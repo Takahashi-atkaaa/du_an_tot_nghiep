@@ -4,7 +4,7 @@
 
 ```bash
 git clone https://github.com/Takahashi-atkaaa/du_an_tot_nghiep
-cd pin247.com.vn
+cd Smart_Mart
 ```
 
 ### 2. Cài Đặt Dependencies
