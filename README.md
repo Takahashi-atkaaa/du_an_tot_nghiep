@@ -1,4 +1,4 @@
-Markdown
+
 # SmartMart 🛒
 
 Hệ thống quản lý bán hàng thông minh được xây dựng trên nền tảng Laravel 12.
