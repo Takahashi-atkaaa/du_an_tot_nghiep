@@ -1,63 +1,68 @@
+Markdown
 # SmartMart 🛒
 
-Chào mừng đến với dự án **SmartMart**. Đây là hệ thống được phát triển dựa trên framework Laravel 12. Dưới đây là hướng dẫn từng bước để cài đặt và khởi chạy dự án trên môi trường local của bạn.
+Hệ thống quản lý bán hàng thông minh (Dự án tốt nghiệp) được xây dựng trên nền tảng Laravel 12.
 
 ---
 
-## 🛠 Yêu cầu hệ thống
+### Dev Dependencies (PHP)
 
-Trước khi bắt đầu, hãy đảm bảo máy tính của bạn đã cài đặt sẵn các công cụ sau:
-* **PHP** (Khuyến nghị phiên bản >= 8.2 phù hợp với Laravel 12)
-* **Composer** (Trình quản lý thư viện của PHP)
-* **Node.js & npm** (Để biên dịch các file Frontend)
-* **MySQL** (Hoặc hệ quản trị cơ sở dữ liệu tương đương)
+| Thư viện | Phiên bản | Mục đích |
+| :--- | :--- | :--- |
+| **fakerphp/faker** | `^1.23` | Tạo dữ liệu mẫu |
+| **laravel/pint** | `^1.24` | Code formatter |
+| **laravel/sail** | `^1.41` | Testing framework |
+| **mockery/mockery** | `^1.6` | Mocking library |
+| **phpunit/phpunit** | `^11.5.50` | Unit testing |
+
+### Frontend (Node.js)
+
+| Thư viện | Phiên bản | Mục đích |
+| :--- | :--- | :--- |
+| **tailwindcss** | `^4.0.0` | CSS framework |
+| **vite** | `^7.0.7` | Build tool |
+| **laravel-vite-plugin** | `^2.0.0` | Vite integration cho Laravel |
+| **axios** | `^1.11.0` | HTTP client |
+| **concurrently** | `^9.0.1` | Chạy nhiều command cùng lúc |
+| **@tailwindcss/vite**| `^4.0.0` | Tailwind Vite plugin |
 
 ---
 
-## 🚀 Hướng dẫn Cài đặt
+## Các Bước Cài Đặt
 
-### Bước 1: Khởi tạo / Tải dự án
-Nếu bạn tự khởi tạo dự án từ đầu, hãy mở Terminal và chạy lệnh sau:
+### 1. Khởi tạo / Clone Repository
+
+Nếu bạn tạo dự án mới hoàn toàn từ đầu:
 ```bash
 composer create-project laravel/laravel SmartMart "12.*"
-Sau đó, di chuyển vào thư mục dự án:
+cd SmartMart
+(Hoặc nếu bạn clone code từ repo GitHub về):
 
 Bash
-cd SmartMart
-(Lưu ý: Nếu bạn clone dự án này từ GitHub về, hãy chạy lệnh composer install để tải các thư viện cần thiết thay vì lệnh create-project ở trên).
+git clone [https://github.com/Takahashi-atkaaa/du_an_tot_nghiep.git](https://github.com/Takahashi-atkaaa/du_an_tot_nghiep.git)
+cd du_an_tot_nghiep
+2. Cài Đặt Dependencies
+Cài đặt các gói thư viện cần thiết cho Backend và Frontend:
 
-Bước 2: Cấu hình Môi trường (Environment)
-Copy file .env.example và đổi tên thành .env:
+Bash
+composer install
+npm install
+3. Cấu Hình Môi Trường
+Tạo file biến môi trường và thiết lập kết nối cơ sở dữ liệu:
 
 Bash
 cp .env.example .env
-Mở file .env lên và cấu hình thông tin kết nối Cơ sở dữ liệu (Database) của bạn:
-
-Code snippet
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=tên_database_cua_ban
-DB_USERNAME=root
-DB_PASSWORD=mật_khẩu_database_cua_ban
-Bước 3: Khởi tạo Application Key
-Tạo mã khóa bảo mật cho ứng dụng Laravel của bạn:
+Mở file .env và điền thông tin Database của bạn (ví dụ: DB_DATABASE=smartmart). Sau đó tạo khóa bảo mật:
 
 Bash
 php artisan key:generate
-Bước 4: Chạy Migration (Tạo bảng cơ sở dữ liệu)
-Đảm bảo bạn đã tạo sẵn database trống có tên giống với DB_DATABASE trong file .env, sau đó chạy:
+4. Migrate Cơ Sở Dữ Liệu
+Chạy lệnh để tạo các bảng trong Database:
 
 Bash
 php artisan migrate
-Bước 5: Cài đặt và Build Frontend
-Tải các thư viện giao diện và biên dịch chúng:
 
-Bash
-npm install
-npm run build
-Bước 6: Khởi chạy Server Local
-Bật server của Laravel lên:
+Cuối cùng, bật server ảo lên:
 
 Bash
 php artisan serve
