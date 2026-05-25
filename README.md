@@ -1,49 +1,79 @@
-
-# SmartMart 🛒
-
-Hệ thống quản lý bán hàng thông minh được xây dựng trên nền tảng Laravel 12.
-
----
-
-
-
----
-
 ## Các Bước Cài Đặt
 
-### 1. Khởi tạo / Clone Repository
+### 1. Clone Repository
 
-Nếu bạn tạo dự án mới hoàn toàn từ đầu:
 ```bash
-composer create-project laravel/laravel SmartMart "12.*"
-cd SmartMart
-(Hoặc nếu bạn clone code từ repo GitHub về):
+git clone https://github.com/Takahashi-atkaaa/du_an_tot_nghiep
+cd pin247.com.vn
+```
 
-Bash
-git clone [https://github.com/Takahashi-atkaaa/du_an_tot_nghiep.git](https://github.com/Takahashi-atkaaa/du_an_tot_nghiep.git)
-cd du_an_tot_nghiep
-2. Cài Đặt Dependencies
-Cài đặt các gói thư viện cần thiết cho Backend và Frontend:
+### 2. Cài Đặt Dependencies
 
-Bash
+```bash
+# Cài đặt PHP dependencies
 composer install
+
+# Cài đặt NPM dependencies
 npm install
-3. Cấu Hình Môi Trường
-Tạo file biến môi trường và thiết lập kết nối cơ sở dữ liệu:
+```
 
-Bash
+### 3. Tạo Database
+
+Đăng nhập vào MySQL ( qua phpMyAdmin hoặc command line):
+
+```sql
+CREATE DATABASE Smart_Mart CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+### 4. Cấu Hình Môi Trường
+
+```bash
+# Copy file .env.example thành .env
 cp .env.example .env
-Mở file .env và điền thông tin Database của bạn (ví dụ: DB_DATABASE=smartmart). Sau đó tạo khóa bảo mật:
 
-Bash
+# Hoặc tạo file .env thủ công với nội dung:
+```
+
+Nội dung file `.env`:
+
+```env
+APP_NAME="Smart_Mart"
+APP_ENV=local
+APP_KEY= (them Application Key vao day )
+APP_DEBUG=true
+APP_URL=http://localhost
+
+LOG_CHANNEL=stack
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=debug
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=Smart_Mart
+DB_USERNAME=root
+DB_PASSWORD=
+
+BROADCAST_DRIVER=log
+CACHE_DRIVER=file
+FILESYSTEM_DISK=local
+QUEUE_CONNECTION=sync
+SESSION_DRIVER=file
+SESSION_LIFETIME=120
+```
+
+### 5. Tạo Application Key
+
+```bash
 php artisan key:generate
-4. Migrate Cơ Sở Dữ Liệu
-Chạy lệnh để tạo các bảng trong Database:
+```
 
-Bash
+### 6. Chạy Migration & Seeder (tùy chọn)
+
+```bash
+# Chạy migration
 php artisan migrate
 
-Cuối cùng, bật server ảo lên:
-
-Bash
-php artisan serve
+# Seed dữ liệu mẫu (nếu có)
+php artisan db:seed
+```
