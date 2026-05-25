@@ -1,59 +1,63 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# SmartMart 🛒
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Chào mừng đến với dự án **SmartMart**. Đây là hệ thống được phát triển dựa trên framework Laravel 12. Dưới đây là hướng dẫn từng bước để cài đặt và khởi chạy dự án trên môi trường local của bạn.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🛠 Yêu cầu hệ thống
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Trước khi bắt đầu, hãy đảm bảo máy tính của bạn đã cài đặt sẵn các công cụ sau:
+* **PHP** (Khuyến nghị phiên bản >= 8.2 phù hợp với Laravel 12)
+* **Composer** (Trình quản lý thư viện của PHP)
+* **Node.js & npm** (Để biên dịch các file Frontend)
+* **MySQL** (Hoặc hệ quản trị cơ sở dữ liệu tương đương)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## 🚀 Hướng dẫn Cài đặt
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Bước 1: Khởi tạo / Tải dự án
+Nếu bạn tự khởi tạo dự án từ đầu, hãy mở Terminal và chạy lệnh sau:
+```bash
+composer create-project laravel/laravel SmartMart "12.*"
+Sau đó, di chuyển vào thư mục dự án:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Bash
+cd SmartMart
+(Lưu ý: Nếu bạn clone dự án này từ GitHub về, hãy chạy lệnh composer install để tải các thư viện cần thiết thay vì lệnh create-project ở trên).
 
-## Laravel Sponsors
+Bước 2: Cấu hình Môi trường (Environment)
+Copy file .env.example và đổi tên thành .env:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Bash
+cp .env.example .env
+Mở file .env lên và cấu hình thông tin kết nối Cơ sở dữ liệu (Database) của bạn:
 
-### Premium Partners
+Code snippet
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=tên_database_cua_ban
+DB_USERNAME=root
+DB_PASSWORD=mật_khẩu_database_cua_ban
+Bước 3: Khởi tạo Application Key
+Tạo mã khóa bảo mật cho ứng dụng Laravel của bạn:
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Bash
+php artisan key:generate
+Bước 4: Chạy Migration (Tạo bảng cơ sở dữ liệu)
+Đảm bảo bạn đã tạo sẵn database trống có tên giống với DB_DATABASE trong file .env, sau đó chạy:
 
-## Contributing
+Bash
+php artisan migrate
+Bước 5: Cài đặt và Build Frontend
+Tải các thư viện giao diện và biên dịch chúng:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Bash
+npm install
+npm run build
+Bước 6: Khởi chạy Server Local
+Bật server của Laravel lên:
 
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Bash
+php artisan serve
