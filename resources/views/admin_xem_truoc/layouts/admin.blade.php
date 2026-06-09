@@ -253,7 +253,7 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('admin/danh-muc') }}" class="nav-link {{ request()->is('admin/danh-muc*') ? 'active' : '' }}">
+                <a href="{{ route('danh_muc.index') }}" class="nav-link {{ request()->is('admin/danh-muc*') ? 'active' : '' }}">
                     <i class="fas fa-tags"></i>
                     <span>Danh mục</span>
                 </a>
