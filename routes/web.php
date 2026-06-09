@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\admin\NhanSu\NguoiDungController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -43,10 +44,14 @@ Route::get('/admin/khuyen-mai', function () {
     return view('admin_xem_truoc.khuyen-mai');
 });
 
-Route::get('/admin/nhan-su', function () {
-    return view('admin_xem_truoc.nhan-vien');
-});
+Route::get('/admin/nhan-su', [NguoiDungController::class, 'index']);
 
 Route::get('/admin/cai-dat', function () {
     return view('admin_xem_truoc.cai-dat');
 });
+
+Route::get('/nguoi-dung', [NguoiDungController::class, 'index'])->name('nguoi-dung.index');
+Route::get('/nguoi-dung/create', [NguoiDungController::class, 'create'])->name('nguoi-dung.create');
+Route::post('/nguoi-dung', [NguoiDungController::class, 'store'])->name('nguoi-dung.store');
+Route::get('/nguoi-dung/{nguoiDung}/edit', [NguoiDungController::class, 'edit'])->name('nguoi-dung.edit');
+Route::put('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'update'])->name('nguoi-dung.update');
