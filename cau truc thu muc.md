@@ -2,7 +2,7 @@ SmartMart/
 ├── app/
 │   ├── Http/
 │   │   ├── Controllers/
-│   │   │   ├── Backend/          # Controllers cho trang quan tri
+│   │   │   ├── admin/          # Controllers cho trang quan tri
 │   │   │   │   ├── KhachHang/    # Khoi Khach hang & Khuyen mai
 │   │   │   │   │   ├── KhachHangController.php
 │   │   │   │   │   ├── KhuyenMaiController.php
@@ -87,7 +87,7 @@ SmartMart/
 │       ├── layouts/              # Layouts chung
 │       │   ├── admin.blade.php   # Layout trang quan tri
 │       │   └── partials/        # Header, Sidebar, Footer
-│       ├── backend/              # Views trang quan tri
+│       ├── admin_view/              # Views trang quan tri
 │       │   ├── dashboard/
 │       │   ├── khach-hang/
 │       │   ├── khuyen-mai/
