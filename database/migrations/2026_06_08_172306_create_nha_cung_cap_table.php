@@ -9,13 +9,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('nha_cung_cap', function (Blueprint $table) {
-            $table->id();
-            $table->string('ten_nha_cung_cap');
-            $table->string('email')->nullable();
-            $table->string('so_dien_thoai')->nullable();
-            $table->string('nguoi_dai_dien')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
+            $table->id(); // int unsigned, khóa chính tự động tăng (AI)
+            $table->string('ten_nha_cung_cap'); // varchar(255), not null
+            $table->string('email')->nullable(); // varchar(255), nullable
+            $table->string('so_dien_thoai'); // varchar(255), not null
+            $table->string('nguoi_dai_dien')->nullable(); // varchar(255), nullable
+            $table->timestamps(); // created_at & updated_at
+            $table->softDeletes(); // deleted_at, hỗ trợ xóa mềm
         });
     }
 

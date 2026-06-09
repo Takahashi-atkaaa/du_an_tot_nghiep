@@ -9,21 +9,21 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('san_pham', function (Blueprint $table) {
-            $table->id();
-            $table->string('ten_san_pham');
-            $table->text('mo_ta')->nullable();
-            $table->foreignId('id_danh_muc')->constrained('danh_muc_san_pham')->cascadeOnDelete();
-            $table->foreignId('id_thuoc_tinh')->nullable()->constrained('thuoc_tinh_san_pham')->nullOnDelete();
-            $table->foreignId('id_don_vi')->nullable()->constrained('don_vi_san_pham')->nullOnDelete();
-            $table->decimal('gia_ban', 14, 2);
-            $table->decimal('gia_nhap', 14, 2)->nullable();
-            $table->decimal('so_luong_ton', 12, 2)->default(0);
-            $table->decimal('dinh_muc_toi_thieu', 12, 2)->default(0);
-            $table->string('hinh_anh')->nullable();
-            $table->string('thuong_hieu')->nullable();
-            $table->enum('trang_thai', ['dang_ban', 'ngung_ban', 'het_hang'])->default('dang_ban');
-            $table->timestamps();
-            $table->softDeletes();
+            $table->id(); // int unsigned, khóa chính tự động tăng (AI)
+            $table->foreignId('id_danh_muc')->constrained('danh_muc_san_pham')->cascadeOnDelete(); // FK → danh_muc_san_pham.id
+            $table->string('ten_san_pham'); // varchar(255), not null
+            $table->string('ma_vach')->unique(); // varchar(255), unique, not null, Mã vạch sản phẩm
+            $table->string('hinh_anh')->nullable(); // varchar(255), nullable
+            $table->string('thuong_hieu')->nullable(); // varchar(255), nullable
+            $table->decimal('gia_ban', 14, 2); // decimal(14,2), not null
+            $table->integer('so_luong_ton_kho')->default(0); // int, default=0
+            $table->text('mo_ta')->nullable(); // text, nullable
+            $table->foreignId('id_thuoc_tinh')->nullable()->constrained('thuoc_tinh_san_pham')->nullOnDelete(); // FK → thuoc_tinh_san_pham.id
+            $table->foreignId('id_don_vi')->nullable()->constrained('don_vi_san_pham')->nullOnDelete(); // FK → don_vi_san_pham.id
+            $table->integer('dinh_muc_toi_thieu')->default(0); // int, default=0
+            $table->boolean('trang_thai')->default(true); // tinyint(1), default=true
+            $table->timestamps(); // created_at & updated_at
+            $table->softDeletes(); // deleted_at, hỗ trợ xóa mềm
         });
     }
 

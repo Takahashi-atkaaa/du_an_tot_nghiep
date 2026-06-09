@@ -9,15 +9,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('lich_su_tich_diem', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('khach_hang_id')->constrained('khach_hang')->cascadeOnDelete();
-            $table->foreignId('hoa_don_id')->nullable()->constrained('hoa_don')->nullOnDelete();
-            $table->enum('loai_giao_dich', ['cong', 'tru']);
-            $table->integer('so_diem');
-            $table->integer('so_diem_con_lai')->nullable();
-            $table->text('mo_ta')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
+            $table->id(); // int unsigned, khóa chính tự động tăng (AI)
+            $table->foreignId('id_khach_hang')->constrained('khach_hang')->cascadeOnDelete(); // FK → khach_hang.id, not null
+            $table->foreignId('id_hoa_don')->nullable()->constrained('hoa_don')->nullOnDelete(); // FK → hoa_don.id
+            $table->string('loai_bien_dong'); // varchar(255), not null, Tăng hoặc giảm điểm
+            $table->integer('so_diem'); // int, not null, Số điểm thay đổi
+            $table->text('ly_do')->nullable(); // text, nullable, Lý do thay đổi điểm
+            $table->timestamps(); // created_at & updated_at (ngay_tao = created_at)
+            $table->softDeletes(); // deleted_at, hỗ trợ xóa mềm
         });
     }
 

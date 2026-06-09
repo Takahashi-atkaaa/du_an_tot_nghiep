@@ -9,15 +9,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('thuoc_tinh_san_pham', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('danh_muc_id')->constrained('danh_muc_san_pham')->cascadeOnDelete();
-            $table->string('ten_thuoc_tinh');
-            $table->string('kieu_du_lieu')->default('text');
-            $table->json('gia_tri_mac_dinh')->nullable();
-            $table->boolean('bat_buoc')->default(false);
-            $table->boolean('trang_thai')->default(true);
-            $table->timestamps();
-            $table->softDeletes();
+            $table->id(); // int unsigned, khóa chính tự động tăng (AI)
+            $table->string('ten_thuoc_tinh'); // varchar(255), not null
+            $table->boolean('trang_thai')->default(true); // tinyint(1), default=true
+            $table->timestamps(); // created_at & updated_at
+            $table->softDeletes(); // deleted_at, hỗ trợ xóa mềm
         });
     }
 

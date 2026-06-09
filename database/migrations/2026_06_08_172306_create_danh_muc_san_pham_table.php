@@ -9,12 +9,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('danh_muc_san_pham', function (Blueprint $table) {
-            $table->id();
-            $table->string('ten_danh_muc');
-            $table->text('mo_ta')->nullable();
-            $table->boolean('trang_thai')->default(true);
-            $table->timestamps();
-            $table->softDeletes();
+            $table->id(); // int unsigned, khóa chính tự động tăng (AI)
+            $table->string('ten_danh_muc'); // varchar(255), not null
+            $table->boolean('trang_thai')->default(true); // tinyint(1), default=true
+            $table->timestamps(); // created_at & updated_at
+            $table->softDeletes(); // deleted_at, hỗ trợ xóa mềm
         });
     }
 

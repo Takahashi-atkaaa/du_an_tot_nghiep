@@ -9,11 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('khuyen_mai_san_pham', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('khuyen_mai_id')->constrained('khuyen_mai')->cascadeOnDelete();
-            $table->foreignId('san_pham_id')->constrained('san_pham')->cascadeOnDelete();
-            $table->unique(['khuyen_mai_id', 'san_pham_id']);
-            $table->timestamps();
+            $table->id(); // int unsigned, khóa chính tự động tăng (AI)
+            $table->foreignId('id_khuyen_mai')->constrained('khuyen_mai')->cascadeOnDelete(); // FK → khuyen_mai.id
+            $table->foreignId('id_san_pham')->constrained('san_pham')->cascadeOnDelete(); // FK → san_pham.id
+            $table->timestamps(); // created_at & updated_at
         });
     }
 
