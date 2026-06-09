@@ -299,10 +299,7 @@
                 <button class="btn d-lg-none me-3" id="sidebar-toggle">
                     <i class="fas fa-bars"></i>
                 </button>
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" placeholder="Tìm kiếm...">
-                </div>
+               
             </div>
             <div class="user-info">
                 <div class="notify">
