@@ -133,8 +133,7 @@ class NhanSuSeeder extends Seeder
             DB::table('thiet_lap_luong')->insert([
                 [
                     'id_nguoi_dung' => $nguoiDungIds[0],
-                    'luong_co_ban' => 15000000,
-                    'luong_theo_gio' => null,
+                    'luong_theo_gio' => 100000,
                     'phu_cap' => 2000000,
                     'thuong' => 1000000,
                     'phat_di_muon' => 0,
@@ -145,8 +144,7 @@ class NhanSuSeeder extends Seeder
                 ],
                 [
                     'id_nguoi_dung' => $nguoiDungIds[1],
-                    'luong_co_ban' => 10000000,
-                    'luong_theo_gio' => null,
+                    'luong_theo_gio' => 80000,
                     'phu_cap' => 1000000,
                     'thuong' => 500000,
                     'phat_di_muon' => 100000,
