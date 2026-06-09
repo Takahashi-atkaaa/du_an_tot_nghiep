@@ -40,8 +40,8 @@ class NhanSuSeeder extends Seeder
         // Nhan vien
         DB::table('nguoi_dung')->insert([
             [
-                'ho_ten' => 'Nguyễn Văn Admin',
-                'email' => 'admin@smartmart.vn',
+                'ho_ten' => 'Nguyễn Tùng Anh',
+                'email' => 'tunganh@smartmart.vn',
                 'mat_khau' => bcrypt('Admin@123'),
                 'sdt' => '0912345678',
                 'vai_tro' => 'admin',
@@ -54,7 +54,7 @@ class NhanSuSeeder extends Seeder
                 'email' => 'thungan@smartmart.vn',
                 'mat_khau' => bcrypt('ThuNgan@123'),
                 'sdt' => '0987654321',
-                'vai_tro' => 'quan_ly',
+                'vai_tro' => 'truong_ca',
                 'trang_thai' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -85,28 +85,19 @@ class NhanSuSeeder extends Seeder
         $caIds = DB::table('ca_lam_viec')->pluck('id')->toArray();
 
         if (count($nguoiDungIds) && count($caIds)) {
+            // Chia ca lam viec
             DB::table('chia_ca_lam_viec')->insert([
                 [
-                    'nguoi_dung_id' => $nguoiDungIds[0],
-                    'ca_lam_viec_id' => $caIds[0],
-                    'ngay_lam' => now()->subDays(1)->toDateString(),
-                    'gio_vao_ca_thuc_te' => '07:58:00',
-                    'gio_ra_ca_thuc_te' => '12:05:00',
-                    'di_muon' => false,
-                    've_som' => false,
-                    'ghi_chu' => 'Đi làm đúng giờ',
+                    'id_nguoi_dung' => $nguoiDungIds[0],
+                    'id_ca_lam_viec' => $caIds[0],
+                    'ngay' => now()->subDays(1)->toDateString(),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ],
                 [
-                    'nguoi_dung_id' => $nguoiDungIds[1],
-                    'ca_lam_viec_id' => $caIds[1],
-                    'ngay_lam' => now()->subDays(1)->toDateString(),
-                    'gio_vao_ca_thuc_te' => '13:05:00',
-                    'gio_ra_ca_thuc_te' => '17:00:00',
-                    'di_muon' => true,
-                    've_som' => false,
-                    'ghi_chu' => 'Đi muộn 5 phút',
+                    'id_nguoi_dung' => $nguoiDungIds[1],
+                    'id_ca_lam_viec' => $caIds[1],
+                    'ngay' => now()->subDays(1)->toDateString(),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ],
@@ -114,28 +105,25 @@ class NhanSuSeeder extends Seeder
 
             $chiaCaIds = DB::table('chia_ca_lam_viec')->pluck('id')->toArray();
 
+            // Diem danh
             DB::table('diem_danh')->insert([
                 [
-                    'nguoi_dung_id' => $nguoiDungIds[0],
-                    'chia_ca_lam_viec_id' => $chiaCaIds[0],
-                    'ngay_diem_danh' => now()->toDateString(),
-                    'gio_vao' => '07:58:00',
-                    'gio_ra' => '12:05:00',
+                    'id_chia_ca_lam_viec' => $chiaCaIds[0],
+                    'gio_vao' => now()->subDays(1)->setTime(7, 58, 0),
                     'so_gio_di_lam_muon' => 0,
+                    'gio_tan_ca' => now()->subDays(1)->setTime(12, 5, 0),
                     'so_gio_lam_them' => 0.08,
-                    'ghi_chu' => 'Điểm danh đúng giờ',
+                    'trang_thai' => 'Đúng giờ',
                     'created_at' => now(),
                     'updated_at' => now(),
                 ],
                 [
-                    'nguoi_dung_id' => $nguoiDungIds[1],
-                    'chia_ca_lam_viec_id' => $chiaCaIds[1],
-                    'ngay_diem_danh' => now()->toDateString(),
-                    'gio_vao' => '13:05:00',
-                    'gio_ra' => null,
-                    'so_gio_di_lam_muon' => 0.08,
+                    'id_chia_ca_lam_viec' => $chiaCaIds[1],
+                    'gio_vao' => now()->subDays(1)->setTime(13, 5, 0),
+                    'so_gio_di_lam_muon' => 5,
+                    'gio_tan_ca' => null,
                     'so_gio_lam_them' => 0,
-                    'ghi_chu' => 'Đi muộn',
+                    'trang_thai' => 'Đi muộn',
                     'created_at' => now(),
                     'updated_at' => now(),
                 ],
@@ -144,13 +132,11 @@ class NhanSuSeeder extends Seeder
             // Thiet lap luong
             DB::table('thiet_lap_luong')->insert([
                 [
-                    'nguoi_dung_id' => $nguoiDungIds[0],
-                    'thang_ap_dung' => now()->startOfMonth()->toDateString(),
+                    'id_nguoi_dung' => $nguoiDungIds[0],
                     'luong_co_ban' => 15000000,
-                    'luong_theo_gio' => 89000,
+                    'luong_theo_gio' => null,
                     'phu_cap' => 2000000,
                     'thuong' => 1000000,
-                    'khau_tru' => 0,
                     'phat_di_muon' => 0,
                     'luong_tang_ca' => 0,
                     'phat_bo_ca' => 0,
@@ -158,13 +144,11 @@ class NhanSuSeeder extends Seeder
                     'updated_at' => now(),
                 ],
                 [
-                    'nguoi_dung_id' => $nguoiDungIds[1],
-                    'thang_ap_dung' => now()->startOfMonth()->toDateString(),
+                    'id_nguoi_dung' => $nguoiDungIds[1],
                     'luong_co_ban' => 10000000,
-                    'luong_theo_gio' => 59000,
+                    'luong_theo_gio' => null,
                     'phu_cap' => 1000000,
                     'thuong' => 500000,
-                    'khau_tru' => 0,
                     'phat_di_muon' => 100000,
                     'luong_tang_ca' => 0,
                     'phat_bo_ca' => 0,

@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('email')->unique(); // varchar(255), unique, not null
             $table->string('sdt'); // varchar(255), not null, Số điện thoại
             $table->string('mat_khau'); // varchar(255), not null, Mật khẩu đã băm (bcrypt)
-            $table->string('vai_tro'); // varchar(255), not null, Admin/nhân viên/quản lý
+            $table->string('vai_tro'); // varchar(255), not null, Admin/nhân viên/trưởng ca
             $table->boolean('trang_thai')->default(true); // tinyint(1), default=true, Trạng thái hoạt động
             $table->timestamps(); // created_at & updated_at
             $table->softDeletes(); // deleted_at, hỗ trợ xóa mềm
