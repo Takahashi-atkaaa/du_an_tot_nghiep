@@ -84,7 +84,7 @@
         <a class="nav-link" href="#"><i class="fas fa-arrow-up me-2"></i>Phiếu xuất</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" href="#"><i class="fas fa-truck me-2"></i>Nhà cung cấp</a>
+        <a class="nav-link" href="{{ url('admin/kho-hang/nha-cung-cap') }}"><i class="fas fa-truck me-2"></i>Nhà cung cấp</a>
     </li>
 </ul>
 

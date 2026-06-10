@@ -253,7 +253,7 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('admin/danh-muc') }}" class="nav-link {{ request()->is('admin/danh-muc*') ? 'active' : '' }}">
+                <a href="{{ route('danh_muc.index') }}" class="nav-link {{ request()->is('admin/danh-muc*') ? 'active' : '' }}">
                     <i class="fas fa-tags"></i>
                     <span>Danh mục</span>
                 </a>
@@ -280,6 +280,12 @@
                 <a href="{{ url('admin/nhan-su') }}" class="nav-link {{ request()->is('admin/nhan-su*') ? 'active' : '' }}">
                     <i class="fas fa-user-tie"></i>
                     <span>Nhân sự</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('ca-lam-viec.index') }}" class="nav-link {{ request()->is('admin/ca-lam-viec*') ? 'active' : '' }}">
+                    <i class="fas fa-business-time"></i>
+                    <span>Ca làm việc</span>
                 </a>
             </li>
             <li class="nav-item mt-3">
