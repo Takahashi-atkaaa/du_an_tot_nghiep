@@ -42,7 +42,7 @@ class NhanSuSeeder extends Seeder
             [
                 'ho_ten' => 'Nguyễn Tùng Anh',
                 'email' => 'tunganh@smartmart.vn',
-                'mat_khau' => bcrypt('Admin@123'),
+                'mat_khau' => bcrypt('123456'),
                 'sdt' => '0912345678',
                 'vai_tro' => 'admin',
                 'trang_thai' => true,
