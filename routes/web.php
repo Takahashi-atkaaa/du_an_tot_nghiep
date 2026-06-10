@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
 
 Route::get('/', function () {
     return view('admin_xem_truoc.dashboard');
@@ -50,3 +51,13 @@ Route::get('/admin/nhan-su', function () {
 Route::get('/admin/cai-dat', function () {
     return view('admin_xem_truoc.cai-dat');
 });
+
+// Nha cung cap routes
+Route::get('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'index']);
+Route::post('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'store']);
+Route::get('/admin/kho-hang/nha-cung-cap/{id}/lich-su-giao-dich', 
+    [NhaCungCapController::class, 'lichSuGiaoDich']
+);
+Route::get('/admin/kho-hang/nha-cung-cap/{id}/edit', [NhaCungCapController::class, 'edit']);
+Route::put('/admin/kho-hang/nha-cung-cap/{id}', [NhaCungCapController::class, 'update']);
+Route::delete('/admin/kho-hang/nha-cung-cap/{id}', [NhaCungCapController::class, 'destroy']);
