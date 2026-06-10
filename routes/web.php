@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\DanhMuc\DanhMucSanPhamController;
 use App\Http\Controllers\Admin\SanPham\SanPhamController;
+use App\Http\Controllers\admin\NhanSu\CaLamViecController;
 use App\Http\Controllers\admin\NhanSu\NguoiDungController;
 use Illuminate\Support\Facades\Route;
 
@@ -43,6 +44,13 @@ Route::get('/admin/khach-hang', function () {
 Route::get('/admin/khuyen-mai', function () {
     return view('admin_xem_truoc.khuyen-mai');
 });
+
+Route::get('/admin/ca-lam-viec', [CaLamViecController::class, 'index'])->name('ca-lam-viec.index');
+Route::get('/admin/ca-lam-viec/create', [CaLamViecController::class, 'create'])->name('ca-lam-viec.create');
+Route::post('/admin/ca-lam-viec', [CaLamViecController::class, 'store'])->name('ca-lam-viec.store');
+Route::get('/admin/ca-lam-viec/{caLamViec}/edit', [CaLamViecController::class, 'edit'])->name('ca-lam-viec.edit');
+Route::put('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'update'])->name('ca-lam-viec.update');
+Route::delete('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'destroy'])->name('ca-lam-viec.destroy');
 
 Route::get('/admin/nhan-su', [NguoiDungController::class, 'index']);
 
