@@ -2,6 +2,7 @@
 
 namespace App\Requests\NhanSu;
 
+use App\Models\CaLamViec;
 use Illuminate\Foundation\Http\FormRequest;
 
 
@@ -42,5 +43,27 @@ class UpdateCaLamViecRequest extends FormRequest
             'so_phut_di_lam_tre_toi_da.required' => 'Vui lòng nhập số phút đi làm trễ tối đa.',
             'so_phut_di_lam_tre_toi_da.integer' => 'Số phút đi làm trễ phải là số nguyên.',
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            if ($validator->errors()->has('gio_bat_dau') || $validator->errors()->has('gio_ket_thuc')) {
+                return;
+            }
+
+            $caLamViecId = $this->route('caLamViec')?->id ?? $this->route('caLamViec');
+
+            $isDuplicateTimeRange = CaLamViec::query()
+                ->where('gio_bat_dau', $this->input('gio_bat_dau'))
+                ->where('gio_ket_thuc', $this->input('gio_ket_thuc'))
+                ->where('id', '!=', $caLamViecId)
+                ->whereNull('deleted_at')
+                ->exists();
+
+            if ($isDuplicateTimeRange) {
+                $validator->errors()->add('gio_ket_thuc', 'Khung giờ này đã tồn tại, vui lòng chọn thời gian khác.');
+            }
+        });
     }
 }
