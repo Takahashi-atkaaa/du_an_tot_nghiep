@@ -4,10 +4,14 @@
 namespace App\Models;
 
 // Su dung trait Authenticatable de ho tro xac thuc
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class NguoiDung extends Authenticatable
 {
+	use HasFactory, SoftDeletes;
+
     // Ten bang trong csdl
     protected $table = 'nguoi_dung';
 
@@ -21,7 +25,13 @@ class NguoiDung extends Authenticatable
         'trang_thai', // Trang thai hoat dong: true = active, false = bi khoa
     ];
 
+    protected $hidden = [
+        'mat_khau',
+    ];
 
+    protected $casts = [
+        'trang_thai' => 'boolean',
+    ];
 
     // Tu dong ma hoa mat khau moi khi gan
     // Su dung accessor de dam bao mat khau luon duoc bcrypt
@@ -43,48 +53,20 @@ class NguoiDung extends Authenticatable
         // Tra ve gia tri cot mat_khau trong bang
         return $this->mat_khau;
     }
-namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
+    public function scopeSearch($query, ?string $keyword)
+    {
+        if (blank($keyword)) {
+            return $query;
+        }
 
-class NguoiDung extends Model
-{
-	use HasFactory, SoftDeletes;
+        $keyword = trim($keyword);
 
-	protected $table = 'nguoi_dung';
-
-	protected $fillable = [
-		'ho_ten',
-		'email',
-		'sdt',
-		'mat_khau',
-		'vai_tro',
-		'trang_thai',
-	];
-
-	protected $hidden = [
-		'mat_khau',
-	];
-
-	protected $casts = [
-		'trang_thai' => 'boolean',
-	];
-
-	public function scopeSearch($query, ?string $keyword)
-	{
-		if (blank($keyword)) {
-			return $query;
-		}
-
-		$keyword = trim($keyword);
-
-		return $query->where(function ($subQuery) use ($keyword) {
-			$subQuery->where('ho_ten', 'like', '%' . $keyword . '%')
-				->orWhere('email', 'like', '%' . $keyword . '%')
-				->orWhere('sdt', 'like', '%' . $keyword . '%')
-				->orWhere('vai_tro', 'like', '%' . $keyword . '%');
-		});
-	}
+        return $query->where(function ($subQuery) use ($keyword) {
+            $subQuery->where('ho_ten', 'like', '%' . $keyword . '%')
+                ->orWhere('email', 'like', '%' . $keyword . '%')
+                ->orWhere('sdt', 'like', '%' . $keyword . '%')
+                ->orWhere('vai_tro', 'like', '%' . $keyword . '%');
+        });
+    }
 }

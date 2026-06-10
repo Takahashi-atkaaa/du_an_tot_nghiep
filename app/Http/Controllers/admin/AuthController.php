@@ -23,12 +23,12 @@ class AuthController extends Controller
     }
 
     public function login(LoginRequest $request)
-     // Laravel thấy type là LoginRequest
-    // → Tự tạo LoginRequest (chạy validation trước)
-    // → Nếu pass → truyền vào
-    // → Nếu fail → trả lỗi, không vào hàm này
-
     {
+        // Laravel thấy type là LoginRequest
+        // → Tự tạo LoginRequest (chạy validation trước)
+        // → Nếu pass → truyền vào
+        // → Nếu fail → trả lỗi, không vào hàm này
+
         if (!Auth::attempt(
         [
         'email' => $request->email, 
