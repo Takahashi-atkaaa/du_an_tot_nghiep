@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\SanPham\SanPhamController;
 use App\Http\Controllers\admin\NhanSu\CaLamViecController;
 use App\Http\Controllers\admin\NhanSu\NguoiDungController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
 
 Route::get('/', function () {
     return view('admin_xem_truoc.dashboard');
@@ -58,6 +59,17 @@ Route::get('/admin/cai-dat', function () {
     return view('admin_xem_truoc.cai-dat');
 });
 
+
+// Nha cung cap routes
+Route::get('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'index']);
+Route::post('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'store']);
+Route::get('/admin/kho-hang/nha-cung-cap/{id}/lich-su-giao-dich', 
+    [NhaCungCapController::class, 'lichSuGiaoDich']
+);
+Route::get('/admin/kho-hang/nha-cung-cap/{id}/edit', [NhaCungCapController::class, 'edit']);
+Route::put('/admin/kho-hang/nha-cung-cap/{id}', [NhaCungCapController::class, 'update']);
+Route::delete('/admin/kho-hang/nha-cung-cap/{id}', [NhaCungCapController::class, 'destroy']);
+
 // quản lý danh mục
 Route::get('quan-ly-danh-muc', [DanhMucSanPhamController::class, 'index'])->name('danh_muc.index');
 Route::post('quan-ly-danh-muc-store', [DanhMucSanPhamController::class, 'store'])->name('danh_muc.store');
@@ -69,3 +81,4 @@ Route::get('/nguoi-dung/create', [NguoiDungController::class, 'create'])->name('
 Route::post('/nguoi-dung', [NguoiDungController::class, 'store'])->name('nguoi-dung.store');
 Route::get('/nguoi-dung/{nguoiDung}/edit', [NguoiDungController::class, 'edit'])->name('nguoi-dung.edit');
 Route::put('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'update'])->name('nguoi-dung.update');
+
