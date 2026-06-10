@@ -8,8 +8,6 @@
 		<h4 class="fw-bold mb-1">Danh sách ca làm việc</h4>
 		<nav aria-label="breadcrumb">
 			<ol class="breadcrumb mb-0">
-				<li class="breadcrumb-item"><a href="{{ url('admin/dashboard') }}">Admin</a></li>
-				<li class="breadcrumb-item active">Ca làm việc</li>
 			</ol>
 		</nav>
 	</div>
