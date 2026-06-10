@@ -6,34 +6,34 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Authentication Defaults
+    | Mặc định xác thực
     |--------------------------------------------------------------------------
     |
-    | This option defines the default authentication "guard" and password
-    | reset "broker" for your application. You may change these values
-    | as required, but they're a perfect start for most applications.
+    | Tùy chọn này định nghĩa guard xác thực mặc định và broker đặt lại mật khẩu
+    | cho ứng dụng của bạn. Bạn có thể thay đổi các giá trị này theo nhu cầu,
+    | nhưng chúng là điểm khởi đầu hoàn hảo cho hầu hết các ứng dụng.
     |
     */
 
     'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
+        'guard' => env('AUTH_GUARD', 'admin'),
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
     ],
 
     /*
     |--------------------------------------------------------------------------
-    | Authentication Guards
+    | Các Authentication Guards
     |--------------------------------------------------------------------------
     |
-    | Next, you may define every authentication guard for your application.
-    | Of course, a great default configuration has been defined for you
-    | which utilizes session storage plus the Eloquent user provider.
+    | Tiếp theo, bạn có thể định nghĩa mọi guard xác thực cho ứng dụng của mình.
+    | Tất nhiên, một cấu hình mặc định tuyệt vời đã được định nghĩa sẵn cho bạn
+    | sử dụng session storage cùng với Eloquent user provider.
     |
-    | All authentication guards have a user provider, which defines how the
-    | users are actually retrieved out of your database or other storage
-    | system used by the application. Typically, Eloquent is utilized.
+    | Tất cả các authentication guard đều có một user provider, định nghĩa cách
+    | người dùng thực sự được truy xuất từ database hoặc hệ thống lưu trữ khác
+    | mà ứng dụng sử dụng. Thông thường, Eloquent được sử dụng.
     |
-    | Supported: "session"
+    | Được hỗ trợ: "session"
     |
     */
 
@@ -42,6 +42,12 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Guard admin - dành cho hệ thống quản trị
+        'admin' => [
+            'driver' => 'session',
+            'provider' => 'nguoidung',
+        ],
     ],
 
     /*
@@ -49,15 +55,15 @@ return [
     | User Providers
     |--------------------------------------------------------------------------
     |
-    | All authentication guards have a user provider, which defines how the
-    | users are actually retrieved out of your database or other storage
-    | system used by the application. Typically, Eloquent is utilized.
+    | Tất cả các authentication guard đều có một user provider, định nghĩa cách
+    | người dùng thực sự được truy xuất từ database hoặc hệ thống lưu trữ khác
+    | mà ứng dụng sử dụng. Thông thường, Eloquent được sử dụng.
     |
-    | If you have multiple user tables or models you may configure multiple
-    | providers to represent the model / table. These providers may then
-    | be assigned to any extra authentication guards you have defined.
+    | Nếu bạn có nhiều bảng hoặc model người dùng, bạn có thể cấu hình nhiều
+    | provider để đại diện cho model / bảng đó. Các provider này sau đó có thể
+    | được gán cho bất kỳ guard xác thực bổ sung nào bạn đã định nghĩa.
     |
-    | Supported: "database", "eloquent"
+    | Được hỗ trợ: "database", "eloquent"
     |
     */
 
@@ -65,6 +71,12 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),
+        ],
+
+        // Provider nguoidung - sử dụng model NguoiDung
+        'nguoidung' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\NguoiDung::class,
         ],
 
         // 'users' => [
@@ -75,20 +87,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Resetting Passwords
+    | Đặt lại mật khẩu
     |--------------------------------------------------------------------------
     |
-    | These configuration options specify the behavior of Laravel's password
-    | reset functionality, including the table utilized for token storage
-    | and the user provider that is invoked to actually retrieve users.
+    | Các tùy chọn cấu hình này chỉ định hành vi của chức năng đặt lại mật khẩu
+    | của Laravel, bao gồm bảng được sử dụng để lưu trữ token
+    | và user provider được gọi để thực sự truy xuất người dùng.
     |
-    | The expiry time is the number of minutes that each reset token will be
-    | considered valid. This security feature keeps tokens short-lived so
-    | they have less time to be guessed. You may change this as needed.
+    | Thời gian hết hạn là số phút mà mỗi token đặt lại sẽ được coi là hợp lệ.
+    | Tính năng bảo mật này giữ cho token có thời gian sống ngắn để
+    | chúng có ít thời gian hơn để bị đoán. Bạn có thể thay đổi theo nhu cầu.
     |
-    | The throttle setting is the number of seconds a user must wait before
-    | generating more password reset tokens. This prevents the user from
-    | quickly generating a very large amount of password reset tokens.
+    | Cài đặt throttle là số giây mà người dùng phải chờ trước khi
+    | tạo thêm token đặt lại mật khẩu. Điều này ngăn người dùng
+    | nhanh chóng tạo ra một lượng lớn token đặt lại mật khẩu.
     |
     */
 
@@ -103,12 +115,12 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Password Confirmation Timeout
+    | Thời gian chờ xác nhận mật khẩu
     |--------------------------------------------------------------------------
     |
-    | Here you may define the number of seconds before a password confirmation
-    | window expires and users are asked to re-enter their password via the
-    | confirmation screen. By default, the timeout lasts for three hours.
+    | Ở đây bạn có thể định nghĩa số giây trước khi cửa sổ xác nhận mật khẩu
+    | hết hạn và người dùng được yêu cầu nhập lại mật khẩu qua màn hình
+    | xác nhận. Theo mặc định, thời gian chờ kéo dài ba giờ.
     |
     */
 

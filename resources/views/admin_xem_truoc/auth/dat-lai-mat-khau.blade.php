@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng nhập - SmartMart Admin</title>
+    <title>Đặt lại mật khẩu - SmartMart Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -56,7 +56,7 @@
             border-color: var(--primary-color);
             box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.15);
         }
-        .btn-login {
+        .btn-submit {
             width: 100%;
             padding: 12px;
             border-radius: 10px;
@@ -64,16 +64,8 @@
             background: var(--primary-color);
             border: none;
         }
-        .btn-login:hover {
+        .btn-submit:hover {
             background: #0b5ed7;
-        }
-        .remember-me {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .remember-me input {
-            margin-right: 8px;
         }
         .login-footer {
             text-align: center;
@@ -101,82 +93,77 @@
 <body>
     <div class="login-card">
         <div class="login-header">
-            <h3><i class="fas fa-store me-2"></i>SmartMart</h3>
-            <p>Hệ thống quản lý bán lẻ</p>
+            <h3><i class="fas fa-lock me-2"></i>SmartMart</h3>
+            <p>Đặt lại mật khẩu mới</p>
         </div>
         <div class="login-body">
-            <h5 class="text-center mb-4 fw-bold">Đăng nhập Admin</h5>
-            
-            <form action="{{ url('admin/login') }}" method="POST">
-                @csrf
-                <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-white border-end-0">
-                            <i class="fas fa-envelope text-muted"></i>
-                        </span>
-                        <input type="email" class="form-control border-start-0 ps-0" 
-                               name="email" placeholder="tunganh@smartmart.vn" required>
-                    </div>
+            <h5 class="text-center mb-3 fw-bold">Nhập mật khẩu mới</h5>
+
+            @if(session('success'))
+                <div class="alert alert-success py-2">
+                    <i class="fas fa-check-circle me-2"></i>
+                    {{ session('success') }}
                 </div>
-                
+            @endif
+
+            @if(session('error'))
+                <div class="alert alert-danger py-2">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    {{ session('error') }}
+                </div>
+            @enderror
+
+            <form action="{{ url('admin/dat-lai-mat-khau') }}" method="POST">
+                @csrf
+                <input type="hidden" name="token" value="{{ $token }}">
+
                 <div class="mb-3">
-                    <label class="form-label">Mật khẩu</label>
+                    <label class="form-label">Mật khẩu mới</label>
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0">
                             <i class="fas fa-lock text-muted"></i>
                         </span>
-                        <input type="password" class="form-control border-start-0 border-end-0" 
-                               name="password" id="password" placeholder="123456" required>
-                        <span class="input-group-text bg-white border-start-0 password-toggle" 
-                              onclick="togglePassword()">
-                            <i class="fas fa-eye" id="toggleIcon"></i>
+                        <input type="password" class="form-control border-start-0 border-end-0"
+                               name="mat_khau_moi" id="mat_khau_moi" placeholder="Nhập mật khẩu mới" required>
+                        <span class="input-group-text bg-white border-start-0 password-toggle"
+                              onclick="togglePassword('mat_khau_moi', 'toggleIcon1')">
+                            <i class="fas fa-eye" id="toggleIcon1"></i>
                         </span>
                     </div>
-                </div>
-                
-                <div class="remember-me">
-                    <input type="checkbox" id="remember" name="remember">
-                    <label for="remember">Ghi nhớ đăng nhập</label>
+                    @error('mat_khau_moi')
+                        <small class="text-danger">{{ $message }}</small>
+                    @enderror
                 </div>
 
-                <div class="text-end mb-3">
-                    <a href="{{ url('/admin/quen-mat-khau') }}" class="text-decoration-none small">
-                        Quên mật khẩu?
-                    </a>
+                <div class="mb-3">
+                    <label class="form-label">Xác nhận mật khẩu mới</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="fas fa-lock text-muted"></i>
+                        </span>
+                        <input type="password" class="form-control border-start-0 border-end-0"
+                               name="mat_khau_moi_confirmation" id="mat_khau_moi_confirmation"
+                               placeholder="Nhập lại mật khẩu mới" required>
+                    </div>
                 </div>
-                
-                @if($errors->any())
-                    <div class="alert alert-danger py-2">
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        {{ $errors->first() }}
-                    </div>
-                @endif
 
-                @if(session('error'))
-                    <div class="alert alert-danger py-2">
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        {{ session('error') }}
-                    </div>
-                @endif
-                
-                <button type="submit" class="btn btn-primary btn-login">
-                    <i class="fas fa-sign-in-alt me-2"></i>Đăng nhập
+                <button type="submit" class="btn btn-primary btn-submit">
+                    <i class="fas fa-check me-2"></i>Đặt lại mật khẩu
                 </button>
             </form>
         </div>
         <div class="login-footer">
-            <a href="{{ url('/') }}">
-                <i class="fas fa-arrow-left me-2"></i>Quay lại trang chủ
+            <a href="{{ url('/admin/login') }}">
+                <i class="fas fa-arrow-left me-2"></i>Quay lại đăng nhập
             </a>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function togglePassword() {
-            const password = document.getElementById('password');
-            const icon = document.getElementById('toggleIcon');
+        function togglePassword(inputId, iconId) {
+            const password = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
             if (password.type === 'password') {
                 password.type = 'text';
                 icon.classList.remove('fa-eye');
