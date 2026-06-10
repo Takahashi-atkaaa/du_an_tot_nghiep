@@ -13,9 +13,10 @@ class CaLamViecController extends Controller
 {
     public function index(): View
     {
+        // Order by fixed sequence: Ca sáng -> Ca chiều -> Ca tối -> Ca đêm
         $caLamViecs = CaLamViec::query()
+            ->orderByRaw("FIELD(ten_ca, 'Ca sáng','Ca chiều','Ca tối','Ca đêm')")
             ->orderBy('gio_bat_dau')
-            ->orderByDesc('id')
             ->paginate(7);
 
         return view('admin_xem_truoc.ca-lam-viec.index', compact('caLamViecs'));

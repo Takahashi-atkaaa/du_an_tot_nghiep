@@ -1,13 +1,16 @@
 <div class="row g-3">
 	<div class="col-md-6">
 		<label class="form-label">Tên ca <span class="text-danger">*</span></label>
-		<input
-			type="text"
-			name="ten_ca"
-			value="{{ old('ten_ca', $caLamViec->ten_ca) }}"
-			class="form-control @error('ten_ca') is-invalid @enderror"
-			placeholder="Ví dụ: Ca sáng"
-		>
+		@php
+			$caOptions = ['Ca sáng','Ca chiều','Ca tối','Ca đêm'];
+			$selected = old('ten_ca', $caLamViec->ten_ca ?? null);
+		@endphp
+		<select name="ten_ca" class="form-select @error('ten_ca') is-invalid @enderror">
+			<option value="">Chọn ca</option>
+			@foreach($caOptions as $opt)
+				<option value="{{ $opt }}" @selected($selected === $opt)>{{ $opt }}</option>
+			@endforeach
+		</select>
 		@error('ten_ca')
 			<div class="invalid-feedback">{{ $message }}</div>
 		@enderror
