@@ -22,36 +22,36 @@
 <!-- Filter & Search -->
 <div class="card table-admin mb-4">
     <div class="card-body">
-        <div class="row g-3">
-            <div class="col-md-4">
-                <div class="input-group">
-                    <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                    <input type="text" class="form-control" placeholder="Tìm kiếm sản phẩm...">
+        <form action="{{ url('admin/san-pham') }}" method="GET">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" class="form-control" name="keyword" value="{{ $keyword ?? '' }}" placeholder="Tìm kiếm sản phẩm...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="danh_muc">
+                        <option value="">Tất cả danh mục</option>
+                        @foreach($danhMucs as $danhMuc)
+                            <option value="{{ $danhMuc->id }}" {{ (string) $danhMuc->id === (string) ($danhMucId ?? '') ? 'selected' : '' }}>{{ $danhMuc->ten_danh_muc }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="trang_thai">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="1" {{ $trangThai === '1' || $trangThai === 1 ? 'selected' : '' }}>Đang bán</option>
+                        <option value="0" {{ $trangThai === '0' || $trangThai === 0 ? 'selected' : '' }}>Ngừng bán</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-filter me-2"></i>Lọc
+                    </button>
                 </div>
             </div>
-            <div class="col-md-3">
-                <select class="form-select">
-                    <option selected>Tất cả danh mục</option>
-                    <option>Thực phẩm</option>
-                    <option>Đồ uống</option>
-                    <option>Bánh kẹo</option>
-                    <option>Mì gói</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <select class="form-select">
-                    <option selected>Tất cả trạng thái</option>
-                    <option>Đang bán</option>
-                    <option>Hết hàng</option>
-                    <option>Ngừng bán</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-outline-secondary w-100">
-                    <i class="fas fa-filter me-2"></i>Lọc
-                </button>
-            </div>
-        </div>
+        </form>
     </div>
 </div>
 
@@ -76,146 +76,43 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td><input type="checkbox" class="form-check-input"></td>
-                        <td>
-                            <img src="https://via.placeholder.com/50" class="rounded" alt="Product" style="width: 50px; height: 50px; object-fit: cover;">
-                        </td>
-                        <td><strong>SP001</strong></td>
-                        <td>
-                            <strong>Sữa tươi Vinamilk 180ml</strong>
-                            <br><small class="text-muted">Barcode: 8934567890123</small>
-                        </td>
-                        <td><span class="badge bg-secondary">Thực phẩm</span></td>
-                        <td><strong>8,500 đ</strong></td>
-                        <td>
-                            <span class="text-success">250</span>
-                        </td>
-                        <td><span class="status-badge status-active">Đang bán</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary btn-action" title="Sửa" data-bs-toggle="modal" data-bs-target="#editProductModal">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-info btn-action" title="Xem">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger btn-action" title="Xóa">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><input type="checkbox" class="form-check-input"></td>
-                        <td>
-                            <img src="https://via.placeholder.com/50" class="rounded" alt="Product" style="width: 50px; height: 50px; object-fit: cover;">
-                        </td>
-                        <td><strong>SP002</strong></td>
-                        <td>
-                            <strong>Bánh Oreo 133g</strong>
-                            <br><small class="text-muted">Barcode: 8934567890124</small>
-                        </td>
-                        <td><span class="badge bg-secondary">Bánh kẹo</span></td>
-                        <td><strong>22,000 đ</strong></td>
-                        <td>
-                            <span class="text-success">180</span>
-                        </td>
-                        <td><span class="status-badge status-active">Đang bán</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary btn-action" title="Sửa">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-info btn-action" title="Xem">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger btn-action" title="Xóa">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><input type="checkbox" class="form-check-input"></td>
-                        <td>
-                            <img src="https://via.placeholder.com/50" class="rounded" alt="Product" style="width: 50px; height: 50px; object-fit: cover;">
-                        </td>
-                        <td><strong>SP003</strong></td>
-                        <td>
-                            <strong>Mì Hảo Tấm gói</strong>
-                            <br><small class="text-muted">Barcode: 8934567890125</small>
-                        </td>
-                        <td><span class="badge bg-secondary">Mì gói</span></td>
-                        <td><strong>7,000 đ</strong></td>
-                        <td>
-                            <span class="text-warning">45</span>
-                        </td>
-                        <td><span class="status-badge status-active">Đang bán</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary btn-action" title="Sửa">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-info btn-action" title="Xem">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger btn-action" title="Xóa">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><input type="checkbox" class="form-check-input"></td>
-                        <td>
-                            <img src="https://via.placeholder.com/50" class="rounded" alt="Product" style="width: 50px; height: 50px; object-fit: cover;">
-                        </td>
-                        <td><strong>SP004</strong></td>
-                        <td>
-                            <strong>Nước ngọt Coca Cola 330ml</strong>
-                            <br><small class="text-muted">Barcode: 8934567890126</small>
-                        </td>
-                        <td><span class="badge bg-secondary">Đồ uống</span></td>
-                        <td><strong>12,000 đ</strong></td>
-                        <td>
-                            <span class="text-danger">0</span>
-                        </td>
-                        <td><span class="status-badge status-inactive">Hết hàng</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary btn-action" title="Sửa">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-info btn-action" title="Xem">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger btn-action" title="Xóa">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><input type="checkbox" class="form-check-input"></td>
-                        <td>
-                            <img src="https://via.placeholder.com/50" class="rounded" alt="Product" style="width: 50px; height: 50px; object-fit: cover;">
-                        </td>
-                        <td><strong>SP005</strong></td>
-                        <td>
-                            <strong>Cà phê G7 3in1</strong>
-                            <br><small class="text-muted">Barcode: 8934567890127</small>
-                        </td>
-                        <td><span class="badge bg-secondary">Đồ uống</span></td>
-                        <td><strong>35,000 đ</strong></td>
-                        <td>
-                            <span class="text-success">120</span>
-                        </td>
-                        <td><span class="status-badge status-active">Đang bán</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary btn-action" title="Sửa">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-info btn-action" title="Xem">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger btn-action" title="Xóa">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
+                    @forelse($sanPhams as $sanPham)
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="form-check-input">
+                            </td>
+                            <td>
+                                @if($sanPham->hinh_anh)
+                                    <img src="{{ asset($sanPham->hinh_anh) }}" class="rounded" alt="{{ $sanPham->ten_san_pham }}" style="width: 60px; height: 60px; object-fit: cover;">
+                                @else
+                                    <img src="https://via.placeholder.com/60" class="rounded" alt="No image">
+                                @endif
+                            </td>
+                            <td>{{ $sanPham->ma_vach }}</td>
+                            <td>{{ $sanPham->ten_san_pham }}</td>
+                            <td>{{ $sanPham->danhMuc->ten_danh_muc ?? '-' }}</td>
+                            <td>{{ number_format($sanPham->gia_ban, 0, ',', '.') }} đ</td>
+                            <td>{{ $sanPham->so_luong_ton_kho }}</td>
+                            <td>
+                                @if($sanPham->so_luong_ton_kho <= 0)
+                                    <span class="badge bg-secondary">Hết hàng</span>
+                                @elseif($sanPham->trang_thai)
+                                    <span class="badge bg-success">Đang bán</span>
+                                @else
+                                    <span class="badge bg-warning text-dark">Ngừng bán</span>
+                                @endif
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary">Chi tiết</button>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                Hiện chưa có sản phẩm nào. Vui lòng thêm sản phẩm mới.
+                            </td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
@@ -223,16 +120,12 @@
     <div class="card-footer bg-white">
         <div class="d-flex justify-content-between align-items-center">
             <div>
-                <span class="text-muted">Hiển thị 1-5 of 156 sản phẩm</span>
+                <span class="text-muted">
+                    Hiển thị {{ $sanPhams->firstItem() ?? 0 }} - {{ $sanPhams->lastItem() ?? 0 }} trên {{ $sanPhams->total() }} sản phẩm
+                </span>
             </div>
             <nav>
-                <ul class="pagination mb-0">
-                    <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
-                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                    <li class="page-item"><a class="page-link" href="#">2</a></li>
-                    <li class="page-item"><a class="page-link" href="#">3</a></li>
-                    <li class="page-item"><a class="page-link" href="#">Next</a></li>
-                </ul>
+                {{ $sanPhams->links('pagination::bootstrap-5') }}
             </nav>
         </div>
     </div>
