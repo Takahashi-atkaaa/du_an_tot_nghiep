@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\BaseModel;
+use App\Models\DanhMucSanPham;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class SanPham extends Model
+class SanPham extends BaseModel
 {
     use HasFactory, SoftDeletes;
 
@@ -32,5 +33,8 @@ class SanPham extends Model
         'trang_thai' => 'boolean',
     ];
 
-
+    public function danhMuc()
+    {
+        return $this->belongsTo(DanhMucSanPham::class, 'id_danh_muc');
+    }
 }
