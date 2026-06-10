@@ -32,7 +32,7 @@ Route::get('/admin/dashboard', function () {
 // Trang doi mat khau
 Route::get('/admin/doi-mat-khau', [AuthController::class, 'showDoiMatKhau'])->name('admin.doi-mat-khau');
 Route::post('/admin/doi-mat-khau', [AuthController::class, 'doiMatKhau'])->name('admin.doi-mat-khau.submit');
-Route::get('/admin/san-pham', [SanPhamController::class, 'index']);
+
 
 // Route::get('/admin/danh-muc', function () {
 //     return view('admin_xem_truoc.danh-muc');
@@ -74,10 +74,11 @@ Route::get('/admin/hoa-don', function () {
     return view('admin_xem_truoc.hoa-don');
 });
 
-// Trang san pham
-Route::get('/admin/san-pham', function () {
-    return view('admin_xem_truoc.san-pham');
-});
+// // Trang san pham
+// Route::get('/admin/san-pham', function () {
+//     return view('admin_xem_truoc.san-pham');
+// });
+Route::get('/admin/san-pham', [SanPhamController::class, 'index']);
 
 // Trang danh muc
 Route::get('/admin/danh-muc', function () {
