@@ -11,6 +11,8 @@ return new class extends Migration
         Schema::create('danh_muc_san_pham', function (Blueprint $table) {
             $table->id(); // int unsigned, khóa chính tự động tăng (AI)
             $table->string('ten_danh_muc'); // varchar(255), not null
+            $table->string('mau_sac')->nullable(); 
+            $table->string('icon')->nullable(); //
             $table->boolean('trang_thai')->default(true); // tinyint(1), default=true
             $table->timestamps(); // created_at & updated_at
             $table->softDeletes(); // deleted_at, hỗ trợ xóa mềm
