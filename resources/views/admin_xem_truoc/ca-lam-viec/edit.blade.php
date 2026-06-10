@@ -7,11 +7,6 @@
 	<div>
 		<h4 class="fw-bold mb-1">Cập nhật ca làm việc</h4>
 		<nav aria-label="breadcrumb">
-			<ol class="breadcrumb mb-0">
-				<li class="breadcrumb-item"><a href="{{ url('admin/dashboard') }}">Admin</a></li>
-				<li class="breadcrumb-item"><a href="{{ route('ca-lam-viec.index') }}">Ca làm việc</a></li>
-				<li class="breadcrumb-item active">Chỉnh sửa</li>
-			</ol>
 		</nav>
 	</div>
 	<a href="{{ route('ca-lam-viec.index') }}" class="btn btn-outline-secondary">Quay lại</a>

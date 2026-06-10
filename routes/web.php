@@ -6,6 +6,7 @@ use App\Http\Controllers\admin\NhanSu\CaLamViecController;
 use App\Http\Controllers\admin\NhanSu\NguoiDungController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
+use App\Models\NhaCungCap;
 
 Route::get('/', function () {
     return view('admin_xem_truoc.dashboard');
@@ -35,7 +36,9 @@ Route::get('/admin/san-pham', [SanPhamController::class, 'index']);
 // });
 
 Route::get('/admin/kho-hang', function () {
-    return view('admin_xem_truoc.kho-hang');
+    $nhaCungCaps = NhaCungCap::orderBy('id', 'asc')->get();
+
+    return view('admin_xem_truoc.kho-hang', compact('nhaCungCaps'));
 });
 
 Route::get('/admin/khach-hang', function () {

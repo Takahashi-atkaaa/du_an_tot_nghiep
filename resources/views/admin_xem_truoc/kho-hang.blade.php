@@ -268,12 +268,14 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Nhà cung cấp</label>
-                            <select class="form-select">
-                                <option selected>Chọn nhà cung cấp</option>
-                                <option>Vinamilk</option>
-                                <option>Nestle</option>
-                                <option>Coca Cola</option>
-                            </select>
+                            <select name="id_nha_cung_cap" class="form-select" required>
+                              <option value="">Chọn nhà cung cấp</option>
+                             @foreach($nhaCungCaps as $ncc)
+                            <option value="{{ $ncc->id }}">
+                                 {{ $ncc->ten_nha_cung_cap }}
+                             </option>
+                         @endforeach
+                         </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Người nhận</label>
