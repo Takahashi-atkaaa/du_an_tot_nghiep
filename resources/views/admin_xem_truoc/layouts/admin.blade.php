@@ -253,7 +253,7 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('admin/danh-muc') }}" class="nav-link {{ request()->is('admin/danh-muc*') ? 'active' : '' }}">
+                <a href="{{ route('danh_muc.index') }}" class="nav-link {{ request()->is('admin/danh-muc*') ? 'active' : '' }}">
                     <i class="fas fa-tags"></i>
                     <span>Danh mục</span>
                 </a>
@@ -282,6 +282,12 @@
                     <span>Nhân sự</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a href="{{ route('ca-lam-viec.index') }}" class="nav-link {{ request()->is('admin/ca-lam-viec*') ? 'active' : '' }}">
+                    <i class="fas fa-business-time"></i>
+                    <span>Ca làm việc</span>
+                </a>
+            </li>
             <li class="nav-item mt-3">
                 <a href="{{ url('admin/cai-dat') }}" class="nav-link {{ request()->is('admin/cai-dat*') ? 'active' : '' }}">
                     <i class="fas fa-cog"></i>
@@ -299,10 +305,7 @@
                 <button class="btn d-lg-none me-3" id="sidebar-toggle">
                     <i class="fas fa-bars"></i>
                 </button>
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" placeholder="Tìm kiếm...">
-                </div>
+               
             </div>
             <div class="user-info">
                 <div class="notify">

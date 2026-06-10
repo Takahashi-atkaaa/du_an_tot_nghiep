@@ -1,7 +1,12 @@
 <?php
 
 // Khai bao su dung helpers cua Laravel
+use App\Http\Controllers\Admin\DanhMuc\DanhMucSanPhamController;
+use App\Http\Controllers\Admin\SanPham\SanPhamController;
+use App\Http\Controllers\admin\NhanSu\CaLamViecController;
+use App\Http\Controllers\admin\NhanSu\NguoiDungController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
 
 // Khai bao su dung controller
 use App\Http\Controllers\admin\AuthController;
@@ -27,6 +32,11 @@ Route::get('/admin/dashboard', function () {
 // Trang doi mat khau
 Route::get('/admin/doi-mat-khau', [AuthController::class, 'showDoiMatKhau'])->name('admin.doi-mat-khau');
 Route::post('/admin/doi-mat-khau', [AuthController::class, 'doiMatKhau'])->name('admin.doi-mat-khau.submit');
+Route::get('/admin/san-pham', [SanPhamController::class, 'index']);
+
+// Route::get('/admin/danh-muc', function () {
+//     return view('admin_xem_truoc.danh-muc');
+// });
 
 // Quen mat khau
 Route::get('/admin/quen-mat-khau', [AuthController::class, 'showQuenMatKhau'])->name('admin.quen-mat-khau');
@@ -40,6 +50,14 @@ Route::post('/admin/dat-lai-mat-khau', [AuthController::class, 'datLaiMatKhau'])
 Route::get('/admin/nhan-su', function () {
     return view('admin_xem_truoc.nhan-vien');
 });
+Route::get('/admin/ca-lam-viec', [CaLamViecController::class, 'index'])->name('ca-lam-viec.index');
+Route::get('/admin/ca-lam-viec/create', [CaLamViecController::class, 'create'])->name('ca-lam-viec.create');
+Route::post('/admin/ca-lam-viec', [CaLamViecController::class, 'store'])->name('ca-lam-viec.store');
+Route::get('/admin/ca-lam-viec/{caLamViec}/edit', [CaLamViecController::class, 'edit'])->name('ca-lam-viec.edit');
+Route::put('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'update'])->name('ca-lam-viec.update');
+Route::delete('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'destroy'])->name('ca-lam-viec.destroy');
+
+Route::get('/admin/nhan-su', [NguoiDungController::class, 'index']);
 
 // Route cau hinh he thong
 Route::get('/admin/cai-dat', function () {
@@ -80,3 +98,26 @@ Route::get('/admin/khach-hang', function () {
 Route::get('/admin/khuyen-mai', function () {
     return view('admin_xem_truoc.khuyen-mai');
 });
+
+// Nha cung cap routes
+Route::get('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'index']);
+Route::post('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'store']);
+Route::get(
+    '/admin/kho-hang/nha-cung-cap/{id}/lich-su-giao-dich',
+    [NhaCungCapController::class, 'lichSuGiaoDich']
+);
+Route::get('/admin/kho-hang/nha-cung-cap/{id}/edit', [NhaCungCapController::class, 'edit']);
+Route::put('/admin/kho-hang/nha-cung-cap/{id}', [NhaCungCapController::class, 'update']);
+Route::delete('/admin/kho-hang/nha-cung-cap/{id}', [NhaCungCapController::class, 'destroy']);
+
+// quản lý danh mục
+Route::get('quan-ly-danh-muc', [DanhMucSanPhamController::class, 'index'])->name('danh_muc.index');
+Route::post('quan-ly-danh-muc-store', [DanhMucSanPhamController::class, 'store'])->name('danh_muc.store');
+Route::get('quan-ly-danh-muc-edit/{id}', [DanhMucSanPhamController::class, 'edit'])->name('danh_muc.edit');
+Route::put('quan-ly-danh-muc-update/{id}', [DanhMucSanPhamController::class, 'update'])->name('danh_muc.update');
+Route::delete('quan-ly-danh-muc-delete/{id}', [DanhMucSanPhamController::class, 'destroy'])->name('danh_muc.destroy');
+Route::get('/nguoi-dung', [NguoiDungController::class, 'index'])->name('nguoi-dung.index');
+Route::get('/nguoi-dung/create', [NguoiDungController::class, 'create'])->name('nguoi-dung.create');
+Route::post('/nguoi-dung', [NguoiDungController::class, 'store'])->name('nguoi-dung.store');
+Route::get('/nguoi-dung/{nguoiDung}/edit', [NguoiDungController::class, 'edit'])->name('nguoi-dung.edit');
+Route::put('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'update'])->name('nguoi-dung.update');
