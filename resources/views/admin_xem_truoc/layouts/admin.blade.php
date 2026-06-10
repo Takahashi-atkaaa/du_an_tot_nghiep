@@ -315,6 +315,7 @@
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Hồ sơ</a></li>
+                        <li><a class="dropdown-item" href="{{ url('admin/doi-mat-khau') }}"><i class="fas fa-key me-2"></i>Đổi mật khẩu</a></li>
                         <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Cài đặt</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{{ url('admin/logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Đăng xuất</a></li>
