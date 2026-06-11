@@ -120,6 +120,19 @@
         </div>
     </div>
 
+    <!-- Product Settings -->
+    <div class="col-lg-6">
+        <div class="card table-admin">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0"><i class="fas fa-boxes me-2"></i>Cài đặt sản phẩm</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">Quản lý đơn vị tính và thuộc tính sản phẩm.</p>
+                <a href="{{ url('admin/cai-dat/san-pham') }}" class="btn btn-outline-primary">Quản lý cài đặt sản phẩm</a>
+            </div>
+        </div>
+    </div>
+
     <!-- Working Hours -->
     <div class="col-lg-6">
         <div class="card table-admin">
