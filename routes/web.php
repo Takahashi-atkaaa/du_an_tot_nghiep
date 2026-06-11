@@ -7,6 +7,7 @@ use App\Http\Controllers\admin\NhanSu\CaLamViecController;
 use App\Http\Controllers\admin\NhanSu\NguoiDungController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
+use App\Models\NhaCungCap;
 
 // Khai bao su dung controller
 use App\Http\Controllers\admin\AuthController;
@@ -87,7 +88,9 @@ Route::get('/admin/danh-muc', function () {
 
 // Trang kho hang
 Route::get('/admin/kho-hang', function () {
-    return view('admin_xem_truoc.kho-hang');
+    $nhaCungCaps = NhaCungCap::orderBy('id', 'asc')->get();
+
+    return view('admin_xem_truoc.kho-hang', compact('nhaCungCaps'));
 });
 
 // Trang khach hang
