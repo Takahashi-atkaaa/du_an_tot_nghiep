@@ -109,4 +109,12 @@ class NguoiDungController extends Controller
         return redirect('/nguoi-dung')
             ->with('success', 'Đã cập nhật người dùng.');
     }
+
+    public function destroy(NguoiDung $nguoiDung){ //xóa mềm đổi trạng thái thành 3 đã nghỉ việc
+        $nguoiDung->trang_thai = 3;
+        $nguoiDung->save();
+
+        return redirect('/nguoi-dung')
+            ->with('success', 'Đã xóa nhân viên.');
+    }
 }
