@@ -20,7 +20,7 @@ class AuthAdmin
     // Xu ly request
     public function handle(Request $request, Closure $next): Response
     {
-        // Kiem tra xem nguoi dung da dang nhap chua bang guard 'admin'
+        // Kiem tra xem nguoi dung da dang nhap chua 
         if (!Auth::check()) {
             // Chua dang nhap -> chuyen huong ve trang login
             return redirect('/admin/login')

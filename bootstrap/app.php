@@ -19,8 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Dang ky middleware alias
         $middleware->alias([
-            'auth.admin' => AuthAdmin::class,   // Middleware kiem tra dang nhap
-            'vai_tro'    => KiemTraVaiTro::class, // Middleware kiem tra vai tro
+            'auth.dangnhap.admin' => AuthAdmin::class,   // Middleware kiem tra dang nhap
+            'kiem_tra_vai_tro'    => KiemTraVaiTro::class, // Middleware kiem tra vai tro
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
