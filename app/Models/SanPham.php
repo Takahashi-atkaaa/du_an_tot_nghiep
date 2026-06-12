@@ -16,9 +16,11 @@ class SanPham extends BaseModel
     protected $fillable = [
         'id_danh_muc',
         'ten_san_pham',
+        'ma_hang',
         'ma_vach',
         'hinh_anh',
         'thuong_hieu',
+        'gia_von',
         'gia_ban',
         'so_luong_ton_kho',
         'mo_ta',
@@ -29,6 +31,7 @@ class SanPham extends BaseModel
     ];
 
     protected $casts = [
+        'gia_von' => 'decimal:2',
         'gia_ban' => 'decimal:2',
         'trang_thai' => 'boolean',
     ];
@@ -36,5 +39,15 @@ class SanPham extends BaseModel
     public function danhMuc()
     {
         return $this->belongsTo(DanhMucSanPham::class, 'id_danh_muc');
+    }
+
+    public function donVi()
+    {
+        return $this->belongsTo(DonViSanPham::class, 'id_don_vi');
+    }
+
+    public function thuocTinh()
+    {
+        return $this->belongsTo(ThuocTinhSanPham::class, 'id_thuoc_tinh');
     }
 }

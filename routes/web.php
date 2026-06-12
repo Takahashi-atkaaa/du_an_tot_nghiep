@@ -79,6 +79,57 @@ Route::get('/admin/cai-dat', function () {
 });
 
 
+use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
+
+Route::get('/admin/cai-dat/san-pham', [ThietLapSanPhamController::class, 'index']);
+Route::post('/admin/cai-dat/san-pham/don-vi', [ThietLapSanPhamController::class, 'storeDonVi']);
+Route::delete('/admin/cai-dat/san-pham/don-vi/{id}', [ThietLapSanPhamController::class, 'destroyDonVi']);
+Route::post('/admin/cai-dat/san-pham/thuoc-tinh', [ThietLapSanPhamController::class, 'storeThuocTinh']);
+Route::delete('/admin/cai-dat/san-pham/thuoc-tinh/{id}', [ThietLapSanPhamController::class, 'destroyThuocTinh']);
+
+// Trang ban hang
+Route::get('/admin/ban-hang', function () {
+    return view('admin_xem_truoc.ban-hang');
+});
+
+// Trang hoa don
+Route::get('/admin/hoa-don', function () {
+    return view('admin_xem_truoc.hoa-don');
+});
+
+// // Trang san pham
+// Route::get('/admin/san-pham', function () {
+//     return view('admin_xem_truoc.san-pham');
+// });
+Route::get('/admin/san-pham', [SanPhamController::class, 'index']);
+Route::post('/admin/san-pham', [SanPhamController::class, 'store']);
+Route::get('/admin/san-pham/{id}/edit', [SanPhamController::class, 'edit']);
+Route::put('/admin/san-pham/{id}', [SanPhamController::class, 'update']);
+Route::get('/admin/san-pham/{id}', [SanPhamController::class, 'show']);
+
+// Trang danh muc
+Route::get('/admin/danh-muc', function () {
+    return view('admin_xem_truoc.danh-muc');
+});
+
+// Trang kho hang
+Route::get('/admin/kho-hang', function () {
+    $nhaCungCaps = NhaCungCap::orderBy('id', 'asc')->get();
+
+    return view('admin_xem_truoc.kho-hang', compact('nhaCungCaps'));
+});
+
+// Trang khach hang
+Route::get('/admin/khach-hang', function () {
+    return view('admin_xem_truoc.khach-hang');
+});
+
+// Trang khuyen mai
+Route::get('/admin/khuyen-mai', function () {
+    return view('admin_xem_truoc.khuyen-mai');
+});
+
+
 // Nha cung cap routes
 Route::get('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'index']);
 Route::post('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'store']);
