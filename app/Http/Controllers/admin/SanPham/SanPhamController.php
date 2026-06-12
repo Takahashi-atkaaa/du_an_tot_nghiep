@@ -144,6 +144,63 @@ class SanPhamController extends Controller
         return redirect()->back()->with('success', 'Đã thêm sản phẩm mới.');
     }
 
+    public function edit($id)
+    {
+        $sanPham = SanPham::findOrFail($id);
+        $danhMucs = DanhMucSanPham::orderBy('ten_danh_muc')->get();
+        $donVis = DonViSanPham::where('trang_thai', true)->orderBy('ten_don_vi')->get();
+        $thuocTinhs = ThuocTinhSanPham::where('trang_thai', true)->orderBy('ten_thuoc_tinh')->get();
+
+        return view('admin_xem_truoc.san-pham-sua', compact('sanPham', 'danhMucs', 'donVis', 'thuocTinhs'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $sanPham = SanPham::findOrFail($id);
+
+        $data = $request->validate([
+            'ten_san_pham' => 'required|string|max:255',
+            'ma_vach' => 'required|string|max:255|unique:san_pham,ma_vach,' . $sanPham->id,
+            'thuong_hieu' => 'nullable|string|max:255',
+            'id_danh_muc' => 'required|exists:danh_muc_san_pham,id',
+            'id_thuoc_tinh' => 'nullable|exists:thuoc_tinh_san_pham,id',
+            'don_vi_co_ban' => 'required|string|max:255',
+            'gia_von' => 'nullable|numeric|min:0',
+            'gia_ban' => 'required|numeric|min:0',
+            'so_luong_ton_kho' => 'nullable|integer|min:0',
+            'dinh_muc_toi_thieu' => 'nullable|integer|min:0',
+            'mo_ta' => 'nullable|string',
+            'hinh_anh' => 'nullable|image|max:2048',
+        ]);
+
+        $imagePath = $sanPham->hinh_anh;
+        if ($request->hasFile('hinh_anh')) {
+            $file = $request->file('hinh_anh');
+            $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9\.\-_]/', '_', $file->getClientOriginalName());
+            $file->move(public_path('uploads/san-pham'), $filename);
+            $imagePath = 'uploads/san-pham/' . $filename;
+        }
+
+        $baseUnit = $this->findOrCreateDonVi($data['don_vi_co_ban'], 1);
+
+        $sanPham->update([
+            'id_danh_muc' => $data['id_danh_muc'],
+            'ten_san_pham' => $data['ten_san_pham'],
+            'ma_vach' => $data['ma_vach'],
+            'thuong_hieu' => $data['thuong_hieu'] ?? null,
+            'gia_von' => $data['gia_von'] ?? 0,
+            'gia_ban' => $data['gia_ban'],
+            'so_luong_ton_kho' => $data['so_luong_ton_kho'] ?? 0,
+            'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
+            'mo_ta' => $data['mo_ta'] ?? null,
+            'id_thuoc_tinh' => $data['id_thuoc_tinh'] ?? null,
+            'id_don_vi' => $baseUnit->id,
+            'hinh_anh' => $imagePath,
+        ]);
+
+        return redirect(url('admin/san-pham'))->with('success', 'Cập nhật sản phẩm thành công.');
+    }
+
     protected function findOrCreateDonVi(string $tenDonVi, int $soLuong): DonViSanPham
     {
         return DonViSanPham::firstOrCreate([
