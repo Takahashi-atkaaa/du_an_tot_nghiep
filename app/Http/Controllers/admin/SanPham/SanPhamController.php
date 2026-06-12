@@ -23,7 +23,7 @@ class SanPhamController extends Controller
         $sanPhams = SanPham::query()
             ->with('danhMuc')
             ->when($keyword, function ($query, $keyword) {
-                $query->searchByFields($keyword, ['ten_san_pham', 'ma_vach', 'thuong_hieu']);
+                $query->searchByFields($keyword, ['ten_san_pham', 'ma_vach', 'ma_hang', 'thuong_hieu']);
             })
             ->when($danhMucId, function ($query, $danhMucId) {
                 $query->where('id_danh_muc', $danhMucId);
