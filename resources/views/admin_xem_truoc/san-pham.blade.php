@@ -108,6 +108,7 @@
                             </td>
                             <td>
                                 <a href="{{ url('admin/san-pham/'.$sanPham->id) }}" class="btn btn-sm btn-outline-primary">Chi tiết</a>
+                                <a href="{{ url('admin/san-pham/'.$sanPham->id.'/edit') }}" class="btn btn-sm btn-outline-secondary ms-1">Sửa</a>
                             </td>
                         </tr>
                     @empty
