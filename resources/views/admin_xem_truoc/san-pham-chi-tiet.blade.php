@@ -41,4 +41,79 @@
     </div>
 </div>
 
+<div class="row mt-4">
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Thẻ kho</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Mã phiếu</th>
+                                <th>Thời gian</th>
+                                <th>Loại phiếu</th>
+                                <th>Nhà cung cấp</th>
+                                <th>Giá</th>
+                                <th>Số lượng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($theKho as $item)
+                                <tr>
+                                    <td>{{ $item->ma_phieu }}</td>
+                                    <td>{{ $item->thoi_gian ? \Carbon\Carbon::parse($item->thoi_gian)->format('d/m/Y H:i') : '-' }}</td>
+                                    <td>{{ $item->loai_phieu }}</td>
+                                    <td>{{ $item->nha_cung_cap ?? '-' }}</td>
+                                    <td>{{ number_format($item->gia, 0, ',', '.') }} đ</td>
+                                    <td>{{ $item->so_luong }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-3">Chưa có dữ liệu thẻ kho.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Lô - Hạn sử dụng</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Số lô</th>
+                                <th>Hạn sử dụng</th>
+                                <th>Số lượng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($loHang as $item)
+                                <tr>
+                                    <td>{{ $item->ma_lo }}</td>
+                                    <td>{{ $item->han_su_dung ? \Carbon\Carbon::parse($item->han_su_dung)->format('d/m/Y') : '-' }}</td>
+                                    <td>{{ $item->so_luong }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-3">Chưa có lô hàng.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DanhMucSanPham;
 use App\Models\SanPham;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class SanPhamController extends Controller
@@ -48,6 +49,33 @@ class SanPhamController extends Controller
     {
         $sanPham = SanPham::with(['danhMuc', 'donVi', 'thuocTinh'])->findOrFail($id);
 
-        return view('admin_xem_truoc.san-pham-chi-tiet', compact('sanPham'));
+        $theKho = DB::table('chi_tiet_phieu')
+            ->join('phieu', 'chi_tiet_phieu.id_phieu', '=', 'phieu.id')
+            ->leftJoin('nha_cung_cap', 'phieu.id_nha_cung_cap', '=', 'nha_cung_cap.id')
+            ->where('chi_tiet_phieu.id_san_pham', $id)
+            ->select(
+                'phieu.id as ma_phieu',
+                'phieu.created_at as thoi_gian',
+                'phieu.loai_phieu',
+                'nha_cung_cap.ten_nha_cung_cap as nha_cung_cap',
+                'chi_tiet_phieu.gia_nhap as gia',
+                'chi_tiet_phieu.so_luong as so_luong'
+            )
+            ->orderByDesc('phieu.created_at')
+            ->get();
+
+        $loHang = DB::table('chi_tiet_phieu')
+            ->where('id_san_pham', $id)
+            ->whereNotNull('ma_lo')
+            ->select(
+                'ma_lo',
+                'han_su_dung',
+                DB::raw('COALESCE(SUM(so_luong_con_lai), SUM(so_luong)) as so_luong')
+            )
+            ->groupBy('ma_lo', 'han_su_dung')
+            ->orderBy('han_su_dung')
+            ->get();
+
+        return view('admin_xem_truoc.san-pham-chi-tiet', compact('sanPham', 'theKho', 'loHang'));
     }
 }
