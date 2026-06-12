@@ -103,7 +103,7 @@
                                 @endif
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-outline-primary">Chi tiết</button>
+                                <a href="{{ url('admin/san-pham/'.$sanPham->id) }}" class="btn btn-sm btn-outline-primary">Chi tiết</a>
                             </td>
                         </tr>
                     @empty

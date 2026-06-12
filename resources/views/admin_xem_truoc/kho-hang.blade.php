@@ -32,7 +32,7 @@
                 <div class="icon me-3"><i class="fas fa-boxes-stacked"></i></div>
                 <div>
                     <h6 class="text-muted mb-1">Tổng sản phẩm</h6>
-                    <h3 class="mb-0">1,245</h3>
+                    <h3 class="mb-0">--</h3>
                 </div>
             </div>
         </div>
@@ -43,7 +43,7 @@
                 <div class="icon me-3"><i class="fas fa-check-circle"></i></div>
                 <div>
                     <h6 class="text-muted mb-1">Còn hàng</h6>
-                    <h3 class="mb-0">1,180</h3>
+                    <h3 class="mb-0">--</h3>
                 </div>
             </div>
         </div>
@@ -54,7 +54,7 @@
                 <div class="icon me-3"><i class="fas fa-exclamation-triangle"></i></div>
                 <div>
                     <h6 class="text-muted mb-1">Sắp hết</h6>
-                    <h3 class="mb-0">45</h3>
+                    <h3 class="mb-0">--</h3>
                 </div>
             </div>
         </div>
@@ -65,7 +65,7 @@
                 <div class="icon me-3"><i class="fas fa-times-circle"></i></div>
                 <div>
                     <h6 class="text-muted mb-1">Hết hàng</h6>
-                    <h3 class="mb-0">20</h3>
+                    <h3 class="mb-0">--</h3>
                 </div>
             </div>
         </div>
@@ -142,87 +142,8 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td><strong>SP001</strong></td>
-                        <td>
-                            <strong>Sữa tươi Vinamilk 180ml</strong>
-                            <br><small class="text-muted">Barcode: 8934567890123</small>
-                        </td>
-                        <td><span class="badge bg-secondary">Thực phẩm</span></td>
-                        <td><strong>250</strong></td>
-                        <td>50</td>
-                        <td>6,500 đ</td>
-                        <td><strong>8,500 đ</strong></td>
-                        <td><span class="status-badge status-active">Còn hàng</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary btn-action" title="Nhập thêm">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-info btn-action" title="Lịch sử">
-                                <i class="fas fa-history"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><strong>SP002</strong></td>
-                        <td>
-                            <strong>Bánh Oreo 133g</strong>
-                            <br><small class="text-muted">Barcode: 8934567890124</small>
-                        </td>
-                        <td><span class="badge bg-secondary">Bánh kẹo</span></td>
-                        <td><strong>180</strong></td>
-                        <td>30</td>
-                        <td>18,000 đ</td>
-                        <td><strong>22,000 đ</strong></td>
-                        <td><span class="status-badge status-active">Còn hàng</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary btn-action" title="Nhập thêm">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-info btn-action" title="Lịch sử">
-                                <i class="fas fa-history"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><strong>SP003</strong></td>
-                        <td>
-                            <strong>Mì Hảo Tấm gói</strong>
-                            <br><small class="text-muted">Barcode: 8934567890125</small>
-                        </td>
-                        <td><span class="badge bg-secondary">Mì gói</span></td>
-                        <td><strong class="text-warning">45</strong></td>
-                        <td>50</td>
-                        <td>5,500 đ</td>
-                        <td><strong>7,000 đ</strong></td>
-                        <td><span class="status-badge status-pending">Sắp hết</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-danger btn-action" title="Nhập gấp">
-                                <i class="fas fa-exclamation"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-info btn-action" title="Lịch sử">
-                                <i class="fas fa-history"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><strong>SP004</strong></td>
-                        <td>
-                            <strong>Nước ngọt Coca Cola 330ml</strong>
-                            <br><small class="text-muted">Barcode: 8934567890126</small>
-                        </td>
-                        <td><span class="badge bg-secondary">Đồ uống</span></td>
-                        <td><strong class="text-danger">0</strong></td>
-                        <td>30</td>
-                        <td>9,000 đ</td>
-                        <td><strong>12,000 đ</strong></td>
-                        <td><span class="status-badge status-inactive">Hết hàng</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-danger btn-action" title="Nhập gấp">
-                                <i class="fas fa-exclamation"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-info btn-action" title="Lịch sử">
-                                <i class="fas fa-history"></i>
-                            </button>
+                        <td colspan="9" class="text-center text-muted py-4">
+                            Chưa có dữ liệu kho hàng. Vui lòng sử dụng chức năng nhập kho hoặc kết nối dữ liệu thực tế.
                         </td>
                     </tr>
                 </tbody>
@@ -232,15 +153,13 @@
     <div class="card-footer bg-white">
         <div class="d-flex justify-content-between align-items-center">
             <div>
-                <span class="text-muted">Hiển thị 1-4 of 1,245 sản phẩm</span>
+                <span class="text-muted">Hiển thị 0 sản phẩm</span>
             </div>
             <nav>
                 <ul class="pagination mb-0">
                     <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
                     <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                    <li class="page-item"><a class="page-link" href="#">2</a></li>
-                    <li class="page-item"><a class="page-link" href="#">3</a></li>
-                    <li class="page-item"><a class="page-link" href="#">Next</a></li>
+                    <li class="page-item disabled"><a class="page-link" href="#">Next</a></li>
                 </ul>
             </nav>
         </div>
@@ -301,15 +220,9 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td>
-                                    <select class="form-select form-select-sm">
-                                        <option>Sữa tươi Vinamilk 180ml</option>
-                                    </select>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    Chưa có sản phẩm trong phiếu nhập. Vui lòng chọn sản phẩm từ dữ liệu thực.
                                 </td>
-                                <td><input type="number" class="form-control form-control-sm" value="100" style="width: 80px;"></td>
-                                <td><input type="number" class="form-control form-control-sm" value="6500" style="width: 100px;"></td>
-                                <td>650,000 đ</td>
-                                <td><button class="btn btn-sm btn-outline-danger"><i class="fas fa-times"></i></button></td>
                             </tr>
                         </tbody>
                     </table>

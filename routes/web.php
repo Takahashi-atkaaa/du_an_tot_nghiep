@@ -65,6 +65,14 @@ Route::get('/admin/cai-dat', function () {
     return view('admin_xem_truoc.cai-dat');
 });
 
+use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
+
+Route::get('/admin/cai-dat/san-pham', [ThietLapSanPhamController::class, 'index']);
+Route::post('/admin/cai-dat/san-pham/don-vi', [ThietLapSanPhamController::class, 'storeDonVi']);
+Route::delete('/admin/cai-dat/san-pham/don-vi/{id}', [ThietLapSanPhamController::class, 'destroyDonVi']);
+Route::post('/admin/cai-dat/san-pham/thuoc-tinh', [ThietLapSanPhamController::class, 'storeThuocTinh']);
+Route::delete('/admin/cai-dat/san-pham/thuoc-tinh/{id}', [ThietLapSanPhamController::class, 'destroyThuocTinh']);
+
 // Trang ban hang
 Route::get('/admin/ban-hang', function () {
     return view('admin_xem_truoc.ban-hang');
@@ -80,6 +88,7 @@ Route::get('/admin/hoa-don', function () {
 //     return view('admin_xem_truoc.san-pham');
 // });
 Route::get('/admin/san-pham', [SanPhamController::class, 'index']);
+Route::get('/admin/san-pham/{id}', [SanPhamController::class, 'show']);
 
 // Trang danh muc
 Route::get('/admin/danh-muc', function () {

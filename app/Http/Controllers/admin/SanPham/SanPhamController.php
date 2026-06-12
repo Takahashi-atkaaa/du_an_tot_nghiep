@@ -43,4 +43,11 @@ class SanPhamController extends Controller
             'trangThai' => $request->input('trang_thai'),
         ]);
     }
+
+    public function show($id)
+    {
+        $sanPham = SanPham::with(['danhMuc', 'donVi', 'thuocTinh'])->findOrFail($id);
+
+        return view('admin_xem_truoc.san-pham-chi-tiet', compact('sanPham'));
+    }
 }

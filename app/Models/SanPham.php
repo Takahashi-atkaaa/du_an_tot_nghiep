@@ -37,4 +37,14 @@ class SanPham extends BaseModel
     {
         return $this->belongsTo(DanhMucSanPham::class, 'id_danh_muc');
     }
+
+    public function donVi()
+    {
+        return $this->belongsTo(DonViSanPham::class, 'id_don_vi');
+    }
+
+    public function thuocTinh()
+    {
+        return $this->belongsTo(ThuocTinhSanPham::class, 'id_thuoc_tinh');
+    }
 }
