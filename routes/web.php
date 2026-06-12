@@ -88,6 +88,7 @@ Route::get('/admin/hoa-don', function () {
 //     return view('admin_xem_truoc.san-pham');
 // });
 Route::get('/admin/san-pham', [SanPhamController::class, 'index']);
+Route::post('/admin/san-pham', [SanPhamController::class, 'store']);
 Route::get('/admin/san-pham/{id}', [SanPhamController::class, 'show']);
 
 // Trang danh muc
