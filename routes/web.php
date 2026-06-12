@@ -11,7 +11,7 @@ use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
 use App\Models\NhaCungCap;
 
 Route::get('/', function () {
-    return view('admin_xem_truoc.dashboard');
+    return view('admin_xem_truoc.auth.login');
 });
 
 // Admin Routes - Preview
