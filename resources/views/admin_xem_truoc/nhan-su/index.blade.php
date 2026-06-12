@@ -128,6 +128,7 @@
                 </thead>
                 <tbody>
                     @forelse($nguoiDungs as $nguoiDung)
+
                         <tr>
                             <td>
                                 <strong>
@@ -201,6 +202,38 @@
                                 </a>
                             </td>
                         </tr>
+
+                        @if($nguoiDung->trang_thai == 3) @continue @endif{{--bỏ qua các trạng thái đã nghỉ việc--}}
+                            <tr>
+                                <td><strong>ND{{ str_pad((string) $nguoiDung->id, 4, '0', STR_PAD_LEFT) }}</strong></td>
+                                <td>
+                                    <strong>{{ $nguoiDung->ho_ten }}</strong>
+                                    <br><small class="text-muted">{{ $nguoiDung->sdt }}</small>
+                                </td>
+                                <td>{{ $nguoiDung->email }}</td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ $nguoiDung->vai_tro }}</span>
+                                </td>
+                                <td>
+                                    <span class="status-badge {{ $nguoiDung->trang_thai ? 'status-active' : 'status-inactive' }}">
+                                        {{ $nguoiDung->trang_thai ? 'Hoạt động' : 'Ngưng hoạt động' }}
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <a href="{{ route('nguoi-dung.edit', $nguoiDung) }}" class="btn btn-sm btn-outline-primary btn-action" title="Sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form action="{{ route('nguoi-dung.destroy', $nguoiDung) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-outline-danger btn-action" title="Xóa" onclick="return confirm('Bạn có chắc chắn muốn xóa người dùng này?')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+
+
                     @empty
                         <tr>
                             <td colspan="9" class="text-center text-muted py-5">

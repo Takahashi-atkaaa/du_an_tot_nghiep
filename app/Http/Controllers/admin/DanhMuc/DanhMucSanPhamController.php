@@ -74,4 +74,4 @@ class DanhMucSanPhamController extends Controller
             ->route('danh_muc.index')
             ->with('success', 'Cập nhật danh mục thành công!');
     }
-}
+}   

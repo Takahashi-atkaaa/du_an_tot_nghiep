@@ -36,9 +36,9 @@ class NguoiDung extends Authenticatable
         'mat_khau',
     ];
 
-    protected $casts = [
-        'trang_thai' => 'boolean',
-    ];
+    // protected $casts = [
+    //     'trang_thai' => 'boolean',
+    // ];
 
     // Tu dong ma hoa mat khau moi khi gan
     // Su dung accessor de dam bao mat khau luon duoc bcrypt
