@@ -53,6 +53,24 @@
     </div>
 </div>
 
+<!-- QR Scanner Modal -->
+<div class="modal fade" id="qrScannerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Quét mã vạch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="qrScanner" style="width:100%; min-height:400px;"></div>
+                <div class="mt-3 text-center">
+                    <button type="button" class="btn btn-secondary" id="stopQrScanBtn">Dừng quét</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Products Table -->
 <div class="card table-admin">
     <div class="card-body p-0">
@@ -303,3 +321,79 @@
 </div>
 
 @endsection
+
+@push('scripts')
+<script src="https://unpkg.com/html5-qrcode@2.3.7/minified/html5-qrcode.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const startQrScanBtn = document.getElementById('startQrScanBtn');
+        const stopQrScanBtn = document.getElementById('stopQrScanBtn');
+        const qrScannerModal = new bootstrap.Modal(document.getElementById('qrScannerModal'));
+        const searchKeywordInput = document.getElementById('searchKeywordInput');
+        const qrScannerElementId = 'qrScanner';
+        let html5QrCode = null;
+        let qrScannerActive = false;
+
+        function startQrScanner() {
+            if (qrScannerActive) {
+                return;
+            }
+
+            html5QrCode = new Html5Qrcode(qrScannerElementId);
+            const config = { fps: 10, qrbox: 250 };
+
+            Html5Qrcode.getCameras().then(cameras => {
+                if (cameras && cameras.length) {
+                    const cameraId = cameras[0].id;
+                    html5QrCode.start(cameraId, config, qrCodeMessage => {
+                        if (searchKeywordInput) {
+                            searchKeywordInput.value = qrCodeMessage;
+                        }
+                        qrScannerModal.hide();
+                        stopQrScanner();
+                        document.querySelector('form[action="{{ url('admin/san-pham') }}"]').submit();
+                    }, errorMessage => {
+                        console.debug('QR scan error', errorMessage);
+                    }).then(() => {
+                        qrScannerActive = true;
+                    }).catch(err => {
+                        console.error('Không thể khởi động QR scanner', err);
+                        alert('Không thể khởi động camera để quét mã vạch. Vui lòng kiểm tra quyền truy cập camera.');
+                    });
+                } else {
+                    alert('Không tìm thấy camera phù hợp để quét mã vạch.');
+                }
+            }).catch(err => {
+                console.error('Lỗi lấy camera', err);
+                alert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập thiết bị.');
+            });
+        }
+
+        function stopQrScanner() {
+            if (!qrScannerActive || !html5QrCode) {
+                return;
+            }
+            html5QrCode.stop().then(() => {
+                html5QrCode.clear();
+                qrScannerActive = false;
+            }).catch(err => {
+                console.error('Lỗi dừng QR scanner', err);
+            });
+        }
+
+        startQrScanBtn.addEventListener('click', function () {
+            qrScannerModal.show();
+            startQrScanner();
+        });
+
+        stopQrScanBtn.addEventListener('click', function () {
+            qrScannerModal.hide();
+            stopQrScanner();
+        });
+
+        document.getElementById('qrScannerModal').addEventListener('hidden.bs.modal', function () {
+            stopQrScanner();
+        });
+    });
+</script>
+@endpush
