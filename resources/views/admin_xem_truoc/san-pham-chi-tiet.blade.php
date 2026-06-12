@@ -29,9 +29,12 @@
             </div>
             <div class="col-md-8">
                 <h3>{{ $sanPham->ten_san_pham }} <small class="text-muted">({{ $sanPham->ma_vach }})</small></h3>
+                <p class="mb-1"><strong>Mã hàng:</strong> {{ $sanPham->ma_hang ?? '-' }}</p>
                 <p class="mb-1"><strong>Danh mục:</strong> {{ $sanPham->danhMuc->ten_danh_muc ?? '-' }}</p>
                 <p class="mb-1"><strong>Đơn vị:</strong> {{ $sanPham->donVi->ten_don_vi ?? '-' }}</p>
                 <p class="mb-1"><strong>Thuộc tính:</strong> {{ $sanPham->thuocTinh->ten_thuoc_tinh ?? '-' }}</p>
+                <p class="mb-1"><strong>Định mức tối thiểu:</strong> {{ $sanPham->dinh_muc_toi_thieu ?? 0 }}</p>
+                <p class="mb-1"><strong>Giá vốn:</strong> {{ number_format($sanPham->gia_von ?? 0, 0, ',', '.') }} đ</p>
                 <p class="mb-1"><strong>Giá bán:</strong> {{ number_format($sanPham->gia_ban, 0, ',', '.') }} đ</p>
                 <p class="mb-1"><strong>Tồn kho:</strong> {{ $sanPham->so_luong_ton_kho }}</p>
                 <p class="mb-1"><strong>Mô tả:</strong></p>
