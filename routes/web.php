@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Controllers\admin\AuthController;
 use App\Http\Controllers\Admin\DanhMuc\DanhMucSanPhamController;
 use App\Http\Controllers\Admin\SanPham\SanPhamController;
 use App\Http\Controllers\admin\NhanSu\CaLamViecController;
 use App\Http\Controllers\admin\NhanSu\NguoiDungController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
+use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
+use App\Models\NhaCungCap;
 
 Route::get('/', function () {
     return view('admin_xem_truoc.dashboard');
@@ -47,7 +50,7 @@ Route::post('/admin/dat-lai-mat-khau', [AuthController::class, 'datLaiMatKhau'])
 Route::get('/nguoi-dung', [NguoiDungController::class, 'index'])->name('nguoi-dung.index');
 Route::get('/admin/nhan-su', function () {
     return redirect('/nguoi-dung');
-
+});
 Route::get('/admin/kho-hang', function () {
     return view('admin_xem_truoc.kho-hang');
 
@@ -79,7 +82,7 @@ Route::get('/admin/cai-dat', function () {
 });
 
 
-use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
+
 
 Route::get('/admin/cai-dat/san-pham', [ThietLapSanPhamController::class, 'index']);
 Route::post('/admin/cai-dat/san-pham/don-vi', [ThietLapSanPhamController::class, 'storeDonVi']);
@@ -154,5 +157,3 @@ Route::post('/nguoi-dung', [NguoiDungController::class, 'store'])->name('nguoi-d
 Route::get('/nguoi-dung/{nguoiDung}/edit', [NguoiDungController::class, 'edit'])->name('nguoi-dung.edit');
 Route::put('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'update'])->name('nguoi-dung.update');
 Route::delete('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'destroy'])->name('nguoi-dung.destroy');
-
-
