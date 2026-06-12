@@ -48,8 +48,9 @@ Route::get('/admin/dat-lai-mat-khau/{token}', [AuthController::class, 'showFormD
 Route::post('/admin/dat-lai-mat-khau', [AuthController::class, 'datLaiMatKhau'])->name('admin.dat-lai-mat-khau.submit');
 
 // Route quan ly nhan su
+Route::get('/nguoi-dung', [NguoiDungController::class, 'index'])->name('nguoi-dung.index');
 Route::get('/admin/nhan-su', function () {
-    return view('admin_xem_truoc.nhan-vien');
+    return redirect('/nguoi-dung');
 });
 Route::get('/admin/ca-lam-viec', [CaLamViecController::class, 'index'])->name('ca-lam-viec.index');
 Route::get('/admin/ca-lam-viec/create', [CaLamViecController::class, 'create'])->name('ca-lam-viec.create');
@@ -58,7 +59,11 @@ Route::get('/admin/ca-lam-viec/{caLamViec}/edit', [CaLamViecController::class, '
 Route::put('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'update'])->name('ca-lam-viec.update');
 Route::delete('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'destroy'])->name('ca-lam-viec.destroy');
 
-Route::get('/admin/nhan-su', [NguoiDungController::class, 'index']);
+Route::get('/nguoi-dung/create', [NguoiDungController::class, 'create'])->name('nguoi-dung.create');
+Route::post('/nguoi-dung', [NguoiDungController::class, 'store'])->name('nguoi-dung.store');
+Route::get('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'show'])->name('nguoi-dung.show');
+Route::get('/nguoi-dung/{nguoiDung}/edit', [NguoiDungController::class, 'edit'])->name('nguoi-dung.edit');
+Route::put('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'update'])->name('nguoi-dung.update');
 
 // Route cau hinh he thong
 Route::get('/admin/cai-dat', function () {
@@ -120,8 +125,3 @@ Route::post('quan-ly-danh-muc-store', [DanhMucSanPhamController::class, 'store']
 Route::get('quan-ly-danh-muc-edit/{id}', [DanhMucSanPhamController::class, 'edit'])->name('danh_muc.edit');
 Route::put('quan-ly-danh-muc-update/{id}', [DanhMucSanPhamController::class, 'update'])->name('danh_muc.update');
 Route::delete('quan-ly-danh-muc-delete/{id}', [DanhMucSanPhamController::class, 'destroy'])->name('danh_muc.destroy');
-Route::get('/nguoi-dung', [NguoiDungController::class, 'index'])->name('nguoi-dung.index');
-Route::get('/nguoi-dung/create', [NguoiDungController::class, 'create'])->name('nguoi-dung.create');
-Route::post('/nguoi-dung', [NguoiDungController::class, 'store'])->name('nguoi-dung.store');
-Route::get('/nguoi-dung/{nguoiDung}/edit', [NguoiDungController::class, 'edit'])->name('nguoi-dung.edit');
-Route::put('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'update'])->name('nguoi-dung.update');

@@ -17,13 +17,20 @@ class NguoiDung extends Authenticatable
 
     // Tat ca cac cot co the gan hang loat khi tao/sua
     protected $fillable = [
-        'ho_ten',     // Ho va ten nguoi dung
-        'email',      // Dia chi email (dung de dang nhap)
-        'sdt',        // So dien thoai
-        'mat_khau',   // Mat khau da duoc ma hoa
-        'vai_tro',    // Vai tro: Admin, nhan_vien, truong_ca
-        'trang_thai', // Trang thai hoat dong: true = active, false = bi khoa
-    ];
+        'ho_ten',
+    'email',
+    'sdt',
+    'mat_khau',
+    'vai_tro',
+    'trang_thai',
+
+    'gioi_tinh',
+    'cccd',
+
+    'anh_dai_dien',
+    'anh_cccd_mat_truoc',
+    'anh_cccd_mat_sau',
+        ];
 
     protected $hidden = [
         'mat_khau',

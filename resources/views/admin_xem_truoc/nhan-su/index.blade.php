@@ -115,8 +115,11 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Mã người dùng</th>
+                        <th>Mã NV</th>
+                        <th>Ảnh</th>
                         <th>Họ tên</th>
+                        <th>Giới tính</th>
+                        <th>CCCD</th>
                         <th>Email</th>
                         <th>Vai trò</th>
                         <th>Trạng thái</th>
@@ -126,40 +129,98 @@
                 <tbody>
                     @forelse($nguoiDungs as $nguoiDung)
                         <tr>
-                            <td><strong>ND{{ str_pad((string) $nguoiDung->id, 4, '0', STR_PAD_LEFT) }}</strong></td>
+                            <td>
+                                <strong>
+                                    ND{{ str_pad((string) $nguoiDung->id, 4, '0', STR_PAD_LEFT) }}
+                                </strong>
+                            </td>
+
+                            <td>
+                                @if($nguoiDung->anh_dai_dien)
+                                    <img
+                                        src="{{ asset('storage/' . $nguoiDung->anh_dai_dien) }}"
+                                        alt="{{ $nguoiDung->ho_ten }}"
+                                        width="50"
+                                        height="50"
+                                        class="rounded-circle border"
+                                        style="object-fit: cover;"
+                                    >
+                                @else
+                                    <div
+                                        class="rounded-circle bg-light border d-flex align-items-center justify-content-center"
+                                        style="width:50px;height:50px;"
+                                    >
+                                        <i class="fas fa-user text-muted"></i>
+                                    </div>
+                                @endif
+                            </td>
+
                             <td>
                                 <strong>{{ $nguoiDung->ho_ten }}</strong>
-                                <br><small class="text-muted">{{ $nguoiDung->sdt }}</small>
+                                <br>
+                                <small class="text-muted">
+                                    {{ $nguoiDung->sdt }}
+                                </small>
                             </td>
-                            <td>{{ $nguoiDung->email }}</td>
+
                             <td>
-                                <span class="badge bg-secondary">{{ $nguoiDung->vai_tro }}</span>
+                                {{ $nguoiDung->gioi_tinh ?? '-' }}
                             </td>
+
+                            <td>
+                                {{ $nguoiDung->cccd ?? '-' }}
+                            </td>
+
+                            <td>
+                                {{ $nguoiDung->email }}
+                            </td>
+
+                            <td>
+                                <span class="badge bg-secondary">
+                                    {{ $nguoiDung->vai_tro }}
+                                </span>
+                            </td>
+
                             <td>
                                 <span class="status-badge {{ $nguoiDung->trang_thai ? 'status-active' : 'status-inactive' }}">
                                     {{ $nguoiDung->trang_thai ? 'Hoạt động' : 'Ngưng hoạt động' }}
                                 </span>
                             </td>
+
                             <td class="text-end">
-                                <a href="{{ route('nguoi-dung.edit', $nguoiDung) }}" class="btn btn-sm btn-outline-primary btn-action" title="Sửa">
+                                <a href="{{ route('nguoi-dung.show', $nguoiDung) }}"
+                                   class="btn btn-sm btn-outline-info btn-action"
+                                   title="Xem chi tiết">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+
+                                <a href="{{ route('nguoi-dung.edit', $nguoiDung) }}"
+                                   class="btn btn-sm btn-outline-primary btn-action"
+                                   title="Sửa">
                                     <i class="fas fa-edit"></i>
                                 </a>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-5">Không có nhân sự nào phù hợp.</td>
+                            <td colspan="9" class="text-center text-muted py-5">
+                                Không có nhân sự nào phù hợp.
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
     </div>
+
     <div class="card-footer bg-white">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div class="text-muted">
-                Hiển thị {{ $nguoiDungs->firstItem() ?? 0 }}-{{ $nguoiDungs->lastItem() ?? 0 }} của {{ $nguoiDungs->total() }} nhân sự
+                Hiển thị {{ $nguoiDungs->firstItem() ?? 0 }}
+                - {{ $nguoiDungs->lastItem() ?? 0 }}
+                của {{ $nguoiDungs->total() }} nhân sự
             </div>
+
             {{ $nguoiDungs->links() }}
         </div>
     </div>
