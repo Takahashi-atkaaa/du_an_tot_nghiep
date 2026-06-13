@@ -51,6 +51,18 @@ Route::post('/admin/dat-lai-mat-khau', [AuthController::class, 'datLaiMatKhau'])
 Route::get('/admin/nhan-su', function () {
     return view('admin_xem_truoc.nhan-vien');
 });
+<<<<<<< Updated upstream
+=======
+Route::get('/admin/kho-hang', function () {
+    return view('admin_xem_truoc.kho-hang');
+
+});
+
+Route::get('/admin/khach-hang', function () {
+    return view('admin_xem_truoc.khach-hang');
+});
+
+>>>>>>> Stashed changes
 Route::get('/admin/ca-lam-viec', [CaLamViecController::class, 'index'])->name('ca-lam-viec.index');
 Route::get('/admin/ca-lam-viec/create', [CaLamViecController::class, 'create'])->name('ca-lam-viec.create');
 Route::post('/admin/ca-lam-viec', [CaLamViecController::class, 'store'])->name('ca-lam-viec.store');
@@ -87,11 +99,12 @@ Route::get('/admin/hoa-don', function () {
 // Route::get('/admin/san-pham', function () {
 //     return view('admin_xem_truoc.san-pham');
 // });
-Route::get('/admin/san-pham', [SanPhamController::class, 'index']);
-Route::post('/admin/san-pham', [SanPhamController::class, 'store']);
-Route::get('/admin/san-pham/{id}/edit', [SanPhamController::class, 'edit']);
-Route::put('/admin/san-pham/{id}', [SanPhamController::class, 'update']);
-Route::get('/admin/san-pham/{id}', [SanPhamController::class, 'show']);
+Route::get('/admin/san-pham', [SanPhamController::class, 'index'])->name('san-pham.index');
+Route::post('/admin/san-pham', [SanPhamController::class, 'store'])->name('san-pham.store');
+Route::get('/admin/san-pham/{id}/edit', [SanPhamController::class, 'edit'])->name('san-pham.edit');
+Route::put('/admin/san-pham/{id}', [SanPhamController::class, 'update'])->name('san-pham.update');
+Route::delete('/admin/san-pham/{id}', [SanPhamController::class, 'destroy'])->name('san-pham.destroy');
+Route::get('/admin/san-pham/{id}', [SanPhamController::class, 'show'])->name('san-pham.show');
 
 // Trang danh muc
 Route::get('/admin/danh-muc', function () {
