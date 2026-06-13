@@ -14,10 +14,7 @@ Route::post('/', function () {
     return view('admin_xem_truoc.auth.login');
 });
 
-// Trang chu - hien thi dashboard
-Route::get('/', function () {
-    return view('admin_xem_truoc.auth.login');
-});
+
 
 Route::get('/admin/login', [AuthController::class, 'showLoginForm'])
     ->name('admin.login');
