@@ -8,6 +8,7 @@ use App\Http\Controllers\admin\NhanSu\NguoiDungController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
 use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
+use App\Http\Controllers\admin\KhuyenMaiController;
 use App\Models\NhaCungCap;
 
 Route::get('/', function () {
@@ -73,9 +74,12 @@ Route::get('/admin/khach-hang', function () {
 });
 
 
-Route::get('/admin/khuyen-mai', function () {
-    return view('admin_xem_truoc.khuyen-mai');
-});
+// The promotions page is served by the KhuyenMaiController (defined later).
+// Removed earlier hard-coded closures that returned the view directly so the
+// controller can provide dynamic data ($items) to the view.
+
+// Trang khuyen mai
+// (handled by KhuyenMaiController below)
 
 
 Route::get('/admin/ca-lam-viec', [CaLamViecController::class, 'index'])->name('ca-lam-viec.index');
@@ -143,9 +147,7 @@ Route::get('/admin/khach-hang', function () {
 });
 
 // Trang khuyen mai
-Route::get('/admin/khuyen-mai', function () {
-    return view('admin_xem_truoc.khuyen-mai');
-});
+// (handled by KhuyenMaiController below)
 
 
 // Nha cung cap routes
@@ -172,3 +174,7 @@ Route::post('/nguoi-dung', [NguoiDungController::class, 'store'])->name('nguoi-d
 Route::get('/nguoi-dung/{nguoiDung}/edit', [NguoiDungController::class, 'edit'])->name('nguoi-dung.edit');
 Route::put('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'update'])->name('nguoi-dung.update');
 Route::delete('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'destroy'])->name('nguoi-dung.destroy');
+
+// CRUD for KhuyenMai
+Route::get('/admin/khuyen-mai', [KhuyenMaiController::class, 'index']);
+Route::post('/admin/khuyen-mai', [KhuyenMaiController::class, 'store']);
