@@ -178,3 +178,6 @@ Route::delete('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'destroy']
 // CRUD for KhuyenMai
 Route::get('/admin/khuyen-mai', [KhuyenMaiController::class, 'index']);
 Route::post('/admin/khuyen-mai', [KhuyenMaiController::class, 'store']);
+Route::get('/admin/khuyen-mai/{id}/edit', [KhuyenMaiController::class, 'edit'])->name('khuyen-mai.edit');
+Route::put('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'update'])->name('khuyen-mai.update');
+Route::delete('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'destroy'])->name('khuyen-mai.destroy');
