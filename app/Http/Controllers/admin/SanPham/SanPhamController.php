@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class SanPhamController extends Controller
@@ -63,7 +64,7 @@ class SanPhamController extends Controller
     {
         $data = $request->validate([
             'ten_san_pham' => 'required|string|max:255',
-            'ma_vach' => 'required|string|max:255|unique:san_pham,ma_vach',
+            'ma_vach' => ['required', 'string', 'max:255', Rule::unique('san_pham', 'ma_vach')->whereNull('deleted_at')],
             'thuong_hieu' => 'nullable|string|max:255',
             'id_danh_muc' => 'required|exists:danh_muc_san_pham,id',
             'id_thuoc_tinh' => 'nullable|exists:thuoc_tinh_san_pham,id',
@@ -162,7 +163,7 @@ class SanPhamController extends Controller
 
         $data = $request->validate([
             'ten_san_pham' => 'required|string|max:255',
-            'ma_vach' => 'required|string|max:255|unique:san_pham,ma_vach,' . $sanPham->id,
+            'ma_vach' => ['required', 'string', 'max:255', Rule::unique('san_pham', 'ma_vach')->ignore($sanPham->id)->whereNull('deleted_at')],
             'thuong_hieu' => 'nullable|string|max:255',
             'id_danh_muc' => 'required|exists:danh_muc_san_pham,id',
             'id_thuoc_tinh' => 'nullable|exists:thuoc_tinh_san_pham,id',
@@ -175,12 +176,17 @@ class SanPhamController extends Controller
             'hinh_anh' => 'nullable|image|max:2048',
         ]);
 
-        $imagePath = $sanPham->hinh_anh;
+        $oldImagePath = $sanPham->hinh_anh;
+        $imagePath = $oldImagePath;
         if ($request->hasFile('hinh_anh')) {
             $file = $request->file('hinh_anh');
             $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9\.\-_]/', '_', $file->getClientOriginalName());
             $file->move($this->uploadDirectory(), $filename);
             $imagePath = 'uploads/san-pham/' . $filename;
+
+            if ($oldImagePath && $oldImagePath !== $imagePath) {
+                $this->deleteProductImageIfUnused($oldImagePath, $sanPham->id);
+            }
         }
 
         $baseUnit = $this->findOrCreateDonVi($data['don_vi_co_ban'], 1);
@@ -206,7 +212,13 @@ class SanPhamController extends Controller
     public function destroy(int $id): RedirectResponse
     {
         $sanPham = SanPham::findOrFail($id);
+        $imagePath = $sanPham->hinh_anh;
+
         $sanPham->delete();
+
+        if ($imagePath) {
+            $this->deleteProductImageIfUnused($imagePath);
+        }
 
         return redirect(url('admin/san-pham'))
             ->with('success', 'Đã xóa sản phẩm.');
@@ -221,6 +233,29 @@ class SanPhamController extends Controller
         }
 
         return $path;
+    }
+
+    protected function deleteProductImageIfUnused(?string $imagePath, ?int $excludeId = null): void
+    {
+        if (blank($imagePath) || str_starts_with($imagePath, 'http')) {
+            return;
+        }
+
+        $query = SanPham::query()->where('hinh_anh', $imagePath);
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        if ($query->exists()) {
+            return;
+        }
+
+        $fullPath = public_path($imagePath);
+
+        if (is_file($fullPath)) {
+            unlink($fullPath);
+        }
     }
 
     protected function findOrCreateDonVi(string $tenDonVi, int $soLuong): DonViSanPham
