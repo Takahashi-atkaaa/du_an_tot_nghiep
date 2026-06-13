@@ -11,17 +11,38 @@ use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
 use App\Models\NhaCungCap;
 
 Route::get('/', function () {
-    return view('admin_xem_truoc.dashboard');
+    return view('admin_xem_truoc.auth.login');
 });
+
+
+
+Route::get('/admin/login', [AuthController::class, 'showLoginForm'])
+    ->name('admin.login');
+Route::post('/admin/login', [AuthController::class, 'login'])
+    ->name('admin.login.submit');
+Route::get('/admin/logout', [AuthController::class, 'logout'])
+    ->name('admin.logout');
+
+// Quen mat khau
+Route::get('/admin/quen-mat-khau', [AuthController::class, 'showQuenMatKhau'])->name('admin.quen-mat-khau');
+Route::post('/admin/quen-mat-khau', [AuthController::class, 'guiEmailQuenMatKhau'])->name('admin.quen-mat-khau.submit');
+
+// Dat lai mat khau
+Route::get('/admin/dat-lai-mat-khau/{token}', [AuthController::class, 'showFormDatLaiMatKhau'])->name('admin.dat-lai-mat-khau');
+Route::post('/admin/dat-lai-mat-khau', [AuthController::class, 'datLaiMatKhau'])->name('admin.dat-lai-mat-khau.submit');
+
+// Trang doi mat khau
+Route::get('/admin/doi-mat-khau', [AuthController::class, 'showDoiMatKhau'])->name('admin.doi-mat-khau');
+Route::post('/admin/doi-mat-khau', [AuthController::class, 'doiMatKhau'])->name('admin.doi-mat-khau.submit');
 
 // Admin Routes - Preview
 Route::get('/admin/dashboard', function () {
     return view('admin_xem_truoc.dashboard');
 });
 
-Route::get('/admin/login', function () {
-    return view('admin_xem_truoc.auth.login');
-});
+// Route::get('/admin/login', function () {
+//     return view('admin_xem_truoc.auth.login');
+// });
 
 Route::get('/admin/ban-hang', function () {
     return view('admin_xem_truoc.ban-hang');
@@ -36,13 +57,6 @@ Route::get('/admin/hoa-don', function () {
 // });
 
 
-// Quen mat khau
-Route::get('/admin/quen-mat-khau', [AuthController::class, 'showQuenMatKhau'])->name('admin.quen-mat-khau');
-Route::post('/admin/quen-mat-khau', [AuthController::class, 'guiEmailQuenMatKhau'])->name('admin.quen-mat-khau.submit');
-
-// Dat lai mat khau
-Route::get('/admin/dat-lai-mat-khau/{token}', [AuthController::class, 'showFormDatLaiMatKhau'])->name('admin.dat-lai-mat-khau');
-Route::post('/admin/dat-lai-mat-khau', [AuthController::class, 'datLaiMatKhau'])->name('admin.dat-lai-mat-khau.submit');
 
 // Route quan ly nhan su
 Route::get('/nguoi-dung', [NguoiDungController::class, 'index'])->name('nguoi-dung.index');
@@ -58,9 +72,11 @@ Route::get('/admin/khach-hang', function () {
     return view('admin_xem_truoc.khach-hang');
 });
 
+
 Route::get('/admin/khuyen-mai', function () {
     return view('admin_xem_truoc.khuyen-mai');
 });
+
 
 Route::get('/admin/ca-lam-viec', [CaLamViecController::class, 'index'])->name('ca-lam-viec.index');
 Route::get('/admin/ca-lam-viec/create', [CaLamViecController::class, 'create'])->name('ca-lam-viec.create');
@@ -102,12 +118,12 @@ Route::get('/admin/hoa-don', function () {
 // Route::get('/admin/san-pham', function () {
 //     return view('admin_xem_truoc.san-pham');
 // });
-Route::get('/admin/san-pham', [SanPhamController::class, 'index']);
-Route::post('/admin/san-pham', [SanPhamController::class, 'store']);
-Route::get('/admin/san-pham/{id}/edit', [SanPhamController::class, 'edit']);
-Route::put('/admin/san-pham/{id}', [SanPhamController::class, 'update']);
-Route::delete('/admin/san-pham/{id}', [SanPhamController::class, 'destroy']);
-Route::get('/admin/san-pham/{id}', [SanPhamController::class, 'show']);
+Route::get('/admin/san-pham', [SanPhamController::class, 'index'])->name('san-pham.index');
+Route::post('/admin/san-pham', [SanPhamController::class, 'store'])->name('san-pham.store');
+Route::get('/admin/san-pham/{id}/edit', [SanPhamController::class, 'edit'])->name('san-pham.edit');
+Route::put('/admin/san-pham/{id}', [SanPhamController::class, 'update'])->name('san-pham.update');
+Route::delete('/admin/san-pham/{id}', [SanPhamController::class, 'destroy'])->name('san-pham.destroy');
+Route::get('/admin/san-pham/{id}', [SanPhamController::class, 'show'])->name('san-pham.show');
 
 // Trang danh muc
 Route::get('/admin/danh-muc', function () {
