@@ -18,6 +18,7 @@
         <i class="fas fa-plus me-2"></i>Thêm sản phẩm
     </button>
 </div>
+
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
@@ -30,11 +31,25 @@
             </ul>
         </div>
     @endif
+    <!-- Filter & Search -->
+<div class="card table-admin mb-4">
+    <div class="card-body">
+        <form action="{{ url('admin/san-pham') }}" method="GET">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" class="form-control" name="keyword" value="{{ $keyword ?? '' }}" placeholder="Tìm kiếm sản phẩm...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="danh_muc">
                         <option value="">Tất cả danh mục</option>
                         @foreach($danhMucs as $danhMuc)
                             <option value="{{ $danhMuc->id }}" {{ (string) $danhMuc->id === (string) ($danhMucId ?? '') ? 'selected' : '' }}>{{ $danhMuc->ten_danh_muc }}</option>
                         @endforeach
                     </select>
+
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="trang_thai">
@@ -43,6 +58,7 @@
                         <option value="0" {{ $trangThai === '0' || $trangThai === 0 ? 'selected' : '' }}>Ngừng bán</option>
                     </select>
                 </div>
+                
                 <div class="col-md-2">
                     <button type="submit" class="btn btn-outline-secondary w-100">
                         <i class="fas fa-filter me-2"></i>Lọc
@@ -50,6 +66,24 @@
                 </div>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- QR Scanner Modal -->
+<div class="modal fade" id="qrScannerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Quét mã vạch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="qrScanner" style="width:100%; min-height:400px;"></div>
+                <div class="mt-3 text-center">
+                    <button type="button" class="btn btn-secondary" id="stopQrScanBtn">Dừng quét</button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -303,3 +337,79 @@
 </div>
 
 @endsection
+
+@push('scripts')
+<script src="https://unpkg.com/html5-qrcode@2.3.7/minified/html5-qrcode.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const startQrScanBtn = document.getElementById('startQrScanBtn');
+        const stopQrScanBtn = document.getElementById('stopQrScanBtn');
+        const qrScannerModal = new bootstrap.Modal(document.getElementById('qrScannerModal'));
+        const searchKeywordInput = document.getElementById('searchKeywordInput');
+        const qrScannerElementId = 'qrScanner';
+        let html5QrCode = null;
+        let qrScannerActive = false;
+
+        function startQrScanner() {
+            if (qrScannerActive) {
+                return;
+            }
+
+            html5QrCode = new Html5Qrcode(qrScannerElementId);
+            const config = { fps: 10, qrbox: 250 };
+
+            Html5Qrcode.getCameras().then(cameras => {
+                if (cameras && cameras.length) {
+                    const cameraId = cameras[0].id;
+                    html5QrCode.start(cameraId, config, qrCodeMessage => {
+                        if (searchKeywordInput) {
+                            searchKeywordInput.value = qrCodeMessage;
+                        }
+                        qrScannerModal.hide();
+                        stopQrScanner();
+                        document.querySelector('form[action="{{ url('admin/san-pham') }}"]').submit();
+                    }, errorMessage => {
+                        console.debug('QR scan error', errorMessage);
+                    }).then(() => {
+                        qrScannerActive = true;
+                    }).catch(err => {
+                        console.error('Không thể khởi động QR scanner', err);
+                        alert('Không thể khởi động camera để quét mã vạch. Vui lòng kiểm tra quyền truy cập camera.');
+                    });
+                } else {
+                    alert('Không tìm thấy camera phù hợp để quét mã vạch.');
+                }
+            }).catch(err => {
+                console.error('Lỗi lấy camera', err);
+                alert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập thiết bị.');
+            });
+        }
+
+        function stopQrScanner() {
+            if (!qrScannerActive || !html5QrCode) {
+                return;
+            }
+            html5QrCode.stop().then(() => {
+                html5QrCode.clear();
+                qrScannerActive = false;
+            }).catch(err => {
+                console.error('Lỗi dừng QR scanner', err);
+            });
+        }
+
+        startQrScanBtn.addEventListener('click', function () {
+            qrScannerModal.show();
+            startQrScanner();
+        });
+
+        stopQrScanBtn.addEventListener('click', function () {
+            qrScannerModal.hide();
+            stopQrScanner();
+        });
+
+        document.getElementById('qrScannerModal').addEventListener('hidden.bs.modal', function () {
+            stopQrScanner();
+        });
+    });
+</script>
+@endpush
