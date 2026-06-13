@@ -4,6 +4,7 @@ use App\Http\Controllers\admin\AuthController;
 use App\Http\Controllers\Admin\DanhMuc\DanhMucSanPhamController;
 use App\Http\Controllers\Admin\SanPham\SanPhamController;
 use App\Http\Controllers\admin\NhanSu\CaLamViecController;
+use App\Http\Controllers\admin\NhanSu\ChiaCaController;
 use App\Http\Controllers\admin\NhanSu\NguoiDungController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
@@ -84,6 +85,15 @@ Route::post('/admin/ca-lam-viec', [CaLamViecController::class, 'store'])->name('
 Route::get('/admin/ca-lam-viec/{caLamViec}/edit', [CaLamViecController::class, 'edit'])->name('ca-lam-viec.edit');
 Route::put('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'update'])->name('ca-lam-viec.update');
 Route::delete('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'destroy'])->name('ca-lam-viec.destroy');
+// chia ca làm việc
+Route::get('/admin/chia-ca-lam-viec', [ChiaCaController::class, 'index'])->name('chia-ca-lam-viec.index');
+Route::get('/admin/chia-ca-lam-viec/create', [ChiaCaController::class, 'create'])->name('chia-ca-lam-viec.create');
+Route::post('/admin/chia-ca-lam-viec', [ChiaCaController::class, 'store'])->name('chia-ca-lam-viec.store');
+Route::get('/admin/chia-ca-lam-viec/export', [ChiaCaController::class, 'export'])->name('chia-ca-lam-viec.export');
+Route::delete('/admin/chia-ca-lam-viec/xoa-o-lich', [ChiaCaController::class, 'destroyCell'])->name('chia-ca-lam-viec.destroy-cell');
+Route::get('/admin/chia-ca-lam-viec/{chiaCaLamViec}/edit', [ChiaCaController::class, 'edit'])->name('chia-ca-lam-viec.edit');
+Route::put('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'update'])->name('chia-ca-lam-viec.update');
+Route::delete('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'destroy'])->name('chia-ca-lam-viec.destroy');
 
 Route::get('/nguoi-dung/create', [NguoiDungController::class, 'create'])->name('nguoi-dung.create');
 Route::post('/nguoi-dung', [NguoiDungController::class, 'store'])->name('nguoi-dung.store');

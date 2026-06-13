@@ -4,6 +4,7 @@
 namespace App\Models;
 
 // Su dung trait Authenticatable de ho tro xac thuc
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -75,5 +76,10 @@ class NguoiDung extends Authenticatable
                 ->orWhere('sdt', 'like', '%' . $keyword . '%')
                 ->orWhere('vai_tro', 'like', '%' . $keyword . '%');
         });
+    }
+
+    public function chiaCaLamViecs(): HasMany
+    {
+        return $this->hasMany(ChiaCaLamViec::class, 'id_nguoi_dung');
     }
 }
