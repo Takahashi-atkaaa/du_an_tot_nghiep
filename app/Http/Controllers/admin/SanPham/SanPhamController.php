@@ -12,7 +12,6 @@ use App\Models\SanPham;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -150,11 +149,6 @@ class SanPhamController extends Controller
         $oldImagePath = $sanPham->hinh_anh;
         $imagePath = $oldImagePath;
         if ($request->hasFile('hinh_anh')) {
-            // Xóa ảnh cũ nếu tồn tại
-            if ($imagePath && File::exists(public_path($imagePath))) {
-                File::delete(public_path($imagePath));
-            }
-
             $file = $request->file('hinh_anh');
             $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9\.\-_]/', '_', $file->getClientOriginalName());
             $file->move($this->uploadDirectory(), $filename);
@@ -196,7 +190,7 @@ class SanPhamController extends Controller
             $this->deleteProductImageIfUnused($imagePath);
         }
 
-        return redirect(url('admin/san-pham'))
+        return redirect()->route('san-pham.index')
             ->with('success', 'Đã xóa sản phẩm.');
     }
 
@@ -294,32 +288,5 @@ class SanPhamController extends Controller
             ->get();
 
         return view('admin_xem_truoc.san-pham-chi-tiet', compact('sanPham', 'theKho', 'loHang'));
-    }
-
-    /**
-     * Xóa sản phẩm (soft delete)
-     */
-    public function destroy($id)
-    {
-        try {
-            $sanPham = SanPham::findOrFail($id);
-
-            // Xóa ảnh sản phẩm nếu tồn tại
-            if ($sanPham->hinh_anh && File::exists(public_path($sanPham->hinh_anh))) {
-                File::delete(public_path($sanPham->hinh_anh));
-            }
-
-            // Xóa khuyến mãi liên kết
-            $sanPham->khuyenMais()->detach();
-
-            // Soft delete
-            $sanPham->delete();
-
-            return redirect()->route('san-pham.index')
-                ->with('success', 'Xóa sản phẩm thành công!');
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
-        }
     }
 }
