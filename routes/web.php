@@ -31,6 +31,10 @@ Route::post('/admin/quen-mat-khau', [AuthController::class, 'guiEmailQuenMatKhau
 Route::get('/admin/dat-lai-mat-khau/{token}', [AuthController::class, 'showFormDatLaiMatKhau'])->name('admin.dat-lai-mat-khau');
 Route::post('/admin/dat-lai-mat-khau', [AuthController::class, 'datLaiMatKhau'])->name('admin.dat-lai-mat-khau.submit');
 
+// Trang doi mat khau
+Route::get('/admin/doi-mat-khau', [AuthController::class, 'showDoiMatKhau'])->name('admin.doi-mat-khau');
+Route::post('/admin/doi-mat-khau', [AuthController::class, 'doiMatKhau'])->name('admin.doi-mat-khau.submit');
+
 // Admin Routes - Preview
 Route::get('/admin/dashboard', function () {
     return view('admin_xem_truoc.dashboard');
