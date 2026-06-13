@@ -18,6 +18,7 @@
         <i class="fas fa-plus me-2"></i>Thêm sản phẩm
     </button>
 </div>
+
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
@@ -33,19 +34,15 @@
             </ul>
         </div>
     @endif
-
-<!-- Filter & Search -->
+    <!-- Filter & Search -->
 <div class="card table-admin mb-4">
     <div class="card-body">
         <form action="{{ url('admin/san-pham') }}" method="GET">
-            <div class="row g-3 align-items-center">
-                <div class="col-md-5">
+            <div class="row g-3">
+                <div class="col-md-4">
                     <div class="input-group">
                         <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" class="form-control" id="searchKeywordInput" name="keyword" value="{{ $keyword ?? '' }}" placeholder="Tìm kiếm theo mã sản phẩm hoặc tên sản phẩm">
-                        <button type="button" class="btn btn-outline-secondary" id="startQrScanBtn" title="Quét mã vạch">
-                            <i class="fas fa-qrcode"></i>
-                        </button>
+                        <input type="text" class="form-control" name="keyword" value="{{ $keyword ?? '' }}" placeholder="Tìm kiếm sản phẩm...">
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -55,6 +52,7 @@
                             <option value="{{ $danhMuc->id }}" {{ (string) $danhMuc->id === (string) ($danhMucId ?? '') ? 'selected' : '' }}>{{ $danhMuc->ten_danh_muc }}</option>
                         @endforeach
                     </select>
+
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="trang_thai">
@@ -63,8 +61,11 @@
                         <option value="0" {{ $trangThai === '0' || $trangThai === 0 ? 'selected' : '' }}>Ngừng bán</option>
                     </select>
                 </div>
-                <div class="col-md-1 d-grid">
-                    <button type="submit" class="btn btn-outline-secondary">Lọc</button>
+                
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-filter me-2"></i>Lọc
+                    </button>
                 </div>
             </div>
         </form>

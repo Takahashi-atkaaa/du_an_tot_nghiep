@@ -16,6 +16,7 @@ class NhanSuSeeder extends Seeder
                 'gio_bat_dau' => '08:00:00',
                 'gio_ket_thuc' => '12:00:00',
                 'so_phut_di_lam_tre_toi_da' => 15,
+                'deleted_at' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -24,6 +25,7 @@ class NhanSuSeeder extends Seeder
                 'gio_bat_dau' => '13:00:00',
                 'gio_ket_thuc' => '17:00:00',
                 'so_phut_di_lam_tre_toi_da' => 15,
+                'deleted_at' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -32,6 +34,7 @@ class NhanSuSeeder extends Seeder
                 'gio_bat_dau' => '18:00:00',
                 'gio_ket_thuc' => '22:00:00',
                 'so_phut_di_lam_tre_toi_da' => 15,
+                'deleted_at' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -46,6 +49,7 @@ class NhanSuSeeder extends Seeder
                 'sdt' => '0912345678',
                 'vai_tro' => 'admin',
                 'trang_thai' => true,
+                'deleted_at' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -56,6 +60,7 @@ class NhanSuSeeder extends Seeder
                 'sdt' => '0987654321',
                 'vai_tro' => 'truong_ca',
                 'trang_thai' => true,
+                'deleted_at' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -66,6 +71,7 @@ class NhanSuSeeder extends Seeder
                 'sdt' => '0977112233',
                 'vai_tro' => 'nhan_vien',
                 'trang_thai' => true,
+                'deleted_at' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -76,6 +82,7 @@ class NhanSuSeeder extends Seeder
                 'sdt' => '0966887766',
                 'vai_tro' => 'nhan_vien',
                 'trang_thai' => true,
+                'deleted_at' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -91,6 +98,7 @@ class NhanSuSeeder extends Seeder
                     'id_nguoi_dung' => $nguoiDungIds[0],
                     'id_ca_lam_viec' => $caIds[0],
                     'ngay' => now()->subDays(1)->toDateString(),
+                    'deleted_at' => null,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ],
@@ -98,6 +106,7 @@ class NhanSuSeeder extends Seeder
                     'id_nguoi_dung' => $nguoiDungIds[1],
                     'id_ca_lam_viec' => $caIds[1],
                     'ngay' => now()->subDays(1)->toDateString(),
+                    'deleted_at' => null,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ],
@@ -105,7 +114,7 @@ class NhanSuSeeder extends Seeder
 
             $chiaCaIds = DB::table('chia_ca_lam_viec')->pluck('id')->toArray();
 
-            // Diem danh
+          // Diem danh
             DB::table('diem_danh')->insert([
                 [
                     'id_chia_ca_lam_viec' => $chiaCaIds[0],
@@ -113,7 +122,9 @@ class NhanSuSeeder extends Seeder
                     'so_gio_di_lam_muon' => 0,
                     'gio_tan_ca' => now()->subDays(1)->setTime(12, 5, 0),
                     'so_gio_lam_them' => 0.08,
-                    'trang_thai' => 'Đúng giờ',
+                    'trang_thai_vao_lam' => 'Dung gio',
+                    'trang_thai_tan_ca' => 'Tang ca',
+                    'deleted_at' => null,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ],
@@ -123,12 +134,13 @@ class NhanSuSeeder extends Seeder
                     'so_gio_di_lam_muon' => 5,
                     'gio_tan_ca' => null,
                     'so_gio_lam_them' => 0,
-                    'trang_thai' => 'Đi muộn',
+                    'trang_thai_vao_lam' => 'Di muon',
+                    'trang_thai_tan_ca' => null,
+                    'deleted_at' => null,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ],
             ]);
-
             // Thiet lap luong
             DB::table('thiet_lap_luong')->insert([
                 [
@@ -139,6 +151,7 @@ class NhanSuSeeder extends Seeder
                     'phat_di_muon' => 0,
                     'luong_tang_ca' => 0,
                     'phat_bo_ca' => 0,
+                    'deleted_at' => null,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ],
@@ -150,6 +163,7 @@ class NhanSuSeeder extends Seeder
                     'phat_di_muon' => 100000,
                     'luong_tang_ca' => 0,
                     'phat_bo_ca' => 0,
+                    'deleted_at' => null,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ],
