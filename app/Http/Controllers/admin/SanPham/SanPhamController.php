@@ -7,8 +7,10 @@ use App\Models\DanhMucSanPham;
 use App\Models\DonViSanPham;
 use App\Models\ThuocTinhSanPham;
 use App\Models\SanPham;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class SanPhamController extends Controller
@@ -83,7 +85,7 @@ class SanPhamController extends Controller
         if ($request->hasFile('hinh_anh')) {
             $file = $request->file('hinh_anh');
             $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9\.\-_]/', '_', $file->getClientOriginalName());
-            $file->move(public_path('uploads/san-pham'), $filename);
+            $file->move($this->uploadDirectory(), $filename);
             $imagePath = 'uploads/san-pham/' . $filename;
         }
 
@@ -177,7 +179,7 @@ class SanPhamController extends Controller
         if ($request->hasFile('hinh_anh')) {
             $file = $request->file('hinh_anh');
             $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9\.\-_]/', '_', $file->getClientOriginalName());
-            $file->move(public_path('uploads/san-pham'), $filename);
+            $file->move($this->uploadDirectory(), $filename);
             $imagePath = 'uploads/san-pham/' . $filename;
         }
 
@@ -199,6 +201,26 @@ class SanPhamController extends Controller
         ]);
 
         return redirect(url('admin/san-pham'))->with('success', 'Cập nhật sản phẩm thành công.');
+    }
+
+    public function destroy(int $id): RedirectResponse
+    {
+        $sanPham = SanPham::findOrFail($id);
+        $sanPham->delete();
+
+        return redirect(url('admin/san-pham'))
+            ->with('success', 'Đã xóa sản phẩm.');
+    }
+
+    protected function uploadDirectory(): string
+    {
+        $path = public_path('uploads/san-pham');
+
+        if (! is_dir($path)) {
+            mkdir($path, 0755, true);
+        }
+
+        return $path;
     }
 
     protected function findOrCreateDonVi(string $tenDonVi, int $soLuong): DonViSanPham
