@@ -10,7 +10,7 @@ use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
 use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
 use App\Models\NhaCungCap;
 
-Route::post('/', function () {
+Route::get('/', function () {
     return view('admin_xem_truoc.auth.login');
 });
 
@@ -40,9 +40,9 @@ Route::get('/admin/dashboard', function () {
     return view('admin_xem_truoc.dashboard');
 });
 
-Route::get('/admin/login', function () {
-    return view('admin_xem_truoc.auth.login');
-});
+// Route::get('/admin/login', function () {
+//     return view('admin_xem_truoc.auth.login');
+// });
 
 Route::get('/admin/ban-hang', function () {
     return view('admin_xem_truoc.ban-hang');
