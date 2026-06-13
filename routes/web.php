@@ -52,8 +52,6 @@ Route::get('/admin/hoa-don', function () {
     return view('admin_xem_truoc.hoa-don');
 });
 
-Route::get('/admin/san-pham', [SanPhamController::class, 'index']);
-
 // Route::get('/admin/danh-muc', function () {
 //     return view('admin_xem_truoc.danh-muc');
 // });
