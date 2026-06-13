@@ -11,6 +11,7 @@ use App\Mail\QuenMatKhauMail;
 use App\Models\NguoiDung;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -90,7 +91,7 @@ class AuthController extends Controller
 
         $token = Str::random(64);
 
-        \DB::table('password_reset_tokens')->updateOrInsert(
+        DB::table('password_reset_tokens')->updateOrInsert(
             ['email' => $email],
             [
                 'token' => Hash::make($token),
@@ -110,7 +111,7 @@ class AuthController extends Controller
 
     public function datLaiMatKhau(DatLaiMatKhauRequest $request)
     {
-        $record = \DB::table('password_reset_tokens')
+        $record = DB::table('password_reset_tokens')
             ->orderBy('created_at', 'desc')
             ->first();
 
@@ -120,7 +121,7 @@ class AuthController extends Controller
 
         $expiresAt = \Carbon\Carbon::parse($record->created_at)->addMinutes(60);
         if (now()->greaterThan($expiresAt)) {
-            \DB::table('password_reset_tokens')->where('email', $record->email)->delete();
+            DB::table('password_reset_tokens')->where('email', $record->email)->delete();
             return back()->with('error', 'Token đã hết hạn. Vui lòng yêu cầu đặt lại mật khẩu mới.');
         }
 
@@ -137,7 +138,7 @@ class AuthController extends Controller
         $user->mat_khau = $request->mat_khau_moi;
         $user->save();
 
-        \DB::table('password_reset_tokens')->where('email', $record->email)->delete();
+        DB::table('password_reset_tokens')->where('email', $record->email)->delete();
 
         return redirect('/admin/login')->with('success', 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập.');
     }

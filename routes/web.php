@@ -10,9 +10,29 @@ use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
 use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
 use App\Models\NhaCungCap;
 
+Route::post('/', function () {
+    return view('admin_xem_truoc.auth.login');
+});
+
+// Trang chu - hien thi dashboard
 Route::get('/', function () {
     return view('admin_xem_truoc.auth.login');
 });
+
+Route::get('/admin/login', [AuthController::class, 'showLoginForm'])
+    ->name('admin.login');
+Route::post('/admin/login', [AuthController::class, 'login'])
+    ->name('admin.login.submit');
+Route::get('/admin/logout', [AuthController::class, 'logout'])
+    ->name('admin.logout');
+
+// Quen mat khau
+Route::get('/admin/quen-mat-khau', [AuthController::class, 'showQuenMatKhau'])->name('admin.quen-mat-khau');
+Route::post('/admin/quen-mat-khau', [AuthController::class, 'guiEmailQuenMatKhau'])->name('admin.quen-mat-khau.submit');
+
+// Dat lai mat khau
+Route::get('/admin/dat-lai-mat-khau/{token}', [AuthController::class, 'showFormDatLaiMatKhau'])->name('admin.dat-lai-mat-khau');
+Route::post('/admin/dat-lai-mat-khau', [AuthController::class, 'datLaiMatKhau'])->name('admin.dat-lai-mat-khau.submit');
 
 // Admin Routes - Preview
 Route::get('/admin/dashboard', function () {
@@ -38,13 +58,6 @@ Route::get('/admin/san-pham', [SanPhamController::class, 'index']);
 // });
 
 
-// Quen mat khau
-Route::get('/admin/quen-mat-khau', [AuthController::class, 'showQuenMatKhau'])->name('admin.quen-mat-khau');
-Route::post('/admin/quen-mat-khau', [AuthController::class, 'guiEmailQuenMatKhau'])->name('admin.quen-mat-khau.submit');
-
-// Dat lai mat khau
-Route::get('/admin/dat-lai-mat-khau/{token}', [AuthController::class, 'showFormDatLaiMatKhau'])->name('admin.dat-lai-mat-khau');
-Route::post('/admin/dat-lai-mat-khau', [AuthController::class, 'datLaiMatKhau'])->name('admin.dat-lai-mat-khau.submit');
 
 // Route quan ly nhan su
 Route::get('/nguoi-dung', [NguoiDungController::class, 'index'])->name('nguoi-dung.index');
