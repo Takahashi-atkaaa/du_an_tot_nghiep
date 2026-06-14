@@ -124,7 +124,14 @@
                             <th>CCCD</th>
                             <th>Email</th>
                             <th>Vai trò</th>
-                            <th>Trạng thái</th>
+                            <th>Trạng thái</th>v
+                            @forelse($nguoiDungs as $nguoiDung)
+                                @if($nguoiDung->vai_tro == 'admin')
+                                    <th>
+                                        Phân quyền
+                                    </th>
+                                @endif
+                            @endforeach
                             <th class="text-end" style="width: 120px;">Thao tác</th>
                         </tr>
                     </thead>
@@ -182,6 +189,10 @@
                                             Ngưng hoạt động
                                         </span>
                                     @endif
+                                </td>
+
+                                <td>
+                                    <a class="btn btn-primary md3" href="{{ route('nguoi-dung.phan-quyen', $nguoiDung)}}">Phân quyền</a>
                                 </td>
 
                                 <td class="text-end">

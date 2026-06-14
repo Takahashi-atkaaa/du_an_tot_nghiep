@@ -76,4 +76,29 @@ class NguoiDung extends Authenticatable
                 ->orWhere('vai_tro', 'like', '%' . $keyword . '%');
         });
     }
+
+    public function quyenNguoiDungs()
+    {
+        return $this->hasMany(
+            QuyenNguoiDung::class,
+            'id_nguoi_dung'
+        );
+    }
+
+    public function quyens()
+    {
+        return $this->belongsToMany(
+            Quyen::class,
+            'quyen_nguoi_dung',
+            'id_nguoi_dung',
+            'id_quyen'
+        );
+    }
+
+    public function hasPermission($maQuyen)
+    {
+        return $this->quyens()
+            ->where('ma_quyen', $maQuyen)
+            ->exists();
+    }
 }
