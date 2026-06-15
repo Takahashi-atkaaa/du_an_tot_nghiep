@@ -9,6 +9,12 @@ use App\Http\Controllers\admin\NhanSu\NguoiDungController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
 use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
+use App\Http\Controllers\admin\KhuyenMaiController;
+use App\Http\Controllers\admin\NhanSu\ChiaCaController;
+use App\Http\Middleware\AuthAdmin;
+use App\Http\Middleware\AuthTruongCa;
+use App\Http\Middleware\KiemTraVaiTro;
+use App\Http\Middleware\KTVaiTroQuanTri;
 use App\Models\NhaCungCap;
 
 Route::get('/', function () {
@@ -41,144 +47,158 @@ Route::get('/admin/dashboard', function () {
     return view('admin_xem_truoc.dashboard');
 });
 
-// Route::get('/admin/login', function () {
-//     return view('admin_xem_truoc.auth.login');
-// });
 
-Route::get('/admin/ban-hang', function () {
-    return view('admin_xem_truoc.ban-hang');
-});
-
-Route::get('/admin/hoa-don', function () {
-    return view('admin_xem_truoc.hoa-don');
-});
-
-// Route::get('/admin/danh-muc', function () {
-//     return view('admin_xem_truoc.danh-muc');
+// Route::get('/admin/ban-hang', function () {
+//     return view('admin_xem_truoc.ban-hang');
 // });
 
 
 
-// Route quan ly nhan su
-Route::get('/nguoi-dung', [NguoiDungController::class, 'index'])->name('nguoi-dung.index');
-Route::get('/admin/nhan-su', function () {
-    return redirect('/nguoi-dung');
-});
-Route::get('/admin/kho-hang', function () {
-    return view('admin_xem_truoc.kho-hang');
-
-});
-
-Route::get('/admin/khach-hang', function () {
-    return view('admin_xem_truoc.khach-hang');
-});
-
-
-Route::get('/admin/khuyen-mai', function () {
-    return view('admin_xem_truoc.khuyen-mai');
-});
-
-
-Route::get('/admin/ca-lam-viec', [CaLamViecController::class, 'index'])->name('ca-lam-viec.index');
-Route::get('/admin/ca-lam-viec/create', [CaLamViecController::class, 'create'])->name('ca-lam-viec.create');
-Route::post('/admin/ca-lam-viec', [CaLamViecController::class, 'store'])->name('ca-lam-viec.store');
-Route::get('/admin/ca-lam-viec/{caLamViec}/edit', [CaLamViecController::class, 'edit'])->name('ca-lam-viec.edit');
-Route::put('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'update'])->name('ca-lam-viec.update');
-Route::delete('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'destroy'])->name('ca-lam-viec.destroy');
-// chia ca làm việc
-Route::get('/admin/chia-ca-lam-viec', [ChiaCaController::class, 'index'])->name('chia-ca-lam-viec.index');
-Route::get('/admin/chia-ca-lam-viec/create', [ChiaCaController::class, 'create'])->name('chia-ca-lam-viec.create');
-Route::post('/admin/chia-ca-lam-viec', [ChiaCaController::class, 'store'])->name('chia-ca-lam-viec.store');
-Route::get('/admin/chia-ca-lam-viec/export', [ChiaCaController::class, 'export'])->name('chia-ca-lam-viec.export');
-Route::delete('/admin/chia-ca-lam-viec/xoa-o-lich', [ChiaCaController::class, 'destroyCell'])->name('chia-ca-lam-viec.destroy-cell');
-Route::get('/admin/chia-ca-lam-viec/{chiaCaLamViec}/edit', [ChiaCaController::class, 'edit'])->name('chia-ca-lam-viec.edit');
-Route::put('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'update'])->name('chia-ca-lam-viec.update');
-Route::delete('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'destroy'])->name('chia-ca-lam-viec.destroy');
-
-Route::get('/nguoi-dung/create', [NguoiDungController::class, 'create'])->name('nguoi-dung.create');
-Route::post('/nguoi-dung', [NguoiDungController::class, 'store'])->name('nguoi-dung.store');
-Route::get('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'show'])->name('nguoi-dung.show');
-Route::get('/nguoi-dung/{nguoiDung}/edit', [NguoiDungController::class, 'edit'])->name('nguoi-dung.edit');
-Route::put('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'update'])->name('nguoi-dung.update');
-
-Route::get('/admin/cai-dat', function () {
-    return view('admin_xem_truoc.cai-dat');
-});
-
-
-
-
-Route::get('/admin/cai-dat/san-pham', [ThietLapSanPhamController::class, 'index']);
-Route::post('/admin/cai-dat/san-pham/don-vi', [ThietLapSanPhamController::class, 'storeDonVi']);
-Route::delete('/admin/cai-dat/san-pham/don-vi/{id}', [ThietLapSanPhamController::class, 'destroyDonVi']);
-Route::post('/admin/cai-dat/san-pham/thuoc-tinh', [ThietLapSanPhamController::class, 'storeThuocTinh']);
-Route::delete('/admin/cai-dat/san-pham/thuoc-tinh/{id}', [ThietLapSanPhamController::class, 'destroyThuocTinh']);
-
-// Trang ban hang
-Route::get('/admin/ban-hang', function () {
-    return view('admin_xem_truoc.ban-hang');
-});
-
-// Trang hoa don
-Route::get('/admin/hoa-don', function () {
-    return view('admin_xem_truoc.hoa-don');
-});
-
-// // Trang san pham
-// Route::get('/admin/san-pham', function () {
-//     return view('admin_xem_truoc.san-pham');
+// Route::get('/admin/kho-hang', function () {
+//     return view('admin_xem_truoc.kho-hang');
 // });
-Route::get('/admin/san-pham', [SanPhamController::class, 'index'])->name('san-pham.index');
-Route::post('/admin/san-pham', [SanPhamController::class, 'store'])->name('san-pham.store');
-Route::get('/admin/san-pham/{id}/edit', [SanPhamController::class, 'edit'])->name('san-pham.edit');
-Route::put('/admin/san-pham/{id}', [SanPhamController::class, 'update'])->name('san-pham.update');
-Route::delete('/admin/san-pham/{id}', [SanPhamController::class, 'destroy'])->name('san-pham.destroy');
-Route::get('/admin/san-pham/{id}', [SanPhamController::class, 'show'])->name('san-pham.show');
 
-// Trang danh muc
-Route::get('/admin/danh-muc', function () {
-    return view('admin_xem_truoc.danh-muc');
+// Route::get('/admin/khach-hang', function () {
+//     return view('admin_xem_truoc.khach-hang');
+// });
+
+// // Route::get('/admin/khuyen-mai', function () {
+// //     return view('admin_xem_truoc.khuyen-mai');
+// // });
+
+// Route::get('/admin/cai-dat', function () {
+//     return view('admin_xem_truoc.cai-dat');
+// });
+
+
+// // Trang ban hang
+// Route::get('/admin/ban-hang', function () {
+//     return view('admin_xem_truoc.ban-hang');
+// });
+//chuc nang admin va truong ca trung nhau, ma quyen do can su cho phep cua admin thi moi dc vao cho vao  middleware [KTVaiTroQuanTri::class]
+//chuc nang mac dinh cua truonwg ca thi vut vao middleware [AuthTruongCa::class] (k hieu inb thuan chim to)
+//phe admin
+Route::middleware([KTVaiTroQuanTri::class])->group(function () {
+    // Nha cung cap routes
+    Route::get('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'index'])->middleware('permission:xem_nha_cung_cap');
+    Route::post('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'store'])->middleware('permission:them_nha_cung_cap');
+    Route::get('/admin/kho-hang/nha-cung-cap/{id}/lich-su-giao-dich',  [NhaCungCapController::class, 'lichSuGiaoDich'])->middleware('permission:xem_lich_su_giao_dich');
+    Route::get('/admin/kho-hang/nha-cung-cap/{id}/edit', [NhaCungCapController::class, 'edit'])->middleware('permission:sua_nha_cung_cap');
+    Route::put('/admin/kho-hang/nha-cung-cap/{id}', [NhaCungCapController::class, 'update'])->middleware('permission:sua_nha_cung_cap');
+    Route::delete('/admin/kho-hang/nha-cung-cap/{id}', [NhaCungCapController::class, 'destroy'])->middleware('permission:xoa_nha_cung_cap');
+
+
+    // quản lý danh mục
+    Route::get('quan-ly-danh-muc', [DanhMucSanPhamController::class, 'index'])->name('danh_muc.index')->middleware('permission:xem_danh_muc');
+    Route::post('quan-ly-danh-muc-store', [DanhMucSanPhamController::class, 'store'])->name('danh_muc.store')->middleware('permission:them_danh_muc');
+    Route::get('quan-ly-danh-muc-edit/{id}', [DanhMucSanPhamController::class, 'edit'])->name('danh_muc.edit')->middleware('permission:sua_danh_muc');
+    Route::put('quan-ly-danh-muc-update/{id}', [DanhMucSanPhamController::class, 'update'])->name('danh_muc.update')->middleware('permission:sua_danh_muc');
+    Route::delete('quan-ly-danh-muc-delete/{id}', [DanhMucSanPhamController::class, 'destroy'])->name('danh_muc.destroy')->middleware('permission:xoa_danh_muc');
+
+
+    //quản lý người dùng
+    Route::get('/nguoi-dung', [NguoiDungController::class, 'index'])->name('nguoi-dung.index')->middleware('permission:xem_nguoi_dung');
+    Route::delete('nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'destroy'])->name('nguoi-dung.destroy')->middleware('permission:xoa_nguoi_dung');
+    Route::get('/nguoi-dung/create', [NguoiDungController::class, 'create'])->name('nguoi-dung.create')->middleware('permission:them_nguoi_dung');
+    Route::post('/nguoi-dung', [NguoiDungController::class, 'store'])->name('nguoi-dung.store')->middleware('permission:them_nguoi_dung');
+    Route::get('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'show'])->name('nguoi-dung.show')->middleware('permission:xem_nguoi_dung');
+    Route::get('/nguoi-dung/{nguoiDung}/edit', [NguoiDungController::class, 'edit'])->name('nguoi-dung.edit')->middleware('permission:sua_nguoi_dung');
+    Route::put('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'update'])->name('nguoi-dung.update')->middleware('permission:sua_nguoi_dung');
+    Route::get('nguoi-dung-phan-quyen/{nguoiDung}', [NguoiDungController::class, 'phanQuyen'])->name('nguoi-dung.phan-quyen')->middleware('permission:phan_quyen_nguoi_dung');
+    Route::Post('nguoi-dung-phan-quyen/{nguoiDung}', [NguoiDungController::class, 'capNhatPhanQuyen'])->name('admin.quyen.update')->middleware('permission:cap_nhat_phan_quyen');
+
+
+    //quản lý sản phẩm
+    Route::get('/admin/san-pham', [SanPhamController::class, 'index'])->middleware('permission:xem_san_pham');
+    Route::post('/admin/san-pham', [SanPhamController::class, 'store'])->middleware('permission:them_san_pham');
+    Route::get('/admin/san-pham/{id}/edit', [SanPhamController::class, 'edit'])->middleware('permission:sua_san_pham');
+    Route::put('/admin/san-pham/{id}', [SanPhamController::class, 'update'])->middleware('permission:sua_san_pham');
+    Route::get('/admin/san-pham/{id}', [SanPhamController::class, 'show'])->middleware('permission:xem_san_pham');
+
+    Route::get('/admin/cai-dat/san-pham', [ThietLapSanPhamController::class, 'index']);
+    Route::post('/admin/cai-dat/san-pham/don-vi', [ThietLapSanPhamController::class, 'storeDonVi']);
+    Route::delete('/admin/cai-dat/san-pham/don-vi/{id}', [ThietLapSanPhamController::class, 'destroyDonVi']);
+    Route::post('/admin/cai-dat/san-pham/thuoc-tinh', [ThietLapSanPhamController::class, 'storeThuocTinh']);
+    Route::delete('/admin/cai-dat/san-pham/thuoc-tinh/{id}', [ThietLapSanPhamController::class, 'destroyThuocTinh']);
+
+    // Quản lý ca làm việc
+    Route::get('/admin/ca-lam-viec', [CaLamViecController::class, 'index'])->name('ca-lam-viec.index')->middleware('permission:xem_ca_lam_viec');
+    Route::get('/admin/ca-lam-viec/create', [CaLamViecController::class, 'create'])->name('ca-lam-viec.create')->middleware('permission:them_ca_lam_viec');
+    Route::post('/admin/ca-lam-viec', [CaLamViecController::class, 'store'])->name('ca-lam-viec.store')->middleware('permission:them_ca_lam_viec');
+    Route::get('/admin/ca-lam-viec/{caLamViec}/edit', [CaLamViecController::class, 'edit'])->name('ca-lam-viec.edit')->middleware('permission:sua_ca_lam_viec');
+    Route::put('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'update'])->name('ca-lam-viec.update')->middleware('permission:sua_ca_lam_viec');
+    Route::delete('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'destroy'])->name('ca-lam-viec.destroy')->middleware('permission:xoa_ca_lam_viec');
+
+    // Trang hoa don
+    Route::get('/admin/hoa-don', function () {
+        return view('admin_xem_truoc.hoa-don');
+    });
+
+
+    // Trang kho hang  
+    Route::get('/admin/kho-hang', function () {
+        $nhaCungCaps = NhaCungCap::orderBy('id', 'asc')->get();
+
+        return view('admin_xem_truoc.kho-hang', compact('nhaCungCaps'));
+    });
+
+
+    // Trang khach hang
+    Route::get('/admin/khach-hang', function () {
+        return view('admin_xem_truoc.khach-hang');
+    });
+
+    // Trang khuyen mai
+    Route::get('/admin/khuyen-mai', [KhuyenMaiController::class, 'index'])
+    ->name('khuyen-mai.index')->middleware('permission:xem_khuyen_mai');
+
+Route::post('/admin/khuyen-mai', [KhuyenMaiController::class, 'store'])
+    ->name('khuyen-mai.store')->middleware('permission:them_khuyen_mai');
+
+Route::get('/admin/khuyen-mai/thung-rac', [KhuyenMaiController::class, 'trash'])
+    ->name('khuyen-mai.trash')->middleware('permission:xem_khuyen_mai');
+
+Route::post('/admin/khuyen-mai/{id}/toggle', [KhuyenMaiController::class, 'toggle'])
+    ->name('khuyen-mai.toggle')->middleware('permission:xem_khuyen_mai');
+
+Route::post('/admin/khuyen-mai/{id}/ajax-toggle', [KhuyenMaiController::class, 'ajaxToggle'])
+    ->name('khuyen-mai.ajaxToggle')->middleware('permission:xem_khuyen_mai');
+
+Route::post('/admin/khuyen-mai/{id}/restore', [KhuyenMaiController::class, 'restore'])
+    ->name('khuyen-mai.restore')->middleware('permission:xem_khuyen_mai');
+
+Route::delete('/admin/khuyen-mai/{id}/force', [KhuyenMaiController::class, 'forceDelete'])
+    ->name('khuyen-mai.forceDelete')->middleware('permission:xem_khuyen_mai');
+
+Route::get('/admin/khuyen-mai/{id}/edit', [KhuyenMaiController::class, 'edit'])
+    ->name('khuyen-mai.edit')->middleware('permission:xem_khuyen_mai');
+
+Route::put('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'update'])
+    ->name('khuyen-mai.update')->middleware('permission:xem_khuyen_mai');
+
+Route::delete('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'destroy'])
+    ->name('khuyen-mai.destroy')->middleware('permission:xem_khuyen_mai');
+
+   // / chia ca làm việc
+    Route::get('/admin/chia-ca-lam-viec', [ChiaCaController::class, 'index'])->name('chia-ca-lam-viec.index');
+    Route::get('/admin/chia-ca-lam-viec/create', [ChiaCaController::class, 'create'])->name('chia-ca-lam-viec.create');
+    Route::post('/admin/chia-ca-lam-viec', [ChiaCaController::class, 'store'])->name('chia-ca-lam-viec.store');
+    Route::get('/admin/chia-ca-lam-viec/export', [ChiaCaController::class, 'export'])->name('chia-ca-lam-viec.export');
+    Route::delete('/admin/chia-ca-lam-viec/xoa-o-lich', [ChiaCaController::class, 'destroyCell'])->name('chia-ca-lam-viec.destroy-cell');
+    Route::get('/admin/chia-ca-lam-viec/{chiaCaLamViec}/edit', [ChiaCaController::class, 'edit'])->name('chia-ca-lam-viec.edit');
+    Route::put('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'update'])->name('chia-ca-lam-viec.update');
+    Route::delete('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'destroy'])->name('chia-ca-lam-viec.destroy');
+
+});//het router admin
+
+//////////phe truong ca 
+Route::middleware([AuthTruongCa::class])->group(function ()
+{
+    // Trang ca lam viec
+    Route::get('/admin/ca-lam-viec', [CaLamViecController::class, 'index'])->name('ca-lam-viec.index')->middleware('permission:xem_ca_lam_viec');
+    Route::get('/admin/ca-lam-viec/create', [CaLamViecController::class, 'create'])->name('ca-lam-viec.create')->middleware('permission:them_ca_lam_viec');
+    Route::post('/admin/ca-lam-viec', [CaLamViecController::class, 'store'])->name('ca-lam-viec.store')->middleware('permission:them_ca_lam_viec');
+    Route::get('/admin/ca-lam-viec/{caLamViec}/edit', [CaLamViecController::class, 'edit'])->name('ca-lam-viec.edit')->middleware('permission:sua_ca_lam_viec');
+    Route::put('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'update'])->name('ca-lam-viec.update')->middleware('permission:sua_ca_lam_viec');
+    Route::delete('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'destroy'])->name('ca-lam-viec.destroy')->middleware('permission:xoa_ca_lam_viec');
 });
-
-// Trang kho hang
-Route::get('/admin/kho-hang', function () {
-    $nhaCungCaps = NhaCungCap::orderBy('id', 'asc')->get();
-
-    return view('admin_xem_truoc.kho-hang', compact('nhaCungCaps'));
-});
-
-// Trang khach hang
-Route::get('/admin/khach-hang', function () {
-    return view('admin_xem_truoc.khach-hang');
-});
-
-// Trang khuyen mai
-Route::get('/admin/khuyen-mai', function () {
-    return view('admin_xem_truoc.khuyen-mai');
-});
-
-
-// Nha cung cap routes
-Route::get('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'index']);
-Route::post('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'store']);
-Route::get('/admin/kho-hang/nha-cung-cap/{id}/lich-su-giao-dich', 
-    [NhaCungCapController::class, 'lichSuGiaoDich']
-);
-Route::get('/admin/kho-hang/nha-cung-cap/{id}/edit', [NhaCungCapController::class, 'edit']);
-Route::put('/admin/kho-hang/nha-cung-cap/{id}', [NhaCungCapController::class, 'update']);
-Route::delete('/admin/kho-hang/nha-cung-cap/{id}', [NhaCungCapController::class, 'destroy']);
-
-// quản lý danh mục
-Route::get('quan-ly-danh-muc', [DanhMucSanPhamController::class, 'index'])->name('danh_muc.index');
-Route::post('quan-ly-danh-muc-store', [DanhMucSanPhamController::class, 'store'])->name('danh_muc.store');
-Route::get('quan-ly-danh-muc-edit/{id}', [DanhMucSanPhamController::class, 'edit'])->name('danh_muc.edit');
-Route::put('quan-ly-danh-muc-update/{id}', [DanhMucSanPhamController::class, 'update'])->name('danh_muc.update');
-Route::delete('quan-ly-danh-muc-delete/{id}', [DanhMucSanPhamController::class, 'destroy'])->name('danh_muc.destroy');
-
-
-Route::get('/nguoi-dung', [NguoiDungController::class, 'index'])->name('nguoi-dung.index');
-Route::get('/nguoi-dung/create', [NguoiDungController::class, 'create'])->name('nguoi-dung.create');
-Route::post('/nguoi-dung', [NguoiDungController::class, 'store'])->name('nguoi-dung.store');
-Route::get('/nguoi-dung/{nguoiDung}/edit', [NguoiDungController::class, 'edit'])->name('nguoi-dung.edit');
-Route::put('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'update'])->name('nguoi-dung.update');
-Route::delete('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'destroy'])->name('nguoi-dung.destroy');

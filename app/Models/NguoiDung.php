@@ -2,7 +2,7 @@
 
 // Khai bao namespace cho model
 namespace App\Models;
-
+use Illuminate\Database\Eloquent\Relations\HasMany;
 // Su dung trait Authenticatable de ho tro xac thuc
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -76,6 +76,31 @@ class NguoiDung extends Authenticatable
                 ->orWhere('sdt', 'like', '%' . $keyword . '%')
                 ->orWhere('vai_tro', 'like', '%' . $keyword . '%');
         });
+    }
+
+    public function quyenNguoiDungs()
+    {
+        return $this->hasMany(
+            QuyenNguoiDung::class,
+            'id_nguoi_dung'
+        );
+    }
+
+    public function quyens()
+    {
+        return $this->belongsToMany(
+            Quyen::class,
+            'quyen_nguoi_dung',
+            'id_nguoi_dung',
+            'id_quyen'
+        );
+    }
+
+    public function hasPermission($maQuyen)
+    {
+        return $this->quyens()
+            ->where('ma_quyen', $maQuyen)
+            ->exists();
     }
 
     public function chiaCaLamViecs(): HasMany
