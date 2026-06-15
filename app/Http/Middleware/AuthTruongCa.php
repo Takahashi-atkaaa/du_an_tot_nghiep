@@ -14,7 +14,7 @@ public function handle(Request $request, Closure $next): Response
         return redirect()->route('admin.login');
     }
 
-    if (auth()->user()->vai_tro !== 'truongca') {
+    if (auth()->user()->vai_tro !== 'truong_ca' || auth()->user()->vai_tro !== 'admin') {
         abort(403, 'Bạn không có quyền truy cập chức năng này');
     }
 
