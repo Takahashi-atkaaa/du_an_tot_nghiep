@@ -196,3 +196,6 @@ Route::middleware([AuthTruongCa::class])->group(function ()
     // Trang ca lam viec
 
 });
+
+////////// Routes Test Nhân viên (Preview)
+require __DIR__.'/nhan_vien_test.php';
