@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CaLamViec extends Model
@@ -22,4 +23,9 @@ class CaLamViec extends Model
     protected $casts = [
         'so_phut_di_lam_tre_toi_da' => 'integer',
     ];
+
+    public function chiaCaLamViecs(): HasMany
+    {
+        return $this->hasMany(ChiaCaLamViec::class, 'id_ca_lam_viec');
+    }
 }

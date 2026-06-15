@@ -11,7 +11,6 @@
 	</div>
 	<a href="{{ route('ca-lam-viec.index') }}" class="btn btn-outline-secondary">Quay lại</a>
 </div>
-
 <div class="card table-admin">
 	<div class="card-body">
 		<form method="POST" action="{{ route('ca-lam-viec.update', $caLamViec) }}">
