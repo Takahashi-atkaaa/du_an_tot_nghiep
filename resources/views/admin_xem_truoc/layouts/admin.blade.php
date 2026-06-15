@@ -278,10 +278,10 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('admin/nhan-su') }}" class="nav-link {{ request()->is('admin/nhan-su*') ? 'active' : '' }}">
+                <a href="{{ url('nguoi-dung') }}" class="nav-link {{ request()->is('nguoi-dung*') ? 'active' : '' }}">
                     <i class="fas fa-user-tie"></i>
                     <span>Nhân sự</span>
-                </a>
+                </a>    
             </li>
             <li class="nav-item">
                 <a href="{{ route('ca-lam-viec.index') }}" class="nav-link {{ request()->is('admin/ca-lam-viec*') ? 'active' : '' }}">
