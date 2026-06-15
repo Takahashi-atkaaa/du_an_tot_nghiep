@@ -176,10 +176,32 @@ Route::put('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'update'])->n
 Route::delete('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'destroy'])->name('nguoi-dung.destroy');
 
 // CRUD for KhuyenMai
-Route::get('/admin/khuyen-mai', [KhuyenMaiController::class, 'index']);
-Route::post('/admin/khuyen-mai', [KhuyenMaiController::class, 'store']);
-Route::get('/admin/khuyen-mai/{id}/edit', [KhuyenMaiController::class, 'edit'])->name('khuyen-mai.edit');
-Route::put('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'update'])->name('khuyen-mai.update');
-Route::delete('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'destroy'])->name('khuyen-mai.destroy');
-Route::post('/admin/khuyen-mai/{id}/toggle', [KhuyenMaiController::class, 'toggle'])->name('khuyen-mai.toggle');
-Route::post('/admin/khuyen-mai/{id}/toggle-ajax', [KhuyenMaiController::class, 'ajaxToggle'])->name('khuyen-mai.toggle.ajax');
+Route::get('/admin/khuyen-mai', [KhuyenMaiController::class, 'index'])
+    ->name('khuyen-mai.index');
+
+Route::post('/admin/khuyen-mai', [KhuyenMaiController::class, 'store'])
+    ->name('khuyen-mai.store');
+
+Route::get('/admin/khuyen-mai/thung-rac', [KhuyenMaiController::class, 'trash'])
+    ->name('khuyen-mai.trash');
+
+Route::post('/admin/khuyen-mai/{id}/toggle', [KhuyenMaiController::class, 'toggle'])
+    ->name('khuyen-mai.toggle');
+
+Route::post('/admin/khuyen-mai/{id}/ajax-toggle', [KhuyenMaiController::class, 'ajaxToggle'])
+    ->name('khuyen-mai.ajaxToggle');
+
+Route::post('/admin/khuyen-mai/{id}/restore', [KhuyenMaiController::class, 'restore'])
+    ->name('khuyen-mai.restore');
+
+Route::delete('/admin/khuyen-mai/{id}/force', [KhuyenMaiController::class, 'forceDelete'])
+    ->name('khuyen-mai.forceDelete');
+
+Route::get('/admin/khuyen-mai/{id}/edit', [KhuyenMaiController::class, 'edit'])
+    ->name('khuyen-mai.edit');
+
+Route::put('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'update'])
+    ->name('khuyen-mai.update');
+
+Route::delete('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'destroy'])
+    ->name('khuyen-mai.destroy');

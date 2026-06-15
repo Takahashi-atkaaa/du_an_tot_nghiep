@@ -81,7 +81,14 @@ class KhuyenMaiController extends Controller
     public function destroy($id)
     {
         $promo = KhuyenMai::findOrFail($id);
+
+        // set status to false to ensure it won't be applied
+        $promo->trang_thai = false;
+        $promo->save();
+
+        // soft delete
         $promo->delete();
+
         return redirect()->back()->with('success', 'Xóa chương trình khuyến mãi thành công');
     }
 
@@ -156,5 +163,29 @@ class KhuyenMaiController extends Controller
             'trang_thai' => (bool) $promo->trang_thai,
             'message' => $promo->trang_thai ? 'Đã kích hoạt' : 'Đã tắt',
         ]);
+    }
+
+    // Show soft-deleted promotions (trash)
+    public function trash(Request $request)
+    {
+        $items = KhuyenMai::onlyTrashed()->orderBy('deleted_at', 'desc')->paginate(12);
+        return view('admin_xem_truoc.khuyen-mai-trash', compact('items'));
+    }
+
+    // Restore soft-deleted promotion
+    public function restore($id)
+    {
+        $promo = KhuyenMai::onlyTrashed()->findOrFail($id);
+        $promo->restore();
+        // Do not auto-activate on restore; leave trang_thai as saved
+        return redirect()->back()->with('success', 'Khôi phục chương trình khuyến mãi thành công');
+    }
+
+    // Permanently delete
+    public function forceDelete($id)
+    {
+        $promo = KhuyenMai::onlyTrashed()->findOrFail($id);
+        $promo->forceDelete();
+        return redirect()->back()->with('success', 'Đã xóa vĩnh viễn chương trình khuyến mãi');
     }
 }
