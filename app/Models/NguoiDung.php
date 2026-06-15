@@ -4,7 +4,7 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 // Su dung trait Authenticatable de ho tro xac thuc
-use Illuminate\Database\Eloquent\Relations\HasMany;
+
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
