@@ -112,4 +112,49 @@ class KhuyenMaiController extends Controller
 
         return redirect()->route('khuyen-mai.edit', $promo->id)->with('success', 'Cập nhật chương trình khuyến mãi thành công');
     }
+
+    // Toggle promotion active state
+    public function toggle($id)
+    {
+        $promo = KhuyenMai::findOrFail($id);
+        $now = Carbon::now();
+        $start = $promo->ngay_bat_dau;
+        $end = $promo->ngay_ket_thuc;
+
+        // Only allow toggle when both start and end are set and now is between them
+        if (! $start || ! $end || ! $now->between($start, $end)) {
+            return redirect()->back()->with('error', 'Chỉ có thể bật/tắt chương trình đang trong thời gian áp dụng.');
+        }
+
+        $promo->trang_thai = ! $promo->trang_thai;
+        $promo->save();
+
+        $msg = $promo->trang_thai ? 'Kích hoạt chương trình khuyến mãi thành công' : 'Tắt chương trình khuyến mãi thành công';
+        return redirect()->back()->with('success', $msg);
+    }
+
+    // AJAX toggle endpoint
+    public function ajaxToggle(Request $request, $id)
+    {
+        $promo = KhuyenMai::findOrFail($id);
+        $now = Carbon::now();
+        $start = $promo->ngay_bat_dau;
+        $end = $promo->ngay_ket_thuc;
+
+        if (! $start || ! $end || ! $now->between($start, $end)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Chỉ có thể bật/tắt chương trình đang trong thời gian áp dụng.'
+            ], 422);
+        }
+
+        $promo->trang_thai = ! $promo->trang_thai;
+        $promo->save();
+
+        return response()->json([
+            'success' => true,
+            'trang_thai' => (bool) $promo->trang_thai,
+            'message' => $promo->trang_thai ? 'Đã kích hoạt' : 'Đã tắt',
+        ]);
+    }
 }

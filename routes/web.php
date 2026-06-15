@@ -181,3 +181,5 @@ Route::post('/admin/khuyen-mai', [KhuyenMaiController::class, 'store']);
 Route::get('/admin/khuyen-mai/{id}/edit', [KhuyenMaiController::class, 'edit'])->name('khuyen-mai.edit');
 Route::put('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'update'])->name('khuyen-mai.update');
 Route::delete('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'destroy'])->name('khuyen-mai.destroy');
+Route::post('/admin/khuyen-mai/{id}/toggle', [KhuyenMaiController::class, 'toggle'])->name('khuyen-mai.toggle');
+Route::post('/admin/khuyen-mai/{id}/toggle-ajax', [KhuyenMaiController::class, 'ajaxToggle'])->name('khuyen-mai.toggle.ajax');

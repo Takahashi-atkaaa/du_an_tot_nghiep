@@ -150,7 +150,7 @@
                                 @else
                                     <span class="badge bg-secondary"><i class="fas fa-tag me-1"></i>{{ ucfirst($promo->loai_giam_gia) }}</span>
                                 @endif
-                                <span class="status-badge {{ $statusClass }}">{{ $statusText }}</span>
+                                <span class="status-badge {{ $statusClass }}" id="promo-status-{{ $promo->id }}">{{ $statusText }}</span>
                             </div>
                             <div class="card-body">
                                 <h5 class="card-title">{{ $promo->ten_chuong_trinh }}</h5>
@@ -173,6 +173,17 @@
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                        </form>
+                                        {{-- Fallback for no-JS: keep a small POST form (hidden) --}}
+                                        <form action="{{ route('khuyen-mai.toggle', $promo->id) }}" method="POST" style="display:inline-block; margin-left:6px;">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Bật/Tắt">
+                                                @if($promo->trang_thai)
+                                                    <i class="fas fa-toggle-on text-success"></i>
+                                                @else
+                                                    <i class="fas fa-toggle-off text-secondary"></i>
+                                                @endif
+                                            </button>
                                         </form>
                                     </div>
                                 </div>

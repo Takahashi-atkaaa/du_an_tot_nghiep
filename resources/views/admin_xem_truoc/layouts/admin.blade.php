@@ -329,6 +329,29 @@
 
         <!-- Content -->
         <div class="content-wrapper">
+            {{-- Flash messages (success / error / validation) --}}
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert" id="flash-message">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
+            @if(session('error'))
+                <div class="alert alert-danger alert-dismissible fade show" role="alert" id="flash-message">
+                    {{ session('error') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
+            @if($errors->any())
+                <div class="alert alert-danger alert-dismissible fade show" role="alert" id="flash-message">
+                    <ul class="mb-0">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
             @yield('content')
         </div>
     </main>
@@ -343,6 +366,14 @@
         document.getElementById('sidebar-toggle')?.addEventListener('click', function() {
             document.getElementById('sidebar').classList.toggle('active');
         });
+        // Auto-dismiss flash messages after 4s
+        setTimeout(function(){
+            var flash = document.getElementById('flash-message');
+            if(flash){
+                var bsAlert = new bootstrap.Alert(flash);
+                bsAlert.close();
+            }
+        }, 4000);
     </script>
     @yield('scripts')
 </body>
