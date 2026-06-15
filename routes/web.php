@@ -12,6 +12,7 @@ use App\Http\Middleware\AuthAdmin;
 use App\Http\Middleware\AuthTruongCa;
 use App\Http\Middleware\KiemTraVaiTro;
 use App\Http\Middleware\KTVaiTroQuanTri;
+use App\Http\Controllers\admin\KhuyenMaiController;
 use App\Models\NhaCungCap;
 
 Route::get('/', function () {
@@ -54,6 +55,17 @@ Route::get('/admin/hoa-don', function () {
 });
 
 
+// Route::get('/admin/danh-muc', function () {
+//     return view('admin_xem_truoc.danh-muc');
+// });
+
+
+
+// Route quan ly nhan su
+Route::get('/nguoi-dung', [NguoiDungController::class, 'index'])->name('nguoi-dung.index');
+Route::get('/admin/nhan-su', function () {
+    return redirect('/nguoi-dung');
+});
 Route::get('/admin/kho-hang', function () {
     return view('admin_xem_truoc.kho-hang');
 
@@ -63,9 +75,14 @@ Route::get('/admin/khach-hang', function () {
     return view('admin_xem_truoc.khach-hang');
 });
 
-Route::get('/admin/khuyen-mai', function () {
-    return view('admin_xem_truoc.khuyen-mai');
-});
+
+// The promotions page is served by the KhuyenMaiController (defined later).
+// Removed earlier hard-coded closures that returned the view directly so the
+// controller can provide dynamic data ($items) to the view.
+
+// Trang khuyen mai
+// (handled by KhuyenMaiController below)
+
 
 Route::get('/admin/cai-dat', function () {
     return view('admin_xem_truoc.cai-dat');
@@ -134,6 +151,21 @@ Route::middleware([KTVaiTroQuanTri::class])->group(function(){
         return view('admin_xem_truoc.hoa-don');
     });
 
+// // Trang san pham
+// Route::get('/admin/san-pham', function () {
+//     return view('admin_xem_truoc.san-pham');
+// });
+Route::get('/admin/san-pham', [SanPhamController::class, 'index'])->name('san-pham.index');
+Route::post('/admin/san-pham', [SanPhamController::class, 'store'])->name('san-pham.store');
+Route::get('/admin/san-pham/{id}/edit', [SanPhamController::class, 'edit'])->name('san-pham.edit');
+Route::put('/admin/san-pham/{id}', [SanPhamController::class, 'update'])->name('san-pham.update');
+Route::delete('/admin/san-pham/{id}', [SanPhamController::class, 'destroy'])->name('san-pham.destroy');
+Route::get('/admin/san-pham/{id}', [SanPhamController::class, 'show'])->name('san-pham.show');
+
+// Trang danh muc
+Route::get('/admin/danh-muc', function () {
+    return view('admin_xem_truoc.danh-muc');
+});
 
 // Trang kho hang  
     Route::get('/admin/kho-hang', function () {
@@ -154,8 +186,54 @@ Route::middleware([KTVaiTroQuanTri::class])->group(function(){
         return view('admin_xem_truoc.khuyen-mai');
     });
 });
+// (handled by KhuyenMaiController below)
 
 
 Route::middleware(['auth',AuthTruongCa::class])->group(function(){
 
 });
+// quản lý danh mục
+Route::get('quan-ly-danh-muc', [DanhMucSanPhamController::class, 'index'])->name('danh_muc.index');
+Route::post('quan-ly-danh-muc-store', [DanhMucSanPhamController::class, 'store'])->name('danh_muc.store');
+Route::get('quan-ly-danh-muc-edit/{id}', [DanhMucSanPhamController::class, 'edit'])->name('danh_muc.edit');
+Route::put('quan-ly-danh-muc-update/{id}', [DanhMucSanPhamController::class, 'update'])->name('danh_muc.update');
+Route::delete('quan-ly-danh-muc-delete/{id}', [DanhMucSanPhamController::class, 'destroy'])->name('danh_muc.destroy');
+
+
+Route::get('/nguoi-dung', [NguoiDungController::class, 'index'])->name('nguoi-dung.index');
+Route::get('/nguoi-dung/create', [NguoiDungController::class, 'create'])->name('nguoi-dung.create');
+Route::post('/nguoi-dung', [NguoiDungController::class, 'store'])->name('nguoi-dung.store');
+Route::get('/nguoi-dung/{nguoiDung}/edit', [NguoiDungController::class, 'edit'])->name('nguoi-dung.edit');
+Route::put('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'update'])->name('nguoi-dung.update');
+Route::delete('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'destroy'])->name('nguoi-dung.destroy');
+
+// CRUD for KhuyenMai
+Route::get('/admin/khuyen-mai', [KhuyenMaiController::class, 'index'])
+    ->name('khuyen-mai.index');
+
+Route::post('/admin/khuyen-mai', [KhuyenMaiController::class, 'store'])
+    ->name('khuyen-mai.store');
+
+Route::get('/admin/khuyen-mai/thung-rac', [KhuyenMaiController::class, 'trash'])
+    ->name('khuyen-mai.trash');
+
+Route::post('/admin/khuyen-mai/{id}/toggle', [KhuyenMaiController::class, 'toggle'])
+    ->name('khuyen-mai.toggle');
+
+Route::post('/admin/khuyen-mai/{id}/ajax-toggle', [KhuyenMaiController::class, 'ajaxToggle'])
+    ->name('khuyen-mai.ajaxToggle');
+
+Route::post('/admin/khuyen-mai/{id}/restore', [KhuyenMaiController::class, 'restore'])
+    ->name('khuyen-mai.restore');
+
+Route::delete('/admin/khuyen-mai/{id}/force', [KhuyenMaiController::class, 'forceDelete'])
+    ->name('khuyen-mai.forceDelete');
+
+Route::get('/admin/khuyen-mai/{id}/edit', [KhuyenMaiController::class, 'edit'])
+    ->name('khuyen-mai.edit');
+
+Route::put('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'update'])
+    ->name('khuyen-mai.update');
+
+Route::delete('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'destroy'])
+    ->name('khuyen-mai.destroy');

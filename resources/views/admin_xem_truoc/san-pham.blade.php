@@ -22,6 +22,9 @@
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
+    @if(session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
     @if($errors->any())
         <div class="alert alert-danger">
             <ul class="mb-0">
@@ -106,7 +109,7 @@
                         <th>Giá bán</th>
                         <th>Tồn kho</th>
                         <th>Trạng thái</th>
-                        <th style="width: 120px;">Thao tác</th>
+                        <th style="width: 180px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -122,7 +125,7 @@
                                     <img src="https://via.placeholder.com/60" class="rounded" alt="No image">
                                 @endif
                             </td>
-                            <td>{{ $sanPham->ma_vach }}</td>
+                            <td>{{ $sanPham->ma_hang ?? $sanPham->ma_vach }}</td>
                             <td>{{ $sanPham->ten_san_pham }}</td>
                             <td>{{ $sanPham->danhMuc->ten_danh_muc ?? '-' }}</td>
                             <td>{{ $sanPham->donVi->ten_don_vi ?? '-' }}</td>
@@ -130,24 +133,29 @@
                             <td>{{ number_format($sanPham->gia_ban, 0, ',', '.') }} đ</td>
                             <td>{{ $sanPham->so_luong_ton_kho }}</td>
                             <td>
-                                @if($sanPham->so_luong_ton_kho <= 0)
+                                @if(! $sanPham->trang_thai)
+                                    <span class="badge bg-danger">Ngừng bán</span>
+                                @elseif($sanPham->so_luong_ton_kho <= 0)
                                     <span class="badge bg-secondary">Hết hàng</span>
                                 @elseif($sanPham->so_luong_ton_kho <= ($sanPham->dinh_muc_toi_thieu ?? 0))
                                     <span class="badge bg-warning text-dark">Sắp hết hàng</span>
-                                @elseif($sanPham->trang_thai)
-                                    <span class="badge bg-success">Đang bán</span>
                                 @else
-                                    <span class="badge bg-warning text-dark">Ngừng bán</span>
+                                    <span class="badge bg-success">Đang bán</span>
                                 @endif
                             </td>
                             <td>
                                 <a href="{{ url('admin/san-pham/'.$sanPham->id) }}" class="btn btn-sm btn-outline-primary">Chi tiết</a>
                                 <a href="{{ url('admin/san-pham/'.$sanPham->id.'/edit') }}" class="btn btn-sm btn-outline-secondary ms-1">Sửa</a>
+                                <form action="{{ url('admin/san-pham/'.$sanPham->id) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger ms-1" onclick="return confirm('Bạn có chắc muốn xóa sản phẩm này?')">Xóa</button>
+                                </form>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
+                            <td colspan="11" class="text-center text-muted py-4">
                                 Hiện chưa có sản phẩm nào. Vui lòng thêm sản phẩm mới.
                             </td>
                         </tr>
@@ -332,9 +340,6 @@
         });
     });
 </script>
-        </div>
-    </div>
-</div>
 
 @endsection
 

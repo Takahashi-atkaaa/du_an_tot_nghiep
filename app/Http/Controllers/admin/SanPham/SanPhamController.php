@@ -3,12 +3,17 @@
 namespace App\Http\Controllers\Admin\SanPham;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\SanPham\StoreSanPhamRequest;
+use App\Http\Requests\SanPham\UpdateSanPhamRequest;
 use App\Models\DanhMucSanPham;
 use App\Models\DonViSanPham;
 use App\Models\ThuocTinhSanPham;
 use App\Models\SanPham;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class SanPhamController extends Controller
@@ -57,52 +62,34 @@ class SanPhamController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreSanPhamRequest $request)
     {
-        $data = $request->validate([
-            'ten_san_pham' => 'required|string|max:255',
-            'ma_vach' => 'required|string|max:255|unique:san_pham,ma_vach',
-            'thuong_hieu' => 'nullable|string|max:255',
-            'id_danh_muc' => 'required|exists:danh_muc_san_pham,id',
-            'id_thuoc_tinh' => 'nullable|exists:thuoc_tinh_san_pham,id',
-            'don_vi_co_ban' => 'required|string|max:255',
-            'gia_von' => 'nullable|numeric|min:0',
-            'gia_ban' => 'required|numeric|min:0',
-            'so_luong_ton_kho' => 'nullable|integer|min:0',
-            'dinh_muc_toi_thieu' => 'nullable|integer|min:0',
-            'mo_ta' => 'nullable|string',
-            'hinh_anh' => 'nullable|image|max:2048',
-            'variants' => 'nullable|array',
-            'variants.*.ten_don_vi' => 'required_with:variants|string|max:255',
-            'variants.*.so_luong_san_pham_trong_don_vi' => 'required_with:variants|integer|min:1',
-            'variants.*.gia_ban' => 'required_with:variants|numeric|min:0',
-            'variants.*.ma_vach' => 'nullable|string|max:255',
-        ]);
+        $data = $request->validated();
 
         $imagePath = null;
         if ($request->hasFile('hinh_anh')) {
             $file = $request->file('hinh_anh');
             $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9\.\-_]/', '_', $file->getClientOriginalName());
-            $file->move(public_path('uploads/san-pham'), $filename);
+            $file->move($this->uploadDirectory(), $filename);
             $imagePath = 'uploads/san-pham/' . $filename;
         }
 
-        $variantBarcodes = array_filter(array_column($data['variants'] ?? [], 'ma_vach'));
+        $variantBarcodes = array_filter(array_column($data['bien_the'] ?? [], 'ma_vach'));
         if ($duplicate = collect($variantBarcodes)->duplicates()->first()) {
-            return redirect()->back()->withInput()->withErrors(['variants' => 'Mã vạch biến thể không được trùng nhau.']);
+            return redirect()->back()->withInput()->withErrors(['bien_the' => 'Mã vạch biến thể không được trùng nhau.']);
         }
 
         if (!empty($variantBarcodes) && SanPham::whereIn('ma_vach', $variantBarcodes)->exists()) {
-            return redirect()->back()->withInput()->withErrors(['variants' => 'Một hoặc nhiều mã vạch biến thể đã tồn tại trong hệ thống.']);
+            return redirect()->back()->withInput()->withErrors(['bien_the' => 'Một hoặc nhiều mã vạch biến thể đã tồn tại trong hệ thống.']);
         }
 
-        $baseUnit = $this->findOrCreateDonVi($data['don_vi_co_ban'], 1);
+        $baseUnit = $this->findOrCreateDonVi($data['id_don_vi'] ?? 'Cái', 1);
 
         $sanPhamData = [
             'id_danh_muc' => $data['id_danh_muc'],
             'ten_san_pham' => $data['ten_san_pham'],
             'ma_hang' => $this->generateUniqueMaHang(),
-            'ma_vach' => $data['ma_vach'],
+            'ma_vach' => $this->generateUniqueMaVach(),
             'thuong_hieu' => $data['thuong_hieu'] ?? null,
             'gia_von' => $data['gia_von'] ?? 0,
             'gia_ban' => $data['gia_ban'],
@@ -112,32 +99,32 @@ class SanPhamController extends Controller
             'id_thuoc_tinh' => $data['id_thuoc_tinh'] ?? null,
             'id_don_vi' => $baseUnit->id,
             'hinh_anh' => $imagePath,
-            'trang_thai' => true,
+            'trang_thai' => $data['trang_thai'] ?? true,
         ];
 
         SanPham::create($sanPhamData);
 
-        foreach ($data['variants'] ?? [] as $variant) {
-            if (empty($variant['ten_don_vi'])) {
+        foreach ($data['bien_the'] ?? [] as $variant) {
+            if (empty($variant['ten_bien_the'])) {
                 continue;
             }
 
-            $unit = $this->findOrCreateDonVi($variant['ten_don_vi'], (int) $variant['so_luong_san_pham_trong_don_vi']);
+            $unit = $this->findOrCreateDonVi($variant['ten_bien_the'], 1);
             SanPham::create([
                 'id_danh_muc' => $data['id_danh_muc'],
                 'ten_san_pham' => $data['ten_san_pham'],
                 'ma_hang' => $this->generateUniqueMaHang(),
-                'ma_vach' => trim($variant['ma_vach']) !== '' ? $variant['ma_vach'] : $this->generateUniqueMaVach(),
+                'ma_vach' => !empty($variant['ma_vach']) ? $variant['ma_vach'] : $this->generateUniqueMaVach(),
                 'thuong_hieu' => $data['thuong_hieu'] ?? null,
                 'gia_von' => $data['gia_von'] ?? 0,
-                'gia_ban' => $variant['gia_ban'],
-                'so_luong_ton_kho' => 0,
+                'gia_ban' => $variant['gia_ban_bien'] ?? $data['gia_ban'],
+                'so_luong_ton_kho' => $variant['so_luong_bien'] ?? 0,
                 'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
                 'mo_ta' => $data['mo_ta'] ?? null,
                 'id_thuoc_tinh' => $data['id_thuoc_tinh'] ?? null,
                 'id_don_vi' => $unit->id,
                 'hinh_anh' => $imagePath,
-                'trang_thai' => true,
+                'trang_thai' => $data['trang_thai'] ?? true,
             ]);
         }
 
@@ -154,39 +141,29 @@ class SanPhamController extends Controller
         return view('admin_xem_truoc.san-pham-sua', compact('sanPham', 'danhMucs', 'donVis', 'thuocTinhs'));
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateSanPhamRequest $request, $id)
     {
         $sanPham = SanPham::findOrFail($id);
+        $data = $request->validated();
 
-        $data = $request->validate([
-            'ten_san_pham' => 'required|string|max:255',
-            'ma_vach' => 'required|string|max:255|unique:san_pham,ma_vach,' . $sanPham->id,
-            'thuong_hieu' => 'nullable|string|max:255',
-            'id_danh_muc' => 'required|exists:danh_muc_san_pham,id',
-            'id_thuoc_tinh' => 'nullable|exists:thuoc_tinh_san_pham,id',
-            'don_vi_co_ban' => 'required|string|max:255',
-            'gia_von' => 'nullable|numeric|min:0',
-            'gia_ban' => 'required|numeric|min:0',
-            'so_luong_ton_kho' => 'nullable|integer|min:0',
-            'dinh_muc_toi_thieu' => 'nullable|integer|min:0',
-            'mo_ta' => 'nullable|string',
-            'hinh_anh' => 'nullable|image|max:2048',
-        ]);
-
-        $imagePath = $sanPham->hinh_anh;
+        $oldImagePath = $sanPham->hinh_anh;
+        $imagePath = $oldImagePath;
         if ($request->hasFile('hinh_anh')) {
             $file = $request->file('hinh_anh');
             $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9\.\-_]/', '_', $file->getClientOriginalName());
-            $file->move(public_path('uploads/san-pham'), $filename);
+            $file->move($this->uploadDirectory(), $filename);
             $imagePath = 'uploads/san-pham/' . $filename;
+
+            if ($oldImagePath && $oldImagePath !== $imagePath) {
+                $this->deleteProductImageIfUnused($oldImagePath, $sanPham->id);
+            }
         }
 
-        $baseUnit = $this->findOrCreateDonVi($data['don_vi_co_ban'], 1);
+        $baseUnit = $this->findOrCreateDonVi($data['id_don_vi'] ?? 'Cái', 1);
 
         $sanPham->update([
             'id_danh_muc' => $data['id_danh_muc'],
             'ten_san_pham' => $data['ten_san_pham'],
-            'ma_vach' => $data['ma_vach'],
             'thuong_hieu' => $data['thuong_hieu'] ?? null,
             'gia_von' => $data['gia_von'] ?? 0,
             'gia_ban' => $data['gia_ban'],
@@ -196,9 +173,59 @@ class SanPhamController extends Controller
             'id_thuoc_tinh' => $data['id_thuoc_tinh'] ?? null,
             'id_don_vi' => $baseUnit->id,
             'hinh_anh' => $imagePath,
+            'trang_thai' => $data['trang_thai'] ?? true,
         ]);
 
         return redirect(url('admin/san-pham'))->with('success', 'Cập nhật sản phẩm thành công.');
+    }
+
+    public function destroy(int $id): RedirectResponse
+    {
+        $sanPham = SanPham::findOrFail($id);
+        $imagePath = $sanPham->hinh_anh;
+
+        $sanPham->delete();
+
+        if ($imagePath) {
+            $this->deleteProductImageIfUnused($imagePath);
+        }
+
+        return redirect()->route('san-pham.index')
+            ->with('success', 'Đã xóa sản phẩm.');
+    }
+
+    protected function uploadDirectory(): string
+    {
+        $path = public_path('uploads/san-pham');
+
+        if (! is_dir($path)) {
+            mkdir($path, 0755, true);
+        }
+
+        return $path;
+    }
+
+    protected function deleteProductImageIfUnused(?string $imagePath, ?int $excludeId = null): void
+    {
+        if (blank($imagePath) || str_starts_with($imagePath, 'http')) {
+            return;
+        }
+
+        $query = SanPham::query()->where('hinh_anh', $imagePath);
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        if ($query->exists()) {
+            return;
+        }
+
+        $fullPath = public_path($imagePath);
+
+        if (is_file($fullPath)) {
+            unlink($fullPath);
+        }
     }
 
     protected function findOrCreateDonVi(string $tenDonVi, int $soLuong): DonViSanPham
