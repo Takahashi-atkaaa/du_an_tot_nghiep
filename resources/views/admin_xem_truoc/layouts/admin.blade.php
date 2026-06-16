@@ -343,6 +343,12 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
+            @if(session('warning'))
+                <div class="alert alert-warning alert-dismissible fade show" role="alert" id="flash-message-warning">
+                    {{ session('warning') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
             @if($errors->any())
                 <div class="alert alert-danger alert-dismissible fade show" role="alert" id="flash-message">
                     <ul class="mb-0">
@@ -373,6 +379,11 @@
             if(flash){
                 var bsAlert = new bootstrap.Alert(flash);
                 bsAlert.close();
+            }
+            var flashWarning = document.getElementById('flash-message-warning');
+            if(flashWarning){
+                var bsWarningAlert = new bootstrap.Alert(flashWarning);
+                bsWarningAlert.close();
             }
         }, 4000);
     </script>

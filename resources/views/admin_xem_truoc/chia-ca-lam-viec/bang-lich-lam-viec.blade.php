@@ -24,7 +24,15 @@
         color: #667085;
     }
 
+    .ca-role {
+        margin-top: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #475467;
+    }
+
     .ca-single-card {
+        position: relative;
         border: 1px solid #d9e2f1;
         border-radius: 14px;
         background: #f8fbff;
@@ -78,10 +86,72 @@
     }
 
     .ca-overlay-card {
+        position: relative;
         border: 1px solid #e5e7eb;
         border-radius: 12px;
         background: #f8fafc;
         padding: 12px;
+    }
+
+    .ca-warning-card {
+        border-color: #ef4444;
+        background: #fff5f5;
+        box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.12);
+    }
+
+    .ca-warning-toggle {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 5;
+    }
+
+    .ca-warning-toggle summary {
+        list-style: none;
+        cursor: pointer;
+    }
+
+    .ca-warning-toggle summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .ca-warning-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        border: 1px solid #fca5a5;
+        background: #fff;
+        color: #dc2626;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+    }
+
+    .ca-warning-menu {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        width: 220px;
+        padding: 10px;
+        border: 1px solid #fecaca;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.14);
+    }
+
+    .ca-warning-item + .ca-warning-item {
+        margin-top: 8px;
+    }
+
+    .ca-warning-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #b42318;
+        line-height: 1.4;
     }
 
     .ca-overlay-actions {
@@ -143,8 +213,42 @@
                         @endphp
                         <td class="lich-cell">
                             @if(count($lichTrongNgay) === 1)
-                                @php $lich = $lichTrongNgay[0]; @endphp
-                                <div class="ca-single-card">
+                                @php
+                                    $lich = $lichTrongNgay[0];
+                                    $canhBaoCa = $chiTietCanhBaoTheoCa[$date->toDateString() . '|' . $lich->id_ca_lam_viec] ?? null;
+                                    $coCanhBao = !empty($canhBaoCa) && (($canhBaoCa['thieu_truong_ca'] ?? false) || ($canhBaoCa['nhieu_truong_ca'] ?? false) || ($canhBaoCa['thieu_nhan_su'] ?? false));
+                                @endphp
+                                <div class="ca-single-card {{ $coCanhBao ? 'ca-warning-card' : '' }}">
+                                    @if($coCanhBao)
+                                        <details class="ca-warning-toggle">
+                                            <summary>
+                                                <span class="ca-warning-icon">
+                                                    <i class="fas fa-exclamation"></i>
+                                                </span>
+                                            </summary>
+                                            <div class="ca-warning-menu">
+                                                @if($canhBaoCa['nhieu_truong_ca'] ?? false)
+                                                    <div class="ca-warning-item">
+                                                        <i class="fas fa-user-shield"></i>
+                                                        <span>Có {{ $canhBaoCa['so_truong_ca'] }} trưởng ca</span>
+                                                    </div>
+                                                @endif
+                                                @if($canhBaoCa['thieu_truong_ca'] ?? false)
+                                                    <div class="ca-warning-item">
+                                                        <i class="fas fa-user-shield"></i>
+                                                        <span>Chưa có trưởng ca</span>
+                                                    </div>
+                                                @endif
+                                                @if($canhBaoCa['thieu_nhan_su'] ?? false)
+                                                    <div class="ca-warning-item">
+                                                        <i class="fas fa-users"></i>
+                                                        <span>Thiếu nhân sự ({{ $canhBaoCa['so_nhan_vien'] }}/{{ $canhBaoCa['so_toi_thieu'] }})</span>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </details>
+                                    @endif
+
                                     <div class="ca-badge">
                                         {{ $lich->caLamViec?->ten_ca ?? '-' }}
                                     </div>
@@ -155,6 +259,9 @@
                                             {{ \Illuminate\Support\Carbon::parse($lich->caLamViec->gio_ket_thuc)->format('H:i') }}
                                         </div>
                                     @endif
+                                    <div class="ca-role">
+                                        {{ ($lich->vai_tro_trong_ca ?? 'nhan_vien') === 'truong_ca' ? 'Trưởng ca' : 'Nhân viên' }}
+                                    </div>
                                     <div class="ca-single-actions">
                                         <a href="{{ route('chia-ca-lam-viec.edit', $lich) }}" class="btn btn-sm btn-outline-primary">
                                             Sửa
@@ -192,7 +299,41 @@
                                             </form>
                                         </div>
                                         @foreach($lichTrongNgay as $lich)
-                                            <div class="ca-overlay-card">
+                                            @php
+                                                $canhBaoCa = $chiTietCanhBaoTheoCa[$date->toDateString() . '|' . $lich->id_ca_lam_viec] ?? null;
+                                                $coCanhBao = !empty($canhBaoCa) && (($canhBaoCa['thieu_truong_ca'] ?? false) || ($canhBaoCa['nhieu_truong_ca'] ?? false) || ($canhBaoCa['thieu_nhan_su'] ?? false));
+                                            @endphp
+                                            <div class="ca-overlay-card {{ $coCanhBao ? 'ca-warning-card' : '' }}">
+                                                @if($coCanhBao)
+                                                    <details class="ca-warning-toggle">
+                                                        <summary>
+                                                            <span class="ca-warning-icon">
+                                                                <i class="fas fa-exclamation"></i>
+                                                            </span>
+                                                        </summary>
+                                                        <div class="ca-warning-menu">
+                                                            @if($canhBaoCa['nhieu_truong_ca'] ?? false)
+                                                                <div class="ca-warning-item">
+                                                                    <i class="fas fa-user-shield"></i>
+                                                                    <span>Có {{ $canhBaoCa['so_truong_ca'] }} trưởng ca</span>
+                                                                </div>
+                                                            @endif
+                                                            @if($canhBaoCa['thieu_truong_ca'] ?? false)
+                                                                <div class="ca-warning-item">
+                                                                    <i class="fas fa-user-shield"></i>
+                                                                    <span>Chưa có trưởng ca</span>
+                                                                </div>
+                                                            @endif
+                                                            @if($canhBaoCa['thieu_nhan_su'] ?? false)
+                                                                <div class="ca-warning-item">
+                                                                    <i class="fas fa-users"></i>
+                                                                    <span>Thiếu nhân sự ({{ $canhBaoCa['so_nhan_vien'] }}/{{ $canhBaoCa['so_toi_thieu'] }})</span>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    </details>
+                                                @endif
+
                                                 <div class="fw-semibold">{{ $lich->caLamViec?->ten_ca ?? '-' }}</div>
                                                 @if($lich->caLamViec)
                                                     <div class="small text-muted">
@@ -201,6 +342,9 @@
                                                         {{ \Illuminate\Support\Carbon::parse($lich->caLamViec->gio_ket_thuc)->format('H:i') }}
                                                     </div>
                                                 @endif
+                                                <div class="ca-role">
+                                                    {{ ($lich->vai_tro_trong_ca ?? 'nhan_vien') === 'truong_ca' ? 'Trưởng ca' : 'Nhân viên' }}
+                                                </div>
                                                 <div class="ca-overlay-actions">
                                                     <a href="{{ route('chia-ca-lam-viec.edit', $lich) }}" class="btn btn-sm btn-outline-primary">
                                                         Sửa

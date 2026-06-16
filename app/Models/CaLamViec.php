@@ -17,10 +17,14 @@ class CaLamViec extends Model
         'ten_ca',
         'gio_bat_dau',
         'gio_ket_thuc',
+        'so_nhan_vien_toi_thieu',
+        'so_nhan_vien_toi_da',
         'so_phut_di_lam_tre_toi_da',
     ];
 
     protected $casts = [
+        'so_nhan_vien_toi_thieu' => 'integer',
+        'so_nhan_vien_toi_da' => 'integer',
         'so_phut_di_lam_tre_toi_da' => 'integer',
     ];
 

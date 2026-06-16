@@ -18,6 +18,7 @@ class PhanCongCaLamViecRequest extends FormRequest
             'id_nguoi_dung' => ['required', 'integer', 'exists:nguoi_dung,id'],
             'id_ca_lam_viec' => ['required', 'integer', 'exists:ca_lam_viec,id'],
             'ngay' => ['required', 'date'],
+            'vai_tro_trong_ca' => ['required', 'in:truong_ca,nhan_vien'],
         ];
     }
 
@@ -30,6 +31,8 @@ class PhanCongCaLamViecRequest extends FormRequest
             'id_ca_lam_viec.exists' => 'Ca làm việc được chọn không tồn tại.',
             'ngay.required' => 'Vui lòng chọn ngày làm việc.',
             'ngay.date' => 'Ngày làm việc không đúng định dạng.',
+            'vai_tro_trong_ca.required' => 'Vui lòng chọn vai trò trong ca.',
+            'vai_tro_trong_ca.in' => 'Vai trò trong ca không hợp lệ.',
         ];
     }
 

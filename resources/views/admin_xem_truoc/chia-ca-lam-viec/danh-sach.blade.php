@@ -100,56 +100,13 @@
     </div>
 </div>
 
-@if(session('success'))
-    <div class="alert alert-success">
-        {{ session('success') }}
-    </div>
-@endif
-
-@if((!empty($canhBaoTruongCa) && count($canhBaoTruongCa)) || (!empty($canhBaoCaChuaCoNhanVien) && count($canhBaoCaChuaCoNhanVien)))
-    <div class="alert alert-warning d-flex align-items-center gap-2 position-relative">
-        <div class="dropdown">
-            <button
-                class="btn btn-link text-danger fw-bold fs-5 fst-italic p-0 text-decoration-none dropdown-toggle"
-                type="button"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-            >
-                <i class="fas fa-exclamation-triangle me-1"></i>
-                Nhắc nhở
-            </button>
-
-            <ul class="dropdown-menu shadow p-3" style="min-width: 420px; max-height: 300px; overflow-y: auto;">
-                @if(!empty($canhBaoTruongCa) && count($canhBaoTruongCa))
-                    @foreach($canhBaoTruongCa as $canhBao)
-                        <li class="mb-2">
-                            <strong class="text-danger">
-                                Ca {{ $canhBao['ca'] }} ngày {{ $canhBao['ngay'] }} chưa có trưởng ca.
-                            </strong>
-                        </li>
-                    @endforeach
-                @endif
-
-                @if(!empty($canhBaoCaChuaCoNhanVien) && count($canhBaoCaChuaCoNhanVien))
-                    @foreach($canhBaoCaChuaCoNhanVien as $canhBao)
-                        <li class="mb-2">
-                            <strong class="text-warning">
-                                Ca {{ $canhBao['ca'] }} ngày {{ $canhBao['ngay'] }} chưa có người làm.
-                            </strong>
-                        </li>
-                    @endforeach
-                @endif
-            </ul>
-        </div>
-    </div>
-@endif
-
 <div class="card table-admin">
     <div class="card-body p-0">
         @include('admin_xem_truoc.chia-ca-lam-viec.bang-lich-lam-viec', [
             'nguoiDungs' => $nguoiDungs,
             'weekDates' => $weekDates,
             'maTranLich' => $maTranLich,
+            'chiTietCanhBaoTheoCa' => $chiTietCanhBaoTheoCa ?? [],
         ])
     </div>
 </div>

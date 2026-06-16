@@ -53,4 +53,22 @@
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
     </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Vai trò trong ca <span class="text-danger">*</span></label>
+        <select
+            name="vai_tro_trong_ca"
+            class="form-select @error('vai_tro_trong_ca') is-invalid @enderror"
+        >
+            <option value="nhan_vien" @selected(old('vai_tro_trong_ca', $chiaCaLamViec->vai_tro_trong_ca ?? 'nhan_vien') === 'nhan_vien')>
+                Nhân viên
+            </option>
+            <option value="truong_ca" @selected(old('vai_tro_trong_ca', $chiaCaLamViec->vai_tro_trong_ca ?? '') === 'truong_ca')>
+                Trưởng ca
+            </option>
+        </select>
+        @error('vai_tro_trong_ca')
+            <div class="invalid-feedback">{{ $message }}</div>
+        @enderror
+    </div>
 </div>
