@@ -39,6 +39,34 @@
         @enderror
     </div>
 
+    <div class="col-md-3">
+        <label class="form-label">Số NV tối thiểu <span class="text-danger">*</span></label>
+        <input
+            type="number"
+            min="0"
+            name="so_nhan_vien_toi_thieu"
+            value="{{ old('so_nhan_vien_toi_thieu', $caLamViec->so_nhan_vien_toi_thieu ?? 0) }}"
+            class="form-control @error('so_nhan_vien_toi_thieu') is-invalid @enderror"
+        >
+        @error('so_nhan_vien_toi_thieu')
+            <div class="invalid-feedback">{{ $message }}</div>
+        @enderror
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label">Số NV tối đa <span class="text-danger">*</span></label>
+        <input
+            type="number"
+            min="0"
+            name="so_nhan_vien_toi_da"
+            value="{{ old('so_nhan_vien_toi_da', $caLamViec->so_nhan_vien_toi_da ?? 0) }}"
+            class="form-control @error('so_nhan_vien_toi_da') is-invalid @enderror"
+        >
+        @error('so_nhan_vien_toi_da')
+            <div class="invalid-feedback">{{ $message }}</div>
+        @enderror
+    </div>
+
     <div class="col-md-6">
         <label class="form-label">Số phút đi làm trễ tối đa <span class="text-danger">*</span></label>
         <input

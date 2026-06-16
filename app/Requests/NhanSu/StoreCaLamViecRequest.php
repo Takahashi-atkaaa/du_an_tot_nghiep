@@ -24,6 +24,8 @@ class StoreCaLamViecRequest extends FormRequest
             ],
             'gio_bat_dau' => ['required', 'date_format:H:i'],
             'gio_ket_thuc' => ['required', 'date_format:H:i'],
+            'so_nhan_vien_toi_thieu' => ['required', 'integer', 'min:0'],
+            'so_nhan_vien_toi_da' => ['required', 'integer', 'min:0', 'gte:so_nhan_vien_toi_thieu'],
             'so_phut_di_lam_tre_toi_da' => ['required', 'integer', 'min:0', 'max:1440'],
         ];
     }
@@ -37,6 +39,13 @@ class StoreCaLamViecRequest extends FormRequest
             'gio_bat_dau.date_format' => 'Giờ bắt đầu không đúng định dạng.',
             'gio_ket_thuc.required' => 'Vui lòng chọn giờ kết thúc.',
             'gio_ket_thuc.date_format' => 'Giờ kết thúc không đúng định dạng.',
+            'so_nhan_vien_toi_thieu.required' => 'Vui lòng nhập số nhân viên tối thiểu.',
+            'so_nhan_vien_toi_thieu.integer' => 'Số nhân viên tối thiểu phải là số nguyên.',
+            'so_nhan_vien_toi_thieu.min' => 'Số nhân viên tối thiểu không được âm.',
+            'so_nhan_vien_toi_da.required' => 'Vui lòng nhập số nhân viên tối đa.',
+            'so_nhan_vien_toi_da.integer' => 'Số nhân viên tối đa phải là số nguyên.',
+            'so_nhan_vien_toi_da.min' => 'Số nhân viên tối đa không được âm.',
+            'so_nhan_vien_toi_da.gte' => 'Số nhân viên tối đa phải lớn hơn hoặc bằng số nhân viên tối thiểu.',
             'so_phut_di_lam_tre_toi_da.required' => 'Vui lòng nhập số phút đi làm trễ tối đa.',
             'so_phut_di_lam_tre_toi_da.integer' => 'Số phút đi làm trễ phải là số nguyên.',
         ];

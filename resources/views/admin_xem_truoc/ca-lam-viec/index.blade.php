@@ -13,8 +13,7 @@
             </ol>
         </nav>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-            </ol>
+            <ol class="breadcrumb mb-0"></ol>
         </nav>
     </div>
     <div class="d-flex flex-column gap-2">
@@ -27,12 +26,6 @@
     </div>
 </div>
 
-@if(session('success'))
-    <div class="alert alert-success">
-        {{ session('success') }}
-    </div>
-@endif
-
 <div class="card table-admin">
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -42,6 +35,8 @@
                         <th>Tên ca</th>
                         <th>Giờ bắt đầu</th>
                         <th>Giờ kết thúc</th>
+                        <th>NV tối thiểu</th>
+                        <th>NV tối đa</th>
                         <th>Đi trễ tối đa</th>
                         <th class="text-end" style="width: 160px;">Thao tác</th>
                     </tr>
@@ -52,6 +47,8 @@
                             <td>{{ $caLamViec->ten_ca }}</td>
                             <td>{{ \Illuminate\Support\Carbon::parse($caLamViec->gio_bat_dau)->format('H:i') }}</td>
                             <td>{{ \Illuminate\Support\Carbon::parse($caLamViec->gio_ket_thuc)->format('H:i') }}</td>
+                            <td>{{ $caLamViec->so_nhan_vien_toi_thieu }}</td>
+                            <td>{{ $caLamViec->so_nhan_vien_toi_da }}</td>
                             <td>{{ $caLamViec->so_phut_di_lam_tre_toi_da }} phút</td>
                             <td class="text-end">
                                 <a href="{{ route('ca-lam-viec.edit', $caLamViec) }}" class="btn btn-sm btn-outline-primary btn-action" title="Sửa">
@@ -68,7 +65,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-5">Chưa có ca làm việc nào.</td>
+                            <td colspan="7" class="text-center text-muted py-5">Chưa có ca làm việc nào.</td>
                         </tr>
                     @endforelse
                 </tbody>

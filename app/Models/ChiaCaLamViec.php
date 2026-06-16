@@ -17,6 +17,7 @@ class ChiaCaLamViec extends Model
         'id_ca_lam_viec',
         'id_nguoi_dung',
         'ngay',
+        'vai_tro_trong_ca',
     ];
 
     protected $casts = [
