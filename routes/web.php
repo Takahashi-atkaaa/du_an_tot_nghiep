@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\SanPham\SanPhamController;
 use App\Http\Controllers\admin\NhanSu\CaLamViecController;
 use App\Http\Controllers\admin\NhanSu\ChiaCaController;
 use App\Http\Controllers\admin\NhanSu\NguoiDungController;
+use App\Http\Controllers\admin\KhachHang\KhachHangController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
 use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
@@ -142,10 +143,38 @@ Route::middleware([KTVaiTroQuanTri::class])->group(function () {
     });
 
 
-    // Trang khach hang
-    Route::get('/admin/khach-hang', function () {
-        return view('admin_xem_truoc.khach-hang');
-    });
+    // Quan ly khach hang
+Route::get('/admin/khach-hang', [KhachHangController::class, 'index'])
+    ->name('khach-hang.index');
+
+Route::get('/admin/khach-hang/create', [KhachHangController::class, 'create'])
+    ->name('khach-hang.create');
+
+Route::post('/admin/khach-hang', [KhachHangController::class, 'store'])
+    ->name('khach-hang.store');
+
+// ===== THÙNG RÁC =====
+Route::get('/admin/khach-hang/thung-rac', [KhachHangController::class, 'trash'])
+    ->name('khach-hang.trash');
+
+Route::put('/admin/khach-hang/{id}/restore', [KhachHangController::class, 'restore'])
+    ->name('khach-hang.restore');
+
+Route::delete('/admin/khach-hang/{id}/force-delete', [KhachHangController::class, 'forceDelete'])
+    ->name('khach-hang.force-delete');
+
+// ===== ROUTE CÓ {khachHang} PHẢI ĐỂ CUỐI =====
+Route::get('/admin/khach-hang/{khachHang}', [KhachHangController::class, 'show'])
+    ->name('khach-hang.show');
+
+Route::get('/admin/khach-hang/{khachHang}/edit', [KhachHangController::class, 'edit'])
+    ->name('khach-hang.edit');
+
+Route::put('/admin/khach-hang/{khachHang}', [KhachHangController::class, 'update'])
+    ->name('khach-hang.update');
+
+Route::delete('/admin/khach-hang/{khachHang}', [KhachHangController::class, 'destroy'])
+    ->name('khach-hang.destroy');
 
     // Trang khuyen mai
     Route::get('/admin/khuyen-mai', [KhuyenMaiController::class, 'index'])
