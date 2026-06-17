@@ -18,6 +18,7 @@ Route::prefix('nhan-vien-xem-truoc')->group(function () {
     Route::get('/san-pham', [TestNhanVienController::class, 'sanPham'])->name('nhan-vien.test.san-pham');
     Route::get('/khach-hang', [TestNhanVienController::class, 'khachHang'])->name('nhan-vien.test.khach-hang');
     Route::get('/lich-lam-viec', [TestNhanVienController::class, 'lichLamViec'])->name('nhan-vien.test.lich');
+    Route::get('/lich-lam-viec/tuan', [TestNhanVienController::class, 'lichLamViecTuan'])->name('nhan-vien.test.lich-tuan');
     Route::get('/cham-cong', [TestNhanVienController::class, 'chamCong'])->name('nhan-vien.test.cham-cong');
     Route::get('/ho-so', [TestNhanVienController::class, 'hoSo'])->name('nhan-vien.test.ho-so');
 });

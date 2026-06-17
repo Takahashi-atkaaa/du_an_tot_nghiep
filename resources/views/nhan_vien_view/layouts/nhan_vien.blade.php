@@ -210,7 +210,7 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('nhan-vien-xem-truoc/lich-lam-viec') }}" class="nav-link {{ request()->is('nhan-vien-xem-truoc/lich-lam-viec') ? 'active' : '' }}">
+                <a href="{{ url('nhan-vien-xem-truoc/lich-lam-viec/tuan') }}" class="nav-link {{ request()->is('nhan-vien-xem-truoc/lich-lam-viec*') ? 'active' : '' }}">
                     <i class="fas fa-calendar-alt"></i>
                     <span>Lịch làm việc</span>
                 </a>
