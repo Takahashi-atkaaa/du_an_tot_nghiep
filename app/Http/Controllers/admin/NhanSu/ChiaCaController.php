@@ -28,11 +28,15 @@ class ChiaCaController extends Controller
 
         $weekSource = $ngay ?: $request->query('week_start');
         $weekStart = $this->resolveWeekStart($weekSource);
+        $selectedWeekDate = $weekSource
+            ? Carbon::parse($weekSource)->toDateString()
+            : $weekStart->toDateString();
         $weekDates = $this->weekDates($weekStart);
         $caLamViecs = $this->caLamViecs();
 
         $nguoiDungs = NguoiDung::query()
             ->where('trang_thai', 1)
+            ->where('vai_tro', '!=', 'admin')
             ->when($keyword !== '', function ($query) use ($keyword) {
                 $query->where('ho_ten', 'like', '%' . $keyword . '%');
             })
@@ -57,6 +61,9 @@ class ChiaCaController extends Controller
 
         $lichTheoTuan = ChiaCaLamViec::query()
             ->with(['nguoiDung', 'caLamViec'])
+            ->whereHas('nguoiDung', function ($query) {
+                $query->where('vai_tro', '!=', 'admin');
+            })
             ->whereBetween('ngay', [
                 $weekStart->toDateString(),
                 $weekStart->copy()->addDays(6)->toDateString(),
@@ -187,6 +194,7 @@ class ChiaCaController extends Controller
         return view('admin_xem_truoc.chia-ca-lam-viec.danh-sach', [
             'nguoiDungs' => $nguoiDungs,
             'weekStart' => $weekStart,
+            'selectedWeekDate' => $selectedWeekDate,
             'weekDates' => $weekDates,
             'maTranLich' => $maTranLich,
             'chiTietCanhBaoTheoCa' => $chiTietCanhBaoTheoCa,
@@ -202,10 +210,15 @@ class ChiaCaController extends Controller
 
     public function create(Request $request): View
     {
-        $weekStart = $this->resolveWeekStart($request->query('week_start'));
+        $weekSource = $request->query('week_start');
+        $weekStart = $this->resolveWeekStart($weekSource);
+        $selectedWeekDate = $weekSource
+            ? Carbon::parse($weekSource)->toDateString()
+            : $weekStart->toDateString();
 
         return view('admin_xem_truoc.chia-ca-lam-viec.nhap-excel', [
             'weekStart' => $weekStart,
+            'selectedWeekDate' => $selectedWeekDate,
             'weekDates' => $this->weekDates($weekStart),
             'caLamViecs' => $this->caLamViecs(),
         ]);
@@ -256,10 +269,16 @@ class ChiaCaController extends Controller
 
     public function edit(ChiaCaLamViec $chiaCaLamViec): View
     {
+        $weekSource = request()->query('week_start');
+        $selectedWeekDate = $weekSource
+            ? Carbon::parse($weekSource)->toDateString()
+            : Carbon::parse($chiaCaLamViec->ngay)->toDateString();
+
         return view('admin_xem_truoc.chia-ca-lam-viec.cap-nhat', [
             'chiaCaLamViec' => $chiaCaLamViec,
             'nguoiDungs' => $this->nguoiDungs(),
             'caLamViecs' => $this->caLamViecs(),
+            'selectedWeekDate' => $selectedWeekDate,
         ]);
     }
 
@@ -267,8 +286,12 @@ class ChiaCaController extends Controller
     {
         $chiaCaLamViec->update($request->validated());
 
+        $selectedWeekDate = $request->input('week_start')
+            ? Carbon::parse($request->input('week_start'))->toDateString()
+            : Carbon::parse($chiaCaLamViec->ngay)->toDateString();
+
         return redirect()
-            ->route('chia-ca-lam-viec.index')
+            ->route('chia-ca-lam-viec.index', ['week_start' => $selectedWeekDate])
             ->with('success', 'Đã cập nhật lịch phân ca thành công.');
     }
 
@@ -331,6 +354,7 @@ class ChiaCaController extends Controller
     {
         return NguoiDung::query()
             ->where('trang_thai', 1)
+            ->where('vai_tro', '!=', 'admin')
             ->orderBy('ho_ten')
             ->get(['id', 'ho_ten', 'vai_tro']);
     }

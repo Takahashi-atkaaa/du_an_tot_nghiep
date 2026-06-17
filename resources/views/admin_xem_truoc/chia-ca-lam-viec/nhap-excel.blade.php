@@ -10,7 +10,7 @@
             Từ {{ $weekStart->format('d/m/Y') }} đến {{ $weekStart->copy()->addDays(6)->format('d/m/Y') }}
         </div>
     </div>
-    <a href="{{ route('chia-ca-lam-viec.index', ['week_start' => $weekStart->format('Y-m-d')]) }}" class="btn btn-outline-secondary">Quay lại</a>
+    <a href="{{ route('chia-ca-lam-viec.index', ['week_start' => $selectedWeekDate]) }}" class="btn btn-outline-secondary">Quay lại</a>
 </div>
 
 <div class="row g-4">
@@ -39,7 +39,7 @@
                     </div>
 
                     <div class="d-flex gap-2">
-                        <a href="{{ route('chia-ca-lam-viec.export', ['week_start' => $weekStart->format('Y-m-d')]) }}" class="btn btn-success">
+                        <a href="{{ route('chia-ca-lam-viec.export', ['week_start' => $selectedWeekDate]) }}" class="btn btn-success">
                             <i class="fas fa-file-export me-2"></i>Tải file mẫu
                         </a>
                         <button type="submit" class="btn btn-primary">

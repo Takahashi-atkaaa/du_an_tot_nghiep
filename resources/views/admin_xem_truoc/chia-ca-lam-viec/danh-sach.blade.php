@@ -16,7 +16,7 @@
             <input
                 type="date"
                 name="week_start"
-                value="{{ $weekStart->format('Y-m-d') }}"
+                value="{{ $selectedWeekDate }}"
                 class="form-control form-control-sm"
                 style="width: 185px;"
             >
@@ -26,12 +26,12 @@
             </button>
         </form>
 
-        <a href="{{ route('chia-ca-lam-viec.export', ['week_start' => $weekStart->format('Y-m-d')]) }}"
+        <a href="{{ route('chia-ca-lam-viec.export', ['week_start' => $selectedWeekDate]) }}"
            class="btn btn-sm btn-success text-nowrap px-3">
             <i class="fas fa-file-export me-1"></i>Export
         </a>
 
-        <a href="{{ route('chia-ca-lam-viec.create', ['week_start' => $weekStart->format('Y-m-d')]) }}"
+        <a href="{{ route('chia-ca-lam-viec.create', ['week_start' => $selectedWeekDate]) }}"
            class="btn btn-sm btn-primary text-nowrap px-3">
             <i class="fas fa-file-import me-1"></i>Import
         </a>
@@ -83,7 +83,7 @@
                 <input
                     type="date"
                     name="week_start"
-                    value="{{ $weekStart->format('Y-m-d') }}"
+                    value="{{ $selectedWeekDate }}"
                     class="form-control"
                 >
             </div>
@@ -104,6 +104,7 @@
     <div class="card-body p-0">
         @include('admin_xem_truoc.chia-ca-lam-viec.bang-lich-lam-viec', [
             'nguoiDungs' => $nguoiDungs,
+            'selectedWeekDate' => $selectedWeekDate,
             'weekDates' => $weekDates,
             'maTranLich' => $maTranLich,
             'chiTietCanhBaoTheoCa' => $chiTietCanhBaoTheoCa ?? [],
