@@ -12,27 +12,44 @@ class NhanSuSeeder extends Seeder
         // Ca lam viec
         DB::table('ca_lam_viec')->insert([
             [
-                'ten_ca' => 'Ca sáng',
-                'gio_bat_dau' => '08:00:00',
+                'ten_ca' => 'SA1',
+                'gio_bat_dau' => '07:00:00',
                 'gio_ket_thuc' => '12:00:00',
+                'so_nhan_vien_toi_thieu' => 2,
+                'so_nhan_vien_toi_da' => 4,
                 'so_phut_di_lam_tre_toi_da' => 15,
                 'deleted_at' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'ten_ca' => 'Ca chiều',
-                'gio_bat_dau' => '13:00:00',
-                'gio_ket_thuc' => '17:00:00',
+                'ten_ca' => 'CH1',
+                'gio_bat_dau' => '12:00:00',
+                'gio_ket_thuc' => '19:00:00',
+                'so_nhan_vien_toi_thieu' => 2,
+                'so_nhan_vien_toi_da' => 4,
                 'so_phut_di_lam_tre_toi_da' => 15,
                 'deleted_at' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'ten_ca' => 'Ca tối',
-                'gio_bat_dau' => '18:00:00',
-                'gio_ket_thuc' => '22:00:00',
+                'ten_ca' => 'TO1',
+                'gio_bat_dau' => '19:00:00',
+                'gio_ket_thuc' => '01:00:00',
+                'so_nhan_vien_toi_thieu' => 2,
+                'so_nhan_vien_toi_da' => 4,
+                'so_phut_di_lam_tre_toi_da' => 15,
+                'deleted_at' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'ten_ca' => 'TO2',
+                'gio_bat_dau' => '01:00:00',
+                'gio_ket_thuc' => '07:00:00',
+                'so_nhan_vien_toi_thieu' => 2,
+                'so_nhan_vien_toi_da' => 4,
                 'so_phut_di_lam_tre_toi_da' => 15,
                 'deleted_at' => null,
                 'created_at' => now(),
@@ -114,7 +131,7 @@ class NhanSuSeeder extends Seeder
 
             $chiaCaIds = DB::table('chia_ca_lam_viec')->pluck('id')->toArray();
 
-          // Diem danh
+            // Diem danh
             DB::table('diem_danh')->insert([
                 [
                     'id_chia_ca_lam_viec' => $chiaCaIds[0],
@@ -122,8 +139,8 @@ class NhanSuSeeder extends Seeder
                     'so_gio_di_lam_muon' => 0,
                     'gio_tan_ca' => now()->subDays(1)->setTime(12, 5, 0),
                     'so_gio_lam_them' => 0.08,
-                    'trang_thai_vao_lam' => 'Dung gio',
-                    'trang_thai_tan_ca' => 'Tang ca',
+                    'trang_thai_vao_lam' => 'Đúng giờ',
+                    'trang_thai_tan_ca' => 'Tăng ca',
                     'deleted_at' => null,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -134,7 +151,7 @@ class NhanSuSeeder extends Seeder
                     'so_gio_di_lam_muon' => 5,
                     'gio_tan_ca' => null,
                     'so_gio_lam_them' => 0,
-                    'trang_thai_vao_lam' => 'Di muon',
+                    'trang_thai_vao_lam' => 'Đi muộn',
                     'trang_thai_tan_ca' => null,
                     'deleted_at' => null,
                     'created_at' => now(),
