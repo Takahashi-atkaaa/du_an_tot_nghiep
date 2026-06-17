@@ -145,36 +145,36 @@ Route::middleware([KTVaiTroQuanTri::class])->group(function () {
 
     // Quan ly khach hang
 Route::get('/admin/khach-hang', [KhachHangController::class, 'index'])
-    ->name('khach-hang.index');
+    ->name('khach-hang.index')->middleware('permission:xem_khach_hang');
 
 Route::get('/admin/khach-hang/create', [KhachHangController::class, 'create'])
-    ->name('khach-hang.create');
+    ->name('khach-hang.create')->middleware('permission:them_khach_hang');
 
 Route::post('/admin/khach-hang', [KhachHangController::class, 'store'])
-    ->name('khach-hang.store');
+    ->name('khach-hang.store')->middleware('permission:them_khach_hang');
 
 // ===== THÙNG RÁC =====
 Route::get('/admin/khach-hang/thung-rac', [KhachHangController::class, 'trash'])
-    ->name('khach-hang.trash');
+    ->name('khach-hang.trash')->middleware('permission:xem_khach_hang');
 
 Route::put('/admin/khach-hang/{id}/restore', [KhachHangController::class, 'restore'])
-    ->name('khach-hang.restore');
+    ->name('khach-hang.restore')->middleware('permission:xem_khach_hang');
 
 Route::delete('/admin/khach-hang/{id}/force-delete', [KhachHangController::class, 'forceDelete'])
-    ->name('khach-hang.force-delete');
+    ->name('khach-hang.force-delete')->middleware('permission:xem_khach_hang');
 
 // ===== ROUTE CÓ {khachHang} PHẢI ĐỂ CUỐI =====
 Route::get('/admin/khach-hang/{khachHang}', [KhachHangController::class, 'show'])
-    ->name('khach-hang.show');
+    ->name('khach-hang.show')->middleware('permission:xem_khach_hang');
 
 Route::get('/admin/khach-hang/{khachHang}/edit', [KhachHangController::class, 'edit'])
-    ->name('khach-hang.edit');
+    ->name('khach-hang.edit')->middleware('permission:sua_khach_hang');
 
 Route::put('/admin/khach-hang/{khachHang}', [KhachHangController::class, 'update'])
-    ->name('khach-hang.update');
+    ->name('khach-hang.update')->middleware('permission:sua_khach_hang');
 
 Route::delete('/admin/khach-hang/{khachHang}', [KhachHangController::class, 'destroy'])
-    ->name('khach-hang.destroy');
+    ->name('khach-hang.destroy')->middleware('permission:xoa_khach_hang')   ;
 
     // Trang khuyen mai
     Route::get('/admin/khuyen-mai', [KhuyenMaiController::class, 'index'])
