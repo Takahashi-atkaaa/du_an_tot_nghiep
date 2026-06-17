@@ -3,6 +3,7 @@
 @section('title', 'Quản lý Nhà cung cấp - SmartMart')
 
 @section('content')
+{{-- Tiêu đề trang --}}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h4 class="fw-bold mb-1">Quản lý Nhà cung cấp</h4>
@@ -20,10 +21,12 @@
     </button>
 </div>
 
+{{-- Thông báo --}}
 @if(session('success'))
     <div class="alert alert-success">{{ session('success') }}</div>
 @endif
 
+{{-- Hiển thị lỗi validate --}}
 @if ($errors->any())
     <div class="alert alert-danger">
         <ul class="mb-0">
@@ -36,6 +39,7 @@
 
 @php $q = $q ?? ''; @endphp
 
+{{-- Tìm kiếm nhà cung cấp --}}
 <div class="row mb-3">
     <div class="col-md-9">
         <form method="GET" action="{{ url('/admin/kho-hang/nha-cung-cap') }}" class="d-flex align-items-center">
@@ -58,6 +62,7 @@
     </div>
 </div>
 
+{{-- Danh sách nhà cung cấp --}}
 <div class="card table-admin mb-4 mt-3">
     <div class="card-body">
         <div class="table-responsive">
@@ -84,16 +89,19 @@
                             <td>{{ optional($item->created_at)->format('Y-m-d') }}</td>
                             <td>
                                 <div class="d-flex gap-2">
+                                    {{-- Lịch sử giao dịch --}}
                                     <a href="{{ url('/admin/kho-hang/nha-cung-cap/'.$item->id.'/lich-su-giao-dich') }}"
                                        class="btn btn-sm btn-outline-primary">
                                         Lịch sử
                                     </a>
 
+                                    {{-- Sửa --}}
                                     <button class="btn btn-sm btn-outline-secondary btn-edit"
                                             data-id="{{ $item->id }}">
                                         Sửa
                                     </button>
 
+                                    {{-- Xóa --}}
                                     <form action="{{ url('/admin/kho-hang/nha-cung-cap/'.$item->id) }}"
                                           method="POST"
                                           class="d-inline">
@@ -118,11 +126,12 @@
     </div>
 </div>
 
+{{-- Phân trang --}}
 <div class="d-flex justify-content-end mt-3">
     {{ $items->links() }}
 </div>
 
-<!-- Add Supplier Modal -->
+{{-- Modal thêm nhà cung cấp --}}
 <div class="modal fade" id="supplierModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -167,7 +176,7 @@
     </div>
 </div>
 
-<!-- Edit Supplier Modal -->
+{{-- Modal sửa nhà cung cấp --}}
 <div class="modal fade" id="editSupplierModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -217,6 +226,7 @@
 @section('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // Sửa nhà cung cấp
     document.querySelectorAll('.btn-edit').forEach(function (btn) {
         btn.addEventListener('click', function () {
             var id = this.dataset.id;
