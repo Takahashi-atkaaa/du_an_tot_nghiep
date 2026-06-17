@@ -22,7 +22,7 @@ class NguoiDung extends Authenticatable
     'email',
     'sdt',
     'mat_khau',
-    'vai_tro',
+    'id_vai_tro',
     'trang_thai',
 
     'gioi_tinh',
@@ -81,26 +81,14 @@ class NguoiDung extends Authenticatable
     public function quyenNguoiDungs()
     {
         return $this->hasMany(
-            QuyenNguoiDung::class,
+            QuyenVaiTro::class,
             'id_nguoi_dung'
         );
     }
 
-    public function quyens()
+    public function vaiTro()
     {
-        return $this->belongsToMany(
-            Quyen::class,
-            'quyen_nguoi_dung',
-            'id_nguoi_dung',
-            'id_quyen'
-        );
-    }
-
-    public function hasPermission($maQuyen)
-    {
-        return $this->quyens()
-            ->where('ma_quyen', $maQuyen)
-            ->exists();
+        return $this->belongsTo(VaiTro::class, 'id_vai_tro');
     }
 
     public function chiaCaLamViecs(): HasMany

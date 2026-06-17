@@ -219,6 +219,15 @@
                 margin-left: 0;
             }
         }
+        .dropdown-toggle-custom .arrow{
+            transition:.3s;
+        }
+        .dropdown-toggle-custom.collapsed .arrow{
+            transform:rotate(0);
+        }
+        .dropdown-toggle-custom:not(.collapsed) .arrow{
+            transform:rotate(-90deg);
+        }
     </style>
     @yield('styles')
 </head>
@@ -278,7 +287,7 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('nguoi-dung') }}" class="nav-link {{ request()->is('nguoi-dung*') ? 'active' : '' }}">
+                <a href="{{ url('nguoi-dung') }}" class="nav-link {{ request()->routeIs('nguoi-dung.index') ? 'active' : '' }}" {{ request()->is('nguoi-dung*') ? 'active' : '' }}">
                     <i class="fas fa-user-tie"></i>
                     <span>Nhân sự</span>
                 </a>    
@@ -289,6 +298,41 @@
                     <span>Ca làm việc</span>
                 </a>
             </li>
+
+            {{-- phân quyền --}}
+            <li class="nav-item">
+                <a class="nav-link collapsed dropdown-toggle-custom"
+                data-bs-toggle="collapse"
+                href="#phanQuyenMenu"
+                role="button"
+                aria-expanded="false"
+                aria-controls="phanQuyenMenu">
+                    <i class="fas fa-user-shield"></i>
+                    <span>Phân quyền</span>
+                    <i class="fas fa-angle-left arrow"></i>
+                </a>
+
+                <div class="collapse" id="phanQuyenMenu">
+                    <ul class="nav flex-column ms-3">
+
+                        <li class="nav-item">
+                            <a href="{{ route('nguoi-dung.phan-quyen', ['id_vai_tro' => 2]) }}"
+                            class="nav-link {{ request()->is('nguoi-dung/phan-quyen/2') ? 'active' : '' }}">
+                                Trưởng ca
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a href="{{ route('nguoi-dung.phan-quyen', ['id_vai_tro' => 3]) }}"
+                            class="nav-link {{ request()->is('nguoi-dung/phan-quyen/3') ? 'active' : '' }}">
+                                Nhân viên
+                            </a>
+                        </li>
+
+                    </ul>
+                </div>
+            </li>
+
             <li class="nav-item mt-3">
                 <a href="{{ url('admin/cai-dat') }}" class="nav-link {{ request()->is('admin/cai-dat*') ? 'active' : '' }}">
                     <i class="fas fa-cog"></i>
