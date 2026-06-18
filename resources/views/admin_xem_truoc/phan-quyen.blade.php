@@ -23,7 +23,7 @@
     }
 </style>
 
-<h2>Phân quyền nhân viên</h2>
+<h2>Phân quyền {{$vaiTro->ten_vai_tro}}</h2>
 
     @if (session('success'))
         <div class="alert alert-success">
@@ -31,7 +31,7 @@
         </div>
     @endif
 
-<form action="{{ route('admin.quyen.update', $nguoiDung) }}" method="POST">
+<form action="{{ route('admin.quyen.update', $vaiTro->id) }}" method="POST">
     @csrf
 
     <div class="quyen-grid">
@@ -42,7 +42,7 @@
                        id="quyen-{{ $quyen->id }}"
                        name="quyens[]"
                        value="{{ $quyen->id }}"
-                       {{ in_array($quyen->id, $quyen_thuoc_nguoi_dung) ? 'checked' : '' }}>
+                       {{ in_array($quyen->id, $quyen_thuoc_vai_tro) ? 'checked' : '' }}>
 
                 <span>{{ $quyen->ten_quyen }}</span>
             </label>

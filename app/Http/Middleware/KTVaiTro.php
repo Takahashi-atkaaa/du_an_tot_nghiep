@@ -6,7 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class KTVaiTroQuanTri
+class KTVaiTro
 {
 public function handle(Request $request, Closure $next, string $permission = null): Response
 {
@@ -16,7 +16,7 @@ public function handle(Request $request, Closure $next, string $permission = nul
 
     $user = auth()->user();
 
-    if ($user->vai_tro === 'admin') {
+    if ($user->vaiTro->ten_vai_tro === 'Admin') {
         return $next($request);
     }
 
@@ -25,7 +25,7 @@ public function handle(Request $request, Closure $next, string $permission = nul
         return $next($request); // hoặc abort(403)
     }
 
-    if (!$user->hasPermission($permission)) {
+    if (!$user->vaiTro->hasPermission($permission)) {
         abort(403, 'Bạn không có quyền truy cập');
     }
 

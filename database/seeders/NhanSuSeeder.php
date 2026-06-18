@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\VaiTro;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -64,7 +65,7 @@ class NhanSuSeeder extends Seeder
                 'email' => 'tunganh@smartmart.vn',
                 'mat_khau' => bcrypt('Admin@123'),
                 'sdt' => '0912345678',
-                'vai_tro' => 'admin',
+                'id_vai_tro' => VaiTro::where('ten_vai_tro', 'Admin')->first()->id,
                 'trang_thai' => true,
                 'deleted_at' => null,
                 'created_at' => now(),
@@ -75,7 +76,7 @@ class NhanSuSeeder extends Seeder
                 'email' => 'thungan@smartmart.vn',
                 'mat_khau' => bcrypt('ThuNgan@123'),
                 'sdt' => '0987654321',
-                'vai_tro' => 'truong_ca',
+                'id_vai_tro' => VaiTro::where('ten_vai_tro', 'Trưởng ca')->first()->id,
                 'trang_thai' => true,
                 'deleted_at' => null,
                 'created_at' => now(),
@@ -86,7 +87,7 @@ class NhanSuSeeder extends Seeder
                 'email' => 'baohang@smartmart.vn',
                 'mat_khau' => bcrypt('BaoHang@123'),
                 'sdt' => '0977112233',
-                'vai_tro' => 'nhan_vien',
+                'id_vai_tro' => VaiTro::where('ten_vai_tro', 'Nhân viên')->first()->id,
                 'trang_thai' => true,
                 'deleted_at' => null,
                 'created_at' => now(),
@@ -97,7 +98,7 @@ class NhanSuSeeder extends Seeder
                 'email' => 'hong@smartmart.vn',
                 'mat_khau' => bcrypt('Hong@123'),
                 'sdt' => '0966887766',
-                'vai_tro' => 'nhan_vien',
+                'id_vai_tro' => VaiTro::where('ten_vai_tro', 'Nhân viên')->first()->id,
                 'trang_thai' => true,
                 'deleted_at' => null,
                 'created_at' => now(),
