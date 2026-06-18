@@ -15,9 +15,14 @@
         </nav>
     </div>
 
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#supplierModal">
-        <i class="fas fa-plus me-2"></i>Thêm nhà cung cấp
-    </button>
+    <div class="d-flex gap-2">
+        <a href="{{ route('nha-cung-cap.trash') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-trash-alt me-2"></i>Thùng rác
+        </a>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#supplierModal">
+            <i class="fas fa-plus me-2"></i>Thêm nhà cung cấp
+        </button>
+    </div>
 </div>
 
 @if(session('success'))

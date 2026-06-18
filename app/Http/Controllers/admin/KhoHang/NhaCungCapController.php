@@ -140,4 +140,33 @@ class NhaCungCapController extends Controller
         'tongGiaTri'
     ));
 }
+
+/**
+     * Show soft-deleted suppliers (trash)
+     */
+    public function trash(Request $request)
+    {
+        $items = NhaCungCap::onlyTrashed()->orderBy('deleted_at', 'desc')->paginate(15);
+        return view('admin_xem_truoc.nha-cung-cap.trash', compact('items'));
+    }
+
+    /**
+     * Restore soft-deleted supplier
+     */
+    public function restore($id)
+    {
+        $item = NhaCungCap::onlyTrashed()->findOrFail($id);
+        $item->restore();
+        return redirect()->back()->with('success', 'Khôi phục nhà cung cấp thành công');
+    }
+
+    /**
+     * Permanently delete supplier
+     */
+    public function forceDelete($id)
+    {
+        $item = NhaCungCap::onlyTrashed()->findOrFail($id);
+        $item->forceDelete();
+        return redirect()->back()->with('success', 'Đã xóa vĩnh viễn nhà cung cấp');
+    }
 }
