@@ -15,6 +15,7 @@ class SanPhamApiController extends Controller
             'danhMuc',
             'donVi',
             'thuocTinhs',
+            'bienThe.thuocTinhs',
         ])->find($id);
 
         if (!$sanPham) {
@@ -55,6 +56,7 @@ class SanPhamApiController extends Controller
             'success' => true,
             'data' => [
                 'sanPham' => $sanPham,
+                'bienThe' => $sanPham->bienThe,
                 'theKho' => $theKho,
                 'loHang' => $loHang,
             ],

@@ -38,7 +38,8 @@ class SanPhamController extends Controller
             ->get();
 
         $sanPhams = SanPham::query()
-            ->with(['danhMuc', 'donVi'])
+            ->with(['danhMuc', 'donVi', 'bienThe.thuocTinhs', 'bienThe.donVi'])
+            ->sanPhamCha()
             ->when($keyword, function ($query, $keyword) {
                 $query->searchByFields($keyword, ['ten_san_pham', 'ma_vach', 'ma_hang', 'thuong_hieu']);
             })
@@ -114,13 +115,31 @@ class SanPhamController extends Controller
                 'id_don_vi'         => $baseUnit->id,
                 'hinh_anh'          => $imagePath,
                 'trang_thai'        => $data['trang_thai'] ?? true,
+                'la_san_pham_cha'   => true,
             ]);
         } else {
-            // Có biến thể → tạo 1 sản phẩm mỗi dòng trong bảng
+            // Có biến thể → tạo 1 sản phẩm CHA, rồi tạo biến thể gán cha
+            $sanPhamCha = SanPham::create([
+                'id_danh_muc'       => $data['id_danh_muc'],
+                'ten_san_pham'      => $data['ten_san_pham'],
+                'ma_hang'           => $this->generateUniqueMaHang(),
+                'ma_vach'           => !empty($data['ma_vach']) ? $data['ma_vach'] : $this->generateUniqueMaVach(),
+                'thuong_hieu'       => $data['thuong_hieu'] ?? null,
+                'gia_von'           => $data['gia_von'] ?? 0,
+                'gia_ban'           => 0,
+                'so_luong_ton_kho'  => 0,
+                'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
+                'mo_ta'             => $data['mo_ta'] ?? null,
+                'id_don_vi'         => $baseUnit->id,
+                'hinh_anh'          => $imagePath,
+                'trang_thai'        => $data['trang_thai'] ?? true,
+                'la_san_pham_cha'   => true,
+            ]);
+
             foreach ($bienThe as $idx => $variant) {
                 $variantImage = $variantImages[$idx] ?? $imagePath;
 
-                $sanPham = SanPham::create([
+                SanPham::create([
                     'id_danh_muc'       => $data['id_danh_muc'],
                     'ten_san_pham'      => $variant['ten_day_du'] ?? $data['ten_san_pham'],
                     'ma_hang'           => $this->generateUniqueMaHang(),
@@ -134,6 +153,7 @@ class SanPhamController extends Controller
                     'id_don_vi'         => $baseUnit->id,
                     'hinh_anh'          => $variantImage,
                     'trang_thai'        => $data['trang_thai'] ?? true,
+                    'san_pham_cha_id'   => $sanPhamCha->id,
                 ]);
 
                 // Attach thuộc tính vào pivot
@@ -149,7 +169,7 @@ class SanPhamController extends Controller
 
     public function edit($id)
     {
-        $sanPham = SanPham::findOrFail($id);
+        $sanPham = SanPham::with(['danhMuc', 'donVi', 'bienThe.thuocTinhs', 'bienThe.donVi'])->findOrFail($id);
         $danhMucs = DanhMucSanPham::orderBy('ten_danh_muc')->get();
         $donVis = DonViSanPham::where('trang_thai', true)->orderBy('ten_don_vi')->get();
         $thuocTinhChas = ThuocTinhSanPham::whereNull('thuoc_tinh_cha_id')
@@ -364,7 +384,7 @@ class SanPhamController extends Controller
 
     public function show($id)
     {
-        $sanPham = SanPham::with(['danhMuc', 'donVi', 'thuocTinhs'])->findOrFail($id);
+        $sanPham = SanPham::with(['danhMuc', 'donVi', 'thuocTinhs', 'bienThe.thuocTinhs', 'bienThe.donVi'])->findOrFail($id);
 
         $theKho = DB::table('chi_tiet_phieu')
             ->join('phieu', 'chi_tiet_phieu.id_phieu', '=', 'phieu.id')

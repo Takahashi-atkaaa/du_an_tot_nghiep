@@ -147,12 +147,17 @@
                         <th style="width: 130px;">Giá bán</th>
                         <th style="width: 80px;">Tồn kho</th>
                         <th style="width: 100px;">Trạng thái</th>
-                        <th style="width: 130px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody id="productTableBody">
                     @foreach($sanPhams as $sanPham)
-                    <tr class="product-row" style="cursor:pointer;" data-product-id="{{ $sanPham->id }}">
+                    <?php
+                        $soBienThe = $sanPham->bienThe->count();
+                        $hasVariants = $soBienThe > 0;
+                        $tongTonKho = $sanPham->ton_kho_tong;
+                        $giaHienThi = $sanPham->gia_ban_hien_thi;
+                    ?>
+                    <tr class="product-row" style="cursor:pointer;" data-product-id="{{ $sanPham->id }}" data-has-variants="{{ $hasVariants ? '1' : '0' }}">
                         <td onclick="event.stopPropagation();">
                             <input type="checkbox" class="form-check-input product-checkbox" value="{{ $sanPham->id }}">
                         </td>
@@ -171,7 +176,19 @@
                             <span class="text-muted small">#{{ $sanPham->ma_hang ?? $sanPham->ma_vach ?? $sanPham->id }}</span>
                         </td>
                         <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
-                            <span class="fw-semibold" style="font-size:0.88rem;">{{ $sanPham->ten_san_pham }}</span>
+                            <div class="d-flex align-items-center gap-2">
+                                @if($hasVariants)
+                                    <a href="javascript:void(0)" onclick="event.stopPropagation(); toggleVariants({{ $sanPham->id }})" class="text-decoration-none expand-btn" id="expandBtn{{ $sanPham->id }}" title="Xem biến thể">
+                                        <i class="fas fa-chevron-right text-muted" style="transition:transform 0.2s;"></i>
+                                    </a>
+                                @else
+                                    <span style="width:16px;display:inline-block;"></span>
+                                @endif
+                                <span class="fw-semibold" style="font-size:0.88rem;">{{ $sanPham->ten_san_pham }}</span>
+                                @if($hasVariants)
+                                    <span class="badge bg-secondary" style="font-size:0.7rem;">{{ $soBienThe }} biến thể</span>
+                                @endif
+                            </div>
                         </td>
                         <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
                             <span class="text-muted small">{{ $sanPham->danhMuc->ten_danh_muc ?? '-' }}</span>
@@ -183,43 +200,87 @@
                             <span class="text-muted small text-center d-block">{{ $sanPham->dinh_muc_toi_thieu ?? 0 }}</span>
                         </td>
                         <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
-                            <span class="fw-bold text-primary" style="font-size:0.88rem;">
-                                {{ number_format($sanPham->gia_ban, 0, ',', '.') }} đ
+                            @if(is_numeric($giaHienThi))
+                                <span class="fw-bold text-primary" style="font-size:0.88rem;">{{ number_format($giaHienThi, 0, ',', '.') }} đ</span>
+                            @else
+                                <span class="fw-bold text-primary" style="font-size:0.8rem;">{{ $giaHienThi }} đ</span>
+                            @endif
+                        </td>
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
+                            <span class="{{ $tongTonKho <= ($sanPham->dinh_muc_toi_thieu ?? 0) ? 'text-warning' : 'text-muted' }} small">
+                                {{ $tongTonKho }}
                             </span>
                         </td>
                         <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
-                            <span class="{{ ($sanPham->so_luong_ton_kho ?? 0) <= ($sanPham->dinh_muc_toi_thieu ?? 0) ? 'text-warning' : 'text-muted' }} small">
-                                {{ $sanPham->so_luong_ton_kho ?? 0 }}
-                            </span>
-                        </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
-                            @if(!$sanPham->trang_thai)
+                            @php
+                                $displayStock = $tongTonKho;
+                                $minStock = $sanPham->dinh_muc_toi_thieu ?? 0;
+                                $trangThaiSanPham = $sanPham->trang_thai;
+                            @endphp
+                            @if(!$trangThaiSanPham)
                                 <span class="badge bg-danger">Ngừng bán</span>
-                            @elseif(($sanPham->so_luong_ton_kho ?? 0) <= 0)
+                            @elseif($displayStock <= 0)
                                 <span class="badge bg-secondary">Hết hàng</span>
-                            @elseif(($sanPham->so_luong_ton_kho ?? 0) <= ($sanPham->dinh_muc_toi_thieu ?? 0))
+                            @elseif($displayStock <= $minStock)
                                 <span class="badge bg-warning text-dark">Sắp hết</span>
                             @else
                                 <span class="badge bg-success">Còn hàng</span>
                             @endif
                         </td>
-                        <td>
-                            <a href="{{ url('admin/san-pham/'.$sanPham->id.'/edit') }}"
-                               class="btn btn-sm btn-outline-secondary py-0 px-2"
-                               style="font-size:0.75rem;">
-                                <i class="fas fa-edit"></i> Sửa
-                            </a>
-                            <form action="{{ url('admin/san-pham/'.$sanPham->id) }}" method="POST" class="d-inline"
-                                  onsubmit="return confirm('Bạn có chắc muốn xóa sản phẩm này?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2"
-                                        style="font-size:0.75rem;">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
+                    </tr>
+                    {{-- Biến thể rows (hidden by default) --}}
+                    @foreach($sanPham->bienThe as $bienThe)
+                    <tr class="variant-row" id="variantRow{{ $sanPham->id }}_{{ $bienThe->id }}" style="display:none; background:#fafafa;">
+                        <td></td>
+                        <td onclick="event.stopPropagation();">
+                            @if($bienThe->hinh_anh)
+                                <img src="{{ asset($bienThe->hinh_anh) }}" alt="" style="width:36px; height:36px; object-fit:cover; border-radius:4px; border:1px solid #eee;">
+                            @else
+                                <div style="width:36px; height:36px; border-radius:4px; background:#eee; display:flex; align-items:center; justify-content:center;">
+                                    <i class="fas fa-image text-muted" style="font-size:0.7rem;"></i>
+                                </div>
+                            @endif
+                        </td>
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
+                            <span class="text-muted small">#{{ $bienThe->ma_hang ?? $bienThe->ma_vach ?? $bienThe->id }}</span>
+                        </td>
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
+                            <div class="d-flex align-items-center gap-2" style="padding-left:20px;">
+                                <i class="fas fa-arrow-turn-down-right text-muted" style="font-size:0.6rem;"></i>
+                                <span class="text-muted" style="font-size:0.82rem;">
+                                    @foreach($bienThe->thuocTinhs as $tt)
+                                        <span class="badge bg-light text-dark border me-1" style="font-size:0.7rem;">{{ $tt->ten_thuoc_tinh }}</span>
+                                    @endforeach
+                                    @if($bienThe->thuocTinhs->isEmpty())
+                                        <em class="small text-muted">Biến thể</em>
+                                    @endif
+                                </span>
+                            </div>
+                        </td>
+                        <td></td>
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
+                            <span class="text-muted small">{{ $bienThe->donVi->ten_don_vi ?? '-' }}</span>
+                        </td>
+                        <td></td>
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
+                            <span class="fw-bold text-primary" style="font-size:0.82rem;">{{ number_format($bienThe->gia_ban, 0, ',', '.') }} đ</span>
+                        </td>
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
+                            <span class="{{ ($bienThe->so_luong_ton_kho ?? 0) <= ($bienThe->dinh_muc_toi_thieu ?? 0) ? 'text-warning' : 'text-muted' }} small">{{ $bienThe->so_luong_ton_kho ?? 0 }}</span>
+                        </td>
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
+                            @if(!$bienThe->trang_thai)
+                                <span class="badge bg-danger">Ngừng</span>
+                            @elseif(($bienThe->so_luong_ton_kho ?? 0) <= 0)
+                                <span class="badge bg-secondary">Hết</span>
+                            @elseif(($bienThe->so_luong_ton_kho ?? 0) <= ($bienThe->dinh_muc_toi_thieu ?? 0))
+                                <span class="badge bg-warning text-dark">Sắp hết</span>
+                            @else
+                                <span class="badge bg-success">Còn</span>
+                            @endif
                         </td>
                     </tr>
+                    @endforeach
                     @endforeach
                 </tbody>
             </table>
@@ -250,9 +311,12 @@
     <div class="offcanvas-header border-bottom">
         <h5 class="offcanvas-title fw-bold"><i class="fas fa-box-open me-2 text-primary"></i>Chi tiết sản phẩm</h5>
         <div class="d-flex gap-2">
-            <a href="#" id="drawerEditBtn" class="btn btn-sm btn-outline-primary">
+            <a href="#" id="drawerEditBtn" class="btn btn-sm btn-primary">
                 <i class="fas fa-edit me-1"></i>Sửa
             </a>
+            <button type="button" class="btn btn-sm btn-danger" id="drawerDeleteBtn" onclick="confirmDeleteFromDrawer()">
+                <i class="fas fa-trash me-1"></i>Xóa
+            </button>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
     </div>
@@ -1352,6 +1416,23 @@
     const drawerBody = document.getElementById('drawerBody');
     const drawerEditBtn = document.getElementById('drawerEditBtn');
 
+    // Toggle variants expand/collapse
+    window.toggleVariants = function(productId) {
+        const btn = document.getElementById('expandBtn' + productId);
+        const rows = document.querySelectorAll('[id^="variantRow' + productId + '_"]');
+        const isExpanded = btn.dataset.expanded === '1';
+
+        if (isExpanded) {
+            rows.forEach(row => row.style.display = 'none');
+            btn.querySelector('i').style.transform = '';
+            btn.dataset.expanded = '0';
+        } else {
+            rows.forEach(row => row.style.display = '');
+            btn.querySelector('i').style.transform = 'rotate(90deg)';
+            btn.dataset.expanded = '1';
+        }
+    };
+
     // Open drawer when clicking any table row (except checkbox/action columns)
     document.getElementById('productTableBody')?.addEventListener('click', function(e) {
         const row = e.target.closest('.product-row');
@@ -1370,6 +1451,7 @@
                 </div>
             </div>`;
         drawerEditBtn.href = `{{ url('admin/san-pham/') }}/${id}/edit`;
+        currentDrawerProductId = id;
         modal.show();
 
         try {
@@ -1384,6 +1466,18 @@
             drawerBody.innerHTML = `<div class="p-4 text-center text-danger">Lỗi tải dữ liệu: ${e.message}</div>`;
         }
     };
+
+    let currentDrawerProductId = null;
+    function confirmDeleteFromDrawer() {
+        if (!currentDrawerProductId) return;
+        if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `{{ url('admin/san-pham') }}/${currentDrawerProductId}`;
+        form.innerHTML = `@csrf @method('DELETE')`;
+        document.body.appendChild(form);
+        form.submit();
+    }
 
     function formatMoney(num) {
         if (num === null || num === undefined) return '0';
@@ -1422,6 +1516,56 @@
         const thuocTinhLabels = (sp.thuoc_tinhs || []).map(tt =>
             `<span class="badge bg-info text-dark me-1">${tt.ten_thuoc_tinh}</span>`
         ).join('');
+
+        const bienTheHtml = (() => {
+            const bt = data.bienThe || [];
+            if (bt.length === 0) return '';
+            return `
+            <div class="mb-3">
+                <h6 class="fw-bold mb-2"><i class="fas fa-layer-group me-1"></i>Biến thể <span class="fw-normal text-muted small">(${bt.length})</span></h6>
+                <table class="table table-sm table-bordered mb-0" style="font-size:0.82rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Ảnh</th>
+                            <th>Thuộc tính</th>
+                            <th>Mã vạch</th>
+                            <th class="text-end">Giá bán</th>
+                            <th class="text-end">Tồn kho</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${bt.map(v => `
+                        <tr>
+                            <td>
+                                ${v.hinh_anh
+                                    ? `<img src="/${v.hinh_anh}" style="width:32px;height:32px;object-fit:cover;border-radius:4px;">`
+                                    : `<div style="width:32px;height:32px;border-radius:4px;background:#eee;display:flex;align-items:center;justify-content:center;"><i class="fas fa-image text-muted" style="font-size:0.6rem;"></i></div>`
+                                }
+                            </td>
+                            <td>
+                                ${(v.thuoc_tinhs || []).length > 0
+                                    ? v.thuoc_tinhs.map(tt => `<span class="badge bg-light text-dark border me-1">${tt.ten_thuoc_tinh}</span>`).join('')
+                                    : '<em class="text-muted">—</em>'
+                                }
+                            </td>
+                            <td class="small">${v.ma_vach || '-'}</td>
+                            <td class="text-end fw-bold text-primary">${formatMoney(v.gia_ban)} đ</td>
+                            <td class="text-end ${(v.so_luong_ton_kho ?? 0) <= (v.dinh_muc_toi_thieu || 0) ? 'text-warning' : 'text-muted'}">${v.so_luong_ton_kho ?? 0}</td>
+                            <td>
+                                ${!v.trang_thai
+                                    ? '<span class="badge bg-danger">Ngừng</span>'
+                                    : (v.so_luong_ton_kho <= 0
+                                        ? '<span class="badge bg-secondary">Hết</span>'
+                                        : '<span class="badge bg-success">Còn</span>'
+                                    )
+                                }
+                            </td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+        })();
 
         const hinhAnh = sp.hinh_anh
             ? `<img src="/${sp.hinh_anh}" class="img-fluid rounded" alt="${sp.ten_san_pham}" style="max-height:220px; object-fit:contain; background:#f8f9fa;">`
@@ -1529,6 +1673,8 @@
                 <h6 class="fw-bold mb-2"><i class="fas fa-align-left me-1"></i>Mô tả</h6>
                 <div class="bg-light rounded p-2 small text-muted" style="white-space:pre-line;">${sp.mo_ta}</div>
             </div>` : ''}
+
+            ${bienTheHtml}
 
             <div class="mb-3">
                 <h6 class="fw-bold mb-2"><i class="fas fa-history me-1"></i>Thẻ kho <span class="fw-normal text-muted small">(${theKho.length})</span></h6>
