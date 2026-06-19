@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Support\Facades\DB;
+use App\Models\Quyen;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -13,7 +14,7 @@ class QuyenSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('quyen')->insert([
+        $quyens = [
 
             // Danh mục
             [
@@ -111,6 +112,59 @@ class QuyenSeeder extends Seeder
                 'ten_quyen' => 'Phân quyền người dùng'
             ],
 
-        ]);
+            // Thiết lập lương
+            [
+                'ma_quyen' => 'xem_thiet_lap_luong',
+                'ten_quyen' => 'Xem thiết lập lương'
+            ],
+            [
+                'ma_quyen' => 'them_thiet_lap_luong',
+                'ten_quyen' => 'Thêm thiết lập lương'
+            ],
+            [
+                'ma_quyen' => 'sua_thiet_lap_luong',
+                'ten_quyen' => 'Sửa thiết lập lương'
+            ],
+            [
+                'ma_quyen' => 'xoa_thiet_lap_luong',
+                'ten_quyen' => 'Xóa thiết lập lương'
+            ],
+
+            // Bảng lương
+            [
+                'ma_quyen' => 'xem_bang_luong',
+                'ten_quyen' => 'Xem bảng lương'
+            ],
+            [
+                'ma_quyen' => 'them_bang_luong',
+                'ten_quyen' => 'Thêm bảng lương'
+            ],
+            [
+                'ma_quyen' => 'sua_bang_luong',
+                'ten_quyen' => 'Sửa bảng lương'
+            ],
+            [
+                'ma_quyen' => 'xoa_bang_luong',
+                'ten_quyen' => 'Xóa bảng lương'
+            ],
+
+            // Phiếu lương
+            [
+                'ma_quyen' => 'xem_phieu_luong',
+                'ten_quyen' => 'Xem phiếu lương'
+            ],
+            [
+                'ma_quyen' => 'sua_phieu_luong',
+                'ten_quyen' => 'Sửa phiếu lương'
+            ],
+
+        ];
+
+        foreach ($quyens as $quyen) {
+            Quyen::firstOrCreate(
+                ['ma_quyen' => $quyen['ma_quyen']],
+                ['ten_quyen' => $quyen['ten_quyen']]
+            );
+        }
     }
 }

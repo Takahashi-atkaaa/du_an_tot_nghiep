@@ -6,6 +6,9 @@ use App\Http\Controllers\Admin\SanPham\SanPhamController;
 use App\Http\Controllers\admin\NhanSu\CaLamViecController;
 use App\Http\Controllers\admin\NhanSu\ChiaCaController;
 use App\Http\Controllers\admin\NhanSu\NguoiDungController;
+use App\Http\Controllers\admin\NhanSu\ThietLapLuongController;
+use App\Http\Controllers\admin\NhanSu\BangLuongController;
+use App\Http\Controllers\admin\NhanSu\PhieuLuongController;
 use App\Http\Controllers\admin\KhachHang\KhachHangController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
@@ -219,6 +222,31 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::get('/admin/chia-ca-lam-viec/{chiaCaLamViec}/edit', [ChiaCaController::class, 'edit'])->name('chia-ca-lam-viec.edit')->middleware('permission:sua_chia_ca_lam_viec');
     Route::put('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'update'])->name('chia-ca-lam-viec.update')->middleware('permission:sua_chia_ca_lam_viec');
     Route::delete('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'destroy'])->name('chia-ca-lam-viec.destroy')->middleware('permission:xoa_chia_ca_lam_viec');
+
+    // Thiết lập lương
+    Route::get('/admin/thiet-lap-luong', [ThietLapLuongController::class, 'index'])->name('thiet-lap-luong.index')->middleware('permission:xem_thiet_lap_luong');
+    Route::get('/admin/thiet-lap-luong/create', [ThietLapLuongController::class, 'create'])->name('thiet-lap-luong.create')->middleware('permission:them_thiet_lap_luong');
+    Route::post('/admin/thiet-lap-luong', [ThietLapLuongController::class, 'store'])->name('thiet-lap-luong.store')->middleware('permission:them_thiet_lap_luong');
+    Route::get('/admin/thiet-lap-luong/{thietLapLuong}', [ThietLapLuongController::class, 'show'])->name('thiet-lap-luong.show')->middleware('permission:xem_thiet_lap_luong');
+    Route::get('/admin/thiet-lap-luong/{thietLapLuong}/edit', [ThietLapLuongController::class, 'edit'])->name('thiet-lap-luong.edit')->middleware('permission:sua_thiet_lap_luong');
+    Route::put('/admin/thiet-lap-luong/{thietLapLuong}', [ThietLapLuongController::class, 'update'])->name('thiet-lap-luong.update')->middleware('permission:sua_thiet_lap_luong');
+    Route::delete('/admin/thiet-lap-luong/{thietLapLuong}', [ThietLapLuongController::class, 'destroy'])->name('thiet-lap-luong.destroy')->middleware('permission:xoa_thiet_lap_luong');
+
+    // Bảng lương
+    Route::get('/admin/bang-luong', [BangLuongController::class, 'index'])->name('bang-luong.index')->middleware('permission:xem_bang_luong');
+    Route::get('/admin/bang-luong/create', [BangLuongController::class, 'create'])->name('bang-luong.create')->middleware('permission:them_bang_luong');
+    Route::post('/admin/bang-luong', [BangLuongController::class, 'store'])->name('bang-luong.store')->middleware('permission:them_bang_luong');
+    Route::get('/admin/bang-luong/{bangLuong}', [BangLuongController::class, 'show'])->name('bang-luong.show')->middleware('permission:xem_bang_luong');
+    Route::get('/admin/bang-luong/{bangLuong}/edit', [BangLuongController::class, 'edit'])->name('bang-luong.edit')->middleware('permission:sua_bang_luong');
+    Route::put('/admin/bang-luong/{bangLuong}', [BangLuongController::class, 'update'])->name('bang-luong.update')->middleware('permission:sua_bang_luong');
+    Route::delete('/admin/bang-luong/{bangLuong}', [BangLuongController::class, 'destroy'])->name('bang-luong.destroy')->middleware('permission:xoa_bang_luong');
+    Route::post('/admin/bang-luong/{bangLuong}/tinh-luong', [BangLuongController::class, 'tinhLuong'])->name('bang-luong.tinh-luong')->middleware('permission:xem_bang_luong');
+
+    // Phiếu lương
+    Route::get('/admin/phieu-luong', [PhieuLuongController::class, 'index'])->name('phieu-luong.index')->middleware('permission:xem_phieu_luong');
+    Route::get('/admin/phieu-luong/{phieuLuong}', [PhieuLuongController::class, 'show'])->name('phieu-luong.show')->middleware('permission:xem_phieu_luong');
+    Route::get('/admin/phieu-luong/{phieuLuong}/edit', [PhieuLuongController::class, 'edit'])->name('phieu-luong.edit')->middleware('permission:sua_phieu_luong');
+    Route::put('/admin/phieu-luong/{phieuLuong}', [PhieuLuongController::class, 'update'])->name('phieu-luong.update')->middleware('permission:sua_phieu_luong');
 
 });//het router admin
 
