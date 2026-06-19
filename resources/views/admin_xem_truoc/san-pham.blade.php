@@ -1420,16 +1420,16 @@
     window.toggleVariants = function(productId) {
         const btn = document.getElementById('expandBtn' + productId);
         const rows = document.querySelectorAll('[id^="variantRow' + productId + '_"]');
-        const isExpanded = btn.dataset.expanded === '1';
+        const isExpanded = btn.classList.contains('expanded');
 
         if (isExpanded) {
             rows.forEach(row => row.style.display = 'none');
+            btn.classList.remove('expanded');
             btn.querySelector('i').style.transform = '';
-            btn.dataset.expanded = '0';
         } else {
             rows.forEach(row => row.style.display = '');
+            btn.classList.add('expanded');
             btn.querySelector('i').style.transform = 'rotate(90deg)';
-            btn.dataset.expanded = '1';
         }
     };
 

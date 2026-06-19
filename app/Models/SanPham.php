@@ -29,6 +29,8 @@ class SanPham extends BaseModel
         'id_don_vi',
         'dinh_muc_toi_thieu',
         'trang_thai',
+        'san_pham_cha_id',
+        'la_san_pham_cha',
     ];
 
     protected $casts = [
