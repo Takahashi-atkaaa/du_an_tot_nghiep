@@ -124,7 +124,7 @@
                             <th>CCCD</th>
                             <th>Email</th>
                             <th>Vai trò</th>
-                            <th>Trạng thái</th>v
+                            <th>Trạng thái</th>
                             @forelse($nguoiDungs as $nguoiDung)
                                 @if($nguoiDung->vai_tro == 'admin')
                                     <th>
@@ -174,10 +174,10 @@
                                 <td>{{ $nguoiDung->email }}</td>
 
                                 <td>
-                                    <span class="badge bg-secondary">
-                                        {{ $nguoiDung->vai_tro }}
-                                    </span>
-                                </td>
+    <span class="badge bg-secondary">
+        {{ $nguoiDung->vaiTro?->ten_vai_tro  }}
+    </span>
+</td>
 
                                 <td>
                                     @if ($nguoiDung->trang_thai == 1)
@@ -191,9 +191,9 @@
                                     @endif
                                 </td>
 
-                                <td>
+                                {{-- <td>
                                     <a class="btn btn-primary md3" href="{{ route('nguoi-dung.phan-quyen', $nguoiDung)}}">Phân quyền</a>
-                                </td>
+                                </td> --}}
 
                                 <td class="text-end">
                                     <a href="{{ route('nguoi-dung.show', $nguoiDung) }}"

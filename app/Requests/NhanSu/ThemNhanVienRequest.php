@@ -63,7 +63,7 @@ class ThemNhanVienRequest extends FormRequest
                 'min:6'
             ],
 
-            'vai_tro' => [
+            'id_vai_tro' => [
                 'required',
                 'string',
                 'max:255'
@@ -109,7 +109,7 @@ class ThemNhanVienRequest extends FormRequest
             'mat_khau.required' => 'Vui lòng nhập mật khẩu.',
             'mat_khau.min' => 'Mật khẩu phải có ít nhất 6 ký tự.',
 
-            'vai_tro.required' => 'Vui lòng chọn vai trò.',
+            'id_vai_tro.required' => 'Vui lòng chọn vai trò.',
 
             'trang_thai.required' => 'Vui lòng chọn trạng thái.',
         ];
@@ -127,7 +127,7 @@ class ThemNhanVienRequest extends FormRequest
             'anh_cccd_mat_truoc' => 'ảnh CCCD mặt trước',
             'anh_cccd_mat_sau' => 'ảnh CCCD mặt sau',
             'mat_khau' => 'mật khẩu',
-            'vai_tro' => 'vai trò',
+            'id_vai_tro' => 'vai trò',
             'trang_thai' => 'trạng thái',
         ];
     }

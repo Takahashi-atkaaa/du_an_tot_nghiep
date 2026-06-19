@@ -12,58 +12,55 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use App\Models\VaiTro;
 
 class NguoiDungController extends Controller
 {
     public function index(Request $request): View
-    {
-        $keyword = $request->input('keyword');
-        $vaiTro = $request->input('vai_tro');
-        $trangThai = $request->filled('trang_thai') ? $request->boolean('trang_thai') : null;
+{
+    $keyword = $request->input('keyword');
+    $vaiTro = $request->input('id_vai_tro');
+    $trangThai = $request->filled('trang_thai')
+        ? $request->boolean('trang_thai')
+        : null;
 
-        $tongNhanVien = NguoiDung::withTrashed()->count();
-        $dangLamViec = NguoiDung::query()->where('trang_thai', true)->count();
-        $nghiPhep = NguoiDung::query()->where('trang_thai', false)->count();
-        $daNghiViec = NguoiDung::onlyTrashed()->count();
+    $tongNhanVien = NguoiDung::withTrashed()->count();
+    $dangLamViec = NguoiDung::where('trang_thai', 1)->count();
+    $nghiPhep = NguoiDung::where('trang_thai', 0)->count();
+    $daNghiViec = NguoiDung::onlyTrashed()->count();
 
-        $nguoiDungs = NguoiDung::query()
-            ->search($keyword)
-            ->when($vaiTro, function ($query, $vaiTro) {
-                $query->where('vai_tro', $vaiTro);
-            })
-            ->when(! is_null($trangThai), function ($query) use ($trangThai) {
-                $query->where('trang_thai', $trangThai);
-            })
-            ->orderByDesc('id')
-            ->paginate(10)
-            ->withQueryString();
+    $nguoiDungs = NguoiDung::with('vaiTro')
+        ->search($keyword)
+        ->when($vaiTro, function ($query, $vaiTro) {
+            $query->where('id_vai_tro', $vaiTro);
+        })
+        ->when(!is_null($trangThai), function ($query) use ($trangThai) {
+            $query->where('trang_thai', $trangThai);
+        })
+        ->orderByDesc('id')
+        ->paginate(10)
+        ->withQueryString();
 
-        return view('admin_xem_truoc.nhan-su.index', [
-            'nguoiDungs' => $nguoiDungs,
-            'keyword' => $keyword,
-            'vaiTro' => $vaiTro,
-            'trangThai' => $request->input('trang_thai'),
-            'tongNhanVien' => $tongNhanVien,
-            'dangLamViec' => $dangLamViec,
-            'nghiPhep' => $nghiPhep,
-            'daNghiViec' => $daNghiViec,
-            'vaiTros' => [
-                'Admin',
-                'Nhân viên',
-                'Trưởng ca',
-            ],
-        ]);
-    }
+    return view('admin_xem_truoc.nhan-su.index', [
+        'nguoiDungs' => $nguoiDungs,
+        'keyword' => $keyword,
+        'vaiTro' => $vaiTro,
+        'trangThai' => $request->input('trang_thai'),
+
+        'tongNhanVien' => $tongNhanVien,
+        'dangLamViec' => $dangLamViec,
+        'nghiPhep' => $nghiPhep,
+        'daNghiViec' => $daNghiViec,
+
+        'vaiTros' => VaiTro::all(),
+    ]);
+}
 
     public function create(): View
     {
         return view('admin_xem_truoc.nhan-su.create', [
             'nguoiDung' => new NguoiDung(),
-            'vaiTros' => [
-                'Admin',
-                'Nhân viên',
-                'Trưởng ca',
-            ],
+            'vaiTros' => VaiTro::all(),
         ]);
     }
 
@@ -102,7 +99,7 @@ class NguoiDungController extends Controller
         'anh_cccd_mat_sau' => $cccdMatSau,
 
         'mat_khau' => Hash::make($validated['mat_khau']),
-        'vai_tro' => $validated['vai_tro'],
+        'id_vai_tro' => $validated['id_vai_tro'],
         'trang_thai' => $request->boolean('trang_thai'),
     ]);
 
@@ -114,11 +111,7 @@ class NguoiDungController extends Controller
     {
         return view('admin_xem_truoc.nhan-su.edit', [
             'nguoiDung' => $nguoiDung,
-            'vaiTros' => [
-                'Admin',
-                'Nhân viên',
-                'Trưởng ca',
-            ],
+            'vaiTros' => VaiTro::all(),
         ]);
     }
 
@@ -143,7 +136,7 @@ class NguoiDungController extends Controller
         'sdt' => $validated['sdt'],
         'gioi_tinh' => $validated['gioi_tinh'],
         'cccd' => $validated['cccd'],
-        'vai_tro' => $validated['vai_tro'],
+        'id_vai_tro' => $validated['id_vai_tro'],
         'trang_thai' => $request->boolean('trang_thai'),
     ];
 

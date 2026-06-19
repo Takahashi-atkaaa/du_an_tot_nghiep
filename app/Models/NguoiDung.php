@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-
+use Illuminate\Support\Facades\Hash;
 class NguoiDung extends Authenticatable
 {
 	use HasFactory, SoftDeletes;
@@ -43,16 +43,16 @@ class NguoiDung extends Authenticatable
 
     // Tu dong ma hoa mat khau moi khi gan
     // Su dung accessor de dam bao mat khau luon duoc bcrypt
-    public function setMatKhauAttribute($value)
-    {
-        // Neu mat khau chua duoc ma hoa thi ma hoa no
-        // Kiem tra do dai > 60 vi bcrypt tao ra chuoi 60 ky tu
-        if (strlen($value) !== 60) {
-            $this->attributes['mat_khau'] = bcrypt($value);
-        } else {
-            $this->attributes['mat_khau'] = $value;
-        }
+    
+
+public function setMatKhauAttribute($value)
+{
+    if (!empty($value)) {
+        $this->attributes['mat_khau'] = Hash::needsRehash($value)
+            ? Hash::make($value)
+            : $value;
     }
+}
 
     // Tra ve mat khau (vi Laravel can mat_khau thay vi mat_khau)
     // Override thuoc tinh tu Model cha
@@ -63,20 +63,19 @@ class NguoiDung extends Authenticatable
     }
 
     public function scopeSearch($query, ?string $keyword)
-    {
-        if (blank($keyword)) {
-            return $query;
-        }
-
-        $keyword = trim($keyword);
-
-        return $query->where(function ($subQuery) use ($keyword) {
-            $subQuery->where('ho_ten', 'like', '%' . $keyword . '%')
-                ->orWhere('email', 'like', '%' . $keyword . '%')
-                ->orWhere('sdt', 'like', '%' . $keyword . '%')
-                ->orWhere('vai_tro', 'like', '%' . $keyword . '%');
-        });
+{
+    if (blank($keyword)) {
+        return $query;
     }
+
+    $keyword = trim($keyword);
+
+    return $query->where(function ($subQuery) use ($keyword) {
+        $subQuery->where('ho_ten', 'like', "%{$keyword}%")
+            ->orWhere('email', 'like', "%{$keyword}%")
+            ->orWhere('sdt', 'like', "%{$keyword}%");
+    });
+}
 
     public function quyenNguoiDungs()
     {

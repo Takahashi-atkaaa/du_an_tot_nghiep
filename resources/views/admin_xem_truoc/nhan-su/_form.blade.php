@@ -124,22 +124,34 @@
         @enderror
     </div>
 
-    <div class="col-md-6">
-        <label class="form-label">Vai trò <span class="text-danger">*</span></label>
-        <select name="vai_tro"
-            class="form-select @error('vai_tro') is-invalid @enderror">
-            <option value="">Chọn vai trò</option>
-            @foreach($vaiTros as $vaiTro)
-                <option value="{{ $vaiTro }}"
-                    @selected(old('vai_tro', $nguoiDung->vai_tro) === $vaiTro)>
-                    {{ $vaiTro }}
-                </option>
-            @endforeach
-        </select>
-        @error('vai_tro')
-            <div class="invalid-feedback">{{ $message }}</div>
-        @enderror
-    </div>
+   <div class="col-md-6">
+    <label class="form-label">
+        Vai trò <span class="text-danger">*</span>
+    </label>
+
+    <select name="id_vai_tro"
+        class="form-select @error('id_vai_tro') is-invalid @enderror">
+
+        <option value="">Chọn vai trò</option>
+
+        @foreach($vaiTros as $vaiTro)
+            <option value="{{ $vaiTro->id }}"
+                @selected(
+                    old('id_vai_tro', $nguoiDung->id_vai_tro)
+                    == $vaiTro->id
+                )>
+                {{ $vaiTro->ten_vai_tro }}
+            </option>
+        @endforeach
+
+    </select>
+
+    @error('id_vai_tro')
+        <div class="invalid-feedback">
+            {{ $message }}
+        </div>
+    @enderror
+</div>
 
     <div class="col-md-6">
         <label class="form-label">Trạng thái <span class="text-danger">*</span></label>

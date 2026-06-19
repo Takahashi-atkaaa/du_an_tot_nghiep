@@ -71,7 +71,7 @@ class CapNhatNhanVienRequest extends FormRequest
                 'max:4096'
             ],
 
-            'vai_tro' => [
+            'id_vai_tro' => [
                 'required',
                 'string',
                 'max:255'
@@ -114,7 +114,7 @@ class CapNhatNhanVienRequest extends FormRequest
             'anh_cccd_mat_sau.mimes' => 'CCCD mặt sau chỉ hỗ trợ JPG, PNG, WEBP.',
             'anh_cccd_mat_sau.max' => 'CCCD mặt sau tối đa 4MB.',
 
-            'vai_tro.required' => 'Vui lòng chọn vai trò.',
+            'id_vai_tro.required' => 'Vui lòng chọn vai trò.',
 
             'trang_thai.required' => 'Vui lòng chọn trạng thái.',
         ];
@@ -131,7 +131,7 @@ class CapNhatNhanVienRequest extends FormRequest
             'anh_dai_dien' => 'ảnh đại diện',
             'anh_cccd_mat_truoc' => 'ảnh CCCD mặt trước',
             'anh_cccd_mat_sau' => 'ảnh CCCD mặt sau',
-            'vai_tro' => 'vai trò',
+            'id_vai_tro' => 'vai trò',
             'trang_thai' => 'trạng thái',
         ];
     }
