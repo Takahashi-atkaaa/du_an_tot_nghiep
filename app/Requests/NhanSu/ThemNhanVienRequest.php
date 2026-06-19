@@ -17,14 +17,55 @@ class ThemNhanVienRequest extends FormRequest
             'ho_ten' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:nguoi_dung,email'],
             'sdt' => ['required', 'string', 'max:20'],
-            'gioi_tinh' => ['required', 'in:Nam,Nữ,Khác'],
-            'cccd' => ['required', 'digits_between:9,12', 'unique:nguoi_dung,cccd'],
-            'anh_dai_dien' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-            'anh_cccd_mat_truoc' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
-            'anh_cccd_mat_sau' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
-            'mat_khau' => ['required', 'string', 'min:6'],
-            'id_vai_tro' => ['required', 'integer', 'exists:vai_tro,id'],
-            'trang_thai' => ['required', 'boolean'],
+
+            'gioi_tinh' => [
+                'required',
+                'in:Nam,Nữ,Khác'
+            ],
+
+            'cccd' => [
+                'required',
+                'digits_between:9,12',
+                'unique:nguoi_dung,cccd'
+            ],
+
+            'anh_dai_dien' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:2048'
+            ],
+
+            'anh_cccd_mat_truoc' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:4096'
+            ],
+
+            'anh_cccd_mat_sau' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:4096'
+            ],
+
+            'mat_khau' => [
+                'required',
+                'string',
+                'min:6'
+            ],
+
+            'id_vai_tro' => [
+                'required',
+                'string',
+                'max:255'
+            ],
+
+            'trang_thai' => [
+                'required',
+                'boolean'
+            ],
         ];
     }
 
@@ -52,8 +93,9 @@ class ThemNhanVienRequest extends FormRequest
             'anh_cccd_mat_sau.max' => 'CCCD mặt sau tối đa 4MB.',
             'mat_khau.required' => 'Vui lòng nhập mật khẩu.',
             'mat_khau.min' => 'Mật khẩu phải có ít nhất 6 ký tự.',
+
             'id_vai_tro.required' => 'Vui lòng chọn vai trò.',
-            'id_vai_tro.exists' => 'Vai trò đã chọn không hợp lệ.',
+
             'trang_thai.required' => 'Vui lòng chọn trạng thái.',
         ];
     }

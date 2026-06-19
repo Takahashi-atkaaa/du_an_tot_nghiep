@@ -30,7 +30,40 @@ class CapNhatNhanVienRequest extends FormRequest
             'cccd' => [
                 'required',
                 'digits_between:9,12',
-                Rule::unique('nguoi_dung', 'cccd')->ignore($nguoiDungId),
+                Rule::unique('nguoi_dung', 'cccd')
+                    ->ignore($nguoiDungId),
+            ],
+
+            'anh_dai_dien' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:2048'
+            ],
+
+            'anh_cccd_mat_truoc' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:4096'
+            ],
+
+            'anh_cccd_mat_sau' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:4096'
+            ],
+
+            'id_vai_tro' => [
+                'required',
+                'string',
+                'max:255'
+            ],
+
+            'trang_thai' => [
+                'required',
+                'boolean'
             ],
             'anh_dai_dien' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'anh_cccd_mat_truoc' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
@@ -62,8 +95,9 @@ class CapNhatNhanVienRequest extends FormRequest
             'anh_cccd_mat_sau.image' => 'CCCD mặt sau phải là hình ảnh.',
             'anh_cccd_mat_sau.mimes' => 'CCCD mặt sau chỉ hỗ trợ JPG, PNG, WEBP.',
             'anh_cccd_mat_sau.max' => 'CCCD mặt sau tối đa 4MB.',
+
             'id_vai_tro.required' => 'Vui lòng chọn vai trò.',
-            'id_vai_tro.exists' => 'Vai trò đã chọn không hợp lệ.',
+
             'trang_thai.required' => 'Vui lòng chọn trạng thái.',
         ];
     }

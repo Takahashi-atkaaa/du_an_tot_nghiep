@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use App\Models\VaiTro;
 
 class NguoiDungController extends Controller
 {
@@ -57,7 +58,7 @@ class NguoiDungController extends Controller
     {
         return view('admin_xem_truoc.nhan-su.create', [
             'nguoiDung' => new NguoiDung(),
-            'vaiTros' => VaiTro::query()->orderBy('ten_vai_tro')->get(['id', 'ten_vai_tro']),
+            'vaiTros' => VaiTro::all(),
         ]);
     }
 
@@ -105,7 +106,7 @@ class NguoiDungController extends Controller
 
         return view('admin_xem_truoc.nhan-su.edit', [
             'nguoiDung' => $nguoiDung,
-            'vaiTros' => VaiTro::query()->orderBy('ten_vai_tro')->get(['id', 'ten_vai_tro']),
+            'vaiTros' => VaiTro::all(),
         ]);
     }
 
@@ -118,26 +119,30 @@ class NguoiDungController extends Controller
         ]);
     }
 
-    public function update(CapNhatNhanVienRequest $request, NguoiDung $nguoiDung): RedirectResponse
-    {
-        $validated = $request->validated();
 
-        $data = [
-            'ho_ten' => $validated['ho_ten'],
-            'email' => $validated['email'],
-            'sdt' => $validated['sdt'],
-            'gioi_tinh' => $validated['gioi_tinh'],
-            'cccd' => $validated['cccd'],
-            'id_vai_tro' => $validated['id_vai_tro'],
-            'trang_thai' => $request->boolean('trang_thai'),
-        ];
+    public function update(
+    CapNhatNhanVienRequest $request,
+    NguoiDung $nguoiDung
+): RedirectResponse
+{
+    $validated = $request->validated();
 
-        if ($request->hasFile('anh_dai_dien')) {
-            if ($nguoiDung->anh_dai_dien) {
-                Storage::disk('public')->delete($nguoiDung->anh_dai_dien);
-            }
+    $data = [
+        'ho_ten' => $validated['ho_ten'],
+        'email' => $validated['email'],
+        'sdt' => $validated['sdt'],
+        'gioi_tinh' => $validated['gioi_tinh'],
+        'cccd' => $validated['cccd'],
+        'id_vai_tro' => $validated['id_vai_tro'],
+        'trang_thai' => $request->boolean('trang_thai'),
+    ];
 
-            $data['anh_dai_dien'] = $request->file('anh_dai_dien')->store('nguoi-dung/avatar', 'public');
+    if ($request->hasFile('anh_dai_dien')) {
+
+        if ($nguoiDung->anh_dai_dien) {
+            Storage::disk('public')->delete(
+                $nguoiDung->anh_dai_dien
+            );
         }
 
         if ($request->hasFile('anh_cccd_mat_truoc')) {
