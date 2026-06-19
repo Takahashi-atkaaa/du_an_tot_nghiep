@@ -13,13 +13,14 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             VaiTroSeeder::class,
+            QuyenSeeder::class,
+            PhanQuyenSeeder::class,
             NhanSuSeeder::class,
             KhachHangSeeder::class,
             NhaCungCapSeeder::class,
             KhoHangSeeder::class,
             SanPhamSeeder::class,
             BanHangSeeder::class,
-            QuyenSeeder::class,
         ]);
     }
 }

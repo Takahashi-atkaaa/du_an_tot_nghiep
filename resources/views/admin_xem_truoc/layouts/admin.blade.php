@@ -437,6 +437,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Font Awesome JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
+    <!-- SheetJS for Excel import preview -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <script>
         // Sidebar toggle for mobile
@@ -458,5 +460,6 @@
         }, 4000);
     </script>
     @yield('scripts')
+    @yield('page_scripts')
 </body>
 </html>

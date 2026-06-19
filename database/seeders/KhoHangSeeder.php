@@ -27,23 +27,29 @@ class KhoHangSeeder extends Seeder
 
         $danhMucIds = DB::table('danh_muc_san_pham')->pluck('id')->toArray();
 
-        // Thuoc tinh san pham
-        if (count($danhMucIds)) {
-            DB::table('thuoc_tinh_san_pham')->insert([
-                [
-                    'ten_thuoc_tinh' => 'Màu sắc',
-                    'trang_thai' => true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ],
-                [
-                    'ten_thuoc_tinh' => 'Kích thước',
-                    'trang_thai' => true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ],
-            ]);
-        }
+        // Thuoc tinh san pham (cha + con)
+        $mauSacId = DB::table('thuoc_tinh_san_pham')->insertGetId([
+            'ten_thuoc_tinh' => 'Màu sắc',
+            'trang_thai' => true,
+            'thuoc_tinh_cha_id' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $sizeId = DB::table('thuoc_tinh_san_pham')->insertGetId([
+            'ten_thuoc_tinh' => 'Kích thước',
+            'trang_thai' => true,
+            'thuoc_tinh_cha_id' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('thuoc_tinh_san_pham')->insert([
+            ['ten_thuoc_tinh' => 'Đen', 'trang_thai' => true, 'thuoc_tinh_cha_id' => $mauSacId, 'created_at' => now(), 'updated_at' => now()],
+            ['ten_thuoc_tinh' => 'Trắng', 'trang_thai' => true, 'thuoc_tinh_cha_id' => $mauSacId, 'created_at' => now(), 'updated_at' => now()],
+            ['ten_thuoc_tinh' => 'Xanh', 'trang_thai' => true, 'thuoc_tinh_cha_id' => $mauSacId, 'created_at' => now(), 'updated_at' => now()],
+            ['ten_thuoc_tinh' => 'M', 'trang_thai' => true, 'thuoc_tinh_cha_id' => $sizeId, 'created_at' => now(), 'updated_at' => now()],
+            ['ten_thuoc_tinh' => 'L', 'trang_thai' => true, 'thuoc_tinh_cha_id' => $sizeId, 'created_at' => now(), 'updated_at' => now()],
+            ['ten_thuoc_tinh' => 'XL', 'trang_thai' => true, 'thuoc_tinh_cha_id' => $sizeId, 'created_at' => now(), 'updated_at' => now()],
+        ]);
 
         // Don vi san pham
         DB::table('don_vi_san_pham')->insert([
@@ -83,7 +89,6 @@ class KhoHangSeeder extends Seeder
                 'gia_ban' => 6990000,
                 'so_luong_ton_kho' => 50,
                 'mo_ta' => 'Điện thoại thông minh cao cấp',
-                'id_thuoc_tinh' => null,
                 'id_don_vi' => $donViIds[0] ?? null,
                 'dinh_muc_toi_thieu' => 10,
                 'trang_thai' => true,
@@ -99,7 +104,6 @@ class KhoHangSeeder extends Seeder
                 'gia_ban' => 120000,
                 'so_luong_ton_kho' => 200,
                 'mo_ta' => 'Gạo ST25 hữu cơ',
-                'id_thuoc_tinh' => null,
                 'id_don_vi' => $donViIds[1] ?? null,
                 'dinh_muc_toi_thieu' => 50,
                 'trang_thai' => true,
