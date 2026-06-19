@@ -281,4 +281,4 @@ Route::middleware([KTVaiTro::class])->group(function () {
 
 
 ////////// Routes Test Nhân viên (Preview)
-require __DIR__.'/nhan_vien_test.php';
+require __DIR__.'/nhan_vien.php';

@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
-class TestNhanVienController extends Controller
+class NhanVienController extends Controller
 {
     public function index()
     {

@@ -180,49 +180,49 @@
         </div>
         <ul class="nav flex-column mt-3">
             <li class="nav-item">
-                <a href="{{ url('nhan-vien-xem-truoc/') }}" class="nav-link {{ request()->is('nhan-vien-xem-truoc') || request()->is('nhan-vien-xem-truoc/') ? 'active' : '' }}">
+                <a href="{{ url('nhan-vien/') }}" class="nav-link {{ request()->is('nhan-vien') || request()->is('nhan-vien/') ? 'active' : '' }}">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('nhan-vien-xem-truoc/ban-hang') }}" class="nav-link {{ request()->is('nhan-vien-xem-truoc/ban-hang') ? 'active' : '' }}">
+                <a href="{{ url('nhan-vien/ban-hang') }}" class="nav-link {{ request()->is('nhan-vien/ban-hang') ? 'active' : '' }}">
                     <i class="fas fa-cash-register"></i>
                     <span>Bán hàng</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('nhan-vien-xem-truoc/hoa-don') }}" class="nav-link {{ request()->is('nhan-vien-xem-truoc/hoa-don*') ? 'active' : '' }}">
+                <a href="{{ url('nhan-vien/hoa-don') }}" class="nav-link {{ request()->is('nhan-vien/hoa-don*') ? 'active' : '' }}">
                     <i class="fas fa-file-invoice"></i>
                     <span>Hóa đơn</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('nhan-vien-xem-truoc/san-pham') }}" class="nav-link {{ request()->is('nhan-vien-xem-truoc/san-pham*') ? 'active' : '' }}">
+                <a href="{{ url('nhan-vien/san-pham') }}" class="nav-link {{ request()->is('nhan-vien/san-pham*') ? 'active' : '' }}">
                     <i class="fas fa-box"></i>
                     <span>Sản phẩm</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('nhan-vien-xem-truoc/khach-hang') }}" class="nav-link {{ request()->is('nhan-vien-xem-truoc/khach-hang*') ? 'active' : '' }}">
+                <a href="{{ url('nhan-vien/khach-hang') }}" class="nav-link {{ request()->is('nhan-vien/khach-hang*') ? 'active' : '' }}">
                     <i class="fas fa-users"></i>
                     <span>Khách hàng</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('nhan-vien-xem-truoc/lich-lam-viec/tuan') }}" class="nav-link {{ request()->is('nhan-vien-xem-truoc/lich-lam-viec*') ? 'active' : '' }}">
+                <a href="{{ url('nhan-vien/lich-lam-viec/tuan') }}" class="nav-link {{ request()->is('nhan-vien/lich-lam-viec*') ? 'active' : '' }}">
                     <i class="fas fa-calendar-alt"></i>
                     <span>Lịch làm việc</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('nhan-vien-xem-truoc/cham-cong') }}" class="nav-link {{ request()->is('nhan-vien-xem-truoc/cham-cong') ? 'active' : '' }}">
+                <a href="{{ url('nhan-vien/cham-cong') }}" class="nav-link {{ request()->is('nhan-vien/cham-cong') ? 'active' : '' }}">
                     <i class="fas fa-clock"></i>
                     <span>Chấm công</span>
                 </a>
             </li>
             <li class="nav-item mt-3">
-                <a href="{{ url('nhan-vien-xem-truoc/ho-so') }}" class="nav-link {{ request()->is('nhan-vien-xem-truoc/ho-so') ? 'active' : '' }}">
+                <a href="{{ url('nhan-vien/ho-so') }}" class="nav-link {{ request()->is('nhan-vien/ho-so') ? 'active' : '' }}">
                     <i class="fas fa-user"></i>
                     <span>Hồ sơ cá nhân</span>
                 </a>
@@ -243,7 +243,7 @@
                         <div class="user-avatar">NV</div>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="{{ url('nhan-vien-xem-truoc/ho-so') }}"><i class="fas fa-user me-2"></i>Hồ sơ</a></li>
+                        <li><a class="dropdown-item" href="{{ url('nhan-vien/ho-so') }}"><i class="fas fa-user me-2"></i>Hồ sơ</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{{ url('login') }}"><i class="fas fa-sign-out-alt me-2"></i>Đăng xuất</a></li>
                     </ul>

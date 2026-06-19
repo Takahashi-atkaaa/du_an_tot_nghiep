@@ -99,7 +99,7 @@
         <div class="card">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-list me-2 text-success"></i>Hóa đơn gần đây</h5>
-                <a href="{{ url('nhan-vien-xem-truoc/hoa-don') }}" class="btn btn-sm btn-outline-success">Xem tất cả</a>
+                <a href="{{ url('nhan-vien/hoa-don') }}" class="btn btn-sm btn-outline-success">Xem tất cả</a>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">

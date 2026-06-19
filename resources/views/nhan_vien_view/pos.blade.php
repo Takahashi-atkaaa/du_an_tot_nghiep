@@ -792,7 +792,7 @@
             <strong>Nhân Viên Test</strong>
             <small>Nhân viên bán hàng</small>
         </div>
-        <a href="{{ url('nhan-vien-xem-truoc/') }}" class="btn-exit">
+        <a href="{{ url('nhan-vien/') }}" class="btn-exit">
             <i class="fas fa-sign-out-alt"></i> Thoát
         </a>
     </div>
@@ -803,7 +803,7 @@
 
     <!-- Sidebar -->
     <nav class="pos-sidebar">
-        <a href="{{ url('nhan-vien-xem-truoc/') }}" class="nav-btn" title="Dashboard">
+        <a href="{{ url('nhan-vien/') }}" class="nav-btn" title="Dashboard">
             <i class="fas fa-home"></i>
             <span>Home</span>
         </a>
@@ -812,24 +812,24 @@
             <i class="fas fa-shopping-cart"></i>
             <span>Bán</span>
         </button>
-        <button class="nav-btn" title="Hóa đơn" onclick="window.location='{{ url('nhan-vien-xem-truoc/hoa-don') }}'">
+        <button class="nav-btn" title="Hóa đơn" onclick="window.location='{{ url('nhan-vien/hoa-don') }}'">
             <i class="fas fa-file-invoice"></i>
             <span>HD</span>
         </button>
-        <button class="nav-btn" title="Sản phẩm" onclick="window.location='{{ url('nhan-vien-xem-truoc/san-pham') }}'">
+        <button class="nav-btn" title="Sản phẩm" onclick="window.location='{{ url('nhan-vien/san-pham') }}'">
             <i class="fas fa-box"></i>
             <span>SP</span>
         </button>
-        <button class="nav-btn" title="Khách hàng" onclick="window.location='{{ url('nhan-vien-xem-truoc/khach-hang') }}'">
+        <button class="nav-btn" title="Khách hàng" onclick="window.location='{{ url('nhan-vien/khach-hang') }}'">
             <i class="fas fa-users"></i>
             <span>KH</span>
         </button>
         <div class="nav-divider"></div>
-        <button class="nav-btn" title="Lịch làm việc" onclick="window.location='{{ url('nhan-vien-xem-truoc/lich-lam-viec') }}'">
+        <button class="nav-btn" title="Lịch làm việc" onclick="window.location='{{ url('nhan-vien/lich-lam-viec') }}'">
             <i class="fas fa-calendar"></i>
             <span>Lịch</span>
         </button>
-        <button class="nav-btn" title="Hồ sơ" onclick="window.location='{{ url('nhan-vien-xem-truoc/ho-so') }}'">
+        <button class="nav-btn" title="Hồ sơ" onclick="window.location='{{ url('nhan-vien/ho-so') }}'">
             <i class="fas fa-user"></i>
             <span>Hồ sơ</span>
         </button>
