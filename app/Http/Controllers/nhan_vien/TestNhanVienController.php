@@ -7,6 +7,7 @@ use App\Models\ChiaCaLamViec;
 use App\Models\NguoiDung;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class TestNhanVienController extends Controller
@@ -85,7 +86,7 @@ class TestNhanVienController extends Controller
 
         $vaiTroChinh = $lichTheoTuan->contains(fn ($lich) => ($lich->vai_tro_trong_ca ?? '') === 'truong_ca')
             ? 'Trưởng ca'
-            : $this->displayRole((string) $nguoiDung->vai_tro);
+            : $this->displayRole(optional($nguoiDung->vaiTro)->ten_vai_tro);
 
         return view('nhan_vien_view.lich-lam-viec.xem-tuan', [
             'nguoiDung' => $nguoiDung,
@@ -116,15 +117,20 @@ class TestNhanVienController extends Controller
     private function resolvePreviewEmployee(Request $request): NguoiDung
     {
         $authUser = auth()->user();
-        if ($authUser instanceof NguoiDung && $authUser->vai_tro !== 'admin') {
+        if ($authUser instanceof NguoiDung && ! $this->isAdminRole(optional($authUser->vaiTro)->ten_vai_tro)) {
+            $authUser->loadMissing('vaiTro');
+
             return $authUser;
         }
 
         $requestedUserId = $request->integer('user_id');
         if ($requestedUserId) {
             $nguoiDung = NguoiDung::query()
+                ->with('vaiTro')
                 ->where('trang_thai', 1)
-                ->where('vai_tro', '!=', 'admin')
+                ->whereHas('vaiTro', function ($query) {
+                    $query->whereIn('ten_vai_tro', ['Nhân viên', 'Trưởng ca']);
+                })
                 ->find($requestedUserId);
 
             if ($nguoiDung) {
@@ -133,8 +139,11 @@ class TestNhanVienController extends Controller
         }
 
         return NguoiDung::query()
+            ->with('vaiTro')
             ->where('trang_thai', 1)
-            ->whereIn('vai_tro', ['nhan_vien', 'truong_ca'])
+            ->whereHas('vaiTro', function ($query) {
+                $query->whereIn('ten_vai_tro', ['Nhân viên', 'Trưởng ca']);
+            })
             ->orderBy('ho_ten')
             ->firstOrFail();
     }
@@ -163,12 +172,19 @@ class TestNhanVienController extends Controller
         return $hours . ' giờ ' . $remainingMinutes . ' phút';
     }
 
-    private function displayRole(string $vaiTro): string
+    private function displayRole(?string $vaiTro): string
     {
-        return match ($vaiTro) {
-            'truong_ca' => 'Trưởng ca',
-            'nhan_vien' => 'Nhân viên',
+        $normalized = Str::of((string) $vaiTro)->lower()->ascii()->value();
+
+        return match ($normalized) {
+            'truong ca' => 'Trưởng ca',
+            'admin' => 'Admin',
             default => 'Nhân viên',
         };
+    }
+
+    private function isAdminRole(?string $vaiTro): bool
+    {
+        return Str::of((string) $vaiTro)->lower()->ascii()->value() === 'admin';
     }
 }

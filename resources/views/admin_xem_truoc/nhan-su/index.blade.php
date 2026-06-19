@@ -85,10 +85,11 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Vai trò</label>
-                        <select name="vai_tro" class="form-select">
+                        <select name="id_vai_tro" class="form-select">
                             <option value="">Tất cả vai trò</option>
                             @foreach ($vaiTros as $vaiTroItem)
-                                <option value="{{ $vaiTroItem }}" @selected($vaiTro === $vaiTroItem)>{{ $vaiTroItem }}
+                                <option value="{{ $vaiTroItem->id }}" @selected((string) $vaiTro === (string) $vaiTroItem->id)>
+                                    {{ $vaiTroItem->ten_vai_tro }}
                                 </option>
                             @endforeach
                         </select>
@@ -124,15 +125,8 @@
                             <th>CCCD</th>
                             <th>Email</th>
                             <th>Vai trò</th>
-                            <th>Trạng thái</th>v
-                            @forelse($nguoiDungs as $nguoiDung)
-                                @if($nguoiDung->vai_tro == 'admin')
-                                    <th>
-                                        Phân quyền
-                                    </th>
-                                @endif
-                            @endforeach
-                            <th class="text-end" style="width: 120px;">Thao tác</th>
+                            <th>Trạng thái</th>
+                            <th class="text-end" style="width: 140px;">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -143,11 +137,8 @@
 
                             <tr>
                                 <td>
-                                    <strong>
-                                        ND{{ str_pad((string) $nguoiDung->id, 4, '0', STR_PAD_LEFT) }}
-                                    </strong>
+                                    <strong>ND{{ str_pad((string) $nguoiDung->id, 4, '0', STR_PAD_LEFT) }}</strong>
                                 </td>
-
                                 <td>
                                     @if ($nguoiDung->anh_dai_dien)
                                         <img src="{{ asset('storage/' . $nguoiDung->anh_dai_dien) }}"
@@ -160,41 +151,26 @@
                                         </div>
                                     @endif
                                 </td>
-
                                 <td>
                                     <strong>{{ $nguoiDung->ho_ten }}</strong>
                                     <br>
                                     <small class="text-muted">{{ $nguoiDung->sdt }}</small>
                                 </td>
-
                                 <td>{{ $nguoiDung->gioi_tinh ?? '-' }}</td>
-
                                 <td>{{ $nguoiDung->cccd ?? '-' }}</td>
-
                                 <td>{{ $nguoiDung->email }}</td>
-
                                 <td>
                                     <span class="badge bg-secondary">
-                                        {{ $nguoiDung->vai_tro }}
+                                        {{ $nguoiDung->vaiTro->ten_vai_tro ?? 'Chưa có vai trò' }}
                                     </span>
                                 </td>
-
                                 <td>
                                     @if ($nguoiDung->trang_thai == 1)
-                                        <span class="status-badge status-active">
-                                            Hoạt động
-                                        </span>
+                                        <span class="status-badge status-active">Hoạt động</span>
                                     @elseif($nguoiDung->trang_thai == 0)
-                                        <span class="status-badge status-inactive">
-                                            Ngưng hoạt động
-                                        </span>
+                                        <span class="status-badge status-inactive">Ngưng hoạt động</span>
                                     @endif
                                 </td>
-
-                                <td>
-                                    <a class="btn btn-primary md3" href="{{ route('nguoi-dung.phan-quyen', $nguoiDung)}}">Phân quyền</a>
-                                </td>
-
                                 <td class="text-end">
                                     <a href="{{ route('nguoi-dung.show', $nguoiDung) }}"
                                         class="btn btn-sm btn-outline-info" title="Xem">
@@ -218,7 +194,6 @@
                                     </form>
                                 </td>
                             </tr>
-
                         @empty
                             <tr>
                                 <td colspan="9" class="text-center text-muted py-5">

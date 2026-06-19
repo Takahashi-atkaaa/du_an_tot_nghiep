@@ -299,7 +299,7 @@
                 <tr>
                     <td>
                         <div class="fw-semibold">{{ $nguoiDung->ho_ten }}</div>
-                        <div class="small text-muted">{{ $nguoiDung->vai_tro }}</div>
+                        <div class="small text-muted">{{ $nguoiDung->vaiTro->ten_vai_tro ?? 'Chưa có vai trò' }}</div>
                     </td>
                     @foreach($weekDates as $date)
                         @php

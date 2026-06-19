@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class VaiTro extends Model
 {
-  protected $table = 'vai_tro';
+    protected $table = 'vai_tro';
 
     protected $fillable = [
         'id',
@@ -16,7 +18,7 @@ class VaiTro extends Model
     /**
      * Một vai trò có nhiều người dùng
      */
-    public function nguoiDungs()
+    public function nguoiDungs(): HasMany
     {
         return $this->hasMany(NguoiDung::class, 'id_vai_tro');
     }
@@ -24,7 +26,7 @@ class VaiTro extends Model
     /**
      * Một vai trò có nhiều quyền
      */
-    public function quyens()
+    public function quyens(): BelongsToMany
     {
         return $this->belongsToMany(
             Quyen::class,

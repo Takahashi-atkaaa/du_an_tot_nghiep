@@ -32,6 +32,9 @@
             padding-top: 20px;
             z-index: 1000;
             transition: all 0.3s ease;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
         }
         .sidebar .logo {
             text-align: center;

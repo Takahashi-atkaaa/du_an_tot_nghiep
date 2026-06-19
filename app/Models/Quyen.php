@@ -1,14 +1,11 @@
 <?php
 
 namespace App\Models;
-use App\Models\QuyenNguoiDung;
-use App\Models\BaseModel;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Quyen extends BaseModel
 {
-
     protected $table = 'quyen';
 
     protected $fillable = [
@@ -17,10 +14,13 @@ class Quyen extends BaseModel
         'ten_quyen',
     ];
 
-
-    public function quyenNguoiDung()
+    public function vaiTros(): BelongsToMany
     {
-        return $this->hasMany(\App\Models\QuyenVaiTro::class, 'id_quyen');
+        return $this->belongsToMany(
+            VaiTro::class,
+            'quyen_vai_tro',
+            'id_quyen',
+            'id_vai_tro'
+        );
     }
 }
-

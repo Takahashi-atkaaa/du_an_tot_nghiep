@@ -2,7 +2,9 @@
 
 // Khai bao namespace cho model
 namespace App\Models;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 // Su dung trait Authenticatable de ho tro xac thuc
 
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -62,7 +64,7 @@ class NguoiDung extends Authenticatable
         return $this->mat_khau;
     }
 
-    public function scopeSearch($query, ?string $keyword)
+    public function scopeSearch(Builder $query, ?string $keyword): Builder
     {
         if (blank($keyword)) {
             return $query;
@@ -70,11 +72,13 @@ class NguoiDung extends Authenticatable
 
         $keyword = trim($keyword);
 
-        return $query->where(function ($subQuery) use ($keyword) {
+        return $query->where(function (Builder $subQuery) use ($keyword) {
             $subQuery->where('ho_ten', 'like', '%' . $keyword . '%')
                 ->orWhere('email', 'like', '%' . $keyword . '%')
                 ->orWhere('sdt', 'like', '%' . $keyword . '%')
-                ->orWhere('vai_tro', 'like', '%' . $keyword . '%');
+                ->orWhereHas('vaiTro', function (Builder $roleQuery) use ($keyword) {
+                    $roleQuery->where('ten_vai_tro', 'like', '%' . $keyword . '%');
+                });
         });
     }
 
@@ -86,7 +90,7 @@ class NguoiDung extends Authenticatable
         );
     }
 
-    public function vaiTro()
+    public function vaiTro(): BelongsTo
     {
         return $this->belongsTo(VaiTro::class, 'id_vai_tro');
     }
