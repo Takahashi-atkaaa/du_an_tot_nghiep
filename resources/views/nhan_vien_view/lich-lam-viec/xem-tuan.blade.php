@@ -552,16 +552,16 @@
         </div>
 
         <div class="week-navigation">
-            <a href="{{ route('nhan-vien.test.lich-tuan', ['week_start' => $weekStart->copy()->subDays(7)->toDateString(), 'user_id' => $nguoiDung->id]) }}" class="btn btn-outline-success">
+            <a href="{{ route('nhan-vien.lich-tuan', ['week_start' => $weekStart->copy()->subDays(7)->toDateString(), 'user_id' => $nguoiDung->id]) }}" class="btn btn-outline-success">
                 <i class="fas fa-arrow-left me-2"></i>Tuần trước
             </a>
-            <a href="{{ route('nhan-vien.test.lich-tuan', ['week_start' => $todayWeekStart, 'user_id' => $nguoiDung->id]) }}" class="btn {{ $weekStart->toDateString() === $todayWeekStart ? 'btn-success' : 'btn-outline-success' }}">
+            <a href="{{ route('nhan-vien.lich-tuan', ['week_start' => $todayWeekStart, 'user_id' => $nguoiDung->id]) }}" class="btn {{ $weekStart->toDateString() === $todayWeekStart ? 'btn-success' : 'btn-outline-success' }}">
                 <i class="far fa-calendar me-2"></i>Tuần này
             </a>
-            <a href="{{ route('nhan-vien.test.lich-tuan', ['week_start' => $weekStart->copy()->addDays(7)->toDateString(), 'user_id' => $nguoiDung->id]) }}" class="btn btn-outline-success">
+            <a href="{{ route('nhan-vien.lich-tuan', ['week_start' => $weekStart->copy()->addDays(7)->toDateString(), 'user_id' => $nguoiDung->id]) }}" class="btn btn-outline-success">
                 Tuần sau <i class="fas fa-arrow-right ms-2"></i>
             </a>
-            <form method="GET" action="{{ route('nhan-vien.test.lich-tuan') }}">
+            <form method="GET" action="{{ route('nhan-vien.lich-tuan') }}">
                 <input type="hidden" name="user_id" value="{{ $nguoiDung->id }}">
                 <input type="date" name="week_start" value="{{ $selectedWeekDate }}" class="form-control week-picker" onchange="this.form.submit()">
             </form>
