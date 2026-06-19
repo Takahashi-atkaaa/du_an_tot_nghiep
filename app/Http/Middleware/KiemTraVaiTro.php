@@ -1,35 +1,35 @@
 <?php
 
-// Khai bao namespace cho middleware
 namespace App\Http\Middleware;
 
-// Su dung middleware co so
 use Closure;
-
-// Su dung Request
 use Illuminate\Http\Request;
-
-// Dinh nghia interface tra ve Response
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class KiemTraVaiTro
 {
-    // Xu ly request
     public function handle(Request $request, Closure $next, ...$vaiTros): Response
     {
-        // Lay nguoi dung hien tai dang nhap
         $nguoiDung = $request->user();
 
-        // Kiem tra xem nguoi dung co vai tro duoc phep khong
-        // $vaiTros la danh sach cac vai tro truyen vao route
-        // VD: ->middleware('vai_tro:Admin,nhan_vien')
-        if ($nguoiDung && in_array($nguoiDung->vai_tro, $vaiTros)) {
-            // Co quyen -> cho phep request di tiep
+        if (! $nguoiDung) {
+            abort(403, 'Bạn không có quyền truy cập trang này');
+        }
+
+        $tenVaiTro = Str::of((string) optional($nguoiDung->vaiTro)->ten_vai_tro)
+            ->lower()
+            ->ascii()
+            ->value();
+
+        $vaiTrosChoPhep = collect($vaiTros)
+            ->map(fn (string $vaiTro) => Str::of($vaiTro)->lower()->ascii()->value())
+            ->all();
+
+        if (in_array($tenVaiTro, $vaiTrosChoPhep, true)) {
             return $next($request);
         }
 
-        // Khong co quyen -> tra ve trang 403 Forbidden
-        // abort() se throw exception va terminates script
-        abort(403, 'Ban khong co quyen truy cap trang nay');
+        abort(403, 'Bạn không có quyền truy cập trang này');
     }
 }

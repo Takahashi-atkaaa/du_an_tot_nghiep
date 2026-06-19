@@ -4,7 +4,7 @@ namespace App\Http\Controllers\admin\NhanSu;
 
 use App\Http\Controllers\Controller;
 use App\Models\NguoiDung;
-use App\Models\Quyen;
+use App\Models\VaiTro;
 use App\Requests\NhanSu\CapNhatNhanVienRequest;
 use App\Requests\NhanSu\ThemNhanVienRequest;
 use Illuminate\Http\RedirectResponse;
@@ -17,44 +17,42 @@ use App\Models\VaiTro;
 class NguoiDungController extends Controller
 {
     public function index(Request $request): View
-{
-    $keyword = $request->input('keyword');
-    $vaiTro = $request->input('id_vai_tro');
-    $trangThai = $request->filled('trang_thai')
-        ? $request->boolean('trang_thai')
-        : null;
+    {
+        $keyword = $request->input('keyword');
+        $vaiTro = $request->input('id_vai_tro');
+        $trangThai = $request->filled('trang_thai') ? $request->boolean('trang_thai') : null;
 
-    $tongNhanVien = NguoiDung::withTrashed()->count();
-    $dangLamViec = NguoiDung::where('trang_thai', 1)->count();
-    $nghiPhep = NguoiDung::where('trang_thai', 0)->count();
-    $daNghiViec = NguoiDung::onlyTrashed()->count();
+        $tongNhanVien = NguoiDung::withTrashed()->count();
+        $dangLamViec = NguoiDung::query()->where('trang_thai', true)->count();
+        $nghiPhep = NguoiDung::query()->where('trang_thai', false)->count();
+        $daNghiViec = NguoiDung::onlyTrashed()->count();
+        $vaiTros = VaiTro::query()->orderBy('ten_vai_tro')->get(['id', 'ten_vai_tro']);
 
-    $nguoiDungs = NguoiDung::with('vaiTro')
-        ->search($keyword)
-        ->when($vaiTro, function ($query, $vaiTro) {
-            $query->where('id_vai_tro', $vaiTro);
-        })
-        ->when(!is_null($trangThai), function ($query) use ($trangThai) {
-            $query->where('trang_thai', $trangThai);
-        })
-        ->orderByDesc('id')
-        ->paginate(10)
-        ->withQueryString();
+        $nguoiDungs = NguoiDung::query()
+            ->with('vaiTro')
+            ->search($keyword)
+            ->when($vaiTro, function ($query, $vaiTro) {
+                $query->where('id_vai_tro', $vaiTro);
+            })
+            ->when(! is_null($trangThai), function ($query) use ($trangThai) {
+                $query->where('trang_thai', $trangThai);
+            })
+            ->orderByDesc('id')
+            ->paginate(10)
+            ->withQueryString();
 
-    return view('admin_xem_truoc.nhan-su.index', [
-        'nguoiDungs' => $nguoiDungs,
-        'keyword' => $keyword,
-        'vaiTro' => $vaiTro,
-        'trangThai' => $request->input('trang_thai'),
-
-        'tongNhanVien' => $tongNhanVien,
-        'dangLamViec' => $dangLamViec,
-        'nghiPhep' => $nghiPhep,
-        'daNghiViec' => $daNghiViec,
-
-        'vaiTros' => VaiTro::all(),
-    ]);
-}
+        return view('admin_xem_truoc.nhan-su.index', [
+            'nguoiDungs' => $nguoiDungs,
+            'keyword' => $keyword,
+            'vaiTro' => $vaiTro,
+            'trangThai' => $request->input('trang_thai'),
+            'tongNhanVien' => $tongNhanVien,
+            'dangLamViec' => $dangLamViec,
+            'nghiPhep' => $nghiPhep,
+            'daNghiViec' => $daNghiViec,
+            'vaiTros' => $vaiTros,
+        ]);
+    }
 
     public function create(): View
     {
@@ -65,50 +63,47 @@ class NguoiDungController extends Controller
     }
 
     public function store(ThemNhanVienRequest $request): RedirectResponse
-{
-    $validated = $request->validated();
+    {
+        $validated = $request->validated();
 
-    $avatar = null;
-    $cccdMatTruoc = null;
-    $cccdMatSau = null;
+        $avatar = null;
+        $cccdMatTruoc = null;
+        $cccdMatSau = null;
 
-    if ($request->hasFile('anh_dai_dien')) {
-        $avatar = $request->file('anh_dai_dien')
-            ->store('nguoi-dung/avatar', 'public');
+        if ($request->hasFile('anh_dai_dien')) {
+            $avatar = $request->file('anh_dai_dien')->store('nguoi-dung/avatar', 'public');
+        }
+
+        if ($request->hasFile('anh_cccd_mat_truoc')) {
+            $cccdMatTruoc = $request->file('anh_cccd_mat_truoc')->store('nguoi-dung/cccd', 'public');
+        }
+
+        if ($request->hasFile('anh_cccd_mat_sau')) {
+            $cccdMatSau = $request->file('anh_cccd_mat_sau')->store('nguoi-dung/cccd', 'public');
+        }
+
+        NguoiDung::create([
+            'ho_ten' => $validated['ho_ten'],
+            'email' => $validated['email'],
+            'sdt' => $validated['sdt'],
+            'gioi_tinh' => $validated['gioi_tinh'],
+            'cccd' => $validated['cccd'],
+            'anh_dai_dien' => $avatar,
+            'anh_cccd_mat_truoc' => $cccdMatTruoc,
+            'anh_cccd_mat_sau' => $cccdMatSau,
+            'mat_khau' => Hash::make($validated['mat_khau']),
+            'id_vai_tro' => $validated['id_vai_tro'],
+            'trang_thai' => $request->boolean('trang_thai'),
+        ]);
+
+        return redirect('/nguoi-dung')
+            ->with('success', 'Đã thêm người dùng mới.');
     }
-
-    if ($request->hasFile('anh_cccd_mat_truoc')) {
-        $cccdMatTruoc = $request->file('anh_cccd_mat_truoc')
-            ->store('nguoi-dung/cccd', 'public');
-    }
-
-    if ($request->hasFile('anh_cccd_mat_sau')) {
-        $cccdMatSau = $request->file('anh_cccd_mat_sau')
-            ->store('nguoi-dung/cccd', 'public');
-    }
-
-    NguoiDung::create([
-        'ho_ten' => $validated['ho_ten'],
-        'email' => $validated['email'],
-        'sdt' => $validated['sdt'],
-        'gioi_tinh' => $validated['gioi_tinh'],
-        'cccd' => $validated['cccd'],
-
-        'anh_dai_dien' => $avatar,
-        'anh_cccd_mat_truoc' => $cccdMatTruoc,
-        'anh_cccd_mat_sau' => $cccdMatSau,
-
-        'mat_khau' => Hash::make($validated['mat_khau']),
-        'id_vai_tro' => $validated['id_vai_tro'],
-        'trang_thai' => $request->boolean('trang_thai'),
-    ]);
-
-    return redirect('/nguoi-dung')
-        ->with('success', 'Đã thêm người dùng mới.');
-}
 
     public function edit(NguoiDung $nguoiDung): View
     {
+        $nguoiDung->load('vaiTro');
+
         return view('admin_xem_truoc.nhan-su.edit', [
             'nguoiDung' => $nguoiDung,
             'vaiTros' => VaiTro::all(),
@@ -117,6 +112,8 @@ class NguoiDungController extends Controller
 
     public function show(NguoiDung $nguoiDung): View
     {
+        $nguoiDung->load('vaiTro');
+
         return view('admin_xem_truoc.nhan-su.show', [
             'nguoiDung' => $nguoiDung,
         ]);
@@ -148,46 +145,34 @@ class NguoiDungController extends Controller
             );
         }
 
-        $data['anh_dai_dien'] = $request->file('anh_dai_dien')
-            ->store('nguoi-dung/avatar', 'public');
-    }
+        if ($request->hasFile('anh_cccd_mat_truoc')) {
+            if ($nguoiDung->anh_cccd_mat_truoc) {
+                Storage::disk('public')->delete($nguoiDung->anh_cccd_mat_truoc);
+            }
 
-    if ($request->hasFile('anh_cccd_mat_truoc')) {
-
-        if ($nguoiDung->anh_cccd_mat_truoc) {
-            Storage::disk('public')->delete(
-                $nguoiDung->anh_cccd_mat_truoc
-            );
+            $data['anh_cccd_mat_truoc'] = $request->file('anh_cccd_mat_truoc')->store('nguoi-dung/cccd', 'public');
         }
 
-        $data['anh_cccd_mat_truoc'] = $request->file('anh_cccd_mat_truoc')
-            ->store('nguoi-dung/cccd', 'public');
-    }
+        if ($request->hasFile('anh_cccd_mat_sau')) {
+            if ($nguoiDung->anh_cccd_mat_sau) {
+                Storage::disk('public')->delete($nguoiDung->anh_cccd_mat_sau);
+            }
 
-    if ($request->hasFile('anh_cccd_mat_sau')) {
-
-        if ($nguoiDung->anh_cccd_mat_sau) {
-            Storage::disk('public')->delete(
-                $nguoiDung->anh_cccd_mat_sau
-            );
+            $data['anh_cccd_mat_sau'] = $request->file('anh_cccd_mat_sau')->store('nguoi-dung/cccd', 'public');
         }
 
-        $data['anh_cccd_mat_sau'] = $request->file('anh_cccd_mat_sau')
-            ->store('nguoi-dung/cccd', 'public');
+        $nguoiDung->update($data);
+
+        return redirect('/nguoi-dung')
+            ->with('success', 'Đã cập nhật người dùng.');
     }
 
-    $nguoiDung->update($data);
-
-    return redirect('/nguoi-dung')
-        ->with('success', 'Đã cập nhật người dùng.');
-}
-
-    public function destroy(NguoiDung $nguoiDung){ //xóa mềm đổi trạng thái thành 3 đã nghỉ việc
+    public function destroy(NguoiDung $nguoiDung): RedirectResponse
+    {
         $nguoiDung->trang_thai = 3;
         $nguoiDung->save();
 
         return redirect('/nguoi-dung')
             ->with('success', 'Đã xóa nhân viên.');
     }
-
 }

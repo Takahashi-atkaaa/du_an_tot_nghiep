@@ -2,7 +2,9 @@
 
 // Khai bao namespace cho model
 namespace App\Models;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 // Su dung trait Authenticatable de ho tro xac thuc
 
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -85,7 +87,7 @@ public function setMatKhauAttribute($value)
         );
     }
 
-    public function vaiTro()
+    public function vaiTro(): BelongsTo
     {
         return $this->belongsTo(VaiTro::class, 'id_vai_tro');
     }

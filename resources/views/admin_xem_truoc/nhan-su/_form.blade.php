@@ -37,9 +37,9 @@
         <select name="gioi_tinh"
             class="form-select @error('gioi_tinh') is-invalid @enderror">
             <option value="">Chọn giới tính</option>
-            <option value="Nam" @selected(old('gioi_tinh', $nguoiDung->gioi_tinh) == 'Nam')>Nam</option>
-            <option value="Nữ" @selected(old('gioi_tinh', $nguoiDung->gioi_tinh) == 'Nữ')>Nữ</option>
-            <option value="Khác" @selected(old('gioi_tinh', $nguoiDung->gioi_tinh) == 'Khác')>Khác</option>
+            <option value="Nam" @selected(old('gioi_tinh', $nguoiDung->gioi_tinh) === 'Nam')>Nam</option>
+            <option value="Nữ" @selected(old('gioi_tinh', $nguoiDung->gioi_tinh) === 'Nữ')>Nữ</option>
+            <option value="Khác" @selected(old('gioi_tinh', $nguoiDung->gioi_tinh) === 'Khác')>Khác</option>
         </select>
         @error('gioi_tinh')
             <div class="invalid-feedback">{{ $message }}</div>
