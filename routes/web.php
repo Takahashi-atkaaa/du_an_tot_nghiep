@@ -115,14 +115,17 @@ Route::middleware([KTVaiTro::class])->group(function () {
     //quản lý sản phẩm
     // API - phải đặt TRƯỚC san-pham/{id} để tránh bị match nhầm
     Route::get('/admin/api/san-pham/{id}', [SanPhamApiController::class, 'show']);
+    Route::delete('/admin/api/san-pham/variant/{id}', [SanPhamApiController::class, 'destroyVariant']);
+    Route::delete('/admin/api/san-pham/{id}/variants', [SanPhamApiController::class, 'destroyAllVariants']);
     Route::get('/admin/api/thuoc-tinh/con/{id}', [ThuocTinhApiController::class, 'getThuocTinhCon']);
     Route::get('/admin/api/thuoc-tinh/all-con', [ThuocTinhApiController::class, 'getAllThuocTinhCon']);
     Route::post('/admin/api/thuoc-tinh', [ThuocTinhApiController::class, 'store']);
 
-    Route::get('/admin/san-pham', [SanPhamController::class, 'index'])->middleware('permission:xem_san_pham');
+    Route::get('/admin/san-pham', [SanPhamController::class, 'index'])
+        ->middleware('permission:xem_san_pham')->name('san-pham.index');
     Route::post('/admin/san-pham', [SanPhamController::class, 'store'])->middleware('permission:them_san_pham');
     Route::post('/admin/san-pham/bulk-action', [SanPhamController::class, 'bulkAction'])->middleware('permission:sua_san_pham');
-    Route::get('/admin/san-pham/trash', [SanPhamController::class, 'trash'])->middleware('permission:xoa_san_pham');
+    Route::get('/admin/san-pham/trash', [SanPhamController::class, 'trash'])->middleware('permission:xoa_san_pham')->name('san-pham.trash');
     Route::get('/admin/san-pham/export', [SanPhamController::class, 'export'])->middleware('permission:xem_san_pham');
     Route::get('/admin/san-pham/export-template', [SanPhamController::class, 'exportTemplate'])->middleware('permission:xem_san_pham');
     Route::post('/admin/san-pham/import', [SanPhamController::class, 'import'])->middleware('permission:them_san_pham');

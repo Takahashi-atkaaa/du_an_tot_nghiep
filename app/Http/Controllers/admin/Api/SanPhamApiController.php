@@ -62,4 +62,60 @@ class SanPhamApiController extends Controller
             ],
         ]);
     }
+
+    public function destroyVariant(int $id): JsonResponse
+    {
+        $bienThe = SanPham::whereNotNull('san_pham_cha_id')->find($id);
+
+        if (!$bienThe) {
+            return response()->json(['success' => false, 'message' => 'Biến thể không tồn tại.'], 404);
+        }
+
+        if ($bienThe->hinh_anh && !str_starts_with($bienThe->hinh_anh, 'http')) {
+            $this->deleteImageIfUnused($bienThe->hinh_anh);
+        }
+
+        $bienThe->thuocTinhs()->detach();
+        $bienThe->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã xóa biến thể.',
+        ]);
+    }
+
+    public function destroyAllVariants(int $parentId): JsonResponse
+    {
+        $sanPham = SanPham::sanPhamCha()->find($parentId);
+
+        if (!$sanPham) {
+            return response()->json(['success' => false, 'message' => 'Sản phẩm cha không tồn tại.'], 404);
+        }
+
+        $bienThes = $sanPham->bienThe;
+
+        foreach ($bienThes as $bienThe) {
+            if ($bienThe->hinh_anh && !str_starts_with($bienThe->hinh_anh, 'http')) {
+                $this->deleteImageIfUnused($bienThe->hinh_anh);
+            }
+            $bienThe->thuocTinhs()->detach();
+            $bienThe->delete();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã xóa ' . $bienThes->count() . ' biến thể.',
+        ]);
+    }
+
+    private function deleteImageIfUnused(string $path): void
+    {
+        $existsInDb = SanPham::where('hinh_anh', $path)->exists();
+        if (!$existsInDb) {
+            $fullPath = public_path($path);
+            if (file_exists($fullPath)) {
+                unlink($fullPath);
+            }
+        }
+    }
 }

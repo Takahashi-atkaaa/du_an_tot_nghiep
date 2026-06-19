@@ -1468,7 +1468,7 @@
     };
 
     let currentDrawerProductId = null;
-    function confirmDeleteFromDrawer() {
+    window.confirmDeleteFromDrawer = function() {
         if (!currentDrawerProductId) return;
         if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
         const form = document.createElement('form');
@@ -1532,6 +1532,7 @@
                             <th class="text-end">Giá bán</th>
                             <th class="text-end">Tồn kho</th>
                             <th>Trạng thái</th>
+                            <th class="text-center">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1560,6 +1561,11 @@
                                         : '<span class="badge bg-success">Còn</span>'
                                     )
                                 }
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteVariant(${v.id}, ${sp.id})" title="Xóa biến thể">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                             </td>
                         </tr>`).join('')}
                     </tbody>
@@ -1747,5 +1753,27 @@
         reader.readAsArrayBuffer(file);
     });
 })();
+
+// ---- Delete Variant (global, accessible from HTML) ----
+window.deleteVariant = async function(variantId, productId) {
+    if (!confirm('Bạn có chắc muốn xóa biến thể này?')) return;
+    try {
+        const res = await fetch(`/admin/api/san-pham/variant/${variantId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content,
+                'Accept': 'application/json',
+            },
+        });
+        const json = await res.json();
+        if (json.success) {
+            window.openProductDrawer(productId);
+        } else {
+            alert(json.message || 'Không thể xóa biến thể.');
+        }
+    } catch(e) {
+        alert('Lỗi: ' + e.message);
+    }
+};
 </script>
 @endsection
