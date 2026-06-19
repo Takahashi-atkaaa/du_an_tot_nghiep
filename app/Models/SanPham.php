@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Models\BaseModel;
 use App\Models\DanhMucSanPham;
+use App\Models\DonViSanPham;
+use App\Models\ThuocTinhSanPham;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -24,7 +26,6 @@ class SanPham extends BaseModel
         'gia_ban',
         'so_luong_ton_kho',
         'mo_ta',
-        'id_thuoc_tinh',
         'id_don_vi',
         'dinh_muc_toi_thieu',
         'trang_thai',
@@ -46,8 +47,8 @@ class SanPham extends BaseModel
         return $this->belongsTo(DonViSanPham::class, 'id_don_vi');
     }
 
-    public function thuocTinh()
+    public function thuocTinhs()
     {
-        return $this->belongsTo(ThuocTinhSanPham::class, 'id_thuoc_tinh');
+        return $this->belongsToMany(ThuocTinhSanPham::class, 'san_pham_thuoc_tinh', 'id_san_pham', 'id_thuoc_tinh');
     }
 }
