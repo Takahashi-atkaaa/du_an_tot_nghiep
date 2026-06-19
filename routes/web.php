@@ -93,6 +93,14 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::delete('/admin/kho-hang/nha-cung-cap/{id}', [NhaCungCapController::class, 'destroy'])->middleware('permission:xoa_nha_cung_cap');
 
 
+    // Thùng rác nhà cung cấp
+    Route::get('/admin/kho-hang/nha-cung-cap/thung-rac', [NhaCungCapController::class, 'trash'])->middleware('permission:xem_nha_cung_cap');
+    Route::post('/admin/kho-hang/nha-cung-cap/bulk-restore', [NhaCungCapController::class, 'bulkRestore'])->middleware('permission:xem_nha_cung_cap');
+    Route::delete('/admin/kho-hang/nha-cung-cap/bulk-force', [NhaCungCapController::class, 'bulkForceDelete'])->middleware('permission:xem_nha_cung_cap');
+    Route::post('/admin/kho-hang/nha-cung-cap/{id}/restore', [NhaCungCapController::class, 'restore'])->middleware('permission:xem_nha_cung_cap');
+    Route::delete('/admin/kho-hang/nha-cung-cap/{id}/force', [NhaCungCapController::class, 'forceDelete'])->middleware('permission:xem_nha_cung_cap');
+
+
     // quản lý danh mục
     Route::get('quan-ly-danh-muc', [DanhMucSanPhamController::class, 'index'])->name('danh_muc.index')->middleware('permission:xem_danh_muc');
     Route::post('quan-ly-danh-muc-store', [DanhMucSanPhamController::class, 'store'])->name('danh_muc.store')->middleware('permission:them_danh_muc');
