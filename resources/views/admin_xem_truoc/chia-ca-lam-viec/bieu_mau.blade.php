@@ -11,7 +11,7 @@
                     value="{{ $nguoiDung->id }}"
                     @selected((string) old('id_nguoi_dung', $chiaCaLamViec->id_nguoi_dung ?? '') === (string) $nguoiDung->id)
                 >
-                    {{ $nguoiDung->ho_ten }}{{ $nguoiDung->vai_tro ? ' - ' . $nguoiDung->vai_tro : '' }}
+                    {{ $nguoiDung->ho_ten }}{{ optional($nguoiDung->vaiTro)->ten_vai_tro ? ' - ' . optional($nguoiDung->vaiTro)->ten_vai_tro : '' }}
                 </option>
             @endforeach
         </select>

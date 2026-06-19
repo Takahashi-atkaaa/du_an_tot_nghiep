@@ -35,8 +35,11 @@ class ChiaCaController extends Controller
         $caLamViecs = $this->caLamViecs();
 
         $nguoiDungs = NguoiDung::query()
+            ->with('vaiTro')
             ->where('trang_thai', 1)
-            ->where('vai_tro', '!=', 'admin')
+            ->whereHas('vaiTro', function ($query) {
+                $query->whereIn('ten_vai_tro', ['Nhân viên', 'Trưởng ca']);
+            })
             ->when($keyword !== '', function ($query) use ($keyword) {
                 $query->where('ho_ten', 'like', '%' . $keyword . '%');
             })
@@ -57,12 +60,14 @@ class ChiaCaController extends Controller
                 });
             })
             ->orderBy('ho_ten')
-            ->get(['id', 'ho_ten', 'vai_tro']);
+            ->get(['id', 'ho_ten', 'id_vai_tro']);
 
         $lichTheoTuan = ChiaCaLamViec::query()
-            ->with(['nguoiDung', 'caLamViec'])
+            ->with(['nguoiDung.vaiTro', 'caLamViec'])
             ->whereHas('nguoiDung', function ($query) {
-                $query->where('vai_tro', '!=', 'admin');
+                $query->whereHas('vaiTro', function ($roleQuery) {
+                    $roleQuery->whereIn('ten_vai_tro', ['Nhân viên', 'Trưởng ca']);
+                });
             })
             ->whereBetween('ngay', [
                 $weekStart->toDateString(),
@@ -102,9 +107,7 @@ class ChiaCaController extends Controller
             })
             ->filter(function ($items) {
                 return ! $items->contains(function ($lich) {
-                    $vaiTro = $this->normalizeName((string) ($lich->nguoiDung?->vai_tro ?? ''));
-
-                    return in_array($vaiTro, ['truong ca', 'truong_ca', 'truongca'], true);
+                    return $this->normalizeShiftRole((string) ($lich->vai_tro_trong_ca ?? '')) === 'truong_ca';
                 });
             })
             ->map(function ($items) {
@@ -353,10 +356,13 @@ class ChiaCaController extends Controller
     private function nguoiDungs()
     {
         return NguoiDung::query()
+            ->with('vaiTro')
             ->where('trang_thai', 1)
-            ->where('vai_tro', '!=', 'admin')
+            ->whereHas('vaiTro', function ($query) {
+                $query->whereIn('ten_vai_tro', ['Nhân viên', 'Trưởng ca']);
+            })
             ->orderBy('ho_ten')
-            ->get(['id', 'ho_ten', 'vai_tro']);
+            ->get(['id', 'ho_ten', 'id_vai_tro']);
     }
 
     private function caLamViecs()
@@ -557,7 +563,7 @@ class ChiaCaController extends Controller
             $rowCells = [
                 $this->xmlCell((string) $nguoiDung->id, 'Base'),
                 $this->xmlCell($nguoiDung->ho_ten, 'Base'),
-                $this->xmlCell((string) $nguoiDung->vai_tro, 'Base'),
+                $this->xmlCell($this->displayUserRole($nguoiDung), 'Base'),
             ];
 
             foreach ($weekDates as $date) {
@@ -680,8 +686,12 @@ class ChiaCaController extends Controller
         }
 
         $nguoiDungMap = NguoiDung::query()
+            ->with('vaiTro')
             ->where('trang_thai', 1)
-            ->get(['id', 'ho_ten', 'vai_tro'])
+            ->whereHas('vaiTro', function ($query) {
+                $query->whereIn('ten_vai_tro', ['Nhân viên', 'Trưởng ca']);
+            })
+            ->get(['id', 'ho_ten', 'id_vai_tro'])
             ->keyBy('id');
 
         $caMap = $this->caLamViecs()
@@ -746,11 +756,17 @@ class ChiaCaController extends Controller
 
                     $uniqueKeys[$uniqueKey] = true;
                     $nguoiDung = $nguoiDungMap->get($nguoiDungId);
+
+                    if (! $nguoiDung || ! $nguoiDung->vaiTro) {
+                        $errors[] = 'Dòng ' . ($rowIndex + 5) . ': Nhân viên chưa có vai trò hợp lệ để phân ca.';
+                        continue;
+                    }
+
                     $insertRows[] = [
                         'id_nguoi_dung' => $nguoiDungId,
                         'id_ca_lam_viec' => $caLamViec->id,
                         'ngay' => $date,
-                        'vai_tro_trong_ca' => $this->defaultShiftRoleFromUserRole((string) ($nguoiDung->vai_tro ?? '')),
+                        'vai_tro_trong_ca' => $this->defaultShiftRoleFromUserRole((string) optional($nguoiDung->vaiTro)->ten_vai_tro),
                         'created_at' => now(),
                         'updated_at' => now(),
                     ];
@@ -1063,6 +1079,11 @@ class ChiaCaController extends Controller
         return $this->normalizeName($vaiTro) === 'truong ca' || $this->normalizeName($vaiTro) === 'truong_ca' || $this->normalizeName($vaiTro) === 'truongca'
             ? 'truong_ca'
             : 'nhan_vien';
+    }
+
+    private function displayUserRole(NguoiDung $nguoiDung): string
+    {
+        return optional($nguoiDung->vaiTro)->ten_vai_tro ?? 'Chưa có vai trò';
     }
 
     private function normalizeShiftRole(string $vaiTroTrongCa): string

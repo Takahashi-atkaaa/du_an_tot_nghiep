@@ -40,7 +40,7 @@
                 <p class="text-muted mb-2">Mã ND{{ str_pad((string) $nguoiDung->id, 4, '0', STR_PAD_LEFT) }}</p>
 
                 <div class="d-flex justify-content-center gap-2 flex-wrap mb-3">
-                    <span class="badge bg-secondary">{{ $nguoiDung->vai_tro }}</span>
+                    <span class="badge bg-secondary">{{ $nguoiDung->vaiTro->ten_vai_tro ?? 'Chưa có vai trò' }}</span>
                     <span class="status-badge {{ $nguoiDung->trang_thai ? 'status-active' : 'status-inactive' }}">
                         {{ $nguoiDung->trang_thai ? 'Hoạt động' : 'Ngưng hoạt động' }}
                     </span>
@@ -84,7 +84,7 @@
                     <div class="col-md-6">
                         <div class="border rounded p-3 h-100">
                             <div class="text-muted small mb-1">Vai trò</div>
-                            <div class="fw-semibold">{{ $nguoiDung->vai_tro }}</div>
+                            <div class="fw-semibold">{{ $nguoiDung->vaiTro->ten_vai_tro ?? 'Chưa có vai trò' }}</div>
                         </div>
                     </div>
                     <div class="col-md-6">

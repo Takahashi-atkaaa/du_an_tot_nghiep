@@ -37,9 +37,9 @@
         <select name="gioi_tinh"
             class="form-select @error('gioi_tinh') is-invalid @enderror">
             <option value="">Chọn giới tính</option>
-            <option value="Nam" @selected(old('gioi_tinh', $nguoiDung->gioi_tinh) == 'Nam')>Nam</option>
-            <option value="Nữ" @selected(old('gioi_tinh', $nguoiDung->gioi_tinh) == 'Nữ')>Nữ</option>
-            <option value="Khác" @selected(old('gioi_tinh', $nguoiDung->gioi_tinh) == 'Khác')>Khác</option>
+            <option value="Nam" @selected(old('gioi_tinh', $nguoiDung->gioi_tinh) === 'Nam')>Nam</option>
+            <option value="Nữ" @selected(old('gioi_tinh', $nguoiDung->gioi_tinh) === 'Nữ')>Nữ</option>
+            <option value="Khác" @selected(old('gioi_tinh', $nguoiDung->gioi_tinh) === 'Khác')>Khác</option>
         </select>
         @error('gioi_tinh')
             <div class="invalid-feedback">{{ $message }}</div>
@@ -126,17 +126,17 @@
 
     <div class="col-md-6">
         <label class="form-label">Vai trò <span class="text-danger">*</span></label>
-        <select name="vai_tro"
-            class="form-select @error('vai_tro') is-invalid @enderror">
+        <select name="id_vai_tro"
+            class="form-select @error('id_vai_tro') is-invalid @enderror">
             <option value="">Chọn vai trò</option>
             @foreach($vaiTros as $vaiTro)
-                <option value="{{ $vaiTro }}"
-                    @selected(old('vai_tro', $nguoiDung->vai_tro) === $vaiTro)>
-                    {{ $vaiTro }}
+                <option value="{{ $vaiTro->id }}"
+                    @selected((string) old('id_vai_tro', $nguoiDung->id_vai_tro) === (string) $vaiTro->id)>
+                    {{ $vaiTro->ten_vai_tro }}
                 </option>
             @endforeach
         </select>
-        @error('vai_tro')
+        @error('id_vai_tro')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
     </div>
