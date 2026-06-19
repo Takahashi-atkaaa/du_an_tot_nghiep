@@ -150,4 +150,101 @@ class NhaCungCapController extends Controller
             'tongGiaTri'
         ));
     }
+
+    /**
+     * Display trash (soft-deleted) suppliers
+     */
+    public function trash(Request $request)
+    {
+        $items = NhaCungCap::onlyTrashed()
+            ->orderBy('deleted_at', 'desc')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('admin_xem_truoc.nha-cung-cap.trash', compact('items'));
+    }
+
+    /**
+     * Restore a single supplier from trash
+     */
+    public function restore($id)
+    {
+        $item = NhaCungCap::onlyTrashed()->where('id', $id)->first();
+        if (!$item) {
+            return redirect()->back()->with('error', 'Không tìm thấy nhà cung cấp trong thùng rác');
+        }
+
+        $item->restore();
+
+        return redirect()->back()->with('success', 'Khôi phục nhà cung cấp thành công');
+    }
+
+    /**
+     * Force delete a single supplier from trash
+     */
+    public function forceDelete($id)
+    {
+        $item = NhaCungCap::onlyTrashed()->where('id', $id)->first();
+        if (!$item) {
+            return redirect()->back()->with('error', 'Không tìm thấy nhà cung cấp trong thùng rác');
+        }
+
+        $item->forceDelete();
+
+        return redirect()->back()->with('success', 'Đã xóa vĩnh viễn nhà cung cấp');
+    }
+
+    /**
+     * Bulk restore suppliers from trash
+     */
+    public function bulkRestore(Request $request)
+    {
+        $raw = $request->input('ids');
+        $ids = [];
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) $ids = $decoded;
+        } elseif (is_array($raw)) {
+            $ids = $raw;
+        }
+
+        $ids = array_filter(array_map('intval', $ids));
+        if (empty($ids)) {
+            return redirect()->back()->with('error', 'Không có mục hợp lệ để khôi phục');
+        }
+
+        $items = NhaCungCap::onlyTrashed()->whereIn('id', $ids)->get();
+        foreach ($items as $it) {
+            $it->restore();
+        }
+
+        return redirect()->back()->with('success', 'Khôi phục các nhà cung cấp đã chọn thành công');
+    }
+
+    /**
+     * Bulk force delete suppliers from trash
+     */
+    public function bulkForceDelete(Request $request)
+    {
+        $raw = $request->input('ids');
+        $ids = [];
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) $ids = $decoded;
+        } elseif (is_array($raw)) {
+            $ids = $raw;
+        }
+
+        $ids = array_filter(array_map('intval', $ids));
+        if (empty($ids)) {
+            return redirect()->back()->with('error', 'Không có mục hợp lệ để xóa');
+        }
+
+        $items = NhaCungCap::onlyTrashed()->whereIn('id', $ids)->get();
+        foreach ($items as $it) {
+            $it->forceDelete();
+        }
+
+        return redirect()->back()->with('success', 'Đã xóa vĩnh viễn các nhà cung cấp đã chọn');
+    }
 }
