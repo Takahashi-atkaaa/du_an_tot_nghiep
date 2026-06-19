@@ -28,6 +28,7 @@ class StoreSanPhamRequest extends FormRequest
             'hinh_anh' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'bien_the' => 'sometimes|array',
             'bien_the.*.ten_bien_the' => 'string|max:255',
+            'bien_the.*.so_luong_san_pham_trong_don_vi' => 'nullable|integer|min:1',
             'bien_the.*.ma_vach' => 'string|unique:san_pham,ma_vach',
             'bien_the.*.gia_ban_bien' => 'numeric|min:0',
             'bien_the.*.so_luong_bien' => 'integer|min:0',
@@ -54,6 +55,7 @@ class StoreSanPhamRequest extends FormRequest
             'hinh_anh.mimes' => 'Hình ảnh phải là JPEG, PNG, JPG, GIF hoặc WEBP',
             'hinh_anh.max' => 'Kích thước hình ảnh không được vượt quá 2MB',
             'bien_the.*.ma_vach.unique' => 'Mã vạch biến thể đã tồn tại',
+            'bien_the.*.so_luong_san_pham_trong_don_vi.min' => 'Quy đổi phải lớn hơn hoặc bằng 1',
         ];
     }
 }

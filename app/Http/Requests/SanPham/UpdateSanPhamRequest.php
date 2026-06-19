@@ -36,6 +36,7 @@ class UpdateSanPhamRequest extends FormRequest
             'hinh_anh' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'bien_the' => 'sometimes|array',
             'bien_the.*.ten_bien_the' => 'string|max:255',
+            'bien_the.*.so_luong_san_pham_trong_don_vi' => 'nullable|integer|min:1',
             'bien_the.*.ma_vach' => [
                 'string',
                 Rule::unique('san_pham', 'ma_vach')->ignore($sanPhamId),

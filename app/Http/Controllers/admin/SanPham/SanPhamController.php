@@ -109,7 +109,7 @@ class SanPhamController extends Controller
                 continue;
             }
 
-            $unit = $this->findOrCreateDonVi($variant['ten_bien_the'], 1);
+            $unit = $this->findOrCreateDonVi($variant['ten_bien_the'], $variant['so_luong_san_pham_trong_don_vi'] ?? 1);
             SanPham::create([
                 'id_danh_muc' => $data['id_danh_muc'],
                 'ten_san_pham' => $data['ten_san_pham'],
@@ -192,6 +192,87 @@ class SanPhamController extends Controller
 
         return redirect()->route('san-pham.index')
             ->with('success', 'Đã xóa sản phẩm.');
+    }
+
+    public function bulkAction(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'action' => 'required|in:delete,activate,deactivate',
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:san_pham,id',
+        ]);
+
+        $ids = $request->input('ids');
+        $action = $request->input('action');
+
+        switch ($action) {
+            case 'delete':
+                $sanPhams = SanPham::whereIn('id', $ids)->get();
+                foreach ($sanPhams as $sanPham) {
+                    if ($sanPham->hinh_anh && !str_starts_with($sanPham->hinh_anh, 'http')) {
+                        $this->deleteProductImageIfUnused($sanPham->hinh_anh);
+                    }
+                    $sanPham->delete();
+                }
+                $message = 'Đã xóa ' . count($ids) . ' sản phẩm.';
+                break;
+
+            case 'activate':
+                SanPham::whereIn('id', $ids)->update(['trang_thai' => true]);
+                $message = 'Đã bật trạng thái cho ' . count($ids) . ' sản phẩm.';
+                break;
+
+            case 'deactivate':
+                SanPham::whereIn('id', $ids)->update(['trang_thai' => false]);
+                $message = 'Đã tắt trạng thái cho ' . count($ids) . ' sản phẩm.';
+                break;
+        }
+
+        return redirect()->route('san-pham.index')->with('success', $message);
+    }
+
+    public function trash(Request $request): View
+    {
+        $keyword = $request->input('keyword');
+
+        $trashed = SanPham::onlyTrashed()
+            ->with(['danhMuc', 'donVi'])
+            ->when($keyword, function ($query, $keyword) {
+                $query->searchByFields($keyword, ['ten_san_pham', 'ma_vach', 'ma_hang', 'thuong_hieu']);
+            })
+            ->orderByDesc('deleted_at')
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('admin_xem_truoc.san-pham-thung-rac', [
+            'trashed' => $trashed,
+            'keyword' => $keyword,
+        ]);
+    }
+
+    public function restore(int $id): RedirectResponse
+    {
+        $sanPham = SanPham::onlyTrashed()->findOrFail($id);
+        $sanPham->restore();
+
+        return redirect()->route('san-pham.trash')->with('success', 'Đã khôi phục sản phẩm "' . $sanPham->ten_san_pham . '".');
+    }
+
+    public function forceDelete(int $id): RedirectResponse
+    {
+        $sanPham = SanPham::onlyTrashed()->findOrFail($id);
+        $imagePath = $sanPham->hinh_anh;
+
+        $sanPham->forceDelete();
+
+        if ($imagePath && !str_starts_with($imagePath, 'http')) {
+            $fullPath = public_path($imagePath);
+            if (is_file($fullPath)) {
+                unlink($fullPath);
+            }
+        }
+
+        return redirect()->route('san-pham.trash')->with('success', 'Đã xóa vĩnh viễn sản phẩm.');
     }
 
     protected function uploadDirectory(): string

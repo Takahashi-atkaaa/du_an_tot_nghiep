@@ -66,9 +66,9 @@ Route::get('/admin/dashboard', function () {
 // //     return view('admin_xem_truoc.khuyen-mai');
 // // });
 
-// Route::get('/admin/cai-dat', function () {
-//     return view('admin_xem_truoc.cai-dat');
-// });
+Route::get('/admin/cai-dat', function () {
+    return view('admin_xem_truoc.cai-dat');
+});
 
 
 // // Trang ban hang
@@ -113,14 +113,21 @@ Route::middleware([KTVaiTro::class])->group(function () {
     //quản lý sản phẩm
     Route::get('/admin/san-pham', [SanPhamController::class, 'index'])->middleware('permission:xem_san_pham');
     Route::post('/admin/san-pham', [SanPhamController::class, 'store'])->middleware('permission:them_san_pham');
+    Route::post('/admin/san-pham/bulk-action', [SanPhamController::class, 'bulkAction'])->middleware('permission:sua_san_pham');
+    Route::get('/admin/san-pham/trash', [SanPhamController::class, 'trash'])->middleware('permission:xoa_san_pham');
+    Route::post('/admin/san-pham/{id}/restore', [SanPhamController::class, 'restore'])->middleware('permission:xoa_san_pham');
+    Route::delete('/admin/san-pham/{id}/force', [SanPhamController::class, 'forceDelete'])->middleware('permission:xoa_san_pham');
     Route::get('/admin/san-pham/{id}/edit', [SanPhamController::class, 'edit'])->middleware('permission:sua_san_pham');
     Route::put('/admin/san-pham/{id}', [SanPhamController::class, 'update'])->middleware('permission:sua_san_pham');
+    Route::delete('/admin/san-pham/{id}', [SanPhamController::class, 'destroy'])->middleware('permission:xoa_san_pham');
     Route::get('/admin/san-pham/{id}', [SanPhamController::class, 'show'])->middleware('permission:xem_san_pham');
 
     Route::get('/admin/cai-dat/san-pham', [ThietLapSanPhamController::class, 'index']);
     Route::post('/admin/cai-dat/san-pham/don-vi', [ThietLapSanPhamController::class, 'storeDonVi']);
+    Route::put('/admin/cai-dat/san-pham/don-vi/{id}', [ThietLapSanPhamController::class, 'updateDonVi']);
     Route::delete('/admin/cai-dat/san-pham/don-vi/{id}', [ThietLapSanPhamController::class, 'destroyDonVi']);
     Route::post('/admin/cai-dat/san-pham/thuoc-tinh', [ThietLapSanPhamController::class, 'storeThuocTinh']);
+    Route::put('/admin/cai-dat/san-pham/thuoc-tinh/{id}', [ThietLapSanPhamController::class, 'updateThuocTinh']);
     Route::delete('/admin/cai-dat/san-pham/thuoc-tinh/{id}', [ThietLapSanPhamController::class, 'destroyThuocTinh']);
 
     // Quản lý ca làm việc

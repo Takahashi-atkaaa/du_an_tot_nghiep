@@ -43,18 +43,29 @@
                 </form>
 
                 <hr>
-                <ul class="list-group">
+                <ul class="list-group" id="donViList">
                     @foreach($donVis as $donVi)
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
+                        <li class="list-group-item d-flex justify-content-between align-items-center" id="donvi-item-{{ $donVi->id }}">
+                            <div class="donvi-view">
                                 <strong>{{ $donVi->ten_don_vi }}</strong>
                                 <div class="text-muted">Số lượng: {{ $donVi->so_luong_san_pham_trong_don_vi }}</div>
                             </div>
-                            <div>
-                                <form method="POST" action="{{ url('admin/cai-dat/san-pham/don-vi/'.$donVi->id) }}" onsubmit="return confirm('Xóa đơn vị này?')">
+                            <div class="donvi-edit d-none">
+                                <form method="POST" action="{{ url('admin/cai-dat/san-pham/don-vi/'.$donVi->id) }}" class="d-flex gap-2">
+                                    @csrf
+                                    @method('PUT')
+                                    <input type="text" name="ten_don_vi" class="form-control form-control-sm" value="{{ $donVi->ten_don_vi }}" required style="width:120px;">
+                                    <input type="number" name="so_luong_san_pham_trong_don_vi" class="form-control form-control-sm" value="{{ $donVi->so_luong_san_pham_trong_don_vi }}" min="1" style="width:80px;">
+                                    <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-check"></i></button>
+                                    <button type="button" class="btn btn-sm btn-secondary" onclick="toggleEditDonVi({{ $donVi->id }})"><i class="fas fa-times"></i></button>
+                                </form>
+                            </div>
+                            <div class="donvi-actions">
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="toggleEditDonVi({{ $donVi->id }})"><i class="fas fa-edit"></i></button>
+                                <form method="POST" action="{{ url('admin/cai-dat/san-pham/don-vi/'.$donVi->id) }}" class="d-inline" onsubmit="return confirm('Xóa đơn vị này?')">
                                     @csrf
                                     @method('DELETE')
-                                    <button class="btn btn-sm btn-danger">Xóa</button>
+                                    <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
                                 </form>
                             </div>
                         </li>
@@ -82,17 +93,27 @@
                 </form>
 
                 <hr>
-                <ul class="list-group">
+                <ul class="list-group" id="thuocTinhList">
                     @foreach($thuocTinhs as $tt)
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
+                        <li class="list-group-item d-flex justify-content-between align-items-center" id="tt-item-{{ $tt->id }}">
+                            <div class="tt-view">
                                 {{ $tt->ten_thuoc_tinh }}
                             </div>
-                            <div>
-                                <form method="POST" action="{{ url('admin/cai-dat/san-pham/thuoc-tinh/'.$tt->id) }}" onsubmit="return confirm('Xóa thuộc tính này?')">
+                            <div class="tt-edit d-none">
+                                <form method="POST" action="{{ url('admin/cai-dat/san-pham/thuoc-tinh/'.$tt->id) }}" class="d-flex gap-2">
+                                    @csrf
+                                    @method('PUT')
+                                    <input type="text" name="ten_thuoc_tinh" class="form-control form-control-sm" value="{{ $tt->ten_thuoc_tinh }}" required style="width:180px;">
+                                    <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-check"></i></button>
+                                    <button type="button" class="btn btn-sm btn-secondary" onclick="toggleEditTt({{ $tt->id }})"><i class="fas fa-times"></i></button>
+                                </form>
+                            </div>
+                            <div class="tt-actions">
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="toggleEditTt({{ $tt->id }})"><i class="fas fa-edit"></i></button>
+                                <form method="POST" action="{{ url('admin/cai-dat/san-pham/thuoc-tinh/'.$tt->id) }}" class="d-inline" onsubmit="return confirm('Xóa thuộc tính này?')">
                                     @csrf
                                     @method('DELETE')
-                                    <button class="btn btn-sm btn-danger">Xóa</button>
+                                    <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
                                 </form>
                             </div>
                         </li>
@@ -103,3 +124,41 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    function toggleEditDonVi(id) {
+        const item = document.getElementById('donvi-item-' + id);
+        const viewEl = item.querySelector('.donvi-view');
+        const editEl = item.querySelector('.donvi-edit');
+        const actionsEl = item.querySelector('.donvi-actions');
+
+        if (editEl.classList.contains('d-none')) {
+            viewEl.classList.add('d-none');
+            actionsEl.classList.add('d-none');
+            editEl.classList.remove('d-none');
+        } else {
+            viewEl.classList.remove('d-none');
+            actionsEl.classList.remove('d-none');
+            editEl.classList.add('d-none');
+        }
+    }
+
+    function toggleEditTt(id) {
+        const item = document.getElementById('tt-item-' + id);
+        const viewEl = item.querySelector('.tt-view');
+        const editEl = item.querySelector('.tt-edit');
+        const actionsEl = item.querySelector('.tt-actions');
+
+        if (editEl.classList.contains('d-none')) {
+            viewEl.classList.add('d-none');
+            actionsEl.classList.add('d-none');
+            editEl.classList.remove('d-none');
+        } else {
+            viewEl.classList.remove('d-none');
+            actionsEl.classList.remove('d-none');
+            editEl.classList.add('d-none');
+        }
+    }
+</script>
+@endpush

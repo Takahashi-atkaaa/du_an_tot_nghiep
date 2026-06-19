@@ -17,6 +17,12 @@
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
         <i class="fas fa-plus me-2"></i>Thêm sản phẩm
     </button>
+    <button class="btn btn-outline-secondary ms-2" id="startQrScanBtn">
+        <i class="fas fa-barcode me-2"></i>Quét mã vạch
+    </button>
+    <a href="{{ url('admin/san-pham/trash') }}" class="btn btn-outline-danger ms-2">
+        <i class="fas fa-trash me-2"></i>Thùng rác
+    </a>
 </div>
 
     @if(session('success'))
@@ -42,7 +48,7 @@
                 <div class="col-md-4">
                     <div class="input-group">
                         <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" class="form-control" name="keyword" value="{{ $keyword ?? '' }}" placeholder="Tìm kiếm sản phẩm...">
+                        <input type="text" id="searchKeywordInput" class="form-control" name="keyword" value="{{ $keyword ?? '' }}" placeholder="Tìm kiếm sản phẩm...">
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -90,16 +96,33 @@
     </div>
 </div>
 
+<!-- Bulk Action Bar -->
+<form id="bulkActionForm" action="{{ url('admin/san-pham/bulk-action') }}" method="POST" style="display:none;">
+    @csrf
+    <input type="hidden" name="action" id="bulkActionInput">
+    <div id="selectedIdsContainer"></div>
+</form>
+
 <!-- Products Table -->
 <div class="card table-admin">
     <div class="card-body p-0">
+        <div class="d-flex justify-content-between align-items-center px-3 py-2 bg-light border-bottom">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="selectAllCheckbox">
+                <label class="form-check-label text-muted" for="selectAllCheckbox">Chọn tất cả</label>
+            </div>
+            <div id="bulkActionButtons" class="d-none">
+                <span class="text-muted me-3" id="selectedCount">0 đã chọn</span>
+                <button type="button" class="btn btn-sm btn-success" onclick="submitBulkAction('activate')"><i class="fas fa-check me-1"></i>Bật trạng thái</button>
+                <button type="button" class="btn btn-sm btn-warning" onclick="submitBulkAction('deactivate')"><i class="fas fa-ban me-1"></i>Tắt trạng thái</button>
+                <button type="button" class="btn btn-sm btn-danger" onclick="submitBulkAction('delete')"><i class="fas fa-trash me-1"></i>Xóa</button>
+            </div>
+        </div>
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th style="width: 50px;">
-                            <input type="checkbox" class="form-check-input">
-                        </th>
+                        <th style="width: 50px;"></th>
                         <th>Ảnh</th>
                         <th>Mã SP</th>
                         <th>Tên sản phẩm</th>
@@ -116,7 +139,7 @@
                     @forelse($sanPhams as $sanPham)
                         <tr>
                             <td>
-                                <input type="checkbox" class="form-check-input">
+                                <input type="checkbox" class="form-check-input product-checkbox" value="{{ $sanPham->id }}">
                             </td>
                             <td>
                                 @if($sanPham->hinh_anh)
@@ -297,15 +320,15 @@
             </form>
             <template id="variantRowTemplate">
                 <tr>
-                    <td><input type="text" name="variants[__INDEX__][ten_don_vi]" class="form-control" placeholder="Thùng"></td>
-                    <td><input type="number" name="variants[__INDEX__][so_luong_san_pham_trong_don_vi]" class="form-control" value="1" min="1"></td>
+                    <td><input type="text" name="bien_the[__INDEX__][ten_bien_the]" class="form-control" placeholder="Thùng"></td>
+                    <td><input type="number" name="bien_the[__INDEX__][so_luong_san_pham_trong_don_vi]" class="form-control" value="1" min="1"></td>
                     <td>
                         <div class="input-group">
-                            <input type="number" name="variants[__INDEX__][gia_ban]" class="form-control" placeholder="0">
+                            <input type="number" name="bien_the[__INDEX__][gia_ban_bien]" class="form-control" placeholder="0">
                             <span class="input-group-text">đ</span>
                         </div>
                     </td>
-                    <td><input type="text" name="variants[__INDEX__][ma_vach]" class="form-control" placeholder="Mã vạch"></td>
+                    <td><input type="text" name="bien_the[__INDEX__][ma_vach]" class="form-control" placeholder="Mã vạch"></td>
                     <td class="text-center">
                         <button type="button" class="btn btn-sm btn-danger remove-variant">Xóa</button>
                     </td>
@@ -333,7 +356,7 @@
                 row.remove();
                 Array.from(variantBody.querySelectorAll('tr')).forEach((tr, idx) => {
                     tr.querySelectorAll('input').forEach(function (input) {
-                        input.name = input.name.replace(/variants\[\d+\]/, 'variants[' + idx + ']');
+                        input.name = input.name.replace(/bien_the\[\d+\]/, 'bien_the[' + idx + ']');
                     });
                 });
             }
@@ -345,76 +368,136 @@
 
 @push('scripts')
 <script src="https://unpkg.com/html5-qrcode@2.3.7/minified/html5-qrcode.min.js"></script>
+@endpush
+
+@section('page_scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const startQrScanBtn = document.getElementById('startQrScanBtn');
-        const stopQrScanBtn = document.getElementById('stopQrScanBtn');
-        const qrScannerModal = new bootstrap.Modal(document.getElementById('qrScannerModal'));
-        const searchKeywordInput = document.getElementById('searchKeywordInput');
-        const qrScannerElementId = 'qrScanner';
-        let html5QrCode = null;
-        let qrScannerActive = false;
+    // Bulk Actions
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const productCheckboxes = document.querySelectorAll('.product-checkbox');
+    const bulkActionButtons = document.getElementById('bulkActionButtons');
+    const selectedCount = document.getElementById('selectedCount');
+    const bulkActionForm = document.getElementById('bulkActionForm');
+    const bulkActionInput = document.getElementById('bulkActionInput');
+    const selectedIdsContainer = document.getElementById('selectedIdsContainer');
 
-        function startQrScanner() {
-            if (qrScannerActive) {
-                return;
-            }
-
-            html5QrCode = new Html5Qrcode(qrScannerElementId);
-            const config = { fps: 10, qrbox: 250 };
-
-            Html5Qrcode.getCameras().then(cameras => {
-                if (cameras && cameras.length) {
-                    const cameraId = cameras[0].id;
-                    html5QrCode.start(cameraId, config, qrCodeMessage => {
-                        if (searchKeywordInput) {
-                            searchKeywordInput.value = qrCodeMessage;
-                        }
-                        qrScannerModal.hide();
-                        stopQrScanner();
-                        document.querySelector('form[action="{{ url('admin/san-pham') }}"]').submit();
-                    }, errorMessage => {
-                        console.debug('QR scan error', errorMessage);
-                    }).then(() => {
-                        qrScannerActive = true;
-                    }).catch(err => {
-                        console.error('Không thể khởi động QR scanner', err);
-                        alert('Không thể khởi động camera để quét mã vạch. Vui lòng kiểm tra quyền truy cập camera.');
-                    });
-                } else {
-                    alert('Không tìm thấy camera phù hợp để quét mã vạch.');
-                }
-            }).catch(err => {
-                console.error('Lỗi lấy camera', err);
-                alert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập thiết bị.');
-            });
+    function updateBulkUI() {
+        const checked = Array.from(productCheckboxes).filter(cb => cb.checked);
+        if (checked.length > 0) {
+            bulkActionButtons.classList.remove('d-none');
+            selectedCount.textContent = checked.length + ' đã chọn';
+        } else {
+            bulkActionButtons.classList.add('d-none');
         }
+    }
 
-        function stopQrScanner() {
-            if (!qrScannerActive || !html5QrCode) {
-                return;
+    productCheckboxes.forEach(cb => cb.addEventListener('change', updateBulkUI));
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function () {
+            productCheckboxes.forEach(cb => cb.checked = this.checked);
+            updateBulkUI();
+        });
+    }
+
+    function submitBulkAction(action) {
+        const checked = Array.from(productCheckboxes).filter(cb => cb.checked);
+        if (checked.length === 0) return;
+
+        const messages = {
+            delete: 'Bạn có chắc muốn xóa ' + checked.length + ' sản phẩm đã chọn?',
+            activate: 'Bật trạng thái cho ' + checked.length + ' sản phẩm?',
+            deactivate: 'Tắt trạng thái cho ' + checked.length + ' sản phẩm?',
+        };
+
+        if (!confirm(messages[action] || 'Xác nhận?')) return;
+
+        selectedIdsContainer.innerHTML = '';
+        checked.forEach(cb => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids[]';
+            input.value = cb.value;
+            selectedIdsContainer.appendChild(input);
+        });
+        bulkActionInput.value = action;
+        bulkActionForm.submit();
+    }
+</script>
+
+<script>
+    // QR Scanner
+    const startQrScanBtn = document.getElementById('startQrScanBtn');
+    const stopQrScanBtn = document.getElementById('stopQrScanBtn');
+    const qrScannerModal = document.getElementById('qrScannerModal');
+    const searchKeywordInput = document.getElementById('searchKeywordInput');
+    const qrScannerElementId = 'qrScanner';
+    let html5QrCode = null;
+    let qrScannerActive = false;
+
+    function startQrScanner() {
+        if (qrScannerActive) return;
+
+        html5QrCode = new Html5Qrcode(qrScannerElementId);
+        const config = { fps: 10, qrbox: 250 };
+
+        Html5Qrcode.getCameras().then(cameras => {
+            if (cameras && cameras.length) {
+                const cameraId = cameras[0].id;
+                html5QrCode.start(cameraId, config, qrCodeMessage => {
+                    if (searchKeywordInput) {
+                        searchKeywordInput.value = qrCodeMessage;
+                    }
+                    bootstrap.Modal.getInstance(qrScannerModal).hide();
+                    stopQrScanner();
+                    document.querySelector('form[action="{{ url('admin/san-pham') }}"]').submit();
+                }, errorMessage => {
+                    console.debug('QR scan error', errorMessage);
+                }).then(() => {
+                    qrScannerActive = true;
+                }).catch(err => {
+                    console.error('Không thể khởi động QR scanner', err);
+                    alert('Không thể khởi động camera để quét mã vạch. Vui lòng kiểm tra quyền truy cập camera.');
+                });
+            } else {
+                alert('Không tìm thấy camera phù hợp để quét mã vạch.');
             }
-            html5QrCode.stop().then(() => {
-                html5QrCode.clear();
-                qrScannerActive = false;
-            }).catch(err => {
-                console.error('Lỗi dừng QR scanner', err);
-            });
-        }
+        }).catch(err => {
+            console.error('Lỗi lấy camera', err);
+            alert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập thiết bị.');
+        });
+    }
 
+    function stopQrScanner() {
+        if (!qrScannerActive || !html5QrCode) return;
+        html5QrCode.stop().then(() => {
+            html5QrCode.clear();
+            qrScannerActive = false;
+        }).catch(err => {
+            console.error('Lỗi dừng QR scanner', err);
+        });
+    }
+
+    if (startQrScanBtn) {
         startQrScanBtn.addEventListener('click', function () {
-            qrScannerModal.show();
+            const modal = new bootstrap.Modal(qrScannerModal);
+            modal.show();
             startQrScanner();
         });
+    }
 
+    if (stopQrScanBtn) {
         stopQrScanBtn.addEventListener('click', function () {
-            qrScannerModal.hide();
+            const modal = bootstrap.Modal.getInstance(qrScannerModal);
+            if (modal) modal.hide();
             stopQrScanner();
         });
+    }
 
-        document.getElementById('qrScannerModal').addEventListener('hidden.bs.modal', function () {
+    if (qrScannerModal) {
+        qrScannerModal.addEventListener('hidden.bs.modal', function () {
             stopQrScanner();
         });
-    });
+    }
 </script>
-@endpush
+@endsection
