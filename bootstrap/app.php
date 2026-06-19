@@ -9,7 +9,7 @@ use App\Http\Middleware\AuthAdmin;
 
 // Khai bao su dung middleware KiemTraVaiTro
 use App\Http\Middleware\KiemTraVaiTro;
-use App\Http\Middleware\KTVaiTroQuanTri;
+use App\Http\Middleware\KTVaiTro;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -22,7 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth.admin' => AuthAdmin::class,   // Middleware kiem tra dang nhap
             'vai_tro'    => KiemTraVaiTro::class, // Middleware kiem tra vai tro
-            'permission' => KTVaiTroQuanTri::class,    // middleware kiểm tra quyền của người dùng khi được admin cấp cho 
+            'permission' => KTVaiTro::class,    // middleware kiểm tra quyền của người dùng khi được admin cấp cho 
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

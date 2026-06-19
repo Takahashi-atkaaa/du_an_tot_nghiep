@@ -197,17 +197,4 @@ class NguoiDungController extends Controller
             ->with('success', 'Đã xóa nhân viên.');
     }
 
-// trang phân quyền
-    public function phanQuyen(NguoiDung $nguoiDung){
-        $quyens = Quyen::all();
-        $quyen_thuoc_nguoi_dung = $nguoiDung->quyens()->pluck('id_quyen')->toArray();
-        return view('admin_xem_truoc.nhan-su.phan-quyen', compact('nguoiDung', 'quyens', 'quyen_thuoc_nguoi_dung'));
-    }
-
-// xử lý cập nhật phân quyền
-    public function capNhatPhanQuyen(Request $request, NguoiDung $nguoiDung){
-        $quyens = $request->input('quyens');
-        $nguoiDung->quyens()->sync($quyens);
-        return redirect()->back()->with('success', 'Đã cập nhật phân quyền.');
-    }
 }

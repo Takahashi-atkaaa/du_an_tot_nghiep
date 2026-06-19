@@ -20,7 +20,7 @@ class Quyen extends BaseModel
 
     public function quyenNguoiDung()
     {
-        return $this->hasMany(QuyenNguoiDung::class, 'id_quyen');
+        return $this->hasMany(\App\Models\QuyenVaiTro::class, 'id_quyen');
     }
 }
 

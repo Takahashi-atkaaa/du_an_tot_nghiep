@@ -11,10 +11,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
 use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
 use App\Http\Controllers\admin\KhuyenMaiController;
+use App\Http\Controllers\admin\PhanQuyenDong\PhanQuyen;
 use App\Http\Middleware\AuthAdmin;
-use App\Http\Middleware\AuthTruongCa;
 use App\Http\Middleware\KiemTraVaiTro;
-use App\Http\Middleware\KTVaiTroQuanTri;
+use App\Http\Middleware\KTVaiTro;
 use App\Models\NhaCungCap;
 
 Route::get('/', function () {
@@ -78,7 +78,7 @@ Route::get('/admin/dashboard', function () {
 //chuc nang admin va truong ca trung nhau, ma quyen do can su cho phep cua admin thi moi dc vao cho vao  middleware [KTVaiTroQuanTri::class]
 //chuc nang mac dinh cua truonwg ca thi vut vao middleware [AuthTruongCa::class] (k hieu inb thuan chim to)
 //phe admin
-Route::middleware([KTVaiTroQuanTri::class])->group(function () {
+Route::middleware([KTVaiTro::class])->group(function () {
     // Nha cung cap routes
     Route::get('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'index'])->middleware('permission:xem_nha_cung_cap');
     Route::post('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'store'])->middleware('permission:them_nha_cung_cap');
@@ -104,8 +104,10 @@ Route::middleware([KTVaiTroQuanTri::class])->group(function () {
     Route::get('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'show'])->name('nguoi-dung.show')->middleware('permission:xem_nguoi_dung');
     Route::get('/nguoi-dung/{nguoiDung}/edit', [NguoiDungController::class, 'edit'])->name('nguoi-dung.edit')->middleware('permission:sua_nguoi_dung');
     Route::put('/nguoi-dung/{nguoiDung}', [NguoiDungController::class, 'update'])->name('nguoi-dung.update')->middleware('permission:sua_nguoi_dung');
-    Route::get('nguoi-dung-phan-quyen/{nguoiDung}', [NguoiDungController::class, 'phanQuyen'])->name('nguoi-dung.phan-quyen')->middleware('permission:phan_quyen_nguoi_dung');
-    Route::Post('nguoi-dung-phan-quyen/{nguoiDung}', [NguoiDungController::class, 'capNhatPhanQuyen'])->name('admin.quyen.update')->middleware('permission:cap_nhat_phan_quyen');
+
+    //Phân quyền người dùng
+    Route::get('nguoi-dung-phan-quyen/{id_vai_tro}', [PhanQuyen::class, 'phanQuyen'])->name('nguoi-dung.phan-quyen')->middleware('permission:phan_quyen_nguoi_dung');
+    Route::Post('nguoi-dung-phan-quyen/{id_vai_tro}', [PhanQuyen::class, 'capNhatPhanQuyen'])->name('admin.quyen.update')->middleware('permission:cap_nhat_phan_quyen');
 
 
     //quản lý sản phẩm
@@ -144,68 +146,69 @@ Route::middleware([KTVaiTroQuanTri::class])->group(function () {
 
 
     // Quan ly khach hang
-Route::get('/admin/khach-hang', [KhachHangController::class, 'index'])
-    ->name('khach-hang.index')->middleware('permission:xem_khach_hang');
+    Route::get('/admin/khach-hang', [KhachHangController::class, 'index'])
+        ->name('khach-hang.index')->middleware('permission:xem_khach_hang');
 
-Route::get('/admin/khach-hang/create', [KhachHangController::class, 'create'])
-    ->name('khach-hang.create')->middleware('permission:them_khach_hang');
+    Route::get('/admin/khach-hang/create', [KhachHangController::class, 'create'])
+        ->name('khach-hang.create')->middleware('permission:them_khach_hang');
 
-Route::post('/admin/khach-hang', [KhachHangController::class, 'store'])
-    ->name('khach-hang.store')->middleware('permission:them_khach_hang');
+    Route::post('/admin/khach-hang', [KhachHangController::class, 'store'])
+        ->name('khach-hang.store')->middleware('permission:them_khach_hang');
 
-// ===== THÙNG RÁC =====
-Route::get('/admin/khach-hang/thung-rac', [KhachHangController::class, 'trash'])
-    ->name('khach-hang.trash')->middleware('permission:xem_khach_hang');
+    // ===== THÙNG RÁC =====
+    Route::get('/admin/khach-hang/thung-rac', [KhachHangController::class, 'trash'])
+        ->name('khach-hang.trash')->middleware('permission:xem_khach_hang');
 
-Route::put('/admin/khach-hang/{id}/restore', [KhachHangController::class, 'restore'])
-    ->name('khach-hang.restore')->middleware('permission:xem_khach_hang');
+    Route::put('/admin/khach-hang/{id}/restore', [KhachHangController::class, 'restore'])
+        ->name('khach-hang.restore')->middleware('permission:xem_khach_hang');
 
-Route::delete('/admin/khach-hang/{id}/force-delete', [KhachHangController::class, 'forceDelete'])
-    ->name('khach-hang.force-delete')->middleware('permission:xem_khach_hang');
+    Route::delete('/admin/khach-hang/{id}/force-delete', [KhachHangController::class, 'forceDelete'])
+        ->name('khach-hang.force-delete')->middleware('permission:xem_khach_hang');
 
-// ===== ROUTE CÓ {khachHang} PHẢI ĐỂ CUỐI =====
-Route::get('/admin/khach-hang/{khachHang}', [KhachHangController::class, 'show'])
-    ->name('khach-hang.show')->middleware('permission:xem_khach_hang');
+    // ===== ROUTE CÓ {khachHang} PHẢI ĐỂ CUỐI =====
+    Route::get('/admin/khach-hang/{khachHang}', [KhachHangController::class, 'show'])
+        ->name('khach-hang.show')->middleware('permission:xem_khach_hang');
 
-Route::get('/admin/khach-hang/{khachHang}/edit', [KhachHangController::class, 'edit'])
-    ->name('khach-hang.edit')->middleware('permission:sua_khach_hang');
+    Route::get('/admin/khach-hang/{khachHang}/edit', [KhachHangController::class, 'edit'])
+        ->name('khach-hang.edit')->middleware('permission:sua_khach_hang');
 
-Route::put('/admin/khach-hang/{khachHang}', [KhachHangController::class, 'update'])
-    ->name('khach-hang.update')->middleware('permission:sua_khach_hang');
+    Route::put('/admin/khach-hang/{khachHang}', [KhachHangController::class, 'update'])
+        ->name('khach-hang.update')->middleware('permission:sua_khach_hang');
 
-Route::delete('/admin/khach-hang/{khachHang}', [KhachHangController::class, 'destroy'])
-    ->name('khach-hang.destroy')->middleware('permission:xoa_khach_hang')   ;
+    Route::delete('/admin/khach-hang/{khachHang}', [KhachHangController::class, 'destroy'])
+        ->name('khach-hang.destroy')->middleware('permission:xoa_khach_hang');
+
 
     // Trang khuyen mai
     Route::get('/admin/khuyen-mai', [KhuyenMaiController::class, 'index'])
     ->name('khuyen-mai.index')->middleware('permission:xem_khuyen_mai');
 
-Route::post('/admin/khuyen-mai', [KhuyenMaiController::class, 'store'])
-    ->name('khuyen-mai.store')->middleware('permission:them_khuyen_mai');
+    Route::post('/admin/khuyen-mai', [KhuyenMaiController::class, 'store'])
+        ->name('khuyen-mai.store')->middleware('permission:them_khuyen_mai');
 
-Route::get('/admin/khuyen-mai/thung-rac', [KhuyenMaiController::class, 'trash'])
-    ->name('khuyen-mai.trash')->middleware('permission:xem_khuyen_mai');
+    Route::get('/admin/khuyen-mai/thung-rac', [KhuyenMaiController::class, 'trash'])
+        ->name('khuyen-mai.trash')->middleware('permission:xem_khuyen_mai');
 
-Route::post('/admin/khuyen-mai/{id}/toggle', [KhuyenMaiController::class, 'toggle'])
-    ->name('khuyen-mai.toggle')->middleware('permission:xem_khuyen_mai');
+    Route::post('/admin/khuyen-mai/{id}/toggle', [KhuyenMaiController::class, 'toggle'])
+        ->name('khuyen-mai.toggle')->middleware('permission:xem_khuyen_mai');
 
-Route::post('/admin/khuyen-mai/{id}/ajax-toggle', [KhuyenMaiController::class, 'ajaxToggle'])
-    ->name('khuyen-mai.ajaxToggle')->middleware('permission:xem_khuyen_mai');
+    Route::post('/admin/khuyen-mai/{id}/ajax-toggle', [KhuyenMaiController::class, 'ajaxToggle'])
+        ->name('khuyen-mai.ajaxToggle')->middleware('permission:xem_khuyen_mai');
 
-Route::post('/admin/khuyen-mai/{id}/restore', [KhuyenMaiController::class, 'restore'])
-    ->name('khuyen-mai.restore')->middleware('permission:xem_khuyen_mai');
+    Route::post('/admin/khuyen-mai/{id}/restore', [KhuyenMaiController::class, 'restore'])
+        ->name('khuyen-mai.restore')->middleware('permission:xem_khuyen_mai');
 
-Route::delete('/admin/khuyen-mai/{id}/force', [KhuyenMaiController::class, 'forceDelete'])
-    ->name('khuyen-mai.forceDelete')->middleware('permission:xem_khuyen_mai');
+    Route::delete('/admin/khuyen-mai/{id}/force', [KhuyenMaiController::class, 'forceDelete'])
+        ->name('khuyen-mai.forceDelete')->middleware('permission:xem_khuyen_mai');
 
-Route::get('/admin/khuyen-mai/{id}/edit', [KhuyenMaiController::class, 'edit'])
-    ->name('khuyen-mai.edit')->middleware('permission:xem_khuyen_mai');
+    Route::get('/admin/khuyen-mai/{id}/edit', [KhuyenMaiController::class, 'edit'])
+        ->name('khuyen-mai.edit')->middleware('permission:xem_khuyen_mai');
 
-Route::put('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'update'])
-    ->name('khuyen-mai.update')->middleware('permission:xem_khuyen_mai');
+    Route::put('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'update'])
+        ->name('khuyen-mai.update')->middleware('permission:xem_khuyen_mai');
 
-Route::delete('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'destroy'])
-    ->name('khuyen-mai.destroy')->middleware('permission:xem_khuyen_mai');
+    Route::delete('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'destroy'])
+        ->name('khuyen-mai.destroy')->middleware('permission:xem_khuyen_mai');
 
    // / chia ca làm việc
     Route::get('/admin/chia-ca-lam-viec', [ChiaCaController::class, 'index'])->name('chia-ca-lam-viec.index')->middleware('permission:xem_chia_ca_lam_viec');
@@ -219,12 +222,6 @@ Route::delete('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'destroy'])
 
 });//het router admin
 
-//////////phe truong ca 
-Route::middleware([AuthTruongCa::class])->group(function ()
-{
-    // Trang ca lam viec
-
-});
 
 ////////// Routes Test Nhân viên (Preview)
 require __DIR__.'/nhan_vien_test.php';
