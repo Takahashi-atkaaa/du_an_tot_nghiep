@@ -129,35 +129,6 @@ class NhanSuSeeder extends Seeder
                 ],
             ]);
 
-            $chiaCaIds = DB::table('chia_ca_lam_viec')->pluck('id')->toArray();
-
-            // Diem danh
-            DB::table('diem_danh')->insert([
-                [
-                    'id_chia_ca_lam_viec' => $chiaCaIds[0],
-                    'gio_vao' => now()->subDays(1)->setTime(7, 58, 0),
-                    'so_gio_di_lam_muon' => 0,
-                    'gio_tan_ca' => now()->subDays(1)->setTime(12, 5, 0),
-                    'so_gio_lam_them' => 0.08,
-                    'trang_thai_vao_lam' => 'Đúng giờ',
-                    'trang_thai_tan_ca' => 'Tăng ca',
-                    'deleted_at' => null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ],
-                [
-                    'id_chia_ca_lam_viec' => $chiaCaIds[1],
-                    'gio_vao' => now()->subDays(1)->setTime(13, 5, 0),
-                    'so_gio_di_lam_muon' => 5,
-                    'gio_tan_ca' => null,
-                    'so_gio_lam_them' => 0,
-                    'trang_thai_vao_lam' => 'Đi muộn',
-                    'trang_thai_tan_ca' => null,
-                    'deleted_at' => null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ],
-            ]);
             // Thiet lap luong
             DB::table('thiet_lap_luong')->insert([
                 [
