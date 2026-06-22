@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin\Api;
+namespace App\Http\Controllers\admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ThuocTinhSanPham;

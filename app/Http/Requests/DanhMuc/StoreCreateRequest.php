@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Requests\DanhMuc;
+namespace App\Http\Requests\DanhMuc;
 
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -8,7 +8,7 @@ class StoreCreateRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // hoặc check quyền nếu có
+        return true;
     }
 
     public function rules(): array

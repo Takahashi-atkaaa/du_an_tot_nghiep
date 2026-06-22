@@ -48,6 +48,16 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
+        $idVaiTro = $nguoiDung->id_vai_tro;
+
+        if (in_array($idVaiTro, [1, 2], true)) {
+            return redirect('/admin/dashboard');
+        }
+
+        if ($idVaiTro === 3) {
+            return redirect('/nhan-vien/');
+        }
+
         return redirect('/admin/dashboard');
     }
 
