@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Requests\ThietLapLuong;
+namespace App\Http\Requests\ThietLapLuong;
 
 use Illuminate\Foundation\Http\FormRequest;
 

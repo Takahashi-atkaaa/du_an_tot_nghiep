@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\admin\AuthController;
+use App\Http\Controllers\nhan_vien\NhanVienController;
 use App\Http\Controllers\Admin\DanhMuc\DanhMucSanPhamController;
 use App\Http\Controllers\Admin\SanPham\SanPhamController;
 use App\Http\Controllers\admin\NhanSu\CaLamViecController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\admin\Api\SanPhamApiController;
 use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
 use App\Http\Controllers\admin\KhuyenMaiController;
 use App\Http\Controllers\admin\PhanQuyenDong\PhanQuyen;
+
 use App\Http\Middleware\AuthAdmin;
 use App\Http\Middleware\KiemTraVaiTro;
 use App\Http\Middleware\KTVaiTro;
@@ -280,5 +282,15 @@ Route::middleware([KTVaiTro::class])->group(function () {
 });//het router admin
 
 
-////////// Routes Test Nhân viên (Preview)
-require __DIR__.'/nhan_vien.php';
+// Routes nhân viên (Preview)
+Route::middleware([KTVaiTro::class])->prefix('nhan-vien')->group(function () {
+    Route::get('/', [NhanVienController::class, 'index'])->name('nhan-vien.dashboard');
+    Route::get('/ban-hang', [NhanVienController::class, 'banHang'])->name('nhan-vien.ban-hang');
+    Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don');
+    Route::get('/san-pham', [NhanVienController::class, 'sanPham'])->name('nhan-vien.san-pham');
+    Route::get('/khach-hang', [NhanVienController::class, 'khachHang'])->name('nhan-vien.khach-hang');
+    Route::get('/lich-lam-viec', [NhanVienController::class, 'lichLamViec'])->name('nhan-vien.lich');
+    Route::get('/lich-lam-viec/tuan', [NhanVienController::class, 'lichLamViecTuan'])->name('nhan-vien.lich-tuan');
+    Route::get('/cham-cong', [NhanVienController::class, 'chamCong'])->name('nhan-vien.cham-cong');
+    Route::get('/ho-so', [NhanVienController::class, 'hoSo'])->name('nhan-vien.ho-so');
+});

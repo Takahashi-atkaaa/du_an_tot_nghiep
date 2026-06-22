@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CaLamViec;
 use App\Models\ChiaCaLamViec;
 use App\Models\NguoiDung;
-use App\Requests\NhanSu\PhanCongCaLamViecRequest;
+use App\Http\Requests\NhanSu\PhanCongCaLamViecRequest;
 use Carbon\Carbon;
 use DOMDocument;
 use DOMXPath;
