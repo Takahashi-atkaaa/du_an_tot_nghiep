@@ -14,6 +14,11 @@ use App\Http\Controllers\nhan_vien\NhanVienController;
 Route::prefix('nhan-vien')->group(function () {
     Route::get('/', [NhanVienController::class, 'index'])->name('nhan-vien.dashboard');
     Route::get('/ban-hang', [NhanVienController::class, 'banHang'])->name('nhan-vien.ban-hang');
+    Route::get('/ban-hang/san-pham', [NhanVienController::class, 'laySanPham'])
+    ->name('nhan-vien.ban-hang.san-pham');
+    Route::get('/ban-hang/danh-muc', [NhanVienController::class, 'layDanhMuc'])
+    ->name('nhan-vien.ban-hang.danh-muc');
+    
     Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don');
     Route::get('/san-pham', [NhanVienController::class, 'sanPham'])->name('nhan-vien.san-pham');
     Route::get('/khach-hang', [NhanVienController::class, 'khachHang'])->name('nhan-vien.khach-hang');

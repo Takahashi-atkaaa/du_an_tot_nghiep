@@ -5,6 +5,8 @@ namespace App\Http\Controllers\nhan_vien;
 use App\Http\Controllers\Controller;
 use App\Models\ChiaCaLamViec;
 use App\Models\NguoiDung;
+use App\Models\SanPham;
+use App\Models\DanhMucSanPham;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -187,4 +189,43 @@ class NhanVienController extends Controller
     {
         return Str::of((string) $vaiTro)->lower()->ascii()->value() === 'admin';
     }
+   public function laySanPham(Request $request)
+{
+    $query = SanPham::query()
+        ->where('trang_thai', 1)
+        ->where('so_luong_ton_kho', '>', 0);
+
+    if ($request->filled('id_danh_muc') && $request->id_danh_muc !== 'all') {
+        $query->where('id_danh_muc', $request->id_danh_muc);
+    }
+
+    if ($request->filled('q')) {
+        $query->where(function ($q) use ($request) {
+            $q->where('ten_san_pham', 'like', '%' . $request->q . '%')
+              ->orWhere('ma_vach', 'like', '%' . $request->q . '%');
+        });
+    }
+
+    return response()->json(
+        $query->select(
+            'id',
+            'id_danh_muc',
+            'ten_san_pham',
+            'ma_vach',
+            'gia_ban',
+            'so_luong_ton_kho',
+            'hinh_anh'
+        )->orderBy('id', 'desc')->get()
+    );
+}
+public function layDanhMuc()
+{
+    return response()->json(
+        DanhMucSanPham::query()
+            ->where('trang_thai', 1)
+            ->select('id', 'ten_danh_muc')
+            ->orderBy('id', 'asc')
+            ->get()
+    );
+}
 }

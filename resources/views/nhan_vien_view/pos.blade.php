@@ -839,32 +839,12 @@
     <div class="pos-products">
 
         <!-- Category Bar -->
-        <div class="pos-category-bar">
-            <button class="cat-btn active" data-category="all" onclick="switchCategory('all')">
-                <i class="fas fa-border-all"></i>
-                Tất cả
-            </button>
-            <button class="cat-btn" data-category="thuc-pham" onclick="switchCategory('thuc-pham')">
-                <i class="fas fa-cookie-bite"></i>
-                Thực phẩm
-                <span class="shortcut">F1</span>
-            </button>
-            <button class="cat-btn" data-category="do-uong" onclick="switchCategory('do-uong')">
-                <i class="fas fa-mug-hot"></i>
-                Đồ uống
-                <span class="shortcut">F4</span>
-            </button>
-            <button class="cat-btn" data-category="dien-tu" onclick="switchCategory('dien-tu')">
-                <i class="fas fa-laptop"></i>
-                Điện tử
-                <span class="shortcut">F8</span>
-            </button>
-            <button class="cat-btn" data-category="quan-ao" onclick="switchCategory('quan-ao')">
-                <i class="fas fa-tshirt"></i>
-                Quần áo
-                <span class="shortcut">F9</span>
-            </button>
-        </div>
+        <div class="pos-category-bar" id="categoryBar">
+    <button class="cat-btn active" data-category="all" onclick="switchCategory('all')">
+        <i class="fas fa-border-all"></i>
+        Tất cả
+    </button>
+</div>
 
         <!-- Search -->
         <div class="pos-search-bar">
@@ -973,36 +953,35 @@
 // ─────────────────────────────────────────────
 // Product Data (Mock)
 // ─────────────────────────────────────────────
-const products = [
-    // Thực phẩm (F1)
-    { id: 1, name: 'Bánh mì', price: 25000, stock: 30, category: 'thuc-pham', icon: 'fa-bread-slice', color: '#FFA726' },
-    { id: 2, name: 'Bánh ngọt', price: 35000, stock: 20, category: 'thuc-pham', icon: 'fa-cookie', color: '#FFCA28' },
-    { id: 3, name: 'Trái cây', price: 45000, stock: 25, category: 'thuc-pham', icon: 'fa-apple-alt', color: '#EF5350' },
-    { id: 4, name: 'Sữa tươi', price: 18000, stock: 50, category: 'thuc-pham', icon: 'fa-wine-bottle', color: '#42A5F5' },
-    { id: 5, name: 'Bánh gối', price: 20000, stock: 15, category: 'thuc-pham', icon: 'fa-circle', color: '#FF7043' },
-    { id: 6, name: 'Xúc xích', price: 30000, stock: 40, category: 'thuc-pham', icon: 'fa-hotdog', color: '#AB47BC' },
+let products = [];
 
-    // Đồ uống (F4)
-    { id: 7, name: 'Cà phê sữa', price: 35000, stock: 50, category: 'do-uong', icon: 'fa-coffee', color: '#795548' },
-    { id: 8, name: 'Trà đá', price: 10000, stock: 100, category: 'do-uong', icon: 'fa-glass-whiskey', color: '#26A69A' },
-    { id: 9, name: 'Nước suối', price: 7000, stock: 100, category: 'do-uong', icon: 'fa-tint', color: '#29B6F6' },
-    { id: 10, name: 'Nước ngọt', price: 15000, stock: 60, category: 'do-uong', icon: 'fa-wine-glass', color: '#EC407A' },
-    { id: 11, name: 'Sinh tố bơ', price: 55000, stock: 20, category: 'do-uong', icon: 'fa-blender', color: '#8BC34A' },
-    { id: 12, name: 'Trà sữa', price: 40000, stock: 35, category: 'do-uong', icon: 'fa-mug-hot', color: '#FF8A65' },
+async function loadProducts() {
+    try {
+        let url = '/nhan-vien/ban-hang/san-pham';
+        const params = new URLSearchParams();
 
-    // Điện tử (F8)
-    { id: 13, name: 'Điện thoại X', price: 5990000, stock: 15, category: 'dien-tu', icon: 'fa-mobile-alt', color: '#5C6BC0' },
-    { id: 14, name: 'Laptop Y Pro', price: 15990000, stock: 8, category: 'dien-tu', icon: 'fa-laptop', color: '#78909C' },
-    { id: 15, name: 'Tai nghe', price: 890000, stock: 25, category: 'dien-tu', icon: 'fa-headphones', color: '#26C6DA' },
-    { id: 16, name: 'Sạc dự phòng', price: 350000, stock: 40, category: 'dien-tu', icon: 'fa-battery-full', color: '#66BB6A' },
+        const search = document.getElementById('searchInput').value;
 
-    // Quần áo (F9)
-    { id: 17, name: 'Áo thun nam', price: 199000, stock: 3, category: 'quan-ao', icon: 'fa-tshirt', color: '#9575CD' },
-    { id: 18, name: 'Quần jeans', price: 450000, stock: 20, category: 'quan-ao', icon: 'fa-cut', color: '#42A5F5' },
-    { id: 19, name: 'Áo khoác', price: 650000, stock: 12, category: 'quan-ao', icon: 'fa-vest', color: '#8D6E63' },
-    { id: 20, name: 'Váy nữ', price: 380000, stock: 18, category: 'quan-ao', icon: 'fa-vest-patches', color: '#F06292' },
-];
+        if (search) {
+            params.append('q', search);
+        }
 
+        if (currentCategory !== 'all') {
+            params.append('id_danh_muc', currentCategory);
+        }
+
+        if (params.toString()) {
+            url += '?' + params.toString();
+        }
+
+        const response = await fetch(url);
+        products = await response.json();
+
+        renderProducts();
+    } catch (error) {
+        console.error('Lỗi tải sản phẩm:', error);
+    }
+}
 // ─────────────────────────────────────────────
 // Cart State
 // ─────────────────────────────────────────────
@@ -1035,15 +1014,14 @@ function formatCurrency(num) {
 // ─────────────────────────────────────────────
 function renderProducts(filter = '') {
     const grid = document.getElementById('productGrid');
-    let filtered = products;
-
-    if (currentCategory !== 'all') {
-        filtered = filtered.filter(p => p.category === currentCategory);
-    }
+    let filtered = [...products];
 
     if (filter) {
         const q = filter.toLowerCase();
-        filtered = filtered.filter(p => p.name.toLowerCase().includes(q));
+        filtered = filtered.filter(p =>
+            (p.ten_san_pham && p.ten_san_pham.toLowerCase().includes(q)) ||
+            (p.ma_vach && String(p.ma_vach).toLowerCase().includes(q))
+        );
     }
 
     if (filtered.length === 0) {
@@ -1056,20 +1034,27 @@ function renderProducts(filter = '') {
         return;
     }
 
-    grid.innerHTML = filtered.map(p => `
-        <div class="pos-product-card" onclick="addToCart(${p.id})">
-            <div class="product-img" style="color:${p.color}">
-                <i class="fas ${p.icon}"></i>
-            </div>
-            <div class="product-info">
-                <div class="product-name">${p.name}</div>
-                <div class="product-price">${formatCurrency(p.price)}</div>
-                <div class="product-stock ${p.stock < 5 ? 'low' : ''}">
-                    ${p.stock < 5 ? '⚠ Sắp hết' : 'Còn ' + p.stock}
+    grid.innerHTML = filtered.map(p => {
+        const ten = p.ten_san_pham ?? 'Chưa có tên';
+        const gia = Number(p.gia_ban ?? 0);
+        const ton = Number(p.so_luong_ton_kho ?? 0);
+        const hinh = p.hinh_anh ? p.hinh_anh : 'https://via.placeholder.com/150';
+
+        return `
+            <div class="pos-product-card" onclick="addToCart(${p.id})">
+                <div class="product-img">
+                    <img src="${hinh}" alt="${ten}" style="width:100%;height:100%;object-fit:cover;">
+                </div>
+                <div class="product-info">
+                    <div class="product-name">${ten}</div>
+                    <div class="product-price">${formatCurrency(gia)}</div>
+                    <div class="product-stock ${ton < 5 ? 'low' : ''}">
+                        ${ton < 5 ? '⚠ Sắp hết' : 'Còn ' + ton}
+                    </div>
                 </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // ─────────────────────────────────────────────
@@ -1077,17 +1062,19 @@ function renderProducts(filter = '') {
 // ─────────────────────────────────────────────
 function switchCategory(cat) {
     currentCategory = cat;
+
     document.querySelectorAll('.cat-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.category === cat);
+        btn.classList.toggle('active', btn.dataset.category == cat);
     });
-    renderProducts(document.getElementById('searchInput').value);
+
+    loadProducts();
 }
 
 // ─────────────────────────────────────────────
 // Filter Products
 // ─────────────────────────────────────────────
 function filterProducts() {
-    renderProducts(document.getElementById('searchInput').value);
+    loadProducts();
 }
 
 // ─────────────────────────────────────────────
@@ -1098,14 +1085,26 @@ function addToCart(id) {
     if (!product) return;
 
     const existing = cart.find(item => item.id === id);
+
     if (existing) {
+        if (existing.qty + 1 > Number(product.so_luong_ton_kho)) {
+            showToast('Số lượng vượt quá tồn kho!', 'error');
+            return;
+        }
         existing.qty += 1;
     } else {
-        cart.push({ ...product, qty: 1 });
+        cart.push({
+            id: product.id,
+            ten_san_pham: product.ten_san_pham,
+            gia_ban: Number(product.gia_ban),
+            so_luong_ton_kho: Number(product.so_luong_ton_kho),
+            hinh_anh: product.hinh_anh,
+            qty: 1
+        });
     }
 
     renderCart();
-    showToast(`Đã thêm "${product.name}" vào giỏ hàng`);
+    showToast(`Đã thêm "${product.ten_san_pham}" vào giỏ hàng`);
 }
 
 // ─────────────────────────────────────────────
@@ -1113,47 +1112,64 @@ function addToCart(id) {
 // ─────────────────────────────────────────────
 function renderCart() {
     const container = document.getElementById('cartItems');
-    const empty = document.getElementById('cartEmpty');
-    const summary = document.getElementById('cartSummary');
     const count = document.getElementById('cartCount');
+    const summary = document.getElementById('cartSummary');
 
     count.textContent = cart.reduce((s, i) => s + i.qty, 0);
 
     if (cart.length === 0) {
-        container.innerHTML = '';
-        container.appendChild(empty);
-        empty.style.display = 'flex';
+        container.innerHTML = `
+            <div class="cart-empty" id="cartEmpty">
+                <i class="fas fa-shopping-cart"></i>
+                <p>Giỏ hàng trống</p>
+                <small>Click sản phẩm để thêm vào</small>
+            </div>
+        `;
         summary.style.display = 'none';
         return;
     }
 
-    empty.style.display = 'none';
     summary.style.display = 'block';
 
-    container.innerHTML = cart.map(item => `
-        <div class="cart-item">
-            <div class="item-img" style="color:${item.color}">
-                <i class="fas ${item.icon}"></i>
-            </div>
-            <div class="item-details">
-                <div class="item-name">${item.name}</div>
-                <div class="item-price">${formatCurrency(item.price)}</div>
-            </div>
-            <div class="item-qty">
-                <button class="qty-btn" onclick="updateQuantity(${item.id}, -1)">
-                    <i class="fas fa-minus"></i>
+    container.innerHTML = cart.map(item => {
+        const ten = item.ten_san_pham ?? 'Chưa có tên';
+        const gia = Number(item.gia_ban ?? 0);
+        const hinh = item.hinh_anh ? item.hinh_anh : 'https://via.placeholder.com/80';
+
+        return `
+            <div class="cart-item">
+                <div class="item-img">
+                    <img src="${hinh}" alt="${ten}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">
+                </div>
+                <div class="item-details">
+                    <div class="item-name">${ten}</div>
+                    <div class="item-price">${formatCurrency(gia)}</div>
+                </div>
+                <div class="item-qty">
+                    <button class="qty-btn" onclick="updateQuantity(${item.id}, -1)">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <span class="qty-num">${item.qty}</span>
+                    <button class="qty-btn" onclick="updateQuantity(${item.id}, 1)">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="item-total">${formatCurrency(gia * item.qty)}</div>
+                <button class="btn-remove" onclick="removeFromCart(${item.id})">
+                    <i class="fas fa-times"></i>
                 </button>
-                <span class="qty-num">${item.qty}</span>
-                <button class="qty-btn" onclick="updateQuantity(${item.id}, 1)">
-                    <i class="fas fa-plus"></i>
-                </button>
             </div>
-            <div class="item-total">${formatCurrency(item.price * item.qty)}</div>
-            <button class="btn-remove" onclick="removeFromCart(${item.id})">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-    `).join('');
+        `;
+    }).join('');
+
+    const subtotal = cart.reduce((s, i) => s + Number(i.gia_ban) * i.qty, 0);
+    const discount = 0;
+    const total = subtotal - discount;
+
+    document.getElementById('subtotal').textContent = formatCurrency(subtotal);
+    document.getElementById('discount').textContent = '-' + formatCurrency(discount);
+    document.getElementById('totalAmount').textContent = formatCurrency(total);
+}
 
     // Update summary
     const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
@@ -1163,7 +1179,7 @@ function renderCart() {
     document.getElementById('subtotal').textContent = formatCurrency(subtotal);
     document.getElementById('discount').textContent = '-' + formatCurrency(discount);
     document.getElementById('totalAmount').textContent = formatCurrency(total);
-}
+
 
 // ─────────────────────────────────────────────
 // Update Quantity
@@ -1204,7 +1220,7 @@ function clearCart() {
 // ─────────────────────────────────────────────
 function calculateChange() {
     const customer = parseFloat(document.getElementById('customerMoney').value) || 0;
-    const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const total = cart.reduce((s, i) => s + Number(i.gia_ban) * i.qty, 0);
     const change = customer - total;
     document.getElementById('changeAmount').textContent = formatCurrency(Math.max(0, change));
 }
@@ -1228,7 +1244,7 @@ function processPayment() {
         return;
     }
 
-    const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const total = cart.reduce((s, i) => s + Number(i.gia_ban) * i.qty, 0);
     const customer = parseFloat(document.getElementById('customerMoney').value) || 0;
 
     if (selectedPayment === 'cash' && customer < total) {
@@ -1303,11 +1319,31 @@ document.addEventListener('keydown', function(e) {
             break;
     }
 });
+async function loadCategories() {
+    try {
+        const response = await fetch('/nhan-vien/ban-hang/danh-muc');
+        const categories = await response.json();
+
+        const bar = document.getElementById('categoryBar');
+
+        categories.forEach(dm => {
+            bar.innerHTML += `
+                <button class="cat-btn" data-category="${dm.id}" onclick="switchCategory('${dm.id}')">
+                    <i class="fas fa-tag"></i>
+                    ${dm.ten_danh_muc}
+                </button>
+            `;
+        });
+    } catch (error) {
+        console.error('Lỗi tải danh mục:', error);
+    }
+}
 
 // ─────────────────────────────────────────────
 // Init
 // ─────────────────────────────────────────────
-renderProducts();
+loadCategories();
+loadProducts();
 </script>
 </body>
 </html>
