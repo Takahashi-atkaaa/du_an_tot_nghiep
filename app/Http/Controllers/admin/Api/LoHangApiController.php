@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LoHang;
 use App\Models\ChiTietLoHang;
 use App\Models\NhaCungCap;
+use App\Models\SanPham;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -286,7 +287,8 @@ class LoHangApiController extends Controller
 
     public function tonKhoTong(): JsonResponse
     {
-        $items = \App\Models\SanPham::with('danhMuc', 'chiTietLoHang')
+        $items = SanPham::with('danhMuc', 'chiTietLoHang')
+            ->sanPhamCha()
             ->get(['id', 'ten_san_pham', 'ma_vach', 'so_luong_ton_kho', 'dinh_muc_toi_thieu', 'id_danh_muc'])
             ->map(function ($sp) {
                 $sp->tong_ton = $sp->chiTietLoHang->sum('so_luong_ton');

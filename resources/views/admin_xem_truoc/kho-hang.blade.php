@@ -976,49 +976,104 @@ function searchProductsNhap(q, danhMuc) {
         return;
     }
     $('#pn-sp-results').html(`<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-muted fs-4"></i></div>`);
-    $.get('/admin/api/san-pham', { q: q || '', danh_muc: danhMuc || '' }, res => {
+    $.get('/admin/api/san-pham', { q: q || '', danh_muc: danhMuc || '', include_variants: 1 }, res => {
         if (!res.success || !res.data.length) {
             $('#pn-sp-results').html(`<div class="text-center text-muted py-4"><i class="fas fa-box-open fs-4 mb-2 d-block text-secondary"></i>Không tìm thấy sản phẩm nào.</div>`);
             return;
         }
-        const html = `<table class="table table-sm table-hover mb-0">
+        const rows = res.data.flatMap(sp => {
+            const variants = sp.bien_the || [];
+            const hasVariants = variants.length > 0;
+            const totalTon = sp.chi_tiet_lo_hang_ton_sum_so_luong_ton || 0;
+            const tonClass = totalTon === 0 ? 'text-danger' : totalTon < 10 ? 'text-warning' : 'text-success';
+            const img = sp.hinh_anh
+                ? `<img src="/${sp.hinh_anh}" width="38" height="38" class="rounded" style="object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                   <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width:38px;height:38px;display:none"><i class="fas fa-box text-secondary"></i></div>`
+                : `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="width:38px;height:38px"><i class="fas fa-box text-secondary"></i></div>`;
+            const danhMucName = sp.danh_muc?.ten_danh_muc || '';
+            const isParentSelected = selectedPnProducts.has(sp.id);
+            const expandIcon = hasVariants
+                ? `<button class="btn btn-sm btn-light border mb-1 btn-toggle-variants" data-parent="${sp.id}" title="Mở rộng biến thể"><i class="fas fa-chevron-down"></i></button>`
+                : '';
+            const expandBtn = hasVariants ? `<button class="btn btn-sm btn-light border btn-toggle-variants" data-parent="${sp.id}" title="Mở rộng biến thể"><i class="fas fa-chevron-down"></i></button>` : '';
+            const parentBtnClass = isParentSelected ? 'btn-secondary' : 'btn-primary';
+            const parentBtnIcon = isParentSelected ? 'fa-check' : 'fa-plus';
+            const parentBtnText = isParentSelected ? 'Đã chọn' : 'Chọn';
+            const parentDisabled = isParentSelected ? 'disabled' : '';
+            const variantRows = variants.map(bt => {
+                const btTon = bt.chi_tiet_lo_hang_ton_sum_so_luong_ton || 0;
+                const btTonClass = btTon === 0 ? 'text-danger' : btTon < 10 ? 'text-warning' : 'text-success';
+                const isBtSelected = selectedPnProducts.has(bt.id);
+                const btBtnClass = isBtSelected ? 'btn-secondary' : 'btn-success';
+                const btBtnIcon = isBtSelected ? 'fa-check' : 'fa-plus';
+                const btBtnText = isBtSelected ? 'Đã chọn' : 'Chọn';
+                const btDisabled = isBtSelected ? 'disabled' : '';
+                const attrs = (bt.thuoc_tinhs || []).map(tt =>
+                    `<span class="badge variant-chip" style="background:#e9ecef;color:#495057;border:1px solid #dee2e6">${tt.ten_thuoc_tinh}</span>`
+                ).join(' ');
+                return `<tr class="variant-sub-row" data-parent="${sp.id}" style="display:none">
+                    <td class="text-center align-middle"><div class="vr" style="width:2px;height:30px;opacity:0.4"></div></td>
+                    <td class="align-middle ps-1">
+                        <div class="small"><span class="text-muted">└</span> ${attrs || '<span class="text-muted small">Không có thuộc tính</span>'}</div>
+                    </td>
+                    <td class="align-middle"><code class="small">${bt.ma_vach || '--'}</code></td>
+                    <td class="text-end align-middle small">${Number(bt.gia_ban || 0).toLocaleString()} đ</td>
+                    <td class="text-center align-middle"><span class="fw-semibold ${btTonClass}">${btTon.toLocaleString()}</span></td>
+                    <td class="text-center align-middle">
+                        <button class="btn btn-sm ${btBtnClass} btn-chon-sp-nhap" data-id="${bt.id}" data-ten="${sp.ten_san_pham} ${attrs.replace(/<[^>]+>/g,'').trim()}" data-gia="${bt.gia_ban || 0}" data-variant="1" ${btDisabled}>
+                            <i class="fas ${btBtnIcon}"></i> ${btBtnText}
+                        </button>
+                    </td>
+                </tr>`;
+            });
+            return [
+                `<tr class="parent-row" data-id="${sp.id}">
+                    <td class="text-center align-middle">${img}</td>
+                    <td class="align-middle">
+                        <div class="fw-semibold small">${sp.ten_san_pham}</div>
+                        <div class="small text-muted">${danhMucName}</div>
+                        ${hasVariants ? `<div class="mt-1"><span class="badge bg-secondary" style="font-size:0.68rem">${variants.length} biến thể</span></div>` : ''}
+                    </td>
+                    <td class="align-middle"><code class="small">${sp.ma_vach || '--'}</code></td>
+                    <td class="text-end align-middle small">${Number(sp.gia_ban || 0).toLocaleString()} đ</td>
+                    <td class="text-center align-middle"><span class="fw-semibold ${tonClass}">${totalTon.toLocaleString()}</span></td>
+                    <td class="text-center align-middle">
+                        ${expandBtn}
+                        <button class="btn btn-sm ${parentBtnClass} btn-chon-sp-nhap" data-id="${sp.id}" data-ten="${sp.ten_san_pham}" data-gia="${sp.gia_ban || 0}" ${parentDisabled}>
+                            <i class="fas ${parentBtnIcon}"></i> ${parentBtnText}
+                        </button>
+                    </td>
+                </tr>`,
+                ...variantRows
+            ];
+        });
+        const tableHtml = `<table class="table table-sm table-hover mb-0">
             <thead class="table-light"><tr>
                 <th style="width:50px"></th>
                 <th>Sản phẩm</th>
                 <th style="width:110px">Mã vạch</th>
                 <th style="width:110px" class="text-end">Giá bán</th>
                 <th style="width:80px" class="text-center">Tồn kho</th>
-                <th style="width:90px" class="text-center">Chọn</th>
+                <th style="width:120px" class="text-center">Chọn</th>
             </tr></thead>
-            <tbody>${res.data.map(sp => {
-                const img = sp.hinh_anh
-                    ? `<img src="/${sp.hinh_anh}" width="38" height="38" class="rounded" style="object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                       <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width:38px;height:38px;display:none"><i class="fas fa-box text-secondary"></i></div>`
-                    : `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="width:38px;height:38px"><i class="fas fa-box text-secondary"></i></div>`;
-                const danhMuc = sp.danh_muc?.ten_danh_muc || '';
-                const tonKho = sp.chi_tiet_lo_hang_ton_sum_so_luong_ton || 0;
-                const tonClass = tonKho === 0 ? 'text-danger' : tonKho < 10 ? 'text-warning' : 'text-success';
-                const isSelected = selectedPnProducts.has(sp.id);
-                const btnClass = isSelected ? 'btn-secondary' : 'btn-primary';
-                const btnIcon = isSelected ? 'fa-check' : 'fa-plus';
-                const btnText = isSelected ? 'Đã chọn' : 'Chọn';
-                const btnDisabled = isSelected ? 'disabled' : '';
-                return `<tr>
-                    <td class="text-center align-middle">${img}</td>
-                    <td class="align-middle"><div class="fw-semibold small">${sp.ten_san_pham}</div><div class="small text-muted">${danhMuc}</div></td>
-                    <td class="align-middle"><code class="small">${sp.ma_vach || '--'}</code></td>
-                    <td class="text-end align-middle">${Number(sp.gia_ban || 0).toLocaleString()} đ</td>
-                    <td class="text-center align-middle"><span class="fw-semibold ${tonClass}">${tonKho.toLocaleString()}</span></td>
-                    <td class="text-center align-middle">
-                        <button class="btn btn-sm ${btnClass} btn-chon-sp-nhap" data-id="${sp.id}" data-ten="${sp.ten_san_pham}" data-gia="${sp.gia_ban || 0}" ${btnDisabled}>
-                            <i class="fas ${btnIcon}"></i> ${btnText}
-                        </button>
-                    </td>
-                </tr>`;
-            }).join('')}</tbody></table>`;
-        $('#pn-sp-results').html(html);
+            <tbody>${rows.join('')}</tbody>
+        </table>`;
+        $('#pn-sp-results').html(tableHtml);
     });
 }
+
+$(document).on('click', '.btn-toggle-variants', function () {
+    const parentId = $(this).data('parent');
+    const icon = $(this).find('i');
+    const isExpanded = icon.hasClass('fa-chevron-down');
+    if (isExpanded) {
+        $(`.variant-sub-row[data-parent="${parentId}"]`).hide();
+        icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+    } else {
+        $(`.variant-sub-row[data-parent="${parentId}"]`).show();
+        icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+    }
+});
 
 $(document).on('click', '.btn-chon-sp-nhap', function () {
     const id = $(this).data('id');
@@ -1038,7 +1093,7 @@ $(document).on('click', '.btn-chon-sp-nhap', function () {
         <td><input type="date" class="form-control form-control-sm" name="chi_tiet[${idx}][han_su_dung]" value=""></td>
         <td><button type="button" class="btn btn-sm btn-outline-danger btn-remove-pn-row" data-id="${id}"><i class="fas fa-times"></i></button></td>
     </tr>`);
-    $(this).prop('disabled', true).removeClass('btn-primary').addClass('btn-secondary').html('<i class="fas fa-check"></i> Đã chọn');
+    $(this).prop('disabled', true).removeClass('btn-primary btn-success').addClass('btn-secondary').html('<i class="fas fa-check"></i> Đã chọn');
 });
 
 $(document).on('click', '.btn-remove-pn-row', function () {
@@ -1049,7 +1104,8 @@ $(document).on('click', '.btn-remove-pn-row', function () {
     if (!$('#pn-ds-sp tr').length) {
         $('#pn-ds-sp').html('<tr id="pn-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td></tr>');
     }
-    $(`.btn-chon-sp-nhap[data-id="${spId}"]`).prop('disabled', false).removeClass('btn-secondary').addClass('btn-primary').html('<i class="fas fa-plus"></i> Chọn');
+    const btn = $(`.btn-chon-sp-nhap[data-id="${spId}"]`);
+    btn.prop('disabled', false).removeClass('btn-secondary').addClass(btn.data('variant') ? 'btn-success' : 'btn-primary').html(`<i class="fas fa-plus"></i> Chọn`);
 });
 
 function loadTonKho(page = 1) {
@@ -1568,16 +1624,24 @@ $(document).on('click', '.btn-xoa-ncc', function () {
 });
 
 // ─── DYNAMIC ROWS ────────────────────────────────────────
+function spDisplayText(sp) {
+    if (sp.san_pham_cha_id) {
+        const attrs = (sp.thuoc_tinhs || []).map(tt => tt.ten_thuoc_tinh).join(' / ');
+        return `└── ${sp.ten_san_pham}${attrs ? ' (' + attrs + ')' : ''} (${sp.ma_vach || sp.id})`;
+    }
+    return `${sp.ten_san_pham} (${sp.ma_vach || sp.id})`;
+}
+
 function spOptions(existingId) {
     return sanPhamAll.map(sp =>
-        `<option value="${sp.id}" ${sp.id == existingId ? 'selected' : ''}>${sp.ten_san_pham} (${sp.ma_vach || sp.id})</option>`
+        `<option value="${sp.id}" ${sp.id == existingId ? 'selected' : ''}>${spDisplayText(sp)}</option>`
     ).join('');
 }
 
 function addPxRow(id, sl) {
     const idx = pxIdx++;
     const opts = sanPhamAll.map(sp =>
-        `<option value="${sp.id}" data-ton="${sp.chi_tiet_lo_hang_ton_sum_so_luong_ton || 0}" ${sp.id == id ? 'selected' : ''}>${sp.ten_san_pham} (${sp.ma_vach || sp.id})</option>`
+        `<option value="${sp.id}" data-ton="${sp.chi_tiet_lo_hang_ton_sum_so_luong_ton || 0}" ${sp.id == id ? 'selected' : ''}>${spDisplayText(sp)}</option>`
     ).join('');
     $('#px-ds-sp').append(`<tr>
         <td><select class="form-select form-select-sm px-sp-select" name="chi_tiet[${idx}][id_san_pham]">${opts || '<option value="">-- Chọn --</option>'}</select></td>
@@ -1823,8 +1887,16 @@ function hienBao(type, message) {
 
 // ─── LOAD ALL PRODUCTS ────────────────────────────────────
 function loadSanPhamAll() {
-    $.get('/admin/api/san-pham', { q: '' }, res => {
-        sanPhamAll = res.data?.data || [];
+    $.get('/admin/api/san-pham', { q: '', include_variants: 1 }, res => {
+        if (!res.data) { sanPhamAll = []; return; }
+        // Flatten: parents + all their variants
+        sanPhamAll = [];
+        res.data.forEach(sp => {
+            sanPhamAll.push(sp);
+            if (sp.bien_the && sp.bien_the.length) {
+                sp.bien_the.forEach(bt => sanPhamAll.push(bt));
+            }
+        });
     });
 }
 </script>

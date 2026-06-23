@@ -16,6 +16,7 @@ class SanPhamApiController extends Controller
         $q = $request->query('q');
         $danhMuc = $request->query('danh_muc');
         $trangThai = $request->query('trang_thai');
+        $includeVariants = $request->boolean('include_variants', false);
 
         $query = SanPham::with(['danhMuc', 'donVi', 'chiTietLoHangTon'])
             ->sanPhamCha()
@@ -31,8 +32,20 @@ class SanPhamApiController extends Controller
 
         $items = $query->get(['id', 'ten_san_pham', 'ma_vach', 'ma_hang', 'hinh_anh', 'gia_ban', 'id_danh_muc', 'id_don_vi', 'trang_thai', 'san_pham_cha_id', 'la_san_pham_cha']);
 
-        // json_encode bỏ qua relationships + withSum → compute manually rồi dùng toArray
-        $items->each(fn($sp) => $sp->chi_tiet_lo_hang_ton_sum_so_luong_ton = $sp->chiTietLoHangTon->sum('so_luong_ton'));
+        if ($includeVariants) {
+            $items->load(['bienThe' => fn($q) => $q->orderBy('ten_san_pham'), 'bienThe.thuocTinhs', 'bienThe.chiTietLoHangTon']);
+        }
+
+        $items->each(function ($sp) use ($includeVariants) {
+            $sp->chi_tiet_lo_hang_ton_sum_so_luong_ton = $sp->chiTietLoHangTon->sum('so_luong_ton');
+            if ($includeVariants) {
+                $sp->bien_the = $sp->bienThe->map(function ($bt) {
+                    $bt->chi_tiet_lo_hang_ton_sum_so_luong_ton = $bt->chiTietLoHangTon->sum('so_luong_ton');
+                    return $bt;
+                })->toArray();
+            }
+        });
+
         $dataArray = $items->toArray();
 
         return response()->json([
