@@ -15,6 +15,7 @@ use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
 use App\Http\Controllers\admin\Api\ThuocTinhApiController;
 use App\Http\Controllers\admin\Api\SanPhamApiController;
 use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
+use App\Http\Controllers\admin\CaLam\CaLam;
 use App\Http\Controllers\admin\KhuyenMaiController;
 use App\Http\Controllers\admin\PhanQuyenDong\PhanQuyen;
 use App\Http\Middleware\AuthAdmin;
@@ -251,6 +252,10 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::get('/admin/chia-ca-lam-viec/{chiaCaLamViec}/edit', [ChiaCaController::class, 'edit'])->name('chia-ca-lam-viec.edit')->middleware('permission:sua_chia_ca_lam_viec');
     Route::put('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'update'])->name('chia-ca-lam-viec.update')->middleware('permission:sua_chia_ca_lam_viec');
     Route::delete('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'destroy'])->name('chia-ca-lam-viec.destroy')->middleware('permission:xoa_chia_ca_lam_viec');
+
+    // quản lý ca làm
+    Route::get('/ca-lam',[CaLam::class, 'index'])->name('ca-lam.index')->middleware('permission::ca-lam');
+
 
     // Thiết lập lương
     Route::get('/admin/thiet-lap-luong', [ThietLapLuongController::class, 'index'])->name('thiet-lap-luong.index')->middleware('permission:xem_thiet_lap_luong');

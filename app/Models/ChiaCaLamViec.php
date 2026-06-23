@@ -35,4 +35,8 @@ class ChiaCaLamViec extends Model
     {
         return $this->belongsTo(NguoiDung::class, 'id_nguoi_dung');
     }
+
+    public function diemDanh(){
+        return $this->HasOne(DiemDanh::class, 'id');
+    }
 }
