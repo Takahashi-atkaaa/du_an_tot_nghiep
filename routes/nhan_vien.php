@@ -18,6 +18,15 @@ Route::prefix('nhan-vien')->group(function () {
     ->name('nhan-vien.ban-hang.san-pham');
     Route::get('/ban-hang/danh-muc', [NhanVienController::class, 'layDanhMuc'])
     ->name('nhan-vien.ban-hang.danh-muc');
+    Route::post('/ban-hang/thanh-toan', [NhanVienController::class, 'thanhToan'])
+    ->name('nhan-vien.ban-hang.thanh-toan');
+       Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])
+        ->name('nhan-vien.hoa-don');
+    Route::get('/hoa-don/{id}', [NhanVienController::class, 'chiTietHoaDon'])
+    ->name('nhan-vien.hoa-don.chi-tiet');
+
+Route::get('/hoa-don/{id}/in', [NhanVienController::class, 'inHoaDon'])
+    ->name('nhan-vien.hoa-don.in');
     
     Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don');
     Route::get('/san-pham', [NhanVienController::class, 'sanPham'])->name('nhan-vien.san-pham');

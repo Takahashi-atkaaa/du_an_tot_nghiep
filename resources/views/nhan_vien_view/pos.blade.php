@@ -1238,38 +1238,72 @@ function selectPayment(method) {
 // ─────────────────────────────────────────────
 // Process Payment
 // ─────────────────────────────────────────────
-function processPayment() {
+async function processPayment() {
     if (cart.length === 0) {
         showToast('Giỏ hàng trống!', 'error');
         return;
     }
 
     const total = cart.reduce((s, i) => s + Number(i.gia_ban) * i.qty, 0);
-    const customer = parseFloat(document.getElementById('customerMoney').value) || 0;
+    let customer = parseFloat(document.getElementById('customerMoney').value) || 0;
+
+if (selectedPayment === 'cash') {
+    if (customer < total) {
+        showToast('Số tiền khách đưa không đủ!', 'error');
+        return;
+    }
+} else {
+    customer = total;
+}
 
     if (selectedPayment === 'cash' && customer < total) {
         showToast('Số tiền khách đưa không đủ!', 'error');
         return;
     }
 
-    const methodText = {
-        cash: 'Tiền mặt',
-        transfer: 'Chuyển khoản',
-        card: 'Quẹt thẻ'
-    };
+    try {
+        const response = await fetch('/nhan-vien/ban-hang/thanh-toan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                cart: cart.map(item => ({
+                    id: item.id,
+                    qty: item.qty
+                })),
+                tien_khach_dua: customer,
+                phuong_thuc_thanh_toan: selectedPayment
+            })
+        });
 
-    const change = customer - total;
-    let msg = `Thanh toán thành công!\nPhương thức: ${methodText[selectedPayment]}\nTổng tiền: ${formatCurrency(total)}`;
-    if (selectedPayment === 'cash') {
-        msg += `\nTiền thừa: ${formatCurrency(Math.max(0, change))}`;
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            showToast(data.message || 'Thanh toán thất bại!', 'error');
+            return;
+        }
+
+        alert(
+            'Thanh toán thành công!\n' +
+            'Mã hóa đơn: #' + data.hoa_don_id + '\n' +
+            'Tổng tiền: ' + formatCurrency(total)
+        );
+        window.open('/nhan-vien/hoa-don/' + data.hoa_don_id, '_blank');
+
+        cart = [];
+        document.getElementById('customerMoney').value = '';
+        document.getElementById('changeAmount').textContent = '0đ';
+
+        renderCart();
+        loadProducts();
+
+        showToast('Thanh toán thành công!');
+    } catch (error) {
+        console.error(error);
+        showToast('Lỗi kết nối máy chủ!', 'error');
     }
-
-    alert(msg);
-    cart = [];
-    document.getElementById('customerMoney').value = '';
-    document.getElementById('changeAmount').textContent = '0đ';
-    renderCart();
-    showToast('Thanh toán thành công!');
 }
 
 // ─────────────────────────────────────────────
