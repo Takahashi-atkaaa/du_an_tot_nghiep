@@ -100,4 +100,14 @@ class SanPham extends BaseModel
         }
         return $this->so_luong_ton_kho + $this->bienThe->sum('so_luong_ton_kho');
     }
+
+    public function chiTietLoHang()
+    {
+        return $this->hasMany(ChiTietLoHang::class, 'id_san_pham');
+    }
+
+    public function chiTietLoHangTon()
+    {
+        return $this->hasMany(ChiTietLoHang::class, 'id_san_pham')->where('so_luong_ton', '>', 0);
+    }
 }
