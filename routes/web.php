@@ -12,6 +12,7 @@ use App\Http\Controllers\admin\NhanSu\PhieuLuongController;
 use App\Http\Controllers\admin\KhachHang\KhachHangController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Api\LoHangApiController;
+use App\Http\Controllers\Admin\Api\NhaCungCapApiController;
 use App\Http\Controllers\Admin\Api\PhieuNhapApiController;
 use App\Http\Controllers\Admin\Api\PhieuXuatApiController;
 use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
@@ -97,6 +98,13 @@ Route::get('/admin/cai-dat', function () {
     Route::post('/admin/api/lo-hang', [LoHangApiController::class, 'store']);
     Route::put('/admin/api/lo-hang/{id}', [LoHangApiController::class, 'update']);
     Route::delete('/admin/api/lo-hang/{id}', [LoHangApiController::class, 'destroy']);
+
+    // Nhà cung cấp API
+    Route::get('/admin/api/nha-cung-cap', [NhaCungCapApiController::class, 'index']);
+    Route::post('/admin/api/nha-cung-cap', [NhaCungCapApiController::class, 'store']);
+    Route::put('/admin/api/nha-cung-cap/{id}', [NhaCungCapApiController::class, 'update']);
+    Route::delete('/admin/api/nha-cung-cap/{id}', [NhaCungCapApiController::class, 'destroy']);
+    Route::get('/admin/api/nha-cung-cap/dropdown', [NhaCungCapApiController::class, 'dropdown']);
 
     // Phiếu nhập
     Route::get('/admin/api/phieu-nhap', [PhieuNhapApiController::class, 'index']);

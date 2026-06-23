@@ -95,6 +95,11 @@
             <span class="badge bg-danger ms-1" id="badge-canh-bao" style="display:none">0</span>
         </button>
     </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-ncc" data-bs-toggle="tab" data-bs-target="#panel-ncc" type="button" role="tab">
+            <i class="fas fa-truck me-1"></i>Nhà cung cấp
+        </button>
+    </li>
 </ul>
 
 {{-- Tab Content --}}
@@ -373,6 +378,61 @@
         </div>
     </div>
 
+    {{-- =========================== TAB 6: NHÀ CUNG CẤP =========================== --}}
+    <div class="tab-pane fade" id="panel-ncc" role="tabpanel">
+
+        {{-- Header & Actions --}}
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="input-group" style="max-width: 400px;">
+                <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                <input type="text" class="form-control" id="ncc-search" placeholder="Tìm tên, email, SĐT...">
+                <button class="btn btn-primary" id="ncc-btn-search"><i class="fas fa-search"></i></button>
+                <button class="btn btn-light border" id="ncc-btn-refresh"><i class="fas fa-sync-alt"></i></button>
+            </div>
+            <div>
+                <a href="{{ url('/admin/kho-hang/nha-cung-cap/thung-rac') }}" class="btn btn-outline-danger btn-sm me-2" target="_blank">
+                    <i class="fas fa-trash-alt me-1"></i>Thùng rác
+                </a>
+                <button class="btn btn-primary btn-sm" id="ncc-btn-them">
+                    <i class="fas fa-plus me-1"></i>Thêm NCC
+                </button>
+            </div>
+        </div>
+
+        {{-- Alert container --}}
+        <div id="ncc-alert-container"></div>
+
+        {{-- Table --}}
+        <div class="card table-admin">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tên NCC</th>
+                                <th>Email</th>
+                                <th>SĐT</th>
+                                <th>Người đại diện</th>
+                                <th>Ngày tạo</th>
+                                <th style="width: 130px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ncc-tbody">
+                            <tr><td colspan="7" class="text-center text-muted py-4">Đang tải...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted small" id="ncc-thong-tin"></span>
+                    <nav id="ncc-phan-trang"></nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>{{-- end tab-content --}}
 
 {{-- ===================== MODAL: TẠO PHIẾU NHẬP ===================== --}}
@@ -622,6 +682,88 @@
     </div>
 </div>
 
+{{-- ===================== MODAL: THÊM NHÀ CUNG CẤP ===================== --}}
+<div class="modal fade" id="modal-them-ncc" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="form-them-ncc" autocomplete="off">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Thêm nhà cung cấp</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tên nhà cung cấp <span class="text-danger">*</span></label>
+                        <input type="text" name="ten_nha_cung_cap" id="ncc_them_ten" class="form-control" required>
+                        <div class="invalid-feedback" id="ncc_them_ten_err"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" id="ncc_them_email" class="form-control">
+                        <div class="invalid-feedback" id="ncc_them_email_err"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+                        <input type="text" name="so_dien_thoai" id="ncc_them_sdt" class="form-control" required>
+                        <div class="invalid-feedback" id="ncc_them_sdt_err"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Người đại diện</label>
+                        <input type="text" name="nguoi_dai_dien" id="ncc_them_nguoi" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary" id="ncc_btn_luu"><i class="fas fa-save me-1"></i>Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- ===================== MODAL: SỬA NHÀ CUNG CẤP ===================== --}}
+<div class="modal fade" id="modal-sua-ncc" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="form-sua-ncc" autocomplete="off">
+                @csrf
+                @method('PUT')
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Sửa nhà cung cấp</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="ncc_sua_id">
+                    <div class="mb-3">
+                        <label class="form-label">Tên nhà cung cấp <span class="text-danger">*</span></label>
+                        <input type="text" name="ten_nha_cung_cap" id="ncc_sua_ten" class="form-control" required>
+                        <div class="invalid-feedback" id="ncc_sua_ten_err"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" id="ncc_sua_email" class="form-control">
+                        <div class="invalid-feedback" id="ncc_sua_email_err"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+                        <input type="text" name="so_dien_thoai" id="ncc_sua_sdt" class="form-control" required>
+                        <div class="invalid-feedback" id="ncc_sua_sdt_err"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Người đại diện</label>
+                        <input type="text" name="nguoi_dai_dien" id="ncc_sua_nguoi" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary" id="ncc_btn_cap_nhat"><i class="fas fa-save me-1"></i>Cập nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {{-- ===================== MODAL: XEM CHI TIẾT LÔ HÀNG ===================== --}}
 <div class="modal fade" id="modal-xem-lo" tabindex="-1">
     <div class="modal-dialog modal-xl">
@@ -653,7 +795,8 @@ $(function () {
     loadLoHang();
     loadPhieuNhap();
     loadPhieuXuat();
-    loadNhaCungCap();
+    loadNhaCungCap(1);
+    loadNccDropdown();
     loadSanPhamAll();
 
     // Modal events
@@ -735,9 +878,64 @@ function loadDanhMucNhap() {
     });
 }
 
-function loadNhaCungCap() {
-    $.get('/admin/api/lo-hang/nha-cung-cap', res => {
-        const opts = res.map(n => `<option value="${n.id}">${n.ten_nha_cung_cap}</option>`).join('');
+let nccPage = 1;
+
+function loadNhaCungCap(page = 1, q = '') {
+    nccPage = page;
+    const searchQ = q !== '' ? q : ($('#ncc-search').val() || '');
+    $('#ncc-tbody').html('<tr><td colspan="7" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-1"></i> Đang tải...</td></tr>');
+    $.get('/admin/api/nha-cung-cap', { page, q: searchQ }, res => {
+        if (!res.success) {
+            $('#ncc-tbody').html('<tr><td colspan="7" class="text-center text-danger py-4">Lỗi tải dữ liệu.</td></tr>');
+            return;
+        }
+        const items = res.data.data;
+        if (items.length === 0) {
+            $('#ncc-tbody').html('<tr><td colspan="7" class="text-center text-muted py-4">Chưa có nhà cung cấp nào.</td></tr>');
+        } else {
+            const rows = items.map(ncc => `
+                <tr>
+                    <td>${ncc.id}</td>
+                    <td>${ncc.ten_nha_cung_cap}</td>
+                    <td>${ncc.email || '<span class="text-muted">—</span>'}</td>
+                    <td>${ncc.so_dien_thoai}</td>
+                    <td>${ncc.nguoi_dai_dien || '<span class="text-muted">—</span>'}</td>
+                    <td>${ncc.created_at ? ncc.created_at.split(' ')[0] : '—'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary btn-sua-ncc" data-id="${ncc.id}"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-outline-danger btn-xoa-ncc" data-id="${ncc.id}" data-ten="${ncc.ten_nha_cung_cap}"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`).join('');
+            $('#ncc-tbody').html(rows);
+        }
+        const total = res.data.total || 0;
+        $('#ncc-thong-tin').text(`Hiển thị ${res.data.data.length} / ${total} nhà cung cấp`);
+        renderNccPagination(page, res.data.last_page || 1);
+    }).fail(() => {
+        $('#ncc-tbody').html('<tr><td colspan="7" class="text-center text-danger py-4">Lỗi kết nối server.</td></tr>');
+    });
+}
+
+function renderNccPagination(page, lastPage) {
+    if (lastPage <= 1) { $('#ncc-phan-trang').html(''); return; }
+    let html = '';
+    const max = 5;
+    let start = Math.max(1, page - 2);
+    let end = Math.min(lastPage, start + max - 1);
+    if (end - start < max - 1) start = Math.max(1, end - max + 1);
+    if (page > 1) html += `<button class="btn btn-sm btn-light border me-1" onclick="loadNhaCungCap(${page - 1})"><i class="fas fa-chevron-left"></i></button>`;
+    for (let i = start; i <= end; i++) {
+        html += `<button class="btn btn-sm ${i === page ? 'btn-primary' : 'btn-light border'} me-1" onclick="loadNhaCungCap(${i})">${i}</button>`;
+    }
+    if (page < lastPage) html += `<button class="btn btn-sm btn-light border" onclick="loadNhaCungCap(${page + 1})"><i class="fas fa-chevron-right"></i></button>`;
+    $('#ncc-phan-trang').html(html);
+}
+
+// Load dropdown NCC cho các tab khác (dùng endpoint riêng)
+function loadNccDropdown() {
+    $.get('/admin/api/nha-cung-cap/dropdown', res => {
+        if (!res.success) return;
+        const opts = res.data.map(n => `<option value="${n.id}">${n.ten_nha_cung_cap}</option>`).join('');
         $('#pn-ncc').html('<option value="">-- Chọn NCC --</option>' + opts);
         $('#px-ncc').html('<option value="">-- Chọn NCC --</option>' + opts);
         $('#lo-ncc').html('<option value="">-- Chọn NCC --</option>' + opts);
@@ -1330,6 +1528,45 @@ $(document).on('click', '.btn-xoa-px', function () {
     $.ajax({ url: '/admin/api/phieu-xuat/' + id, method: 'DELETE', success: res => { hienBao('success', res.message); loadPhieuXuat(pxPage); loadStats(); }, error: x => hienBao('danger', x.responseJSON?.message || 'Lỗi.') });
 });
 
+// ─── NCC TAB EVENTS ───────────────────────────────────────
+$('#tab-ncc').on('shown.bs.tab', () => loadNhaCungCap(nccPage));
+
+$(document).on('click', '#ncc-btn-them', () => {
+    $('#form-them-ncc')[0].reset();
+    $('#form-them-ncc .form-control').removeClass('is-invalid');
+    new bootstrap.Modal(document.getElementById('modal-them-ncc')).show();
+});
+
+$(document).on('click', '#ncc-btn-search', () => loadNhaCungCap(1, $('#ncc-search').val()));
+$(document).on('click', '#ncc-btn-refresh', () => { $('#ncc-search').val(''); loadNhaCungCap(1); });
+
+$(document).on('keypress', '#ncc-search', e => { if (e.which === 13) loadNhaCungCap(1, $('#ncc-search').val()); });
+
+$(document).on('click', '.btn-sua-ncc', function () {
+    const id = $(this).data('id');
+    $.get('/admin/api/nha-cung-cap/' + id, res => {
+        if (!res.success) { hienBao('danger', 'Không tải được dữ liệu.'); return; }
+        const n = res.item;
+        $('#ncc_sua_id').val(n.id);
+        $('#ncc_sua_ten').val(n.ten_nha_cung_cap);
+        $('#ncc_sua_email').val(n.email || '');
+        $('#ncc_sua_sdt').val(n.so_dien_thoai);
+        $('#ncc_sua_nguoi').val(n.nguoi_dai_dien || '');
+        $('#form-sua-ncc .form-control').removeClass('is-invalid');
+        new bootstrap.Modal(document.getElementById('modal-sua-ncc')).show();
+    }).fail(() => hienBao('danger', 'Lỗi kết nối.'));
+});
+
+$(document).on('click', '.btn-xoa-ncc', function () {
+    const id = $(this).data('id');
+    const ten = $(this).data('ten');
+    if (!confirm('Xóa nhà cung cấp "' + ten + '"?')) return;
+    $.ajax({ url: '/admin/api/nha-cung-cap/' + id, method: 'DELETE', success: res => {
+        hienBao('success', res.message);
+        loadNhaCungCap(nccPage);
+    }, error: x => hienBao('danger', x.responseJSON?.message || 'Lỗi xóa.') });
+});
+
 // ─── DYNAMIC ROWS ────────────────────────────────────────
 function spOptions(existingId) {
     return sanPhamAll.map(sp =>
@@ -1406,6 +1643,76 @@ function updateFefoPreview() {
 }
 
 // ─── FORM SUBMITS ────────────────────────────────────────
+// NCC: Thêm
+$(document).on('submit', '#form-them-ncc', function (e) {
+    e.preventDefault();
+    const btn = $('#ncc_btn_luu');
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Đang lưu...');
+    $.post('/admin/api/nha-cung-cap', {
+        _token: $('meta[name="csrf-token"]').attr('content'),
+        ten_nha_cung_cap: $('#ncc_them_ten').val(),
+        email: $('#ncc_them_email').val(),
+        so_dien_thoai: $('#ncc_them_sdt').val(),
+        nguoi_dai_dien: $('#ncc_them_nguoi').val(),
+    }, res => {
+        if (res.success) {
+            bootstrap.Modal.getInstance(document.getElementById('modal-them-ncc')).hide();
+            hienBao('success', res.message);
+            loadNhaCungCap(1);
+        } else {
+            hienBao('danger', res.message);
+        }
+    }).fail(x => {
+        const err = x.responseJSON;
+        if (err && err.errors) {
+            const e = err.errors;
+            $('#ncc_them_ten').toggleClass('is-invalid', !!e.ten_nha_cung_cap)
+                .next('.invalid-feedback').text(e.ten_nha_cung_cap?.[0] || '');
+            $('#ncc_them_email').toggleClass('is-invalid', !!e.email)
+                .next('.invalid-feedback').text(e.email?.[0] || '');
+            $('#ncc_them_sdt').toggleClass('is-invalid', !!e.so_dien_thoai)
+                .next('.invalid-feedback').text(e.so_dien_thoai?.[0] || '');
+        } else {
+            hienBao('danger', err?.message || 'Lỗi server.');
+        }
+    }).always(() => btn.prop('disabled', false).html('<i class="fas fa-save me-1"></i>Lưu'));
+});
+
+// NCC: Sửa
+$(document).on('submit', '#form-sua-ncc', function (e) {
+    e.preventDefault();
+    const id = $('#ncc_sua_id').val();
+    const btn = $('#ncc_btn_cap_nhat');
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Đang cập nhật...');
+    $.ajax({ url: '/admin/api/nha-cung-cap/' + id, method: 'PUT', headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }, data: {
+        ten_nha_cung_cap: $('#ncc_sua_ten').val(),
+        email: $('#ncc_sua_email').val(),
+        so_dien_thoai: $('#ncc_sua_sdt').val(),
+        nguoi_dai_dien: $('#ncc_sua_nguoi').val(),
+    }, success: res => {
+        if (res.success) {
+            bootstrap.Modal.getInstance(document.getElementById('modal-sua-ncc')).hide();
+            hienBao('success', res.message);
+            loadNhaCungCap(nccPage);
+        } else {
+            hienBao('danger', res.message);
+        }
+    }, error: x => {
+        const err = x.responseJSON;
+        if (err && err.errors) {
+            const e = err.errors;
+            $('#ncc_sua_ten').toggleClass('is-invalid', !!e.ten_nha_cung_cap)
+                .next('.invalid-feedback').text(e.ten_nha_cung_cap?.[0] || '');
+            $('#ncc_sua_email').toggleClass('is-invalid', !!e.email)
+                .next('.invalid-feedback').text(e.email?.[0] || '');
+            $('#ncc_sua_sdt').toggleClass('is-invalid', !!e.so_dien_thoai)
+                .next('.invalid-feedback').text(e.so_dien_thoai?.[0] || '');
+        } else {
+            hienBao('danger', err?.message || 'Lỗi server.');
+        }
+    }, complete: () => btn.prop('disabled', false).html('<i class="fas fa-save me-1"></i>Cập nhật') });
+});
+
 function buildChiTiet(tableId, prefix) {
     const rows = [];
     $('#' + tableId + ' tr').each(function () {
