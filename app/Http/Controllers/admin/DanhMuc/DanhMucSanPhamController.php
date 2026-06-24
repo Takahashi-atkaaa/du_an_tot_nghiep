@@ -1,10 +1,10 @@
 <?php
  
-namespace App\Http\Controllers\Admin\DanhMuc;
+namespace App\Http\Controllers\admin\DanhMuc;
  
 use App\Http\Controllers\Controller;
-use App\Requests\DanhMuc\StoreCreateRequest;
-use App\Requests\DanhMuc\UpdateDanhMucRequest;
+use App\Http\Requests\DanhMuc\StoreCreateRequest;
+use App\Http\Requests\DanhMuc\UpdateDanhMucRequest;
 use App\Models\DanhMucSanPham;
 use Illuminate\Http\Request;
  

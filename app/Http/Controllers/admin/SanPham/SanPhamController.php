@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin\SanPham;
+namespace App\Http\Controllers\admin\SanPham;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SanPham\StoreSanPhamRequest;
@@ -183,7 +183,12 @@ class SanPhamController extends Controller
         $isParent = (bool) $sanPham->la_san_pham_cha;
 
         return view('admin_xem_truoc.san-pham-sua', compact(
-            'sanPham', 'danhMucs', 'donVis', 'thuocTinhs', 'sanPhamCha', 'isParent'
+            'sanPham',
+            'danhMucs',
+            'donVis',
+            'thuocTinhs',
+            'sanPhamCha',
+            'isParent'
         ));
     }
 
@@ -322,7 +327,6 @@ class SanPhamController extends Controller
                     }
                 }
             }
-
         } else {
             // === BIẾN THỂ ===
             $sanPham->update([
@@ -580,9 +584,19 @@ class SanPhamController extends Controller
         $sanPhams = $query->get();
 
         $columns = [
-            'Mã SP', 'Tên sản phẩm', 'Danh mục', 'Thương hiệu', 'Mã vạch',
-            'Đơn vị', 'Giá vốn', 'Giá bán', 'Tồn kho', 'Định mức tối thiểu',
-            'Mô tả', 'Trạng thái', 'Ngày tạo'
+            'Mã SP',
+            'Tên sản phẩm',
+            'Danh mục',
+            'Thương hiệu',
+            'Mã vạch',
+            'Đơn vị',
+            'Giá vốn',
+            'Giá bán',
+            'Tồn kho',
+            'Định mức tối thiểu',
+            'Mô tả',
+            'Trạng thái',
+            'Ngày tạo'
         ];
 
         $rows = [];
@@ -617,14 +631,14 @@ class SanPhamController extends Controller
     private function exportCsv(array $columns, array $rows, string $filename)
     {
         $handle = fopen('php://temp', 'r+');
-        fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM for UTF-8
+        fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF)); // BOM for UTF-8
 
         fputcsv($handle, $columns);
         foreach ($rows as $row) {
             fputcsv($handle, $row);
         }
 
-        return response()->streamDownload(function() use ($handle) {
+        return response()->streamDownload(function () use ($handle) {
             rewind($handle);
             echo stream_get_contents($handle);
             fclose($handle);
@@ -675,8 +689,16 @@ class SanPhamController extends Controller
         $type = $request->get('type', 'csv');
 
         $columns = [
-            'Tên sản phẩm *', 'Danh mục *', 'Thương hiệu', 'Mã vạch',
-            'Giá vốn', 'Giá bán', 'Tồn kho', 'Định mức tối thiểu', 'Mô tả', 'Đơn vị'
+            'Tên sản phẩm *',
+            'Danh mục *',
+            'Thương hiệu',
+            'Mã vạch',
+            'Giá vốn',
+            'Giá bán',
+            'Tồn kho',
+            'Định mức tối thiểu',
+            'Mô tả',
+            'Đơn vị'
         ];
 
         $sample = [
@@ -686,12 +708,12 @@ class SanPhamController extends Controller
 
         if ($type === 'csv') {
             $output = fopen('php://output', 'w');
-            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+            fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
             fputcsv($output, $columns);
             foreach ($sample as $row) {
                 fputcsv($output, $row);
             }
-            return response()->streamDownload(function() use ($output) {
+            return response()->streamDownload(function () use ($output) {
                 rewind($output);
                 fpassthru($output);
                 fclose($output);
