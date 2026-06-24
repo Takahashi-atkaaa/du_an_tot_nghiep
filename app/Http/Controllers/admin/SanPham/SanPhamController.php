@@ -508,7 +508,6 @@ class SanPhamController extends Controller
             'trang_thai' => true,
         ]);
     }
-
     protected function generateUniqueMaHang(): string
     {
         do {
