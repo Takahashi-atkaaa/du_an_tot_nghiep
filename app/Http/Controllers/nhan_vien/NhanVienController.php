@@ -26,10 +26,34 @@ class NhanVienController extends Controller
         return view('nhan_vien_view.pos');
     }
 
-    public function hoaDon()
-    {
-        return view('nhan_vien_view.hoa-don.index');
+   public function hoaDon(Request $request)
+{
+    $query = DB::table('hoa_don')
+        ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
+        ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
+        ->select(
+            'hoa_don.*',
+            'khach_hang.ten_khach_hang',
+            'nguoi_dung.ho_ten as ten_nhan_vien'
+        )
+        ->orderByDesc('hoa_don.id');
+
+    if ($request->filled('q')) {
+        $query->where('hoa_don.id', preg_replace('/[^0-9]/', '', $request->q));
     }
+
+    if ($request->filled('ngay')) {
+        $query->whereDate('hoa_don.created_at', $request->ngay);
+    }
+
+    if ($request->filled('trang_thai')) {
+        $query->where('hoa_don.trang_thai', $request->trang_thai);
+    }
+
+    $hoaDons = $query->paginate(10)->withQueryString();
+
+    return view('nhan_vien_view.hoa-don.index', compact('hoaDons'));
+}
 
     public function sanPham()
     {
@@ -269,6 +293,16 @@ public function thanhToan(Request $request)
         $khachCanTra = $tongTienHang - $tienGiamGia;
         $tienKhachDua = $request->tien_khach_dua;
         $tienThua = max(0, $tienKhachDua - $khachCanTra);
+        $phuongThucMap = [
+        'cash' => 'Tiền mặt',
+        'transfer' => 'Chuyển khoản',
+         'card' => 'Quẹt thẻ',
+         'tien_mat' => 'Tiền mặt',
+            'chuyen_khoan' => 'Chuyển khoản',
+        ];
+
+        $phuongThucThanhToan = $phuongThucMap[$request->phuong_thuc_thanh_toan]
+         ?? $request->phuong_thuc_thanh_toan;
 
         if ($request->phuong_thuc_thanh_toan === 'cash' && $tienKhachDua < $khachCanTra) {
             return response()->json([
@@ -287,7 +321,7 @@ public function thanhToan(Request $request)
             'khach_can_tra' => $khachCanTra,
             'tien_khach_dua' => $tienKhachDua,
             'tien_thua' => $tienThua,
-            'phuong_thuc_thanh_toan' => $request->phuong_thuc_thanh_toan,
+            'phuong_thuc_thanh_toan' => $phuongThucThanhToan,
             'trang_thai' => 'Hoàn thành',
             'diem_su_dung' => 0,
             'diem_thu_duoc' => 0,
@@ -348,5 +382,41 @@ public function chiTietHoaDon($id)
 public function inHoaDon($id)
 {
     return $this->chiTietHoaDon($id);
+}
+public function huyHoaDon($id)
+{
+    return DB::transaction(function () use ($id) {
+        $hoaDon = DB::table('hoa_don')
+            ->where('id', $id)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$hoaDon) {
+            return back()->with('error', 'Không tìm thấy hóa đơn.');
+        }
+
+        if ($hoaDon->trang_thai === 'Đã hủy') {
+            return back()->with('error', 'Hóa đơn này đã bị hủy trước đó.');
+        }
+
+        $chiTiet = DB::table('chi_tiet_hoa_don')
+            ->where('id_hoa_don', $id)
+            ->get();
+
+        foreach ($chiTiet as $item) {
+            DB::table('san_pham')
+                ->where('id', $item->id_san_pham)
+                ->increment('so_luong_ton_kho', $item->so_luong);
+        }
+
+        DB::table('hoa_don')
+            ->where('id', $id)
+            ->update([
+                'trang_thai' => 'Đã hủy',
+                'updated_at' => now(),
+            ]);
+
+        return back()->with('success', 'Đã hủy hóa đơn và hoàn lại tồn kho.');
+    });
 }
 }
