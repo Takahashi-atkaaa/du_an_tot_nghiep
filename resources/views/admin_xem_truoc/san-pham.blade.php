@@ -333,7 +333,7 @@
 
 <!-- Add Product Modal -->
 <div class="modal fade" id="addProductModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
+    <div class="modal-dialog modal-xl modal-fullheight">
         <div class="modal-content">
             <div class="modal-header" style="background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color:white;">
                 <div>
@@ -343,100 +343,106 @@
             </div>
             <form action="{{ url('admin/san-pham') }}" method="POST" enctype="multipart/form-data" id="productForm">
                 @csrf
-                <div class="modal-body">
-
-                    {{-- ======== ROW 1: Thông tin + Hình ảnh ======== --}}
-                    <div class="row g-3 mb-3">
-                        {{-- Thông tin sản phẩm --}}
-                        <div class="col-lg-8">
-                            <div class="card border mb-3">
-                                <div class="card-header bg-white py-2">
-                                    <h6 class="mb-0 fw-semibold"><i class="fas fa-info-circle me-1 text-primary"></i> Thông tin sản phẩm</h6>
+                <div class="modal-body p-3" id="addProductModalBody">
+                    {{-- ======== 1. Thông tin chung ======== --}}
+                    <div class="section-card mb-2">
+                        <div class="section-header" onclick="toggleSection(this)">
+                            <span><i class="fas fa-info-circle me-2 text-primary"></i>Thông tin chung</span>
+                            <i class="fas fa-chevron-down section-arrow"></i>
+                        </div>
+                        <div class="section-body open">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <label class="form-label">Tên sản phẩm <span class="text-danger">*</span></label>
+                                    <input type="text" name="ten_san_pham" class="form-control" placeholder="VD: Áo thun Doremon" required>
                                 </div>
-                                <div class="card-body py-2">
-                                    <div class="row g-2">
-                                        <div class="col-md-6">
-                                            <label class="form-label small fw-medium">Tên sản phẩm <span class="text-danger">*</span></label>
-                                            <input type="text" name="ten_san_pham" class="form-control form-control-sm" placeholder="VD: Áo thun Doremon" required>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label small fw-medium">Danh mục <span class="text-danger">*</span></label>
-                                            <select class="form-select form-select-sm" name="id_danh_muc" required>
-                                                <option selected disabled value="">-- Chọn --</option>
-                                                @foreach($danhMucs as $danhMuc)
-                                                    <option value="{{ $danhMuc->id }}">{{ $danhMuc->ten_danh_muc }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label small fw-medium">Thương hiệu</label>
-                                            <input type="text" name="thuong_hieu" class="form-control form-control-sm" placeholder="VD: Nike">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label small fw-medium">Barcode / Mã vạch</label>
-                                            <input type="text" name="ma_vach" class="form-control form-control-sm" placeholder="8934567890123">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label small fw-medium">Mô tả</label>
-                                            <textarea name="mo_ta" class="form-control form-control-sm" rows="1" placeholder="Mô tả sản phẩm..."></textarea>
-                                        </div>
-                                    </div>
+                                <div class="col-3">
+                                    <label class="form-label">Danh mục <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="id_danh_muc" required>
+                                        <option selected disabled value="">-- Chọn --</option>
+                                        @foreach($danhMucs as $danhMuc)
+                                            <option value="{{ $danhMuc->id }}">{{ $danhMuc->ten_danh_muc }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-3">
+                                    <label class="form-label">Thương hiệu</label>
+                                    <input type="text" name="thuong_hieu" class="form-control" placeholder="VD: Nike">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label">Barcode / Mã vạch</label>
+                                    <input type="text" name="ma_vach" class="form-control" placeholder="8934567890123">
+                                </div>
+                                <div class="col-8">
+                                    <label class="form-label">Mô tả</label>
+                                    <textarea name="mo_ta" class="form-control" rows="1" placeholder="Mô tả sản phẩm..."></textarea>
                                 </div>
                             </div>
+                        </div>
+                    </div>
 
-                            <div class="card border">
-                                <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0 fw-semibold"><i class="fas fa-coins me-1 text-warning"></i> Giá & Tồn kho</h6>
-                                    <div class="form-check form-switch mb-0">
-                                        <input class="form-check-input" type="checkbox" name="trang_thai" id="trangThaiSwitch" checked value="1">
-                                        <label class="form-check-label small" for="trangThaiSwitch">Đang bán</label>
+                    {{-- ======== 2. Giá & Tồn kho ======== --}}
+                    <div class="section-card mb-2">
+                        <div class="section-header" onclick="toggleSection(this)">
+                            <span><i class="fas fa-coins me-2 text-warning"></i>Giá &amp; Tồn kho</span>
+                            <i class="fas fa-chevron-down section-arrow"></i>
+                        </div>
+                        <div class="section-body open">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-3">
+                                    <label class="form-label">Giá vốn</label>
+                                    <div class="input-group">
+                                        <input type="number" name="gia_von" class="form-control" placeholder="0" min="0">
+                                        <span class="input-group-text">đ</span>
                                     </div>
                                 </div>
-                                <div class="card-body py-2">
-                                    <div class="row g-2">
-                                        <div class="col-md-3">
-                                            <label class="form-label small fw-medium">Giá vốn</label>
-                                            <div class="input-group input-group-sm">
-                                                <input type="number" name="gia_von" class="form-control" placeholder="0" min="0">
-                                                <span class="input-group-text">đ</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label small fw-medium">Giá bán <span class="text-danger">*</span></label>
-                                            <div class="input-group input-group-sm">
-                                                <input type="number" name="gia_ban" class="form-control" placeholder="0" min="0" required>
-                                                <span class="input-group-text">đ</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label small fw-medium">Tồn kho</label>
-                                            <input type="number" name="so_luong_ton_kho" class="form-control form-control-sm" placeholder="0" min="0" value="0">
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label small fw-medium">Định mức tối thiểu</label>
-                                            <input type="number" name="dinh_muc_toi_thieu" class="form-control form-control-sm" placeholder="0" min="0" value="0">
-                                        </div>
+                                <div class="col-3">
+                                    <label class="form-label">Giá bán <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input type="number" name="gia_ban" class="form-control" placeholder="0" min="0" required>
+                                        <span class="input-group-text">đ</span>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <label class="form-label">Tồn kho</label>
+                                    <input type="number" name="so_luong_ton_kho" class="form-control" placeholder="0" min="0" value="0">
+                                </div>
+                                <div class="col-3">
+                                    <label class="form-label">Định mức tối thiểu</label>
+                                    <input type="number" name="dinh_muc_toi_thieu" class="form-control" placeholder="0" min="0" value="0">
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="trang_thai" id="trangThaiSwitch" checked value="1">
+                                        <label class="form-check-label fw-medium" for="trangThaiSwitch">Sản phẩm đang được bán</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        {{-- Hình ảnh --}}
-                        <div class="col-lg-4">
-                            <div class="card border h-100">
-                                <div class="card-header bg-white py-2">
-                                    <h6 class="mb-0 fw-semibold"><i class="fas fa-image me-1 text-success"></i> Hình ảnh</h6>
-                                </div>
-                                <div class="card-body d-flex flex-column align-items-center justify-content-center" id="imageUploadArea" style="min-height:220px; border: 2px dashed #dee2e6; border-radius: 8px; cursor:pointer; transition: all 0.2s;">
-                                    <div id="imagePlaceholder" class="text-center py-4">
-                                        <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
-                                        <p class="text-muted small mb-0">Click để chọn ảnh</p>
-                                        <p class="text-muted" style="font-size:0.7rem;">JPEG, PNG, JPG, GIF, WEBP</p>
+                    {{-- ======== 3. Hình ảnh ======== --}}
+                    <div class="section-card mb-2">
+                        <div class="section-header" onclick="toggleSection(this)">
+                            <span><i class="fas fa-image me-2 text-success"></i>Hình ảnh</span>
+                            <i class="fas fa-chevron-down section-arrow"></i>
+                        </div>
+                        <div class="section-body open">
+                            <div class="d-flex gap-3 align-items-start">
+                                <div class="border rounded d-flex align-items-center justify-content-center"
+                                     id="imageUploadArea"
+                                     style="width:180px; height:180px; border-style:dashed !important; cursor:pointer; background:#f8f9fa; flex-shrink:0;"
+                                     onclick="document.getElementById('hinhAnhInput').click()">
+                                    <div id="imagePlaceholder" class="text-center">
+                                        <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2 d-block"></i>
+                                        <p class="text-muted small mb-0">Chọn ảnh</p>
                                     </div>
-                                    <img id="imagePreview" src="" class="img-fluid rounded d-none" style="max-height:180px; object-fit:cover;">
+                                    <img id="imagePreview" src="" class="img-fluid rounded d-none" style="object-fit:cover; width:100%; height:100%;">
                                 </div>
                                 <input type="file" name="hinh_anh" id="hinhAnhInput" class="d-none" accept="image/*">
-                                <div class="card-footer bg-white py-1 text-center">
+                                <div class="flex-grow-1">
+                                    <p class="text-muted small mb-1">Hỗ trợ định dạng: JPEG, PNG, JPG, GIF, WEBP</p>
+                                    <p class="text-muted small mb-2">Dung lượng tối đa: 5MB</p>
                                     <button type="button" class="btn btn-sm btn-outline-danger d-none" id="removeImageBtn">
                                         <i class="fas fa-trash me-1"></i>Xóa ảnh
                                     </button>
@@ -445,112 +451,178 @@
                         </div>
                     </div>
 
-                    {{-- ======== ROW 2: Đơn vị + Thuộc tính + Tổ hợp ======== --}}
-                    <div class="row g-3 mb-3">
-                        {{-- Đơn vị --}}
-                        <div class="col-lg-3">
-                            <div class="card border h-100">
-                                <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0 fw-semibold"><i class="fas fa-ruler me-1 text-info"></i> Đơn vị</h6>
-                                    <button type="button" class="btn btn-sm py-0 px-2 btn-outline-primary" id="btnTaoDonViMoi" title="Tạo đơn vị mới">
-                                        <i class="fas fa-plus"></i>
+                    {{-- ======== 4. Đơn vị bán hàng ======== --}}
+                    <div class="section-card mb-2">
+                        <div class="section-header" onclick="toggleSection(this)">
+                            <span><i class="fas fa-ruler-combined me-2 text-info"></i>Đơn vị bán hàng</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-muted small">Đơn vị cơ bản:</span>
+                                <input type="text" name="don_vi_text" class="form-control form-control-sm" style="width:120px;" id="donViTextInput" placeholder="VD: Lon" value="Cái">
+                                <button type="button" class="btn btn-sm btn-primary" id="btnThemDonVi"><i class="fas fa-plus me-1"></i>Thêm</button>
+                                <i class="fas fa-chevron-down section-arrow"></i>
+                            </div>
+                        </div>
+                        <div class="section-body open">
+                            <div class="table-scroll-wrap">
+                                <table class="table table-bordered table-sm mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="text-center" style="width:40px;">STT</th>
+                                            <th style="min-width:130px;">Tên đơn vị <span class="text-danger">*</span></th>
+                                            <th style="width:90px;">Quy đổi</th>
+                                            <th style="width:130px;">Giá lẻ (đ) <span class="text-danger">*</span></th>
+                                            <th style="width:130px;">Giá sỉ (đ)</th>
+                                            <th style="width:140px;">Mã vạch</th>
+                                            <th style="width:90px;">Tồn kho</th>
+                                            <th style="width:72px;">Ảnh</th>
+                                            <th class="text-center" style="width:40px;">
+                                                <input type="checkbox" id="selectAllUnits" title="Chọn tất cả">
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="donViTableBody">
+                                        <tr data-unit-row>
+                                            <td class="text-center align-middle small fw-medium">1</td>
+                                            <td>
+                                                <input type="text" class="form-control unit-ten" placeholder="VD: Lon" required>
+                                            </td>
+                                            <td>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" class="form-control unit-qty" value="1" min="1">
+                                                    <span class="input-group-text">/ ĐV</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control unit-gia-le" placeholder="0" min="0">
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control unit-gia-si" placeholder="0" min="0">
+                                            </td>
+                                            <td>
+                                                <input type="text" class="form-control unit-mavach" placeholder="Mã vạch">
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control unit-tonkho" value="0" min="0">
+                                            </td>
+                                            <td style="width:72px;">
+                                                <div class="unit-img-cell" data-idx="0" style="position:relative;">
+                                                    <div class="unit-img-placeholder" style="width:52px;height:52px;border:2px dashed #dee2e6;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#f8f9fa;">
+                                                        <i class="fas fa-image text-muted"></i>
+                                                    </div>
+                                                    <img class="unit-img-preview d-none" style="width:52px;height:52px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;" data-preview-for="0">
+                                                    <input type="file" class="unit-img-input d-none" accept="image/*" data-file-for="0" name="hang_cung_loai[0][hinh_anh]">
+                                                    <button type="button" class="unit-img-remove btn btn-sm btn-danger rounded-circle d-none" data-remove-for="0" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;padding:0;font-size:9px;line-height:18px;text-align:center;">×</button>
+                                                </div>
+                                            </td>
+                                            <td class="text-center align-middle">
+                                                <input type="checkbox" class="unit-check form-check-input">
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                <span class="badge bg-secondary" id="unitCountLabel">1 đơn vị</span>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnApDungGiaMacDinh">
+                                        <i class="fas fa-sync-alt me-1"></i>Áp dụng giá mặc định
                                     </button>
-                                </div>
-                                <div class="card-body py-2">
-                                    <label class="form-label small fw-medium">Đơn vị cơ bản</label>
-                                    <input type="text" name="don_vi_text" class="form-control form-control-sm mb-2" id="donViTextInput" placeholder="VD: Cái" value="Cái" required>
-                                    <div id="donViTags" class="d-flex flex-wrap gap-1"></div>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" id="btnXoaDonViDaChon">
+                                        <i class="fas fa-trash me-1"></i>Xóa đã chọn
+                                    </button>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        {{-- Thuộc tính --}}
-                        <div class="col-lg-5">
-                            <div class="card border">
-                                <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0 fw-semibold"><i class="fas fa-tags me-1 text-danger"></i> Thuộc tính</h6>
-                                    <button type="button" class="btn btn-sm py-0 px-2 btn-outline-primary" id="btnThemThuocTinh" title="Thêm nhóm thuộc tính">
-                                        <i class="fas fa-plus me-1"></i>Thêm
-                                    </button>
-                                </div>
-                                <div class="card-body py-2">
+                    {{-- ======== 5. Thuộc tính & Tổ hợp ======== --}}
+                    <div class="section-card mb-2">
+                        <div class="section-header" onclick="toggleSection(this)">
+                            <span><i class="fas fa-tags me-2 text-danger"></i>Thuộc tính &amp; Tổ hợp</span>
+                            <i class="fas fa-chevron-down section-arrow"></i>
+                        </div>
+                        <div class="section-body open">
+                            <div class="row g-3">
+                                {{-- Left: Thuộc tính --}}
+                                <div class="col-6">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0 fw-semibold"><i class="fas fa-layer-group me-1 text-danger"></i> Thuộc tính</h6>
+                                        <button type="button" class="btn btn-sm btn-danger" id="btnThemThuocTinh">
+                                            <i class="fas fa-plus me-1"></i>Thêm nhóm
+                                        </button>
+                                    </div>
                                     <div id="thuocTinhContainer"></div>
-                                    <div id="thuocTinhEmptyHint" class="text-center text-muted py-3 border border-dashed rounded">
-                                        <p class="mb-0 small">Bấm <b>"Thêm"</b> để thêm thuộc tính<br><span class="text-secondary" style="font-size:0.75rem;">VD: Màu sắc (Đen, Trắng, Xanh)</span></p>
+                                    <div id="thuocTinhEmptyHint" class="text-center text-muted py-4 border border-dashed rounded">
+                                        <p class="mb-1 small">Bấm <b>"Thêm nhóm"</b> để thêm thuộc tính</p>
+                                        <p class="mb-0 text-secondary" style="font-size:0.72rem;">VD: Màu sắc, Size, Chất liệu...</p>
                                     </div>
                                     <div id="taoBangContainer" class="mt-2 text-center" style="display:none;">
-                                        <span class="badge bg-info me-2" id="tongBienTheText"></span>
+                                        <span class="badge bg-info me-2 mb-1" id="tongBienTheText"></span>
                                         <button type="button" class="btn btn-sm btn-success" id="btnTaoBangBienThe">
-                                            <i class="fas fa-table me-1"></i>Tạo bảng hàng cùng loại
+                                            <i class="fas fa-table me-1"></i>Tạo bảng tổ hợp
                                         </button>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        {{-- Tổ hợp đã tạo --}}
-                        <div class="col-lg-4">
-                            <div class="card border h-100">
-                                <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0 fw-semibold"><i class="fas fa-layer-group me-1 text-primary"></i> Tổ hợp</h6>
-                                    <span class="badge bg-primary" id="soLuongBienTheBadge" style="display:none;">0</span>
-                                </div>
-                                <div class="card-body py-2" id="tongHopHienThi" style="max-height:200px; overflow-y:auto;">
-                                    <p class="text-muted small mb-0 text-center" id="khongCoTongHop">Chưa có tổ hợp nào</p>
+                                {{-- Right: Tổ hợp --}}
+                                <div class="col-6">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0 fw-semibold"><i class="fas fa-swatchbook me-1 text-primary"></i> Tổ hợp</h6>
+                                        <span class="badge bg-primary" id="soLuongBienTheBadge" style="display:none;">0</span>
+                                    </div>
+                                    <div class="border rounded p-2 tong-hop-wrap" id="tongHopHienThi" style="max-height:220px; overflow-y:auto; background:#fafafa; min-height:80px;">
+                                        <p class="text-muted small mb-0 text-center py-3" id="khongCoTongHop">Chưa có tổ hợp nào</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {{-- ======== ROW 3: Bảng biến thể ======== --}}
-                    <div id="bangBienTheSection" style="display:none;">
-                        <div class="card border">
-                            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0 fw-semibold"><i class="fas fa-list me-1 text-primary"></i> Bảng hàng cùng loại</h6>
-                                <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnTatCaGiaBanMacDinh">
-                                        <i class="fas fa-sync-alt me-1"></i>Áp dụng giá mặc định
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnThemDongBienThe">
-                                        <i class="fas fa-plus me-1"></i>Thêm dòng
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive" style="max-height:380px; overflow-y:auto;">
-                                    <table class="table table-bordered table-sm mb-0">
-                                        <thead class="table-light position-sticky top-0">
-                                            <tr>
-                                                <th class="text-center" style="width:40px;">STT</th>
-                                                <th>Tên sản phẩm</th>
-                                                <th style="width:150px;">Giá bán <span class="text-danger">*</span></th>
-                                                <th style="width:130px;">Mã vạch</th>
-                                                <th style="width:90px;">Tồn kho</th>
-                                                <th style="width:90px;">Ảnh</th>
-                                                <th class="text-center" style="width:50px;">
-                                                    <input type="checkbox" id="selectAllVariants" title="Chọn tất cả">
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="bangBienTheBody"></tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <div class="card-footer bg-white py-2 d-flex justify-content-between align-items-center">
-                                <span class="text-muted small" id="selectedCountLabel">0 dòng đã chọn</span>
-                                <button type="button" class="btn btn-sm btn-danger" id="btnXoaDongDaChon">
-                                    <i class="fas fa-trash me-1"></i>Xóa dòng đã chọn
+                    {{-- ======== 6. Bảng hàng cùng loại ======== --}}
+                    <div class="section-card mb-2" id="bangHangCungLoaiSection">
+                        <div class="section-header" onclick="toggleSection(this)">
+                            <span><i class="fas fa-table me-2 text-primary"></i>Bảng hàng cùng loại</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-sm btn-success" id="btnCapNhatBangHCL">
+                                    <i class="fas fa-sync-alt me-1"></i>Cập nhật bảng
                                 </button>
+                                <i class="fas fa-chevron-down section-arrow"></i>
+                            </div>
+                        </div>
+                        <div class="section-body open">
+                            <div class="table-scroll-wrap bang-hcl-table-wrap">
+                                <table class="table table-bordered table-sm mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="text-center" style="width:44px;">STT</th>
+                                            <th style="min-width:200px;">Tên sản phẩm</th>
+                                            <th style="width:100px;">Tổ hợp</th>
+                                            <th style="width:90px;">Quy đổi</th>
+                                            <th style="width:120px;">Giá lẻ (đ)</th>
+                                            <th style="width:120px;">Giá sỉ (đ)</th>
+                                            <th style="width:130px;">Mã vạch</th>
+                                            <th style="width:80px;">Tồn kho</th>
+                                            <th style="width:72px;">Ảnh</th>
+                                            <th style="width:80px;">Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="bangHangCungLoaiBody">
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
-
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
-                    <button type="submit" class="btn btn-success px-4">
-                        <i class="fas fa-save me-1"></i>Lưu sản phẩm
-                    </button>
+
+                <div class="modal-footer bg-light">
+                    <div class="d-flex justify-content-between w-100 align-items-center">
+                        <span class="text-muted small"><i class="fas fa-info-circle me-1"></i> Điền đầy đủ thông tin trước khi lưu</span>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                            <button type="submit" class="btn btn-success px-4">
+                                <i class="fas fa-save me-1"></i>Lưu sản phẩm
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>
@@ -558,34 +630,140 @@
 </div>
 
 <style>
-    .step-tabs .nav-link {
-        border-radius: 20px;
-        font-size: 0.85rem;
-        padding: 6px 16px;
-        color: #6c757d;
-        border: 1px solid transparent;
-        background: none;
+    /* ======= Modal Full Height ======= */
+    #addProductModal .modal-fullheight {
+        max-width: 1120px;
+        margin: 1.5rem auto;
     }
-    .step-tabs .nav-link.active {
-        background: #0d6efd;
-        color: white;
-        font-weight: 600;
+    #addProductModal .modal-fullheight .modal-content {
+        height: 100%;
+        max-height: calc(100vh - 3rem);
+        display: flex;
+        flex-direction: column;
     }
-    .step-tabs .nav-link .step-num {
-        display: inline-flex;
+    #addProductModal .modal-fullheight .modal-body {
+        overflow-y: auto;
+        flex: 1;
+        padding: 1.25rem 1.5rem;
+    }
+    #addProductModal .modal-fullheight .modal-header {
+        flex-shrink: 0;
+        padding: 1rem 1.5rem;
+    }
+    #addProductModal .modal-fullheight .modal-footer {
+        flex-shrink: 0;
+        padding: 0.75rem 1.5rem;
+    }
+
+    /* ======= Card headings ======= */
+    #addProductModal .card-header h6 {
+        font-size: 0.88rem;
+        letter-spacing: 0.02em;
+    }
+
+    /* ======= Section Card (KiotViet-style collapsible) ======= */
+    #addProductModal .section-card {
+        border: 1px solid #e0e4e8;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        overflow: hidden;
+        background: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    #addProductModal .section-header {
+        background: #f8f9fa;
+        padding: 10px 14px;
+        display: flex;
+        justify-content: space-between;
         align-items: center;
-        justify-content: center;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.3);
-        font-size: 0.7rem;
-        margin-right: 6px;
+        cursor: pointer;
+        user-select: none;
+        font-weight: 600;
+        font-size: 0.84rem;
+        color: #212529;
+        border-bottom: 1px solid #e9ecef;
     }
-    .step-tabs .nav-link.active .step-num {
-        background: rgba(255,255,255,0.4);
+    #addProductModal .section-header:hover { background: #e9ecef; }
+    #addProductModal .section-header > span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }
-    .attr-chip {
+    #addProductModal .section-header > span i {
+        opacity: 0.75;
+    }
+    #addProductModal .section-body { display: none; padding: 14px; overflow: hidden; }
+    #addProductModal .section-body.open { display: block; }
+    #addProductModal .section-arrow {
+        font-size: 0.68rem;
+        color: #6c757d;
+        transition: transform 0.2s ease;
+    }
+    #addProductModal .section-header.open .section-arrow { transform: rotate(180deg); }
+
+    /* ======= Form fields ======= */
+    #addProductModal .form-label {
+        font-size: 0.8rem;
+        margin-bottom: 0.2rem;
+        color: #495057;
+    }
+    #addProductModal .form-control,
+    #addProductModal .form-select {
+        font-size: 0.85rem;
+    }
+    #addProductModal .input-group-text {
+        font-size: 0.82rem;
+    }
+
+    /* ======= Table ======= */
+    #addProductModal table {
+        font-size: 0.82rem;
+    }
+    #addProductModal table th {
+        font-size: 0.78rem;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+    #addProductModal table td {
+        vertical-align: middle;
+        padding: 0.4rem 0.5rem;
+    }
+    #addProductModal table tbody tr:hover {
+        background-color: #f8faff;
+    }
+
+    /* ======= Table scroll wrap (sticky header + horizontal scroll) ======= */
+    #addProductModal .table-scroll-wrap {
+        overflow-x: auto;
+        overflow-y: auto;
+        height: 240px;
+    }
+    #addProductModal .table-scroll-wrap table {
+        table-layout: fixed;
+        min-width: 900px;
+    }
+    #addProductModal .table-scroll-wrap table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    #addProductModal .bang-hcl-table-wrap {
+        height: 300px;
+        overflow-x: auto;
+    }
+    #addProductModal .bang-hcl-table-wrap table {
+        table-layout: fixed;
+        min-width: 600px;
+    }
+
+    /* ======= Tổ hợp wrap ======= */
+    #addProductModal .tong-hop-wrap {
+        overflow-x: auto;
+    }
+
+    /* ======= Attrib chip ======= */
+    #addProductModal .attr-chip {
         display: inline-flex;
         align-items: center;
         gap: 4px;
@@ -598,9 +776,9 @@
         user-select: none;
         transition: all 0.15s;
     }
-    .attr-chip:hover { border-color: #0d6efd; background: #e7f1ff; }
-    .attr-chip.selected { background: #0d6efd; color: white; border-color: #0d6efd; }
-    .attr-chip .chip-check {
+    #addProductModal .attr-chip:hover { border-color: #0d6efd; background: #e7f1ff; }
+    #addProductModal .attr-chip.selected { background: #0d6efd; color: white; border-color: #0d6efd; }
+    #addProductModal .attr-chip .chip-check {
         width: 14px; height: 14px;
         border: 1.5px solid #adb5bd;
         border-radius: 3px;
@@ -609,32 +787,13 @@
         transition: all 0.15s;
         flex-shrink: 0;
     }
-    .attr-chip.selected .chip-check {
+    #addProductModal .attr-chip.selected .chip-check {
         background: white; border-color: white;
     }
-    .attr-chip.selected .chip-check::after {
+    #addProductModal .attr-chip.selected .chip-check::after {
         content: '✓'; font-size: 9px; color: #0d6efd; font-weight: bold;
     }
-    .attr-group-row {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 10px 12px;
-        margin-bottom: 8px;
-        border: 1px solid #e9ecef;
-    }
-    .attr-group-title {
-        font-weight: 600;
-        font-size: 0.82rem;
-        color: #495057;
-        margin-bottom: 8px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    .attr-group-actions {
-        margin-left: auto;
-    }
-    .don-vi-chip {
+    #addProductModal .don-vi-chip {
         display: inline-block;
         padding: 3px 10px;
         border-radius: 12px;
@@ -644,19 +803,29 @@
         cursor: pointer;
         margin: 2px;
     }
-    .don-vi-chip:hover { border-color: #0d6efd; }
-    .don-vi-chip.active { background: #0d6efd; color: white; border-color: #0d6efd; }
-    .product-row:hover > td { background-color: #f0f7ff !important; }
+    #addProductModal .don-vi-chip:hover { border-color: #0d6efd; }
+    #addProductModal .don-vi-chip.active { background: #0d6efd; color: white; border-color: #0d6efd; }
+    #addProductModal .product-row:hover > td { background-color: #f0f7ff !important; }
+    #addProductModal .unit-table tr:hover > td { background-color: #f8f9fa; }
+    #addProductModal .hcl-preview-row:hover > td { background-color: #f0f7ff !important; }
 </style>
 
 <script>
+    // ---- Section collapse/expand (KiotViet-style) ----
+    function toggleSection(headerEl) {
+        const card = headerEl.closest('.section-card');
+        const body = card.querySelector('.section-body');
+        const isOpen = body.classList.contains('open');
+        body.classList.toggle('open', !isOpen);
+        headerEl.classList.toggle('open', !isOpen);
+    }
+
 (function() {
     // ---- State ----
-    let thuocTinhIndex = 0;
-    let bienTheIndex = 0;
-    let daTaoBang = false;
+    let unitIndex = 0;  // next index for file inputs
+    let unitRowCount = 0;
 
-    // ---- Image Preview ----
+    // ---- Image Preview (main product image) ----
     const imageUploadArea = document.getElementById('imageUploadArea');
     const hinhAnhInput = document.getElementById('hinhAnhInput');
     const imagePreview = document.getElementById('imagePreview');
@@ -685,64 +854,176 @@
         removeImageBtn.classList.add('d-none');
     });
 
-    // ---- Don Vi ----
+    // ---- Don Vi Table Management ----
+    const donViTableBody = document.getElementById('donViTableBody');
+    const unitCountLabel = document.getElementById('unitCountLabel');
+    const btnThemDonVi = document.getElementById('btnThemDonVi');
+    const btnXoaDonViDaChon = document.getElementById('btnXoaDonViDaChon');
+    const btnApDungGiaMacDinh = document.getElementById('btnApDungGiaMacDinh');
+    const selectAllUnits = document.getElementById('selectAllUnits');
     const donViTextInput = document.getElementById('donViTextInput');
-    const donViTags = document.getElementById('donViTags');
+    const btnCapNhatBangHCL = document.getElementById('btnCapNhatBangHCL');
 
-    // Render saved don vi as chips
-    const donViList = @json($donVis ?? []);
-    function renderDonViChips() {
-        donViTags.innerHTML = '';
-        donViList.forEach(dv => {
-            if (dv.ten_don_vi === donViTextInput.value.trim()) return;
-            const chip = document.createElement('span');
-            chip.className = 'don-vi-chip';
-            chip.textContent = dv.ten_don_vi;
-            chip.addEventListener('click', () => {
-                donViTextInput.value = dv.ten_don_vi;
-                renderDonViChips();
-            });
-            donViTags.appendChild(chip);
+    // Render STT for unit table
+    function renderUnitSTT() {
+        donViTableBody.querySelectorAll('tr').forEach((tr, i) => {
+            const firstTd = tr.querySelector('td');
+            if (firstTd) firstTd.textContent = i + 1;
         });
+        const count = donViTableBody.querySelectorAll('tr').length;
+        unitRowCount = count;
+        unitCountLabel.textContent = count + ' đơn vị';
     }
-    donViTextInput.addEventListener('input', renderDonViChips);
-    renderDonViChips();
 
-    document.getElementById('btnTaoDonViMoi').addEventListener('click', async function() {
-        const ten = prompt('Nhập tên đơn vị mới (VD: Hộp, Thùng, Chai):');
-        if (!ten) return;
-        try {
-            const res = await fetch('/admin/cai-dat/san-pham/don-vi', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || document.querySelector('input[name=_token]')?.value,
-                },
-                body: JSON.stringify({ ten_don_vi: ten, so_luong_san_pham_trong_don_vi: 1 })
-            });
-            const data = await res.json();
-            if (data.success || res.ok) {
-                donViTextInput.value = ten;
-                renderDonViChips();
-            }
-        } catch(e) { console.error(e); }
+    // Add a new unit row
+    window.addUnitRow = function(tenDonVi, giaLe, giaSi, maVach, qty, tonKho, imgData, imgFileFor) {
+        unitIndex++;
+        const idx = unitIndex;
+        const currentCount = donViTableBody.querySelectorAll('tr').length;
+
+        const html = `
+        <tr data-unit-row>
+            <td class="text-center align-middle small fw-medium">${currentCount + 1}</td>
+            <td>
+                <input type="text" class="form-control form-control-sm unit-ten" placeholder="VD: Lon" value="${tenDonVi || ''}" required>
+            </td>
+            <td>
+                <div class="input-group input-group-sm">
+                    <input type="number" class="form-control unit-qty" value="${qty || 1}" min="1">
+                    <span class="input-group-text">/ ĐV</span>
+                </div>
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm unit-gia-le" placeholder="0" min="0" value="${giaLe || ''}">
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm unit-gia-si" placeholder="0" min="0" value="${giaSi || ''}">
+            </td>
+            <td>
+                <input type="text" class="form-control form-control-sm unit-mavach" placeholder="Mã vạch" value="${maVach || ''}">
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm unit-tonkho" value="${tonKho || 0}" min="0">
+            </td>
+            <td style="width:80px;">
+                <div class="unit-img-cell" data-idx="${idx}" style="position:relative;">
+                    <div class="unit-img-placeholder" style="width:56px;height:56px;border:2px dashed #dee2e6;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#f8f9fa;">
+                        <i class="fas fa-image text-muted"></i>
+                    </div>
+                    ${imgData ? `<img class="unit-img-preview" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;" src="${imgData}" data-preview-for="${idx}">` : `<img class="unit-img-preview d-none" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;" data-preview-for="${idx}">`}
+                    <input type="file" class="unit-img-input d-none" accept="image/*" data-file-for="${idx}" name="hang_cung_loai[${currentCount}][hinh_anh]" ${imgFileFor ? `data-original-for="${imgFileFor}"` : ''}>
+                    <button type="button" class="unit-img-remove btn btn-sm btn-danger rounded-circle d-none" data-remove-for="${idx}" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;padding:0;font-size:9px;line-height:18px;text-align:center;">×</button>
+                </div>
+            </td>
+            <td class="text-center align-middle">
+                <input type="checkbox" class="unit-check form-check-input">
+            </td>
+        </tr>`;
+
+        donViTableBody.insertAdjacentHTML('beforeend', html);
+        renderUnitSTT();
+
+        if (imgData) {
+            const row = donViTableBody.lastElementChild;
+            const placeholder = row.querySelector('.unit-img-placeholder');
+            const preview = row.querySelector('.unit-img-preview');
+            const removeBtn = row.querySelector('.unit-img-remove');
+            if (placeholder) placeholder.classList.add('d-none');
+            if (preview) preview.classList.remove('d-none');
+            if (removeBtn) removeBtn.classList.remove('d-none');
+        }
+
+        attachUnitImageEvents(donViTableBody.lastElementChild);
+    };
+
+    btnThemDonVi.addEventListener('click', function() {
+        window.addUnitRow();
     });
 
-    // ---- Thuoc Tinh ----
+    // Delete selected unit rows
+    btnXoaDonViDaChon.addEventListener('click', function() {
+        donViTableBody.querySelectorAll('.unit-check:checked').forEach(cb => {
+            cb.closest('tr').remove();
+        });
+        renderUnitSTT();
+        updateBangHangCungLoai();
+    });
+
+    // Select all unit checkboxes
+    selectAllUnits.addEventListener('change', function() {
+        donViTableBody.querySelectorAll('.unit-check').forEach(cb => cb.checked = this.checked);
+    });
+
+    // Apply default retail price to all unit rows
+    btnApDungGiaMacDinh.addEventListener('click', function() {
+        const giaLe = document.querySelector('input[name="gia_ban"]').value;
+        donViTableBody.querySelectorAll('.unit-gia-le').forEach(inp => {
+            if (!inp.value) inp.value = giaLe;
+        });
+    });
+
+    // Attach image events to unit rows
+    function attachUnitImageEvents(row) {
+        row.querySelectorAll('.unit-img-placeholder').forEach(placeholder => {
+            placeholder.addEventListener('click', function() {
+                const cell = this.closest('.unit-img-cell');
+                const idx = cell.dataset.idx;
+                const fileInput = document.querySelector(`.unit-img-input[data-file-for="${idx}"]`);
+                if (fileInput) fileInput.click();
+            });
+        });
+
+        row.querySelectorAll('.unit-img-input').forEach(fileInput => {
+            fileInput.addEventListener('change', function() {
+                const file = this.files[0];
+                if (!file) return;
+                const idx = this.dataset.fileFor;
+                const preview = document.querySelector(`.unit-img-preview[data-preview-for="${idx}"]`);
+                const placeholder = document.querySelector(`.unit-img-cell[data-idx="${idx}"] .unit-img-placeholder`);
+                const removeBtn = document.querySelector(`.unit-img-remove[data-remove-for="${idx}"]`);
+
+                const reader = new FileReader();
+                reader.onload = e => {
+                    if (preview) { preview.src = e.target.result; preview.classList.remove('d-none'); }
+                    if (placeholder) placeholder.classList.add('d-none');
+                    if (removeBtn) removeBtn.classList.remove('d-none');
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+        row.querySelectorAll('.unit-img-remove').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const idx = this.dataset.removeFor;
+                const preview = document.querySelector(`.unit-img-preview[data-preview-for="${idx}"]`);
+                const placeholder = document.querySelector(`.unit-img-cell[data-idx="${idx}"] .unit-img-placeholder`);
+                const fileInput = document.querySelector(`.unit-img-input[data-file-for="${idx}"]`);
+                const removeBtn = document.querySelector(`.unit-img-remove[data-remove-for="${idx}"]`);
+
+                if (preview) { preview.src = ''; preview.classList.add('d-none'); }
+                if (placeholder) placeholder.classList.remove('d-none');
+                if (fileInput) { fileInput.value = ''; }
+                if (removeBtn) removeBtn.classList.add('d-none');
+            });
+        });
+    }
+
+    // Attach image events to the initial row
+    attachUnitImageEvents(donViTableBody.firstElementChild);
+
+    // ---- Thuộc tính ----
+    let thuocTinhIndex = 0;
+    let bienTheIndex = 0;
+
     const thuocTinhContainer = document.getElementById('thuocTinhContainer');
     const thuocTinhEmptyHint = document.getElementById('thuocTinhEmptyHint');
     const taoBangContainer = document.getElementById('taoBangContainer');
     const tongBienTheText = document.getElementById('tongBienTheText');
     const btnThemThuocTinh = document.getElementById('btnThemThuocTinh');
     const btnTaoBangBienThe = document.getElementById('btnTaoBangBienThe');
-    const bangBienTheSection = document.getElementById('bangBienTheSection');
-    const bangBienTheBody = document.getElementById('bangBienTheBody');
     const soLuongBienTheBadge = document.getElementById('soLuongBienTheBadge');
-    const btnThemDongBienThe = document.getElementById('btnThemDongBienThe');
-    const btnXoaDongDaChon = document.getElementById('btnXoaDongDaChon');
-    const selectAllVariants = document.getElementById('selectAllVariants');
-    const btnTatCaGiaBanMacDinh = document.getElementById('btnTatCaGiaBanMacDinh');
-    const selectedCountLabel = document.getElementById('selectedCountLabel');
+    const khongCoTongHop = document.getElementById('khongCoTongHop');
+    const tongHopHienThi = document.getElementById('tongHopHienThi');
 
     function kiemTraHienThiTaoBang() {
         const rows = document.querySelectorAll('.attr-group-row');
@@ -754,7 +1035,7 @@
         thuocTinhEmptyHint.style.display = rows.length === 0 ? 'block' : 'none';
         if (tong > 1) {
             taoBangContainer.style.display = 'block';
-            tongBienTheText.textContent = `Sẽ tạo ${tong} biến thể (tổ hợp đầy đủ)`;
+            tongBienTheText.textContent = `${tong} tổ hợp`;
         } else {
             taoBangContainer.style.display = 'none';
         }
@@ -765,17 +1046,17 @@
         const thuocTinhChas = @json($thuocTinhChas ?? []);
 
         const html = `
-        <div class="attr-group-row" id="${id}">
-            <div class="attr-group-title">
+        <div class="attr-group-row" id="${id}" style="background:#f8f9fa;border-radius:8px;padding:10px 12px;margin-bottom:8px;border:1px solid #e9ecef;">
+            <div class="attr-group-title" style="font-weight:600;font-size:0.82rem;color:#495057;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
                 <i class="fas fa-tag text-muted"></i>
-                <select class="form-select form-select-sm d-inline-block" style="width:auto; max-width:200px;" data-thuoc-tinh-select>
+                <select class="form-select form-select-sm d-inline-block" style="width:auto;max-width:200px;" data-thuoc-tinh-select>
                     <option value="">-- Chọn thuộc tính --</option>
                     ${thuocTinhChas.map(tt => `<option value="${tt.id}">${tt.ten_thuoc_tinh}</option>`).join('')}
                 </select>
                 <button type="button" class="btn btn-sm btn-outline-success py-0 px-2" data-tao-moi-cha-btn title="Tạo thuộc tính cha mới">
                     <i class="fas fa-plus"></i>
                 </button>
-                <div class="attr-group-actions">
+                <div style="margin-left:auto;">
                     <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" data-xoa-nhom-btn title="Xóa nhóm">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -798,22 +1079,18 @@
         const selectEl = row.querySelector('[data-thuoc-tinh-select]');
         const conList = row.querySelector('.thuoc-tinh-con-list');
 
-        // Chọn thuộc tính cha
         selectEl.addEventListener('change', async function() {
             const chaId = this.value;
-            const chaTen = this.options[this.selectedIndex]?.text || '';
             conList.innerHTML = '';
             if (!chaId) { kiemTraHienThiTaoBang(); return; }
-
             try {
                 const res = await fetch(`/admin/api/thuoc-tinh/con/${chaId}`);
                 const cons = await res.json();
-                renderConList(chaId, chaTen, cons);
+                renderConList(chaId, this.options[this.selectedIndex]?.text || '', cons);
             } catch(e) { console.error(e); }
             kiemTraHienThiTaoBang();
         });
 
-        // Tạo thuộc tính cha mới
         row.querySelector('[data-tao-moi-cha-btn]').addEventListener('click', async function() {
             const ten = prompt('Nhập tên thuộc tính cha mới (VD: Màu sắc, Size, Chất liệu):');
             if (!ten) return;
@@ -828,22 +1105,20 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    const newId = data.data.id;
                     document.querySelectorAll('[data-thuoc-tinh-select]').forEach(s => {
                         const opt = document.createElement('option');
-                        opt.value = newId;
+                        opt.value = data.data.id;
                         opt.textContent = data.data.ten_thuoc_tinh;
                         s.appendChild(opt);
                     });
-                    selectEl.value = newId;
+                    selectEl.value = data.data.id;
                     selectEl.dispatchEvent(new Event('change'));
                 }
             } catch(e) { console.error(e); }
         });
 
-        // Thêm giá trị con mới
         row.querySelector('[data-them-gia-tri-btn]').addEventListener('click', async function() {
-            const ten = prompt('Nhập giá trị thuộc tính con (VD: Đen, Trắng, M, L):');
+            const ten = prompt('Nhập giá trị (VD: Đen, Trắng, M, L):');
             if (!ten) return;
             const chaId = selectEl.value;
             if (!chaId) { alert('Vui lòng chọn thuộc tính cha trước.'); return; }
@@ -863,7 +1138,6 @@
             } catch(e) { console.error(e); }
         });
 
-        // Xóa nhóm thuộc tính
         row.querySelector('[data-xoa-nhom-btn]').addEventListener('click', function() {
             row.remove();
             kiemTraHienThiTaoBang();
@@ -871,14 +1145,12 @@
     }
 
     function renderConList(chaId, chaTen, cons, append) {
-        const allRows = document.querySelectorAll('.attr-group-row');
         let targetRow = null;
-        allRows.forEach(r => {
+        document.querySelectorAll('.attr-group-row').forEach(r => {
             const sel = r.querySelector('[data-thuoc-tinh-select]');
             if (sel && sel.value == chaId) targetRow = r;
         });
         if (!targetRow) return;
-
         const conList = targetRow.querySelector('.thuoc-tinh-con-list');
         if (!append) conList.innerHTML = '';
         cons.forEach(c => {
@@ -890,19 +1162,14 @@
             </label>`;
             conList.insertAdjacentHTML('beforeend', html);
         });
-
         conList.querySelectorAll('.attr-chip').forEach(chip => {
             chip.addEventListener('click', function(e) {
                 e.preventDefault();
                 this.classList.toggle('selected');
                 kiemTraHienThiTaoBang();
-                capNhatThuocTinhHienThi();
+                capNhatTongHopPanel();
             });
         });
-    }
-
-    function capNhatThuocTinhHienThi() {
-        // Optional: show selected chips summary
     }
 
     // ---- Cartesian product ----
@@ -913,10 +1180,53 @@
         }, []);
     }
 
-    // ---- Create variant table ----
+    // ---- Tổ hợp panel ----
+    function capNhatTongHopPanel() {
+        const rows = document.querySelectorAll('.attr-group-row');
+        if (rows.length === 0) {
+            if (khongCoTongHop) khongCoTongHop.style.display = '';
+            tongHopHienThi.querySelectorAll('.tong-hop-item').forEach(el => el.remove());
+            return;
+        }
+        const combos = [];
+        document.querySelectorAll('.attr-group-row').forEach(row => {
+            const checked = row.querySelectorAll('.attr-chip.selected');
+            if (checked.length === 0) return;
+            combos.push(Array.from(checked).map(chip => ({
+                id: chip.dataset.conId,
+                ten: chip.querySelector('span:last-child').textContent.trim(),
+                chaTen: chip.dataset.chaTen
+            })));
+        });
+
+        if (combos.length === 0) {
+            if (khongCoTongHop) khongCoTongHop.style.display = '';
+            tongHopHienThi.querySelectorAll('.tong-hop-item').forEach(el => el.remove());
+            return;
+        }
+
+        if (khongCoTongHop) khongCoTongHop.style.display = 'none';
+        tongHopHienThi.querySelectorAll('.tong-hop-item').forEach(el => el.remove());
+
+        const toHop = cartesianProduct(combos);
+        toHop.forEach(combo => {
+            const label = combo.map(c => c.ten).join(' × ');
+            const div = document.createElement('div');
+            div.className = 'tong-hop-item d-flex align-items-center gap-2 mb-1 p-1 rounded';
+            div.style.cssText = 'background:#e7f1ff;font-size:0.75rem;';
+            div.innerHTML = `<span class="text-truncate flex-grow-1">${label}</span>`;
+            tongHopHienThi.appendChild(div);
+        });
+
+        soLuongBienTheBadge.textContent = toHop.length;
+        soLuongBienTheBadge.style.display = 'inline';
+    }
+
     btnTaoBangBienThe.addEventListener('click', function() {
-        const tenSanPham = document.querySelector('input[name="ten_san_pham"]').value.trim() || 'Sản phẩm';
-        const giaBanMacDinh = document.querySelector('input[name="gia_ban"]').value;
+        const tenSanPham = tenSanPhamInput?.value.trim() || 'Sản phẩm';
+        const giaBanMacDinh = giaBanInput?.value || '';
+        bangHangCungLoaiBody.innerHTML = '';
+        bienTheIndex = 0;
 
         const nhomThuocTinh = [];
         document.querySelectorAll('.attr-group-row').forEach(row => {
@@ -935,231 +1245,254 @@
         });
 
         if (nhomThuocTinh.length === 0) return;
-
         const toHop = cartesianProduct(nhomThuocTinh);
-        bangBienTheBody.innerHTML = '';
-        bienTheIndex = 0;
-        daTaoBang = true;
 
         toHop.forEach(combo => {
-            const tenThuocTinh = combo.map(c => `${c.chaTen}: ${c.ten}`).join(' | ');
             const tenDayDu = `${tenSanPham} (${combo.map(c => c.ten).join(' - ')})`;
             const thuocTinhIds = combo.map(c => c.id).join(',');
+            const idx = bienTheIndex++;
 
             const html = `
             <tr data-variant-row>
-                <td class="text-center align-middle small fw-medium">${bienTheIndex + 1}</td>
+                <td class="text-center align-middle small fw-medium">${idx + 1}</td>
                 <td class="align-middle">
                     <input type="text" class="form-control form-control-sm" value="${tenDayDu}" data-variant-ten>
-                    <input type="hidden" name="bien_the[${bienTheIndex}][ten_day_du]" value="${tenDayDu}">
+                    <input type="hidden" name="bien_the[${idx}][ten_day_du]" value="${tenDayDu}">
+                </td>
+                <td style="width:90px;">
+                    <input type="hidden" name="bien_the[${idx}][thuoc_tinh_ids]" value="${thuocTinhIds}">
+                    <span class="badge bg-light text-dark border" style="font-size:0.72rem;">${combo.map(c => c.ten).join('<br>')}</span>
                 </td>
                 <td>
                     <div class="input-group input-group-sm">
-                        <input type="number" class="form-control" name="bien_the[${bienTheIndex}][gia_ban]" value="${giaBanMacDinh || ''}" placeholder="0" required>
+                        <input type="number" class="form-control" name="bien_the[${idx}][gia_ban]" value="${giaBanMacDinh || ''}" placeholder="0" required>
                         <span class="input-group-text">đ</span>
                     </div>
                 </td>
                 <td>
-                    <input type="text" class="form-control form-control-sm" name="bien_the[${bienTheIndex}][ma_vach]" placeholder="Mã vạch">
+                    <input type="text" class="form-control form-control-sm" name="bien_the[${idx}][ma_vach]" placeholder="Mã vạch">
                 </td>
                 <td>
-                    <input type="number" class="form-control form-control-sm" name="bien_the[${bienTheIndex}][so_luong]" value="0" min="0">
+                    <input type="number" class="form-control form-control-sm" name="bien_the[${idx}][so_luong]" value="0" min="0">
                 </td>
-                <td style="width:80px;">
-                    <div class="variant-img-cell" data-idx="${bienTheIndex}" style="position:relative;">
-                        <div class="variant-img-placeholder" style="width:60px;height:60px;border:2px dashed #dee2e6;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#f8f9fa;">
-                            <i class="fas fa-image text-muted"></i>
-                        </div>
-                        <img class="variant-img-preview d-none" style="width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;" data-preview-for="${bienTheIndex}">
-                        <input type="file" class="variant-img-input d-none" name="bien_the[${bienTheIndex}][hinh_anh]" accept="image/*">
-                        <button type="button" class="variant-img-remove btn btn-sm btn-danger rounded-circle d-none" data-remove-for="${bienTheIndex}" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;padding:0;font-size:9px;line-height:18px;text-align:center;">×</button>
-                    </div>
-                </td>
-                <td class="text-center align-middle">
-                    <input type="checkbox" class="variant-check form-check-input">
-                    <input type="hidden" name="bien_the[${bienTheIndex}][thuoc_tinh_ids]" value="${thuocTinhIds}">
-                </td>
-            </tr>`;
-            bangBienTheBody.insertAdjacentHTML('beforeend', html);
-            bienTheIndex++;
-        });
-
-        soLuongBienTheBadge.textContent = bienTheIndex;
-        soLuongBienTheBadge.style.display = 'inline';
-        bangBienTheSection.style.display = 'block';
-        hienThiSTT();
-        capNhatTongHopPanel();
-    });
-
-    // ---- Apply default price ----
-    btnTatCaGiaBanMacDinh.addEventListener('click', function() {
-        const giaBan = document.querySelector('input[name="gia_ban"]').value;
-        document.querySelectorAll('#bangBienTheBody tr input[name*="[gia_ban]"]').forEach(inp => {
-            inp.value = giaBan;
-        });
-    });
-
-    // ---- Add empty row ----
-    btnThemDongBienThe.addEventListener('click', function() {
-        const tenSanPham = document.querySelector('input[name="ten_san_pham"]').value.trim() || 'Sản phẩm';
-        const giaBanMacDinh = document.querySelector('input[name="gia_ban"]').value;
-        const idx = bienTheIndex++;
-        soLuongBienTheBadge.textContent = bienTheIndex;
-
-        const html = `
-        <tr data-variant-row>
-            <td class="text-center align-middle small fw-medium">${idx + 1}</td>
-            <td class="align-middle">
-                <input type="text" class="form-control form-control-sm" value="${tenSanPham}" data-variant-ten>
-                <input type="hidden" name="bien_the[${idx}][ten_day_du]" value="${tenSanPham}">
-            </td>
-            <td>
-                <div class="input-group input-group-sm">
-                    <input type="number" class="form-control" name="bien_the[${idx}][gia_ban]" value="${giaBanMacDinh || ''}" placeholder="0" required>
-                    <span class="input-group-text">đ</span>
-                </div>
-            </td>
-            <td>
-                <input type="text" class="form-control form-control-sm" name="bien_the[${idx}][ma_vach]" placeholder="Mã vạch">
-            </td>
-            <td>
-                <input type="number" class="form-control form-control-sm" name="bien_the[${idx}][so_luong]" value="0" min="0">
-            </td>
                 <td style="width:80px;">
                     <div class="variant-img-cell" data-idx="${idx}" style="position:relative;">
-                        <div class="variant-img-placeholder" style="width:60px;height:60px;border:2px dashed #dee2e6;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#f8f9fa;">
+                        <div class="variant-img-placeholder" style="width:56px;height:56px;border:2px dashed #dee2e6;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#f8f9fa;">
                             <i class="fas fa-image text-muted"></i>
                         </div>
-                        <img class="variant-img-preview d-none" style="width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;" data-preview-for="${idx}">
+                        <img class="variant-img-preview d-none" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;" data-preview-for="${idx}">
                         <input type="file" class="variant-img-input d-none" name="bien_the[${idx}][hinh_anh]" accept="image/*">
                         <button type="button" class="variant-img-remove btn btn-sm btn-danger rounded-circle d-none" data-remove-for="${idx}" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;padding:0;font-size:9px;line-height:18px;text-align:center;">×</button>
                     </div>
                 </td>
-            <td class="text-center align-middle">
-                <input type="checkbox" class="variant-check form-check-input">
-            </td>
-        </tr>`;
-        bangBienTheBody.insertAdjacentHTML('beforeend', html);
-        hienThiSTT();
-        capNhatTongHopPanel();
+            </tr>`;
+            bangHangCungLoaiBody.insertAdjacentHTML('beforeend', html);
+        });
+
+        // Attach variant image events
+        bangHangCungLoaiBody.querySelectorAll('.variant-img-placeholder').forEach(p => {
+            p.addEventListener('click', function() {
+                const cell = this.closest('.variant-img-cell');
+                const idx = cell.dataset.idx;
+                const fileInput = document.querySelector(`.variant-img-input[data-preview-for="${idx}"]`);
+                if (fileInput) fileInput.click();
+            });
+        });
+        bangHangCungLoaiBody.querySelectorAll('.variant-img-input').forEach(fi => {
+            fi.addEventListener('change', function() {
+                const file = this.files[0];
+                if (!file) return;
+                const idx = this.dataset.previewFor;
+                const preview = document.querySelector(`.variant-img-preview[data-preview-for="${idx}"]`);
+                const placeholder = document.querySelector(`.variant-img-cell[data-idx="${idx}"] .variant-img-placeholder`);
+                const removeBtn = document.querySelector(`.variant-img-remove[data-remove-for="${idx}"]`);
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    if (preview) { preview.src = ev.target.result; preview.classList.remove('d-none'); }
+                    if (placeholder) placeholder.classList.add('d-none');
+                    if (removeBtn) removeBtn.classList.remove('d-none');
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+        bangHangCungLoaiBody.querySelectorAll('.variant-img-remove').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const idx = this.dataset.removeFor;
+                const preview = document.querySelector(`.variant-img-preview[data-preview-for="${idx}"]`);
+                const placeholder = document.querySelector(`.variant-img-cell[data-idx="${idx}"] .variant-img-placeholder`);
+                const fileInput = document.querySelector(`.variant-img-input[data-preview-for="${idx}"]`);
+                const removeBtn2 = document.querySelector(`.variant-img-remove[data-remove-for="${idx}"]`);
+                if (preview) { preview.src = ''; preview.classList.add('d-none'); }
+                if (placeholder) placeholder.classList.remove('d-none');
+                if (fileInput) fileInput.value = '';
+                if (removeBtn2) removeBtn2.classList.add('d-none');
+            });
+        });
     });
 
-    function capNhatTongHopPanel() {
-        const container = document.getElementById('tongHopHienThi');
-        const khongCo = document.getElementById('khongCoTongHop');
-        const rows = document.querySelectorAll('#bangBienTheBody tr');
-        if (rows.length === 0) {
-            if (khongCo) khongCo.style.display = '';
-            return;
-        }
-        if (khongCo) khongCo.style.display = 'none';
-        // Render each combo as a small card
-        let html = '';
+    // ---- Bang Hang Cung Loai ----
+    const bangHangCungLoaiBody = document.getElementById('bangHangCungLoaiBody');
+    const tenSanPhamInput = document.querySelector('input[name="ten_san_pham"]');
+    const giaBanInput = document.querySelector('input[name="gia_ban"]');
+
+    function updateBangHangCungLoai() {
+        const tenSanPham = tenSanPhamInput?.value.trim() || 'Sản phẩm';
+        const giaBanMacDinh = giaBanInput?.value || '';
+        const rows = donViTableBody.querySelectorAll('tr[data-unit-row]');
+
+        bangHangCungLoaiBody.innerHTML = '';
+
         rows.forEach((row, i) => {
-            const ten = row.querySelector('[data-variant-ten]')?.value || ('Biến thể ' + (i+1));
-            html += `<div class="d-flex align-items-center gap-2 mb-1 p-1 rounded" style="background:#f8f9fa; font-size:0.78rem;">
-                <span class="badge bg-primary" style="min-width:20px;">${i+1}</span>
-                <span class="text-truncate flex-grow-1">${ten}</span>
-            </div>`;
+            const tenDonVi = row.querySelector('.unit-ten')?.value.trim() || '';
+            const giaLe = row.querySelector('.unit-gia-le')?.value || '';
+            const giaSi = row.querySelector('.unit-gia-si')?.value || '';
+            const maVach = row.querySelector('.unit-mavach')?.value || '';
+            const qty = row.querySelector('.unit-qty')?.value || '1';
+            const tonKho = row.querySelector('.unit-tonkho')?.value || '0';
+
+            if (!tenDonVi) return;
+
+            const tenDayDu = tenSanPham + ' ' + tenDonVi;
+            const idx = row.querySelector('.unit-img-cell')?.dataset.idx || i;
+
+            // Check if this row has a custom image
+            const previewImg = document.querySelector(`.unit-img-preview[data-preview-for="${idx}"]`);
+            const hasCustomImg = previewImg && !previewImg.classList.contains('d-none') && previewImg.src;
+            const previewSrc = hasCustomImg ? previewImg.src : '';
+
+            const html = `
+            <tr class="hcl-preview-row" data-hcl-row="${i}">
+                <td class="text-center align-middle small fw-medium">${i + 1}</td>
+                <td class="align-middle">
+                    <input type="hidden" name="hang_cung_loai[${i}][ten_don_vi]" value="${tenDonVi}">
+                    <input type="hidden" name="hang_cung_loai[${i}][so_luong_quy_doi]" value="${qty}">
+                    <span class="fw-medium" style="font-size:0.85rem;">${tenDayDu}</span>
+                </td>
+                <td class="align-middle text-center">
+                    <span class="badge bg-light text-secondary border" style="font-size:0.72rem;">—</span>
+                </td>
+                <td class="align-middle text-center">
+                    <span class="badge bg-info-subtle text-info border" style="font-size:0.78rem;">${qty}</span>
+                </td>
+                <td class="align-middle">
+                    <input type="hidden" name="hang_cung_loai[${i}][gia_ban_le]" value="${giaLe}">
+                    <span class="fw-bold text-primary" style="font-size:0.85rem;">${giaLe ? Number(giaLe).toLocaleString('vi-VN') : '—'}</span>
+                </td>
+                <td class="align-middle">
+                    <input type="hidden" name="hang_cung_loai[${i}][gia_ban_si]" value="${giaSi}">
+                    <span class="text-muted" style="font-size:0.85rem;">${giaSi ? Number(giaSi).toLocaleString('vi-VN') : '—'}</span>
+                </td>
+                <td class="align-middle">
+                    <input type="hidden" name="hang_cung_loai[${i}][ma_vach]" value="${maVach}">
+                    <span class="small text-muted">${maVach || '—'}</span>
+                </td>
+                <td class="align-middle text-center">
+                    <input type="hidden" name="hang_cung_loai[${i}][so_luong]" value="${tonKho}">
+                    <span class="small">${tonKho}</span>
+                </td>
+                <td class="align-middle text-center">
+                    <input type="hidden" name="hang_cung_loai[${i}][has_image]" value="${hasCustomImg ? '1' : '0'}">
+                    ${hasCustomImg
+                        ? `<img src="${previewSrc}" style="width:40px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #dee2e6;">`
+                        : `<div style="width:40px;height:40px;border-radius:4px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;"><i class="fas fa-image text-muted" style="font-size:0.7rem;"></i></div>`
+                    }
+                </td>
+                <td class="align-middle text-center">
+                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="suaHangCungLoai(this)" title="Sửa">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="xoaHangCungLoai(this)" title="Xóa">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>`;
+
+            bangHangCungLoaiBody.insertAdjacentHTML('beforeend', html);
         });
-        container.innerHTML = html;
+
+        // Hide section if no rows
+        const section = document.getElementById('bangHangCungLoaiSection');
+        if (bangHangCungLoaiBody.querySelectorAll('tr').length === 0) {
+            section.style.display = 'none';
+        } else {
+            section.style.display = 'block';
+        }
     }
 
-    // ---- Delete selected rows ----
-    btnXoaDongDaChon.addEventListener('click', function() {
-        document.querySelectorAll('.variant-check:checked').forEach(cb => {
-            cb.closest('tr').remove();
+    // Edit an HCL row — fills data back to unit table
+    window.suaHangCungLoai = function(btn) {
+        const tr = btn.closest('tr');
+        const hiddenInputs = tr.querySelectorAll('input[type="hidden"]');
+        // Just re-focus the first unit row as a simple "edit" UX
+        donViTableBody.querySelector('.unit-ten')?.focus();
+    };
+
+    // Delete an HCL row
+    window.xoaHangCungLoai = function(btn) {
+        const tr = btn.closest('tr');
+        tr.remove();
+        // Re-number remaining rows
+        bangHangCungLoaiBody.querySelectorAll('tr').forEach((r, idx) => {
+            r.querySelector('td:first-child').textContent = idx + 1;
         });
-        bienTheIndex = bangBienTheBody.querySelectorAll('tr').length;
-        soLuongBienTheBadge.textContent = bienTheIndex;
-        if (bienTheIndex === 0) {
-            bangBienTheSection.style.display = 'none';
-            soLuongBienTheBadge.style.display = 'none';
+        const section = document.getElementById('bangHangCungLoaiSection');
+        if (bangHangCungLoaiBody.querySelectorAll('tr').length === 0) {
+            section.style.display = 'none';
         }
-        hienThiSTT();
-        capNhatSelectedCount();
-        capNhatTongHopPanel();
+    };
+
+    // Update HCL table on unit row change
+    donViTableBody.addEventListener('input', function() {
+        clearTimeout(window.hclUpdateTimer);
+        window.hclUpdateTimer = setTimeout(updateBangHangCungLoai, 400);
     });
+    donViTableBody.addEventListener('change', updateBangHangCungLoai);
 
-    // ---- Select all ----
-    selectAllVariants.addEventListener('change', function() {
-        document.querySelectorAll('.variant-check').forEach(cb => cb.checked = this.checked);
-        capNhatSelectedCount();
-    });
+    // Manual update button
+    btnCapNhatBangHCL.addEventListener('click', updateBangHangCungLoai);
 
-    // ---- Update selected count ----
-    function capNhatSelectedCount() {
-        const count = document.querySelectorAll('.variant-check:checked').length;
-        selectedCountLabel.textContent = count + ' dòng đã chọn';
-    }
-    bangBienTheBody.addEventListener('change', capNhatSelectedCount);
-
-    // ---- Variant image preview ----
-    bangBienTheBody.addEventListener('click', function(e) {
-        const placeholder = e.target.closest('.variant-img-placeholder');
-        if (placeholder) {
-            const cell = placeholder.closest('.variant-img-cell');
-            const idx = cell.dataset.idx;
-            const fileInput = document.querySelector(`.variant-img-input[data-preview-for="${idx}"]`);
-            if (fileInput) fileInput.click();
-            return;
-        }
-
-        const removeBtn = e.target.closest('.variant-img-remove');
-        if (removeBtn) {
-            const idx = removeBtn.dataset.removeFor;
-            const preview = document.querySelector(`.variant-img-preview[data-preview-for="${idx}"]`);
-            const placeholder = document.querySelector(`.variant-img-cell[data-idx="${idx}"] .variant-img-placeholder`);
-            const fileInput = document.querySelector(`.variant-img-input[data-preview-for="${idx}"]`);
-            const removeBtn2 = document.querySelector(`.variant-img-remove[data-remove-for="${idx}"]`);
-            if (preview) { preview.src = ''; preview.classList.add('d-none'); }
-            if (placeholder) placeholder.classList.remove('d-none');
-            if (fileInput) fileInput.value = '';
-            if (removeBtn2) removeBtn2.classList.add('d-none');
-        }
-    });
-
-    bangBienTheBody.addEventListener('change', function(e) {
-        if (!e.target.classList.contains('variant-img-input')) return;
-        const file = e.target.files[0];
-        if (!file) return;
-        const idx = e.target.dataset.previewFor;
-        const preview = document.querySelector(`.variant-img-preview[data-preview-for="${idx}"]`);
-        const placeholder = document.querySelector(`.variant-img-cell[data-idx="${idx}"] .variant-img-placeholder`);
-        const removeBtn = document.querySelector(`.variant-img-remove[data-remove-for="${idx}"]`);
-        const reader = new FileReader();
-        reader.onload = ev => {
-            if (preview) { preview.src = ev.target.result; preview.classList.remove('d-none'); }
-            if (placeholder) placeholder.classList.add('d-none');
-            if (removeBtn) removeBtn.classList.remove('d-none');
-        };
-        reader.readAsDataURL(file);
-    });
-
-    // ---- Renumber ----
-    function hienThiSTT() {
-        document.querySelectorAll('#bangBienTheBody tr').forEach((tr, i) => {
-            tr.querySelector('td').textContent = i + 1;
-        });
-    }
+    // Initial render
+    updateBangHangCungLoai();
 
     // ---- Reset modal on close ----
     document.getElementById('addProductModal').addEventListener('hidden.bs.modal', function() {
-        daTaoBang = false;
-        bienTheIndex = 0;
-        thuocTinhIndex = 0;
-        thuocTinhContainer.innerHTML = '';
-        bangBienTheBody.innerHTML = '';
-        bangBienTheSection.style.display = 'none';
-        soLuongBienTheBadge.style.display = 'none';
-        taoBangContainer.style.display = 'none';
-        thuocTinhEmptyHint.style.display = 'block';
+        donViTableBody.innerHTML = `
+            <tr data-unit-row>
+                <td class="text-center align-middle small fw-medium">1</td>
+                <td><input type="text" class="form-control form-control-sm unit-ten" placeholder="VD: Lon" required></td>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <input type="number" class="form-control unit-qty" value="1" min="1">
+                        <span class="input-group-text">/ ĐV</span>
+                    </div>
+                </td>
+                <td><input type="number" class="form-control form-control-sm unit-gia-le" placeholder="0" min="0"></td>
+                <td><input type="number" class="form-control form-control-sm unit-gia-si" placeholder="0" min="0"></td>
+                <td><input type="text" class="form-control form-control-sm unit-mavach" placeholder="Mã vạch"></td>
+                <td><input type="number" class="form-control form-control-sm unit-tonkho" value="0" min="0"></td>
+                <td style="width:80px;">
+                    <div class="unit-img-cell" data-idx="0" style="position:relative;">
+                        <div class="unit-img-placeholder" style="width:56px;height:56px;border:2px dashed #dee2e6;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#f8f9fa;">
+                            <i class="fas fa-image text-muted"></i>
+                        </div>
+                        <img class="unit-img-preview d-none" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;" data-preview-for="0">
+                        <input type="file" class="unit-img-input d-none" accept="image/*" data-file-for="0" name="hang_cung_loai[0][hinh_anh]">
+                        <button type="button" class="unit-img-remove btn btn-sm btn-danger rounded-circle d-none" data-remove-for="0" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;padding:0;font-size:9px;line-height:18px;text-align:center;">×</button>
+                    </div>
+                </td>
+                <td class="text-center align-middle"><input type="checkbox" class="unit-check form-check-input"></td>
+            </tr>`;
+        unitIndex = 0;
+        unitRowCount = 1;
+        unitCountLabel.textContent = '1 đơn vị';
         imagePreview.src = '';
         imagePreview.classList.add('d-none');
         imagePlaceholder.classList.remove('d-none');
         removeImageBtn.classList.add('d-none');
         hinhAnhInput.value = '';
-        capNhatTongHopPanel();
+        selectAllUnits.checked = false;
+        updateBangHangCungLoai();
+        attachUnitImageEvents(donViTableBody.firstElementChild);
     });
 })();
 </script>
@@ -1583,9 +1916,9 @@
         let theKhoHtml = '';
         if (theKho.length > 0) {
             theKhoHtml = `
-            <div class="table-responsive" style="max-height:260px; overflow-y:auto;">
+            <div class="table-scroll-wrap">
                 <table class="table table-sm table-hover mb-0">
-                    <thead class="table-light position-sticky top-0">
+                    <thead class="table-light">
                         <tr>
                             <th>Mã phiếu</th>
                             <th>Thời gian</th>
