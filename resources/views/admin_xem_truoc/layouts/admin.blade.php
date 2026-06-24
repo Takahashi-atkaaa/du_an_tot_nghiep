@@ -323,56 +323,47 @@
             </li>
 
 
-
-
-
-
-
-            {{-- <li class="nav-item">
-                <a href="{{ route('ca-lam-viec.index') }}" class="nav-link {{ request()->is('admin/ca-lam-viec*') ? 'active' : '' }}">
+            {{-- Quản lý ca làm --}}
+            <li class="nav-item">
+                <a class="nav-link collapsed dropdown-toggle-custom"
+                data-bs-toggle="collapse"
+                href="#caLamMenu"
+                role="button"
+                aria-expanded="false"
+                aria-controls="caLamMenu">
                     <i class="fas fa-business-time"></i>
-                    <span>Ca làm việc</span>
+                    <span>Quản lý ca làm</span>
+                    <i class="fas fa-angle-left arrow"></i>
                 </a>
-            </li> --}}
+
+                <div class="collapse" id="caLamMenu">
+                    <ul class="nav flex-column ms-3">
+
+                        <li class="nav-item">
+                            <a href="{{ route('ca-lam.index') }}"
+                            class="nav-link {{ request()->is('admin/ca-lam-viec*') ? 'active' : '' }}">
+                                Ca làm hiên tại
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a href="{{ route('ca-lam-viec.index') }}"
+                            class="nav-link {{ request()->is('admin/lich-lam-viec*') ? 'active' : '' }}">
+                                Lịch làm việc
+                            </a>
+                        </li>
 
 
+                        <li class="nav-item">
+                            <a href="{{ route('lich-su-ca-lam-viec.index') }}"
+                            class="nav-link">
+                                Lịch sử ca làm
+                            </a>
+                        </li>
 
-
-
-
-{{-- Quản lý ca làm --}}
-<li class="nav-item">
-    <a class="nav-link collapsed dropdown-toggle-custom"
-       data-bs-toggle="collapse"
-       href="#caLamMenu"
-       role="button"
-       aria-expanded="false"
-       aria-controls="caLamMenu">
-        <i class="fas fa-business-time"></i>
-        <span>Quản lý ca làm</span>
-        <i class="fas fa-angle-left arrow"></i>
-    </a>
-
-    <div class="collapse" id="caLamMenu">
-        <ul class="nav flex-column ms-3">
-
-            <li class="nav-item">
-                <a href="{{ route('ca-lam.index') }}"
-                   class="nav-link {{ request()->is('admin/ca-lam-viec*') ? 'active' : '' }}">
-                    Ca làm hiên tại
-                </a>
+                    </ul>
+                </div>
             </li>
-
-            <li class="nav-item">
-                <a href="{{ route('ca-lam-viec.index') }}"
-                   class="nav-link {{ request()->is('admin/lich-lam-viec*') ? 'active' : '' }}">
-                    Lịch làm việc
-                </a>
-            </li>
-
-        </ul>
-    </div>
-</li>
 
             {{-- phân quyền --}}
             <li class="nav-item">

@@ -1,7 +1,7 @@
 
 @extends('admin_xem_truoc.layouts.admin')
 
-@section('title', 'Quản lý ca làm việc - SmartMart')
+@section('title', 'Chi tiết lịch sửa ca làm việc - SmartMart')
 
 <style>
 
@@ -82,9 +82,9 @@
                     </div>
 
                     <div>
-                        <div class="text-muted">Giờ hiện tại</div>
+                        <div class="text-muted">Thời lượng ca</div>
                         <h4>
-                            <span id="gio"></span>
+                            <span>{{$ca->gio_bat_dau}}  -   {{$ca->gio_ket_thuc}}</span>
                         </h4>
                     </div>
                 </div>
@@ -99,14 +99,13 @@
                     </div>
 
                     <div>
-                        <div class="text-muted">Ngày hiện tại</div>
-                        <h5 class="mb-0">{{ $ngay_hien_tai }}</h5>
+                        <div class="text-muted">Ngày </div>
+                        <h5 class="mb-0">{{ $ngay }}</h5>
                     </div>
                 </div>
             </div>
         </div>
 
-        @if($ca_hien_tai)
 
         <div class="col-md-3">
             <div class="card info-card">
@@ -118,7 +117,7 @@
                     <div>
                         <div class="text-muted">Ca hiện tại</div>
                         <h4 class="mb-0">
-                            {{ $ca_hien_tai->ten_ca }}
+                            {{ $ca->ten_ca }}
                         </h4>
                     </div>
                 </div>
@@ -138,18 +137,16 @@
                         </div>
 
                         <h5 class="mb-0 text-danger">
-                            {{ number_format($tong_doanh_thu_cua_ca) }}đ
+                            {{ number_format($tongDoanhThuCuaCa) }}đ
                         </h5>
                     </div>
                 </div>
             </div>
         </div>
 
-        @endif
 
     </div>
 
-    @if($ca_hien_tai)
 
     {{-- Thống kê --}}
     <div class="row g-4 mb-4">
@@ -168,7 +165,7 @@
                         </div>
 
                         <h3 class="mb-0">
-                            {{ $danh_sach_hoa_don_cua_ca->count() }}
+                            {{ $tongHoaDoncuaCa }}
                         </h3>
                     </div>
 
@@ -190,7 +187,7 @@
                         </div>
 
                         <h3 class="mb-0">
-                            {{ $tong_nhan_vien_cua_ca }}
+                            {{ $tongNhanVienTrongCa }}
                         </h3>
                     </div>
 
@@ -229,7 +226,7 @@
 
                         <tbody>
 
-                        @foreach($danh_sach_hoa_don_cua_ca as $hoaDon)
+                        @foreach($danhSachHoaDon as $hoaDon)
 
                             <tr>
 
@@ -256,7 +253,7 @@
                                 </td>
 
                                 <td>
-                                    <a href="{{ route('chi-tiet-hoa-don.show', $hoaDon->id) }}"
+                                    <a href="{{ route('lich-su-ca-lam-chi-tiet-hoa-don.show',['id_hoaDon'=> $hoaDon->id, 'ngay'=> $ngay]) }}"
                                         class="btn btn-warning">
                                             Chi tiết
                                         </a>
@@ -300,7 +297,7 @@
 
                         <tbody>
 
-                        @foreach($nhan_vien as $nv)
+                        @foreach($danhSachNhanVienTrongCa as $nv)
 
                             <tr>
 
@@ -349,30 +346,11 @@
         </div>
 
     </div>
-
-    @else
-
-    <div class="alert alert-warning text-center">
-        Hiện tại không có ca nào đang làm việc.
-    </div>
-
-    @endif
-
+        <a href="{{route('lich-su-ngay-lam-viec.cac-ca-lam', ['ngay'=> $ngay])}}" class="btn btn-dark">
+            Quay lại
+        </a>
 </div>
 
-<script>
-    function CapNhatGio(){
-        const now = new Date()
-        const gio =  String(now.getHours()).padStart(2,'0')
-        const phut = String(now.getMinutes()).padStart(2,'0')
-        const giay = String(now.getSeconds()).padStart(2,'0')
-
-        document.getElementById('gio').innerText = `${gio}:${phut}:${giay}`
-    }
-
-    CapNhatGio()
-    setInterval(CapNhatGio,1000);
-</script>
 @endsection
 
 

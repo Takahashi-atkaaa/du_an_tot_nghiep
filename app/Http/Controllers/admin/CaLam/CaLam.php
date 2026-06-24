@@ -5,6 +5,7 @@ namespace App\Http\Controllers\admin\CaLam;
 use App\Http\Controllers\Controller;
 use App\Models\CaLamViec;
 use App\Models\ChiaCaLamViec;
+use App\Models\ChiTietHoaDon;
 use App\Models\HoaDon;
 use Illuminate\Http\Request;
 
@@ -63,6 +64,19 @@ if (!$ca_hien_tai) {
         )
     );
 }
+
+
+//chi tiết hóa đơn
+ public function show($id_hoadon){
+    $hoaDon = HoaDon::with(['nguoiDung', 'caLamViec'])
+        ->findOrfail($id_hoadon);
+
+    $chiTietHoaDon = ChiTietHoaDon::with(['sanPham', 'chiTietPhieu'])
+        ->where('id_hoa_don', $id_hoadon)
+        ->get();
+
+    return view('admin_xem_truoc.ca-lam-viec.chi-tiet-hoa-don', compact('chiTietHoaDon', 'hoaDon'));
+ }
 
 
 }

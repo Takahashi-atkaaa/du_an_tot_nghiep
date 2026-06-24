@@ -16,6 +16,7 @@ use App\Http\Controllers\admin\Api\ThuocTinhApiController;
 use App\Http\Controllers\admin\Api\SanPhamApiController;
 use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
 use App\Http\Controllers\admin\CaLam\CaLam;
+use App\Http\Controllers\admin\CaLam\LichSuCaLam;
 use App\Http\Controllers\admin\KhuyenMaiController;
 use App\Http\Controllers\admin\PhanQuyenDong\PhanQuyen;
 use App\Http\Middleware\AuthAdmin;
@@ -255,6 +256,12 @@ Route::middleware([KTVaiTro::class])->group(function () {
 
     // quản lý ca làm
     Route::get('/ca-lam',[CaLam::class, 'index'])->name('ca-lam.index')->middleware('permission::ca-lam');
+    Route::get('/chi-tiet-hoa-don/{id_hoadon}',[CaLam::class, 'show'])->name('chi-tiet-hoa-don.show')->middleware('permission::ca-lam');
+        //lịch sử ca làm
+        Route::get('/lich-su-ca-lam-viec',[LichSuCaLam::class, 'index'])->name('lich-su-ca-lam-viec.index')->middleware('permission::ca-lam');
+        Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}',[LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission::ca-lam');
+        Route::get('/lich-su-ca-lam-chi_tiet_ca_lam/{id_ca}/{ngay}',[LichSuCaLam::class, 'chi_tiet_ca'])->name('lich-su-ngay-lam-viec.chi_tiet_ca_lam')->middleware('permission::ca-lam');
+        Route::get('/lich-su-ca-lam-chi_tiet-hoa-don/{id_hoaDon}/{ngay}',[LichSuCaLam::class, 'chi_tiet_hoa_don'])->name('lich-su-ca-lam-chi-tiet-hoa-don.show')->middleware('permission::ca-lam');
 
 
     // Thiết lập lương
