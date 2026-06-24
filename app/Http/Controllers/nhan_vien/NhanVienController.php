@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\DB;
+use App\Models\KhachHang;
 
 
 class NhanVienController extends Controller
@@ -262,6 +263,7 @@ public function thanhToan(Request $request)
         'cart.*.qty' => 'required|integer|min:1',
         'tien_khach_dua' => 'required|numeric|min:0',
         'phuong_thuc_thanh_toan' => 'required|string',
+        'id_khach_hang' => 'nullable|integer|exists:khach_hang,id',
     ]);
 
     return DB::transaction(function () use ($request) {
@@ -313,7 +315,7 @@ public function thanhToan(Request $request)
 
         $hoaDonId = DB::table('hoa_don')->insertGetId([
             'id_nguoi_dung' => 1,
-            'id_khach_hang' => null,
+            'id_khach_hang' => $request->id_khach_hang,
             'id_ca_lam_viec' => null,
             'id_khuyen_mai' => null,
             'tong_tien_hang' => $tongTienHang,
@@ -418,5 +420,32 @@ public function huyHoaDon($id)
 
         return back()->with('success', 'Đã hủy hóa đơn và hoàn lại tồn kho.');
     });
+}
+public function layKhachHang(Request $request)
+{
+    $query = KhachHang::query()
+        ->where('trang_thai', 1);
+
+    if ($request->filled('q')) {
+        $query->where(function ($q) use ($request) {
+            $q->where('ten_khach_hang', 'like', '%' . $request->q . '%')
+              ->orWhere('so_dien_thoai', 'like', '%' . $request->q . '%')
+              ->orWhere('email', 'like', '%' . $request->q . '%');
+        });
+    }
+
+    return response()->json(
+        $query->select(
+            'id',
+            'ten_khach_hang',
+            'so_dien_thoai',
+            'email',
+            'diem_tich_luy',
+            'tong_chi_tieu'
+        )
+        ->orderBy('ten_khach_hang')
+        ->limit(10)
+        ->get()
+    );
 }
 }

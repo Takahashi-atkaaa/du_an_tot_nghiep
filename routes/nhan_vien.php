@@ -28,6 +28,8 @@ Route::prefix('nhan-vien')->group(function () {
     ->name('nhan-vien.hoa-don.in');
     Route::post('/hoa-don/{id}/huy', [NhanVienController::class, 'huyHoaDon'])
     ->name('nhan-vien.hoa-don.huy');
+    Route::get('/ban-hang/khach-hang', [NhanVienController::class, 'layKhachHang'])
+    ->name('nhan-vien.ban-hang.khach-hang');
     
     Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don');
     Route::get('/san-pham', [NhanVienController::class, 'sanPham'])->name('nhan-vien.san-pham');

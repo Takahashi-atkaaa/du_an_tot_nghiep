@@ -847,6 +847,29 @@
 </div>
 
         <!-- Search -->
+        <div class="mb-2 position-relative">
+    <input type="text"
+           id="customerSearchInput"
+           class="form-control"
+           placeholder="Tìm khách hàng theo tên / SĐT..."
+           oninput="searchCustomers()">
+
+    <input type="hidden" id="selectedCustomerId">
+
+    <div id="customerSearchResult"
+         class="bg-white border rounded shadow-sm position-absolute w-100"
+         style="z-index:3000; display:none; max-height:220px; overflow-y:auto;">
+    </div>
+</div>
+
+<div id="selectedCustomerBox" class="mb-2" style="display:none;">
+    <div class="alert alert-success py-2 mb-0 d-flex justify-content-between align-items-center">
+        <span id="selectedCustomerText"></span>
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearSelectedCustomer()">
+            Bỏ chọn
+        </button>
+    </div>
+</div>
         <div class="pos-search-bar">
             <div class="search-wrapper">
                 <i class="fas fa-search"></i>
@@ -1273,6 +1296,7 @@ if (selectedPayment === 'cash') {
                     id: item.id,
                     qty: item.qty
                 })),
+                id_khach_hang: selectedCustomer ? selectedCustomer.id : null,
                 tien_khach_dua: customer,
                 phuong_thuc_thanh_toan: selectedPayment
             })
@@ -1371,6 +1395,62 @@ async function loadCategories() {
     } catch (error) {
         console.error('Lỗi tải danh mục:', error);
     }
+}
+let selectedCustomer = null;
+let customerSearchTimer = null;
+
+function searchCustomers() {
+    clearTimeout(customerSearchTimer);
+
+    const keyword = document.getElementById('customerSearchInput').value.trim();
+    const resultBox = document.getElementById('customerSearchResult');
+
+    if (keyword.length < 2) {
+        resultBox.style.display = 'none';
+        resultBox.innerHTML = '';
+        return;
+    }
+
+    customerSearchTimer = setTimeout(async () => {
+        const response = await fetch('/nhan-vien/ban-hang/khach-hang?q=' + encodeURIComponent(keyword));
+        const customers = await response.json();
+
+        if (customers.length === 0) {
+            resultBox.innerHTML = `<div class="p-2 text-muted">Không tìm thấy khách hàng</div>`;
+            resultBox.style.display = 'block';
+            return;
+        }
+
+        resultBox.innerHTML = customers.map(kh => `
+            <div class="p-2 border-bottom" style="cursor:pointer"
+                 onclick='selectCustomer(${JSON.stringify(kh)})'>
+                <strong>${kh.ten_khach_hang}</strong>
+                <br>
+                <small>SĐT: ${kh.so_dien_thoai ?? '---'} | Điểm: ${kh.diem_tich_luy ?? 0}</small>
+            </div>
+        `).join('');
+
+        resultBox.style.display = 'block';
+    }, 300);
+}
+
+function selectCustomer(customer) {
+    selectedCustomer = customer;
+
+    document.getElementById('selectedCustomerId').value = customer.id;
+    document.getElementById('customerSearchInput').value = '';
+    document.getElementById('customerSearchResult').style.display = 'none';
+
+    document.getElementById('selectedCustomerText').innerHTML =
+        `<strong>${customer.ten_khach_hang}</strong> - ${customer.so_dien_thoai ?? ''} - Điểm: ${customer.diem_tich_luy ?? 0}`;
+
+    document.getElementById('selectedCustomerBox').style.display = 'block';
+}
+
+function clearSelectedCustomer() {
+    selectedCustomer = null;
+    document.getElementById('selectedCustomerId').value = '';
+    document.getElementById('selectedCustomerBox').style.display = 'none';
 }
 
 // ─────────────────────────────────────────────
