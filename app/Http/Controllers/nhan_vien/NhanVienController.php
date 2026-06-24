@@ -32,10 +32,7 @@ class NhanVienController extends Controller
         return view('nhan_vien_view.san-pham.index');
     }
 
-    public function khachHang()
-    {
-        return view('nhan_vien_view.khach-hang.index');
-    }
+  
 
     public function lichLamViec(Request $request)
     {
