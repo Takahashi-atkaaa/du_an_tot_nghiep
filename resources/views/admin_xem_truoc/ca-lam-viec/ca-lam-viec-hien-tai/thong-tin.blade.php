@@ -1,7 +1,7 @@
 
 @extends('admin_xem_truoc.layouts.admin')
 
-@section('title', 'Chi tiết lịch sửa ca làm việc - SmartMart')
+@section('title', 'Quản lý ca làm việc - SmartMart')
 
 <style>
 
@@ -82,9 +82,9 @@
                     </div>
 
                     <div>
-                        <div class="text-muted">Thời lượng ca</div>
+                        <div class="text-muted">Giờ hiện tại</div>
                         <h4>
-                            <span>{{$ca->gio_bat_dau}}  -   {{$ca->gio_ket_thuc}}</span>
+                            <span id="gio"></span>
                         </h4>
                     </div>
                 </div>
@@ -99,13 +99,14 @@
                     </div>
 
                     <div>
-                        <div class="text-muted">Ngày </div>
-                        <h5 class="mb-0">{{ $ngay }}</h5>
+                        <div class="text-muted">Ngày hiện tại</div>
+                        <h5 class="mb-0">{{ $ngay_hien_tai }}</h5>
                     </div>
                 </div>
             </div>
         </div>
 
+        @if($ca_hien_tai)
 
         <div class="col-md-3">
             <div class="card info-card">
@@ -117,7 +118,7 @@
                     <div>
                         <div class="text-muted">Ca hiện tại</div>
                         <h4 class="mb-0">
-                            {{ $ca->ten_ca }}
+                            {{ $ca_hien_tai->ten_ca }}
                         </h4>
                     </div>
                 </div>
@@ -137,16 +138,18 @@
                         </div>
 
                         <h5 class="mb-0 text-danger">
-                            {{ number_format($tongDoanhThuCuaCa) }}đ
+                            {{ number_format($tong_doanh_thu_cua_ca) }}đ
                         </h5>
                     </div>
                 </div>
             </div>
         </div>
 
+        @endif
 
     </div>
 
+    @if($ca_hien_tai)
 
     {{-- Thống kê --}}
     <div class="row g-4 mb-4">
@@ -165,7 +168,7 @@
                         </div>
 
                         <h3 class="mb-0">
-                            {{ $tongHoaDoncuaCa }}
+                            {{ $danh_sach_hoa_don_cua_ca->count() }}
                         </h3>
                     </div>
 
@@ -187,7 +190,7 @@
                         </div>
 
                         <h3 class="mb-0">
-                            {{ $tongNhanVienTrongCa }}
+                            {{ $tong_nhan_vien_cua_ca }}
                         </h3>
                     </div>
 
@@ -226,7 +229,7 @@
 
                         <tbody>
 
-                        @foreach($danhSachHoaDon as $hoaDon)
+                        @foreach($danh_sach_hoa_don_cua_ca as $hoaDon)
 
                             <tr>
 
@@ -253,7 +256,7 @@
                                 </td>
 
                                 <td>
-                                    <a href="{{ route('lich-su-ca-lam-chi-tiet-hoa-don.show',['id_hoaDon'=> $hoaDon->id, 'ngay'=> $ngay]) }}"
+                                    <a href="{{ route('chi-tiet-hoa-don.show', $hoaDon->id) }}"
                                         class="btn btn-warning">
                                             Chi tiết
                                         </a>
@@ -292,12 +295,13 @@
                                 <th>SĐT</th>
                                 <th>Vai trò</th>
                                 <th>Điểm danh</th>
+                             
                             </tr>
                         </thead>
 
                         <tbody>
 
-                        @foreach($danhSachNhanVienTrongCa as $nv)
+                        @foreach($nhan_vien as $nv)
 
                             <tr>
 
@@ -331,6 +335,8 @@
 
                                 </td>
 
+                        
+
                             </tr>
 
                         @endforeach
@@ -346,11 +352,30 @@
         </div>
 
     </div>
-        <a href="{{route('lich-su-ngay-lam-viec.cac-ca-lam', ['ngay'=> $ngay])}}" class="btn btn-dark">
-            Quay lại
-        </a>
+
+    @else
+
+    <div class="alert alert-warning text-center">
+        Hiện tại không có ca nào đang làm việc.
+    </div>
+
+    @endif
+
 </div>
 
+<script>
+    function CapNhatGio(){
+        const now = new Date()
+        const gio =  String(now.getHours()).padStart(2,'0')
+        const phut = String(now.getMinutes()).padStart(2,'0')
+        const giay = String(now.getSeconds()).padStart(2,'0')
+
+        document.getElementById('gio').innerText = `${gio}:${phut}:${giay}`
+    }
+
+    CapNhatGio()
+    setInterval(CapNhatGio,1000);
+</script>
 @endsection
 
 

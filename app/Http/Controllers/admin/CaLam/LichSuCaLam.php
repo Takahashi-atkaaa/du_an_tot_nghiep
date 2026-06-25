@@ -35,7 +35,7 @@ class LichSuCaLam extends Controller
         $ngay = $ngay;
 
         $tongDoanhThuNgay =HoaDon::whereDate('created_at', $ngay)
-            ->sum('tong_tien_hang');
+            ->sum('khach_can_tra');
 
         $tongSoHoaDonNgay =HoaDon::whereDate('created_at', $ngay)
             ->count('id');
@@ -54,7 +54,7 @@ class LichSuCaLam extends Controller
 
         $tongDoanhThuCuaCa = HoaDon::whereDate('created_at', $ngay)
            ->where('id_ca_lam_viec', $id_ca)
-           ->sum('tong_tien_hang');
+           ->sum('khach_can_tra');
 
         $tongHoaDoncuaCa = HoaDon::whereDate('created_at', $ngay)
            ->where('id_ca_lam_viec', $id_ca)
