@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Requests\NhanSu;
+namespace App\Http\Requests\NhanSu;
 
 use Illuminate\Foundation\Http\FormRequest;
 

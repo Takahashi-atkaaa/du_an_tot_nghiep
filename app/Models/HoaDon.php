@@ -42,4 +42,19 @@ class HoaDon extends Model
 	{
 		return $this->belongsTo(KhachHang::class, 'id_khach_hang');
 	}
+
+	public function ca_lam_viec(){
+		return $this->belongsTo(CaLamViec::class, 'id_ca_lam_viec');
+	}
+
+	public function chiTietHoaDon(){
+		return $this->HasMany(ChiTietHoaDon::class, 'id_hoa_don');
+	}
+	public function nguoiDung(){
+		return $this->belongsTo(NguoiDung::class, 'id_nguoi_dung');
+	}
+
+	public function caLamViec(){
+		return $this->belongsTo(CaLamViec::class, 'id_ca_lam_viec');
+	}
 }

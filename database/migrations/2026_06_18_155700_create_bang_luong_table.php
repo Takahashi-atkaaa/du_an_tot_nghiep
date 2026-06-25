@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('ten_bang_luong');
             $table->string('ky_lam_viec');
-            $table->decimal('tong_luong_tat_ca_nhan_vien', 16, 2);
+            $table->decimal('tong_luong_tat_ca_nhan_vien', 16, 2)->default(0);
             $table->integer('so_nhan_vien');
             $table->string('trang_thai');
             $table->timestamps();
