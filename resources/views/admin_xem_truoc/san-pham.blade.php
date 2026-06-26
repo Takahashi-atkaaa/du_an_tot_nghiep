@@ -469,7 +469,7 @@
                                         <tr>
                                             <th class="text-center" style="width:40px;">STT</th>
                                             <th style="min-width:130px;">Tên đơn vị <span class="text-danger">*</span></th>
-                                            <th style="width:90px;">Quy đổi</th>
+                                            <th style="width:110px;">Quy đổi</th>
                                             <th style="width:130px;">Giá lẻ (đ) <span class="text-danger">*</span></th>
                                             <th style="width:130px;">Giá sỉ (đ)</th>
                                             <th style="width:140px;">Mã vạch</th>
@@ -596,7 +596,7 @@
                                             <th class="text-center" style="width:44px;">STT</th>
                                             <th style="min-width:200px;">Tên sản phẩm</th>
                                             <th style="width:100px;">Tổ hợp</th>
-                                            <th style="width:90px;">Quy đổi</th>
+                                            <th style="width:110px;">Quy đổi</th>
                                             <th style="width:120px;">Giá lẻ (đ)</th>
                                             <th style="width:120px;">Giá sỉ (đ)</th>
                                             <th style="width:130px;">Mã vạch</th>
@@ -740,7 +740,7 @@
     }
     #addProductModal .table-scroll-wrap table {
         table-layout: fixed;
-        min-width: 900px;
+        min-width: 920px;
     }
     #addProductModal .table-scroll-wrap table thead th {
         position: sticky;

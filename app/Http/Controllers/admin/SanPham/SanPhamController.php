@@ -7,6 +7,7 @@ use App\Http\Requests\SanPham\StoreSanPhamRequest;
 use App\Http\Requests\SanPham\UpdateSanPhamRequest;
 use App\Models\DanhMucSanPham;
 use App\Models\DonViSanPham;
+use App\Models\DonViSanPhamSanPham;
 use App\Models\ThuocTinhSanPham;
 use App\Models\SanPham;
 use Illuminate\Http\RedirectResponse;
@@ -99,7 +100,7 @@ class SanPhamController extends Controller
 
         $bienThe = $data['bien_the'] ?? [];
 
-        return DB::transaction(function () use ($data, $bienThe, $baseUnit) {
+        return DB::transaction(function () use ($data, $bienThe, $baseUnit, $request) {
             if (empty($bienThe)) {
                 // Không có biến thể → tạo 1 sản phẩm duy nhất
                 $sanPham = SanPham::create([
@@ -163,6 +164,37 @@ class SanPhamController extends Controller
                         $ids = array_map('intval', explode(',', $variant['thuoc_tinh_ids']));
                         $bienTheSp->thuocTinhs()->attach(array_filter($ids));
                     }
+                }
+            }
+
+            // Lưu đơn vị bán hàng (hang_cung_loai)
+            if (!empty($data['hang_cung_loai'])) {
+                $firstKey = array_key_first($data['hang_cung_loai']);
+                foreach ($data['hang_cung_loai'] as $idx => $unit) {
+                    $tenDonVi = trim($unit['ten_don_vi'] ?? '');
+                    $soLuongQuyDoi = (int)($unit['so_luong_quy_doi'] ?? 1);
+
+                    $donVi = DonViSanPham::firstOrCreate(
+                        ['ten_don_vi' => $tenDonVi],
+                        ['so_luong_san_pham_trong_don_vi' => $soLuongQuyDoi, 'trang_thai' => true]
+                    );
+
+                    $unitImgPath = null;
+                    if ($request->hasFile("hang_cung_loai.{$idx}.hinh_anh")) {
+                        $unitImgPath = $this->uploadImage($request->file("hang_cung_loai.{$idx}.hinh_anh"), 'uploads/don-vi');
+                    }
+
+                    DonViSanPhamSanPham::create([
+                        'id_san_pham'         => $sanPham->id,
+                        'id_don_vi'          => $donVi->id,
+                        'ten_don_vi'         => $tenDonVi,
+                        'so_luong_quy_doi'   => $soLuongQuyDoi,
+                        'gia_ban_le'         => (float)($unit['gia_ban_le'] ?? 0),
+                        'gia_ban_si'         => isset($unit['gia_ban_si']) ? (float)$unit['gia_ban_si'] : null,
+                        'ma_vach'            => !empty($unit['ma_vach']) ? trim($unit['ma_vach']) : null,
+                        'hinh_anh'           => $unitImgPath,
+                        'la_don_vi_mac_dinh' => ($idx === $firstKey),
+                    ]);
                 }
             }
 
@@ -473,11 +505,15 @@ class SanPhamController extends Controller
         return $path;
     }
 
-    protected function uploadImage($file): string
+    protected function uploadImage($file, string $subDir = 'san-pham'): string
     {
+        $dir = public_path("uploads/{$subDir}");
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
         $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9\.\-_]/', '_', $file->getClientOriginalName());
-        $file->move($this->uploadDirectory(), $filename);
-        return 'uploads/san-pham/' . $filename;
+        $file->move($dir, $filename);
+        return "uploads/{$subDir}/" . $filename;
     }
 
     protected function deleteProductImageIfUnused(?string $imagePath, ?int $excludeId = null): void

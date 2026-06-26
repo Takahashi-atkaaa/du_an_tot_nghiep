@@ -110,4 +110,9 @@ class SanPham extends BaseModel
     {
         return $this->hasMany(ChiTietLoHang::class, 'id_san_pham')->where('so_luong_ton', '>', 0);
     }
+
+    public function donViSanPhams(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\DonViSanPhamSanPham::class, 'id_san_pham');
+    }
 }
