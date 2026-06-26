@@ -871,11 +871,17 @@
     </div>
 </div>
         <div class="pos-search-bar">
-            <div class="search-wrapper">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Tìm sản phẩm..." oninput="filterProducts()">
-            </div>
-        </div>
+    <div class="search-wrapper">
+        <i class="fas fa-search"></i>
+
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="Tìm sản phẩm hoặc quét mã vạch..."
+            oninput="filterProducts()"
+            onkeydown="handleSearchEnter(event)">
+    </div>
+</div>
 
         <!-- Product Grid -->
         <div class="pos-product-grid" id="productGrid">
@@ -1528,6 +1534,44 @@ function applyPromotion() {
 
     renderCart();
     calculateChange();
+} 
+
+// hàm tìm kiếm sản phẩm theo mã vạch khi nhấn Enter
+async function handleSearchEnter(event) {
+    if (event.key !== 'Enter') return;
+
+    event.preventDefault();
+
+    const keyword = event.target.value.trim();
+    if (!keyword) return;
+
+    try {
+        const response = await fetch('/nhan-vien/ban-hang/san-pham?q=' + encodeURIComponent(keyword));
+        const data = await response.json();
+
+        const product = data.find(p =>
+            String(p.ma_vach || '').toLowerCase() === keyword.toLowerCase()
+        );
+
+        if (!product) {
+            showToast('Không tìm thấy mã vạch này!', 'error');
+            return;
+        }
+
+        products = data;
+        addToCart(product.id);
+
+        event.target.value = '';
+        loadProducts();
+
+        setTimeout(() => {
+            event.target.focus();
+        }, 100);
+
+    } catch (error) {
+        console.error(error);
+        showToast('Lỗi quét mã vạch!', 'error');
+    }
 }
 
 // ─────────────────────────────────────────────
