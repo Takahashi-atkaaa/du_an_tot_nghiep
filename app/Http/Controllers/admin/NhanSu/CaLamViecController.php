@@ -4,8 +4,8 @@ namespace App\Http\Controllers\admin\NhanSu;
 
 use App\Http\Controllers\Controller;
 use App\Models\CaLamViec;
-use App\Requests\NhanSu\StoreCaLamViecRequest;
-use App\Requests\NhanSu\UpdateCaLamViecRequest;
+use App\Http\Requests\NhanSu\StoreCaLamViecRequest;
+use App\Http\Requests\NhanSu\UpdateCaLamViecRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 

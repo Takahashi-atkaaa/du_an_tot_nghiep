@@ -11,7 +11,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
+    
         :root {
             --primary-color: #0d6efd;
             --sidebar-bg: #1a1a2e;
@@ -320,11 +324,48 @@
                     </li>
                 </ul>
             </li>
+
+
+            {{-- Quản lý ca làm --}}
             <li class="nav-item">
-                <a href="{{ route('ca-lam-viec.index') }}" class="nav-link {{ request()->is('admin/ca-lam-viec*') ? 'active' : '' }}">
+                <a class="nav-link collapsed dropdown-toggle-custom"
+                data-bs-toggle="collapse"
+                href="#caLamMenu"
+                role="button"
+                aria-expanded="false"
+                aria-controls="caLamMenu">
                     <i class="fas fa-business-time"></i>
-                    <span>Ca làm việc</span>
+                    <span>Quản lý ca làm</span>
+                    <i class="fas fa-angle-left arrow"></i>
                 </a>
+
+                <div class="collapse" id="caLamMenu">
+                    <ul class="nav flex-column ms-3">
+
+                        <li class="nav-item">
+                            <a href="{{ route('ca-lam.index') }}"
+                            class="nav-link {{ request()->is('admin/ca-lam-viec*') ? 'active' : '' }}">
+                                Ca làm hiên tại
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a href="{{ route('ca-lam-viec.index') }}"
+                            class="nav-link {{ request()->is('admin/lich-lam-viec*') ? 'active' : '' }}">
+                                Lịch làm việc
+                            </a>
+                        </li>
+
+
+                        <li class="nav-item">
+                            <a href="{{ route('lich-su-ca-lam-viec.index') }}"
+                            class="nav-link">
+                                Lịch sử ca làm
+                            </a>
+                        </li>
+
+                    </ul>
+                </div>
             </li>
 
             {{-- phân quyền --}}
