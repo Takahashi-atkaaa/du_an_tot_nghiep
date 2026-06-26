@@ -23,11 +23,11 @@ public function index()
         ->where('gio_ket_thuc', '>=', $gio_hien_tai)
         ->first();
 
-if (!$ca_hien_tai) {
-    return redirect()
-        ->back()
-        ->with('warning', 'Hiện tại không có ca làm việc.');
-}
+    if (!$ca_hien_tai) {
+        return redirect()
+            ->back()
+            ->with('warning', 'Hiện tại không có ca làm việc.');
+    }
 
     $tong_doanh_thu_cua_ca = HoaDon::where(
         'id_ca_lam_viec', $ca_hien_tai->id

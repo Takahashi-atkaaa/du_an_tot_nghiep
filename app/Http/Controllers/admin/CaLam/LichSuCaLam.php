@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\CaLamViec;
 use App\Models\ChiaCaLamViec;
 use App\Models\ChiTietHoaDon;
+use App\Models\DiemDanh;
 use App\Models\HoaDon;
+use App\Models\NguoiDung;
 use Illuminate\Http\Request;
 
 class LichSuCaLam extends Controller
@@ -61,7 +63,7 @@ class LichSuCaLam extends Controller
            ->count('id');
 
         $danhSachNhanVienTrongCa = ChiaCaLamViec::with('nguoiDung')
-            ->where('ngay', $ngay)
+            ->whereDate('ngay', $ngay)
             ->where('id_ca_lam_viec', $id_ca)
             ->get();
 
@@ -70,7 +72,10 @@ class LichSuCaLam extends Controller
             ->where('id_ca_lam_viec', $id_ca)
             ->count('id');
 
-        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.chi-tiet-ca-lam', compact('ca', 'danhSachHoaDon', 'danhSachNhanVienTrongCa', 'tongDoanhThuCuaCa', 'tongNhanVienTrongCa', 'tongHoaDoncuaCa', 'ngay'));
+        $danhSachDiemDanh = DiemDanh::pluck('id_chia_ca_lam_viec')
+            ->toArray();
+
+        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.chi-tiet-ca-lam', compact('ca', 'danhSachHoaDon', 'danhSachNhanVienTrongCa', 'tongDoanhThuCuaCa', 'tongNhanVienTrongCa', 'tongHoaDoncuaCa', 'ngay', 'danhSachDiemDanh'));
     }
 
     //chi tiết hóa đơn trong lịch sử ca làm
@@ -83,5 +88,6 @@ class LichSuCaLam extends Controller
             ->get();
         return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.chi-tiet-hoa-don', compact('chiTietHoaDon', 'hoaDon', 'ngay'));
     }
+
 
 }

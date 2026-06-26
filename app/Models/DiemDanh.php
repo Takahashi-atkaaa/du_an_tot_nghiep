@@ -10,11 +10,13 @@ class DiemDanh extends Model
     protected $table = 'diem_danh';
 
     protected $fillable = [
-        'ten_danh_muc',
-        'trang_thai',
         'id_chia_ca_lam_viec',
-        'mau_sac',
-        'icon'
+        'gio_vao',
+        'so_gio_di_lam_muon',
+        'gio_tan_ca',
+        'so_gio_lam_them',
+        'trang_thai_vao_lam',
+        'trang_thai_tan_ca',
     ];
 
     public function chiaCaLamViec()
