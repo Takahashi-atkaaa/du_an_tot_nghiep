@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             KhoHangSeeder::class,
             SanPhamSeeder::class,
             BanHangSeeder::class,
+            KhoHangFefoSeeder::class,
         ]);
     }
 }

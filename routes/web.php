@@ -12,6 +12,10 @@ use App\Http\Controllers\admin\NhanSu\BangLuongController;
 use App\Http\Controllers\admin\NhanSu\PhieuLuongController;
 use App\Http\Controllers\admin\KhachHang\KhachHangController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\Api\LoHangApiController;
+use App\Http\Controllers\Admin\Api\NhaCungCapApiController;
+use App\Http\Controllers\Admin\Api\PhieuNhapApiController;
+use App\Http\Controllers\Admin\Api\PhieuXuatApiController;
 use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
 use App\Http\Controllers\admin\Api\ThuocTinhApiController;
 use App\Http\Controllers\admin\Api\SanPhamApiController;
@@ -89,9 +93,51 @@ Route::get('/admin/cai-dat', function () {
 //chuc nang admin va truong ca trung nhau, ma quyen do can su cho phep cua admin thi moi dc vao cho vao  middleware [KTVaiTroQuanTri::class]
 //chuc nang mac dinh cua truonwg ca thi vut vao middleware [AuthTruongCa::class] (k hieu inb thuan chim to)
 //phe admin
-Route::middleware([KTVaiTro::class])->group(function () {
-    // Nha cung cap routes
-    Route::get('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'index'])->middleware('permission:xem_nha_cung_cap');
+    // Lô hàng
+    Route::get('/admin/api/lo-hang', [LoHangApiController::class, 'index']);
+    Route::get('/admin/api/lo-hang/nha-cung-cap', [LoHangApiController::class, 'nhaCungCaps']);
+    Route::get('/admin/api/lo-hang/ton-kho', [LoHangApiController::class, 'tonKho']);
+    Route::get('/admin/api/lo-hang/thong-ke', [LoHangApiController::class, 'thongKe']);
+    Route::get('/admin/api/lo-hang/canh-bao', [LoHangApiController::class, 'canhBao']);
+    Route::get('/admin/api/lo-hang/ton-kho-tong', [LoHangApiController::class, 'tonKhoTong']);
+    Route::get('/admin/api/lo-hang/{id}', [LoHangApiController::class, 'show']);
+    Route::post('/admin/api/lo-hang', [LoHangApiController::class, 'store']);
+    Route::put('/admin/api/lo-hang/{id}', [LoHangApiController::class, 'update']);
+    Route::delete('/admin/api/lo-hang/{id}', [LoHangApiController::class, 'destroy']);
+
+    // Nhà cung cấp API
+    Route::get('/admin/api/nha-cung-cap', [NhaCungCapApiController::class, 'index']);
+    Route::post('/admin/api/nha-cung-cap', [NhaCungCapApiController::class, 'store']);
+    Route::put('/admin/api/nha-cung-cap/{id}', [NhaCungCapApiController::class, 'update']);
+    Route::delete('/admin/api/nha-cung-cap/{id}', [NhaCungCapApiController::class, 'destroy']);
+    Route::get('/admin/api/nha-cung-cap/dropdown', [NhaCungCapApiController::class, 'dropdown']);
+
+    // Phiếu nhập
+    Route::get('/admin/api/phieu-nhap', [PhieuNhapApiController::class, 'index']);
+    Route::get('/admin/api/phieu-nhap/lo-hang', [PhieuNhapApiController::class, 'danhSachLoHang']);
+    Route::get('/admin/api/phieu-nhap/{id}', [PhieuNhapApiController::class, 'show']);
+    Route::post('/admin/api/phieu-nhap', [PhieuNhapApiController::class, 'store']);
+    Route::put('/admin/api/phieu-nhap/{id}', [PhieuNhapApiController::class, 'update']);
+    Route::delete('/admin/api/phieu-nhap/{id}', [PhieuNhapApiController::class, 'destroy']);
+
+    // Phiếu xuất
+    Route::get('/admin/api/phieu-xuat', [PhieuXuatApiController::class, 'index']);
+    Route::get('/admin/api/phieu-xuat/{id}', [PhieuXuatApiController::class, 'show']);
+    Route::post('/admin/api/phieu-xuat', [PhieuXuatApiController::class, 'store']);
+    Route::put('/admin/api/phieu-xuat/{id}', [PhieuXuatApiController::class, 'update']);
+    Route::delete('/admin/api/phieu-xuat/{id}', [PhieuXuatApiController::class, 'destroy']);
+
+    Route::middleware([KTVaiTro::class])->group(function () {
+        // API - phải đặt TRƯỚC san-pham/{id} để tránh bị match nhầm (KHÔNG bị chặn bởi KTVaiTro)
+        Route::get('/admin/api/san-pham', [SanPhamApiController::class, 'index']);
+        Route::get('/admin/api/san-pham/{id}', [SanPhamApiController::class, 'show']);
+        Route::delete('/admin/api/san-pham/variant/{id}', [SanPhamApiController::class, 'destroyVariant']);
+        Route::delete('/admin/api/san-pham/{id}/variants', [SanPhamApiController::class, 'destroyAllVariants']);
+        Route::get('/admin/api/thuoc-tinh/con/{id}', [ThuocTinhApiController::class, 'getThuocTinhCon']);
+        Route::get('/admin/api/thuoc-tinh/all-con', [ThuocTinhApiController::class, 'getAllThuocTinhCon']);
+        Route::post('/admin/api/thuoc-tinh', [ThuocTinhApiController::class, 'store']);
+        // Nha cung cap routes
+        Route::get('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'index'])->middleware('permission:xem_nha_cung_cap');
     Route::post('/admin/kho-hang/nha-cung-cap', [NhaCungCapController::class, 'store'])->middleware('permission:them_nha_cung_cap');
     Route::get('/admin/kho-hang/nha-cung-cap/{id}/lich-su-giao-dich',  [NhaCungCapController::class, 'lichSuGiaoDich'])->middleware('permission:xem_lich_su_giao_dich');
     Route::get('/admin/kho-hang/nha-cung-cap/{id}/edit', [NhaCungCapController::class, 'edit'])->middleware('permission:sua_nha_cung_cap');
@@ -130,13 +176,6 @@ Route::middleware([KTVaiTro::class])->group(function () {
 
 
     //quản lý sản phẩm
-    // API - phải đặt TRƯỚC san-pham/{id} để tránh bị match nhầm
-    Route::get('/admin/api/san-pham/{id}', [SanPhamApiController::class, 'show']);
-    Route::delete('/admin/api/san-pham/variant/{id}', [SanPhamApiController::class, 'destroyVariant']);
-    Route::delete('/admin/api/san-pham/{id}/variants', [SanPhamApiController::class, 'destroyAllVariants']);
-    Route::get('/admin/api/thuoc-tinh/con/{id}', [ThuocTinhApiController::class, 'getThuocTinhCon']);
-    Route::get('/admin/api/thuoc-tinh/all-con', [ThuocTinhApiController::class, 'getAllThuocTinhCon']);
-    Route::post('/admin/api/thuoc-tinh', [ThuocTinhApiController::class, 'store']);
 
     Route::get('/admin/san-pham', [SanPhamController::class, 'index'])
         ->middleware('permission:xem_san_pham')->name('san-pham.index');
@@ -175,11 +214,23 @@ Route::middleware([KTVaiTro::class])->group(function () {
     });
 
 
-    // Trang kho hang  
+    // Trang kho hang
     Route::get('/admin/kho-hang', function () {
         $nhaCungCaps = NhaCungCap::orderBy('id', 'asc')->get();
 
         return view('admin_xem_truoc.kho-hang', compact('nhaCungCaps'));
+    });
+
+    Route::get('/admin/kho-hang/lo-hang', function () {
+        return view('admin_xem_truoc.warehouse.lo-hang');
+    });
+
+    Route::get('/admin/kho-hang/phieu-nhap', function () {
+        return view('admin_xem_truoc.warehouse.phieu-nhap');
+    });
+
+    Route::get('/admin/kho-hang/phieu-xuat', function () {
+        return view('admin_xem_truoc.warehouse.phieu-xuat');
     });
 
 
@@ -309,6 +360,22 @@ Route::middleware([KTVaiTro::class])->prefix('nhan-vien')->group(function () {
     Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don');
     Route::get('/san-pham', [NhanVienController::class, 'sanPham'])->name('nhan-vien.san-pham');
   // khách hàng 
+  Route::get('/ban-hang/san-pham', [NhanVienController::class, 'laySanPham'])
+  ->name('nhan-vien.ban-hang.san-pham');
+  Route::get('/ban-hang/danh-muc', [NhanVienController::class, 'layDanhMuc'])
+  ->name('nhan-vien.ban-hang.danh-muc');
+  Route::post('/ban-hang/thanh-toan', [NhanVienController::class, 'thanhToan'])
+  ->name('nhan-vien.ban-hang.thanh-toan');
+     Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])
+      ->name('nhan-vien.hoa-don');
+  Route::get('/hoa-don/{id}', [NhanVienController::class, 'chiTietHoaDon'])
+  ->name('nhan-vien.hoa-don.chi-tiet');
+  Route::get('/hoa-don/{id}/in', [NhanVienController::class, 'inHoaDon'])
+  ->name('nhan-vien.hoa-don.in');
+  Route::post('/hoa-don/{id}/huy', [NhanVienController::class, 'huyHoaDon'])
+  ->name('nhan-vien.hoa-don.huy');
+  Route::get('/ban-hang/khach-hang', [NhanVienController::class, 'layKhachHang'])
+  ->name('nhan-vien.ban-hang.khach-hang');
   
     Route::get('/khach-hang', [NhanVienKhachHangController::class, 'index'])->name('nhan-vien.khach-hang.index');
     Route::get('/khach-hang/create', [NhanVienKhachHangController::class, 'create'])->name('nhan-vien.khach-hang.create');
