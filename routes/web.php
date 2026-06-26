@@ -318,6 +318,8 @@ Route::middleware([KTVaiTro::class])->prefix('nhan-vien')->group(function () {
   ->name('nhan-vien.hoa-don.huy');
   Route::get('/ban-hang/khach-hang', [NhanVienController::class, 'layKhachHang'])
   ->name('nhan-vien.ban-hang.khach-hang');
+  Route::get('/ban-hang/khuyen-mai', [NhanVienController::class, 'layKhuyenMai'])
+    ->name('nhan-vien.ban-hang.khuyen-mai');
   
     Route::get('/khach-hang', [NhanVienKhachHangController::class, 'index'])->name('nhan-vien.khach-hang.index');
     Route::get('/khach-hang/create', [NhanVienKhachHangController::class, 'create'])->name('nhan-vien.khach-hang.create');
