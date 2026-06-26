@@ -171,7 +171,7 @@
                                     <i class="fas fa-image text-muted"></i>
                                 </div>
                             @endif
-                        </td>
+                        </td> 
                         <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
                             <span class="text-muted small">#{{ $sanPham->ma_hang ?? $sanPham->ma_vach ?? $sanPham->id }}</span>
                         </td>

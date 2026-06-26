@@ -85,17 +85,19 @@ class SanPhamApiController extends Controller
             ->limit(20)
             ->get();
 
-        $loHang = DB::table('chi_tiet_phieu')
-            ->where('id_san_pham', $id)
-            ->whereNotNull('ma_lo')
+        $loHang = DB::table('chi_tiet_lo_hang as ct')
+            ->join('lo_hang as lh', 'lh.id', '=', 'ct.id_lo_hang')
+            ->where('ct.id_san_pham', $id)
+            ->where('ct.so_luong_ton', '>', 0)
+            ->orderBy('ct.han_su_dung', 'asc')
             ->select(
-                'ma_lo as maLo',
-                'han_su_dung as hanSuDung',
-                'so_luong',
-                'so_luong_con_lai as soLuongConLai'
+                'ct.id as idChiTietLo',
+                'lh.ma_lo as maLo',
+                'ct.han_su_dung as hanSuDung',
+                'ct.so_luong_nhap as so_luong',
+                'ct.so_luong_ton as soLuongConLai',
+                'ct.gia_nhap as giaNhap'
             )
-            ->groupBy('ma_lo', 'han_su_dung', 'so_luong', 'so_luong_con_lai')
-            ->orderBy('han_su_dung')
             ->get();
 
         $sanPham->load(['danhMuc', 'donVi', 'thuocTinhs', 'bienThe.thuocTinhs']);

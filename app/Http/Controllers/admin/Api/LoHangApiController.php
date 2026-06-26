@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LoHang;
 use App\Models\ChiTietLoHang;
 use App\Models\NhaCungCap;
+use App\Models\Phieu;
 use App\Models\SanPham;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,34 +36,14 @@ class LoHangApiController extends Controller
             $query->where('id_nha_cung_cap', $ncc);
         }
 
-        // Lấy tất cả IDs trước (không cần paginate ở đây)
-        $idsQuery = clone $query;
-        $total = (clone $idsQuery)->count();
         $perPage = 15;
         $page = (int) $request->query('page', 1);
-        $offset = ($page - 1) * $perPage;
 
-        // Query với relationships + withSum
-        $items = LoHang::with(['nhaCungCap', 'chiTietLoHang.sanPham'])
-            ->withSum('chiTietLoHang', 'so_luong_ton')
-            ->withSum('chiTietLoHang', 'so_luong_nhap')
-            ->orderByDesc('id')
-            ->offset($offset)
-            ->limit($perPage)
-            ->get();
-
-        // json_encode bỏ qua relationships → dùng toArray() để serialize đúng
-        $dataArray = $items->toArray();
+        $items = $query->paginate($perPage, ['*'], 'page', $page);
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'data' => $dataArray,
-                'total' => $total,
-                'per_page' => $perPage,
-                'current_page' => $page,
-                'last_page' => (int) ceil($total / $perPage),
-            ],
+            'data' => $items->toArray(),
         ]);
     }
 
@@ -104,7 +85,14 @@ class LoHangApiController extends Controller
         ]);
 
         $loHang = DB::transaction(function () use ($data) {
+            $phieu = Phieu::create([
+                'loai_phieu' => 'Lô hàng độc lập',
+                'loai_phieu_enum' => 'lo_hang_doc_lap',
+                'id_nguoi_dung' => auth()->id(),
+            ]);
+
             $lo = LoHang::create([
+                'id_phieu' => $phieu->id,
                 'id_nha_cung_cap' => $data['id_nha_cung_cap'] ?? null,
                 'ma_lo' => $data['ma_lo'] ?? null,
                 'ngay_nhap' => $data['ngay_nhap'],
@@ -120,6 +108,8 @@ class LoHangApiController extends Controller
                     'gia_nhap' => $ct['gia_nhap'],
                     'han_su_dung' => $ct['han_su_dung'],
                 ]);
+
+                SanPham::where('id', $ct['id_san_pham'])->increment('so_luong_ton_kho', $ct['so_luong_nhap']);
             }
 
             return $lo->load('chiTietLoHang.sanPham', 'nhaCungCap');
@@ -208,7 +198,10 @@ class LoHangApiController extends Controller
     public function nhaCungCaps(): JsonResponse
     {
         $ncc = NhaCungCap::orderBy('ten_nha_cung_cap')->get(['id', 'ten_nha_cung_cap']);
-        return response()->json($ncc);
+        return response()->json([
+            'success' => true,
+            'data' => $ncc,
+        ]);
     }
 
     public function thongKe(): JsonResponse
@@ -287,11 +280,12 @@ class LoHangApiController extends Controller
 
     public function tonKhoTong(): JsonResponse
     {
-        $items = SanPham::with('danhMuc', 'chiTietLoHang')
+        $items = SanPham::with('danhMuc')
+            ->withSum('chiTietLoHang', 'so_luong_ton')
             ->sanPhamCha()
             ->get(['id', 'ten_san_pham', 'ma_vach', 'so_luong_ton_kho', 'dinh_muc_toi_thieu', 'id_danh_muc'])
             ->map(function ($sp) {
-                $sp->tong_ton = $sp->chiTietLoHang->sum('so_luong_ton');
+                $sp->tong_ton = $sp->chi_tiet_lo_hang_sum_so_luong_ton ?? 0;
                 return $sp;
             })
             ->sortBy('ten_san_pham')

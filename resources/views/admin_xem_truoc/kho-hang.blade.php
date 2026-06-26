@@ -537,9 +537,9 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="alert alert-warning mb-3 py-2 small">
+                    <div class="alert alert-info mb-3 py-2 small">
                         <i class="fas fa-info-circle me-1"></i>
-                        Hệ thống sẽ tự động xuất hàng theo nguyên tắc <strong>FEFO</strong> — ưu tiên lô có HSD gần nhất trước.
+                        Chọn <strong>sản phẩm</strong>, sau đó chọn <strong>lô hàng cụ thể</strong> (mỗi lô có HSD và tồn kho riêng).
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
@@ -572,6 +572,7 @@
                                 <tr>
                                     <th>Sản phẩm</th>
                                     <th class="text-center" style="width:100px">Tồn kho</th>
+                                    <th style="width:240px">Lô hàng (HSD - Tồn)</th>
                                     <th class="text-center" style="width:90px">SL xuất</th>
                                     <th style="width:40px"></th>
                                 </tr>
@@ -807,10 +808,23 @@ $(function () {
     $('#modal-tao-pn').on('hidden.bs.modal', function () {
         selectedPnProducts.clear();
         pnIdx = 0;
+        $('#form-tao-pn')[0].reset();
         $('#pn-ds-sp').html('<tr id="pn-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td></tr>');
         $('#pn-sp-results').html(`<div class="text-center text-muted py-4"><i class="fas fa-search fs-4 mb-2 d-block"></i>Nhập tên hoặc mã vạch để tìm sản phẩm</div>`);
         $('#pn-sp-search').val('');
         $('#pn-sp-danh-muc').val('');
+    });
+
+    $('#modal-tao-px').on('hidden.bs.modal', function () {
+        pxIdx = 0;
+        $('#form-tao-px')[0].reset();
+        $('#px-ds-sp').html('');
+    });
+
+    $('#modal-tao-lo').on('hidden.bs.modal', function () {
+        loIdx = 0;
+        $('#form-tao-lo')[0].reset();
+        $('#lo-ds-sp').html('');
     });
 
     // Modal triggers
@@ -839,12 +853,6 @@ $(function () {
 
     $('#px-btn-them-sp').click(() => addPxRow());
     $('#lo-btn-them-sp').click(() => addLoRow());
-
-    // PX product change → show FEFO preview
-    $(document).on('change', '.px-sp-select', function () {
-        updateFefoPreview();
-    });
-    $(document).on('input', '.px-sl-input', updateFefoPreview);
 
     // Submit forms
     $('#form-tao-pn').submit(e => { e.preventDefault(); submitPhieuNhap(); });
@@ -1251,6 +1259,8 @@ function loadPhieuNhap(page = 1) {
             const ncc = item.phieu?.nha_cung_cap?.ten_nha_cung_cap || '--';
             const nguoi = item.phieu?.nguoi_dung?.ho_ten || item.phieu?.id_nguoi_dung || '--';
             const ngay = item.created_at?.slice(0, 10) || '';
+            const tongGiaTri = (item.chi_tiet_phieu || []).reduce((s, ct) =>
+                s + ((ct.so_luong || 0) * (ct.gia_nhap || 0)), 0);
             const ghiChu = item.ghi_chu || '<span class="text-muted">--</span>';
             return `
             <tr>
@@ -1260,6 +1270,7 @@ function loadPhieuNhap(page = 1) {
                 <td>${ncc}</td>
                 <td>${nguoi}</td>
                 <td class="text-center">${ngay}</td>
+                <td class="text-end fw-bold text-danger">${tongGiaTri.toLocaleString()} đ</td>
                 <td>${ghiChu}</td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-primary btn-xem-pn" data-id="${item.id}"><i class="fas fa-eye"></i></button>
@@ -1300,7 +1311,7 @@ function loadPhieuXuat(page = 1) {
             const nguoi = item.phieu?.nguoi_dung?.ho_ten || item.phieu?.id_nguoi_dung || '--';
             const ngay = item.created_at?.slice(0, 10) || '';
             const lyDo = item.ly_do || '<span class="text-muted">--</span>';
-            const tongSl = '--';
+            const tongSl = (item.chi_tiet_phieu || []).reduce((s, ct) => s + (ct.so_luong || 0), 0);
             return `
             <tr>
                 <td>${item.id}</td>
@@ -1646,10 +1657,17 @@ function addPxRow(id, sl) {
     $('#px-ds-sp').append(`<tr>
         <td><select class="form-select form-select-sm px-sp-select" name="chi_tiet[${idx}][id_san_pham]">${opts || '<option value="">-- Chọn --</option>'}</select></td>
         <td class="text-center text-muted ton-cell small">--</td>
+        <td>
+            <select class="form-select form-select-sm px-lo-select" name="chi_tiet[${idx}][id_chi_tiet_lo_hang]" disabled>
+                <option value="">-- Chọn lô --</option>
+            </select>
+            <small class="text-muted px-lo-info d-block mt-1">--</small>
+        </td>
         <td><input type="number" class="form-control form-control-sm px-sl-input" name="chi_tiet[${idx}][so_luong]" value="${sl || 1}" min="1"></td>
         <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removePxRow(this)"><i class="fas fa-times"></i></button></td>
     </tr>`);
     updateTonCell($('#px-ds-sp tr:last .px-sp-select'));
+    if (id) loadLoOptions($('#px-ds-sp tr:last'), id);
 }
 
 function addLoRow(id, sl, gia, hsd) {
@@ -1664,10 +1682,50 @@ function addLoRow(id, sl, gia, hsd) {
     </tr>`);
 }
 
-function removePxRow(btn) { if ($('#px-ds-sp tr').length > 1) $(btn).closest('tr').remove(); updateFefoPreview(); }
+function removePxRow(btn) { if ($('#px-ds-sp tr').length > 1) $(btn).closest('tr').remove(); }
 function removeLoRow(btn) { if ($('#lo-ds-sp tr').length > 1) $(btn).closest('tr').remove(); }
 
-$(document).on('change', '.px-sp-select', function () { updateTonCell(this); });
+$(document).on('change', '.px-sp-select', function () {
+    updateTonCell(this);
+    loadLoOptions($(this).closest('tr'), $(this).val());
+});
+
+$(document).on('change', '.px-lo-select', function () {
+    const opt = $(this).find('option:selected');
+    const info = $(this).closest('tr').find('.px-lo-info');
+    info.text(opt.val() ? `HSD ${opt.data('hsd') || '--'}, tồn lô ${opt.data('ton') || 0}` : '--');
+});
+
+function loadLoOptions(row, idSp) {
+    const loSelect = row.find('.px-lo-select');
+    const info = row.find('.px-lo-info');
+    if (!idSp) {
+        loSelect.html('<option value="">-- Chọn lô --</option>').prop('disabled', true);
+        info.text('--');
+        return;
+    }
+    loSelect.html('<option value="">-- Đang tải --</option>').prop('disabled', true);
+    info.text('Đang tải danh sách lô...');
+    $.get('/admin/api/lo-hang/ton-kho?id_san_pham=' + idSp, res => {
+        if (!res.success || !res.data.chi_tiet || !res.data.chi_tiet.length) {
+            loSelect.html('<option value="">-- Hết hàng --</option>').prop('disabled', true);
+            info.html('<span class="text-danger">Sản phẩm đã hết tồn kho</span>');
+            return;
+        }
+        const opts = res.data.chi_tiet.map(ct => {
+            const lo = ct.lo_hang || {};
+            const hsd = (ct.han_su_dung || '').split('T')[0];
+            const maLo = lo.ma_lo || ('L-' + lo.id);
+            return `<option value="${ct.id}" data-ton="${ct.so_luong_ton}" data-hsd="${hsd}" data-malo="${maLo}">${maLo} | HSD ${hsd} | tồn ${ct.so_luong_ton}</option>`;
+        }).join('');
+        loSelect.html('<option value="">-- Chọn lô --</option>' + opts).prop('disabled', false);
+        info.text('');
+    }).fail(() => {
+        loSelect.html('<option value="">-- Lỗi tải lô --</option>').prop('disabled', true);
+        info.html('<span class="text-danger">Không tải được danh sách lô</span>');
+    });
+}
+
 function updateTonCell(el) {
     const val = $(el).val();
     const row = $(el).closest('tr');
@@ -1678,33 +1736,7 @@ function updateTonCell(el) {
     } else { cell.text('--'); }
 }
 
-function updateFefoPreview() {
-    let html = '<div class="fefo-preview small"><h6 class="mb-2"><i class="fas fa-list-check me-1"></i>Preview FEFO khi xuất:</h6>';
-    let hasItem = false;
-    $('#px-ds-sp tr').each(function () {
-        const spSelect = $(this).find('.px-sp-select');
-        const spName = spSelect.find('option:selected').text() || '--';
-        const sl = parseInt($(this).find('.px-sl-input').val()) || 0;
-        if (spSelect.val() && sl > 0) {
-            hasItem = true;
-            html += `<div class="mb-1"><strong>${spName}</strong> × ${sl.toLocaleString()}</div>`;
-            $.ajax({ url: '/admin/api/lo-hang/ton-kho?id_san_pham=' + spSelect.val(), async: false, success: res => {
-                if (!res.success) return;
-                let con = sl;
-                const loList = (res.data.chi_tiet || []).map(ct => {
-                    const lo = ct.lo_hang || {};
-                    const lay = Math.min(con, ct.so_luong_ton || 0);
-                    con -= lay;
-                    return { ma_lo: lo.ma_lo || 'L-' + lo.id, hsd: (ct.han_su_dung || '').split('T')[0], lay };
-                }).filter(l => l.lay > 0);
-                loList.forEach(l => { html += `<div class="ms-3 text-muted">→ Lô ${l.ma_lo} (HSD ${l.hsd}): xuất <span class="text-danger">${l.lay}</span></div>`; });
-                if (con > 0) html += `<div class="ms-3 text-danger">⚠ Không đủ tồn kho (thiếu ${con})</div>`;
-            }});
-        }
-    });
-    html += '</div>';
-    $('#px-fefo-preview').html(hasItem ? html : '');
-}
+function updateFefoPreview() { /* No longer used: user chọn lô thủ công */ }
 
 // ─── FORM SUBMITS ────────────────────────────────────────
 // NCC: Thêm
@@ -1803,7 +1835,7 @@ function submitPhieuNhap() {
         id_lo_hang: '',
         chi_tiet: chiTiet,
     };
-    $.ajax({ url: '/admin/api/phieu-nhap', method: 'POST', contentType: 'application/json', data: JSON.stringify(data),
+    $.ajax({ url: '/admin/api/phieu-nhap', method: 'POST', headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }, contentType: 'application/json', data: JSON.stringify(data),
         success: res => {
             bootstrap.Modal.getInstance(document.getElementById('modal-tao-pn')).hide();
             hienBao('success', res.message);
@@ -1815,25 +1847,52 @@ function submitPhieuNhap() {
 
 function submitPhieuXuat() {
     const chiTiet = [];
+    let hasError = false;
     $('#px-ds-sp tr').each(function () {
         const sp = $(this).find('.px-sp-select').val();
-        const sl = $(this).find('.px-sl-input').val();
-        if (sp && sl) chiTiet.push({ id_san_pham: sp, so_luong: parseInt(sl) });
+        const loSel = $(this).find('.px-lo-select');
+        const lo = loSel.val();
+        const sl = parseInt($(this).find('.px-sl-input').val());
+        const ton = parseInt(loSel.find('option:selected').data('ton') || 0);
+        if (sp && sl) {
+            if (!lo) {
+                hienBao('warning', 'Vui lòng chọn lô hàng cho từng sản phẩm.');
+                hasError = true;
+                return false;
+            }
+            if (sl > ton) {
+                hienBao('warning', `Lô đã chọn chỉ tồn ${ton}, không đủ để xuất ${sl}.`);
+                hasError = true;
+                return false;
+            }
+            chiTiet.push({ id_san_pham: sp, id_chi_tiet_lo_hang: lo, so_luong: sl });
+        }
     });
-    if (!chiTiet.length) { hienBao('warning', 'Vui lòng thêm ít nhất một sản phẩm.'); return; }
+    if (hasError || !chiTiet.length) {
+        if (!chiTiet.length && !hasError) hienBao('warning', 'Vui lòng thêm ít nhất một sản phẩm.');
+        return;
+    }
     const data = {
         loai_xuat: $('#px-loai').val(),
         id_nha_cung_cap: $('#px-ncc').val() || null,
         ly_do: $('#px-ly-do').val(),
-        chi_tiet,
+        chi_tiet: chiTiet,
     };
-    $.ajax({ url: '/admin/api/phieu-xuat', method: 'POST', contentType: 'application/json', data: JSON.stringify(data),
+    $.ajax({ url: '/admin/api/phieu-xuat', method: 'POST', headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }, contentType: 'application/json', data: JSON.stringify(data),
         success: res => {
             bootstrap.Modal.getInstance(document.getElementById('modal-tao-px')).hide();
             hienBao('success', res.message);
             loadPhieuXuat(1); loadTonKho(tkPage); loadStats();
         },
-        error: x => hienBao('danger', x.responseJSON?.message || 'Có lỗi xảy ra.')
+        error: x => {
+            console.error('PhieuXuat error:', x);
+            let msg = x.responseJSON?.message;
+            if (!msg && x.responseText) {
+                try { const j = JSON.parse(x.responseText); msg = j.message; } catch(e) { msg = x.responseText.substring(0, 200); }
+            }
+            if (!msg) msg = 'Có lỗi xảy ra. Mở console để xem chi tiết.';
+            hienBao('danger', 'Lỗi ' + x.status + ': ' + msg);
+        }
     });
 }
 
@@ -1847,7 +1906,7 @@ function submitLoHang() {
         ghi_chu: $('#lo-ghi-chu').val(),
         chi_tiet,
     };
-    $.ajax({ url: '/admin/api/lo-hang', method: 'POST', contentType: 'application/json', data: JSON.stringify(data),
+    $.ajax({ url: '/admin/api/lo-hang', method: 'POST', headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }, contentType: 'application/json', data: JSON.stringify(data),
         success: res => {
             bootstrap.Modal.getInstance(document.getElementById('modal-tao-lo')).hide();
             hienBao('success', res.message);

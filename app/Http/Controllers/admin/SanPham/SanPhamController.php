@@ -99,73 +99,75 @@ class SanPhamController extends Controller
 
         $bienThe = $data['bien_the'] ?? [];
 
-        if (empty($bienThe)) {
-            // Không có biến thể → tạo 1 sản phẩm duy nhất
-            $sanPham = SanPham::create([
-                'id_danh_muc'       => $data['id_danh_muc'],
-                'ten_san_pham'      => $data['ten_san_pham'],
-                'ma_hang'           => $this->generateUniqueMaHang(),
-                'ma_vach'           => !empty($data['ma_vach']) ? $data['ma_vach'] : $this->generateUniqueMaVach(),
-                'thuong_hieu'       => $data['thuong_hieu'] ?? null,
-                'gia_von'           => $data['gia_von'] ?? 0,
-                'gia_ban'           => 0,
-                'so_luong_ton_kho'  => 0,
-                'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
-                'mo_ta'             => $data['mo_ta'] ?? null,
-                'id_don_vi'         => $baseUnit->id,
-                'hinh_anh'          => $imagePath,
-                'trang_thai'        => $data['trang_thai'] ?? true,
-                'la_san_pham_cha'   => true,
-            ]);
-        } else {
-            // Có biến thể → tạo 1 sản phẩm CHA, rồi tạo biến thể gán cha
-            $sanPhamCha = SanPham::create([
-                'id_danh_muc'       => $data['id_danh_muc'],
-                'ten_san_pham'      => $data['ten_san_pham'],
-                'ma_hang'           => $this->generateUniqueMaHang(),
-                'ma_vach'           => !empty($data['ma_vach']) ? $data['ma_vach'] : $this->generateUniqueMaVach(),
-                'thuong_hieu'       => $data['thuong_hieu'] ?? null,
-                'gia_von'           => $data['gia_von'] ?? 0,
-                'gia_ban'           => 0,
-                'so_luong_ton_kho'  => 0,
-                'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
-                'mo_ta'             => $data['mo_ta'] ?? null,
-                'id_don_vi'         => $baseUnit->id,
-                'hinh_anh'          => $imagePath,
-                'trang_thai'        => $data['trang_thai'] ?? true,
-                'la_san_pham_cha'   => true,
-            ]);
-
-            foreach ($bienThe as $idx => $variant) {
-                $variantImage = $variantImages[$idx] ?? $imagePath;
-
-                $bienTheSp = SanPham::create([
+        return DB::transaction(function () use ($data, $bienThe, $baseUnit) {
+            if (empty($bienThe)) {
+                // Không có biến thể → tạo 1 sản phẩm duy nhất
+                $sanPham = SanPham::create([
                     'id_danh_muc'       => $data['id_danh_muc'],
-                    'ten_san_pham'      => $variant['ten_day_du'] ?? $data['ten_san_pham'],
+                    'ten_san_pham'      => $data['ten_san_pham'],
                     'ma_hang'           => $this->generateUniqueMaHang(),
-                    'ma_vach'           => !empty($variant['ma_vach']) ? $variant['ma_vach'] : $this->generateUniqueMaVach(),
+                    'ma_vach'           => !empty($data['ma_vach']) ? $data['ma_vach'] : $this->generateUniqueMaVach(),
                     'thuong_hieu'       => $data['thuong_hieu'] ?? null,
                     'gia_von'           => $data['gia_von'] ?? 0,
-                    'gia_ban'           => $variant['gia_ban'] ?? 0,
-                    'so_luong_ton_kho'  => $variant['so_luong'] ?? 0,
+                    'gia_ban'           => 0,
+                    'so_luong_ton_kho'  => 0,
                     'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
                     'mo_ta'             => $data['mo_ta'] ?? null,
                     'id_don_vi'         => $baseUnit->id,
-                    'hinh_anh'          => $variantImage,
+                    'hinh_anh'          => $imagePath,
                     'trang_thai'        => $data['trang_thai'] ?? true,
-                    'san_pham_cha_id'   => $sanPhamCha->id,
-                    'la_san_pham_cha'   => false,
+                    'la_san_pham_cha'   => true,
+                ]);
+            } else {
+                // Có biến thể → tạo 1 sản phẩm CHA, rồi tạo biến thể gán cha
+                $sanPhamCha = SanPham::create([
+                    'id_danh_muc'       => $data['id_danh_muc'],
+                    'ten_san_pham'      => $data['ten_san_pham'],
+                    'ma_hang'           => $this->generateUniqueMaHang(),
+                    'ma_vach'           => !empty($data['ma_vach']) ? $data['ma_vach'] : $this->generateUniqueMaVach(),
+                    'thuong_hieu'       => $data['thuong_hieu'] ?? null,
+                    'gia_von'           => $data['gia_von'] ?? 0,
+                    'gia_ban'           => 0,
+                    'so_luong_ton_kho'  => 0,
+                    'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
+                    'mo_ta'             => $data['mo_ta'] ?? null,
+                    'id_don_vi'         => $baseUnit->id,
+                    'hinh_anh'          => $imagePath,
+                    'trang_thai'        => $data['trang_thai'] ?? true,
+                    'la_san_pham_cha'   => true,
                 ]);
 
-                // Attach thuộc tính vào pivot
-                if (!empty($variant['thuoc_tinh_ids'])) {
-                    $ids = array_map('intval', explode(',', $variant['thuoc_tinh_ids']));
-                    $bienTheSp->thuocTinhs()->attach(array_filter($ids));
+                foreach ($bienThe as $idx => $variant) {
+                    $variantImage = $variantImages[$idx] ?? $imagePath;
+
+                    $bienTheSp = SanPham::create([
+                        'id_danh_muc'       => $data['id_danh_muc'],
+                        'ten_san_pham'      => $variant['ten_day_du'] ?? $data['ten_san_pham'],
+                        'ma_hang'           => $this->generateUniqueMaHang(),
+                        'ma_vach'           => !empty($variant['ma_vach']) ? $variant['ma_vach'] : $this->generateUniqueMaVach(),
+                        'thuong_hieu'       => $data['thuong_hieu'] ?? null,
+                        'gia_von'           => $data['gia_von'] ?? 0,
+                        'gia_ban'           => $variant['gia_ban'] ?? 0,
+                        'so_luong_ton_kho'  => $variant['so_luong'] ?? 0,
+                        'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
+                        'mo_ta'             => $data['mo_ta'] ?? null,
+                        'id_don_vi'         => $baseUnit->id,
+                        'hinh_anh'          => $variantImage,
+                        'trang_thai'        => $data['trang_thai'] ?? true,
+                        'san_pham_cha_id'   => $sanPhamCha->id,
+                        'la_san_pham_cha'   => false,
+                    ]);
+
+                    // Attach thuộc tính vào pivot
+                    if (!empty($variant['thuoc_tinh_ids'])) {
+                        $ids = array_map('intval', explode(',', $variant['thuoc_tinh_ids']));
+                        $bienTheSp->thuocTinhs()->attach(array_filter($ids));
+                    }
                 }
             }
-        }
 
-        return redirect()->back()->with('success', 'Đã thêm sản phẩm mới.');
+            return redirect()->back()->with('success', 'Đã thêm sản phẩm mới.');
+        });
     }
 
     public function edit($id)
@@ -206,15 +208,16 @@ class SanPhamController extends Controller
         // Xử lý đơn vị
         $baseUnit = $this->findOrCreateDonVi($data['don_vi_text'] ?? $sanPham->donVi->ten_don_vi ?? 'Cái', 1);
 
-        if ($isParent) {
+        return DB::transaction(function () use ($sanPham, $data, $request, $imagePath, $baseUnit) {
+            $isParent = (bool) $sanPham->la_san_pham_cha;
+
+            if ($isParent) {
             // === SẢN PHẨM CHA ===
             $sanPham->update([
                 'id_danh_muc' => $data['id_danh_muc'],
                 'ten_san_pham' => $data['ten_san_pham'],
                 'thuong_hieu' => $data['thuong_hieu'] ?? null,
                 'gia_von' => $data['gia_von'] ?? 0,
-                'gia_ban' => 0,
-                'so_luong_ton_kho' => 0,
                 'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
                 'mo_ta' => $data['mo_ta'] ?? null,
                 'id_don_vi' => $baseUnit->id,
@@ -349,7 +352,8 @@ class SanPhamController extends Controller
         }
 
         return redirect(url('admin/san-pham'))->with('success', 'Cập nhật sản phẩm thành công.');
-    }
+    });
+}
 
     public function destroy(int $id): RedirectResponse
     {

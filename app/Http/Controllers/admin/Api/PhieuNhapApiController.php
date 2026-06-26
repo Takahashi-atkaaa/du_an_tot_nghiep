@@ -26,6 +26,7 @@ class PhieuNhapApiController extends Controller
             'phieu' => fn($p) => $p->with('nhaCungCap', 'nguoiDung'),
             'hoaDon',
             'phieuXuatGoc',
+            'chiTietPhieu',
         ])
             ->whereHas('phieu', fn($p) => $p->where('loai_phieu_enum', 'like', 'nhap%'))
             ->orderByDesc('id');
@@ -80,14 +81,13 @@ class PhieuNhapApiController extends Controller
             'id_lo_hang' => 'required_if:tao_lo_moi,0|nullable|integer|exists:lo_hang,id',
             'chi_tiet' => 'required|array|min:1',
             'chi_tiet.*.id_san_pham' => 'required|integer|exists:san_pham,id',
-            'chi_tiet.*.so_luong' => 'required|integer|min:1',
+            'chi_tiet.*.so_luong_nhap' => 'required|integer|min:1',
             'chi_tiet.*.gia_nhap' => 'required|numeric|min:0',
             'chi_tiet.*.han_su_dung' => 'required|date',
-            'chi_tiet.*.so_luong_nhap' => 'required|integer|min:1',
         ], [
             'chi_tiet.required' => 'Phải có ít nhất một sản phẩm.',
             'chi_tiet.*.id_san_pham.required' => 'Mỗi sản phẩm phải có ID.',
-            'chi_tiet.*.so_luong.min' => 'Số lượng phải lớn hơn 0.',
+            'chi_tiet.*.so_luong_nhap.min' => 'Số lượng nhập phải lớn hơn 0.',
             'id_lo_hang.required_if' => 'Vui lòng chọn lô hàng khi không tạo lô mới.',
         ]);
 
@@ -135,7 +135,7 @@ class PhieuNhapApiController extends Controller
                         'id_san_pham' => $ct['id_san_pham'],
                         'id_lo_hang' => $loHang->id,
                         'id_chi_tiet_lo_hang' => $chiTietLoHang->id,
-                        'so_luong' => $ct['so_luong'],
+                        'so_luong' => $ct['so_luong_nhap'],
                         'gia_nhap' => $ct['gia_nhap'],
                         'han_su_dung' => $ct['han_su_dung'],
                         'so_luong_con_lai' => $ct['so_luong_nhap'],
@@ -165,7 +165,7 @@ class PhieuNhapApiController extends Controller
                         'id_san_pham' => $ct['id_san_pham'],
                         'id_lo_hang' => $idLoHang,
                         'id_chi_tiet_lo_hang' => $chiTietLoHang?->id,
-                        'so_luong' => $ct['so_luong'],
+                        'so_luong' => $ct['so_luong_nhap'],
                         'gia_nhap' => $ct['gia_nhap'],
                         'han_su_dung' => $ct['han_su_dung'],
                         'so_luong_con_lai' => $ct['so_luong_nhap'],
