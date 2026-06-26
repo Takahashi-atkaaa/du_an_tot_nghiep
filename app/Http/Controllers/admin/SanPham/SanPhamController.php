@@ -7,6 +7,7 @@ use App\Http\Requests\SanPham\StoreSanPhamRequest;
 use App\Http\Requests\SanPham\UpdateSanPhamRequest;
 use App\Models\DanhMucSanPham;
 use App\Models\DonViSanPham;
+
 use App\Models\ThuocTinhSanPham;
 use App\Models\SanPham;
 use Illuminate\Http\RedirectResponse;
@@ -84,88 +85,165 @@ class SanPhamController extends Controller
             }
         }
 
-        // Validate mã vạch biến thể không trùng
-        $barcodes = array_filter(array_column($data['bien_the'] ?? [], 'ma_vach'));
-        if (collect($barcodes)->duplicates()->isNotEmpty()) {
-            return redirect()->back()->withInput()->withErrors(['bien_the' => 'Mã vạch biến thể không được trùng nhau.']);
-        }
-
-        if (!empty($barcodes) && SanPham::whereIn('ma_vach', $barcodes)->exists()) {
-            return redirect()->back()->withInput()->withErrors(['bien_the' => 'Một hoặc nhiều mã vạch biến thể đã tồn tại trong hệ thống.']);
-        }
-
         // Tạo/cập nhật đơn vị cơ bản
         $baseUnit = $this->findOrCreateDonVi($data['don_vi_text'] ?? 'Cái', 1);
 
         $bienThe = $data['bien_the'] ?? [];
 
-        if (empty($bienThe)) {
-            // Không có biến thể → tạo 1 sản phẩm duy nhất
-            $sanPham = SanPham::create([
-                'id_danh_muc'       => $data['id_danh_muc'],
-                'ten_san_pham'      => $data['ten_san_pham'],
-                'ma_hang'           => $this->generateUniqueMaHang(),
-                'ma_vach'           => !empty($data['ma_vach']) ? $data['ma_vach'] : $this->generateUniqueMaVach(),
-                'thuong_hieu'       => $data['thuong_hieu'] ?? null,
-                'gia_von'           => $data['gia_von'] ?? 0,
-                'gia_ban'           => 0,
-                'so_luong_ton_kho'  => 0,
-                'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
-                'mo_ta'             => $data['mo_ta'] ?? null,
-                'id_don_vi'         => $baseUnit->id,
-                'hinh_anh'          => $imagePath,
-                'trang_thai'        => $data['trang_thai'] ?? true,
-                'la_san_pham_cha'   => true,
-            ]);
-        } else {
-            // Có biến thể → tạo 1 sản phẩm CHA, rồi tạo biến thể gán cha
-            $sanPhamCha = SanPham::create([
-                'id_danh_muc'       => $data['id_danh_muc'],
-                'ten_san_pham'      => $data['ten_san_pham'],
-                'ma_hang'           => $this->generateUniqueMaHang(),
-                'ma_vach'           => !empty($data['ma_vach']) ? $data['ma_vach'] : $this->generateUniqueMaVach(),
-                'thuong_hieu'       => $data['thuong_hieu'] ?? null,
-                'gia_von'           => $data['gia_von'] ?? 0,
-                'gia_ban'           => 0,
-                'so_luong_ton_kho'  => 0,
-                'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
-                'mo_ta'             => $data['mo_ta'] ?? null,
-                'id_don_vi'         => $baseUnit->id,
-                'hinh_anh'          => $imagePath,
-                'trang_thai'        => $data['trang_thai'] ?? true,
-                'la_san_pham_cha'   => true,
-            ]);
+        try {
+            return DB::transaction(function () use ($data, $bienThe, $baseUnit, $request, $imagePath, $variantImages) {
+            $hasHCL = !empty($data['hang_cung_loai']);
 
-            foreach ($bienThe as $idx => $variant) {
-                $variantImage = $variantImages[$idx] ?? $imagePath;
+            // === MODE: Đơn vị bán hàng (HCL) - tạo sản phẩm độc lập ===
+            if ($hasHCL) {
+                // 1. Tạo sản phẩm cơ bản từ thông tin chung
+                $baseBarcode = !empty($data['ma_vach']) ? $data['ma_vach'] : $this->generateUniqueMaVach();
 
-                $bienTheSp = SanPham::create([
-                    'id_danh_muc'       => $data['id_danh_muc'],
-                    'ten_san_pham'      => $variant['ten_day_du'] ?? $data['ten_san_pham'],
-                    'ma_hang'           => $this->generateUniqueMaHang(),
-                    'ma_vach'           => !empty($variant['ma_vach']) ? $variant['ma_vach'] : $this->generateUniqueMaVach(),
-                    'thuong_hieu'       => $data['thuong_hieu'] ?? null,
-                    'gia_von'           => $data['gia_von'] ?? 0,
-                    'gia_ban'           => $variant['gia_ban'] ?? 0,
-                    'so_luong_ton_kho'  => $variant['so_luong'] ?? 0,
+                try {
+                    SanPham::create([
+                        'id_danh_muc'        => $data['id_danh_muc'],
+                        'ten_san_pham'       => $data['ten_san_pham'],
+                        'ma_hang'            => $this->generateUniqueMaHang(),
+                        'ma_vach'            => $baseBarcode,
+                        'thuong_hieu'        => $data['thuong_hieu'] ?? null,
+                        'gia_von'            => $data['gia_von'] ?? 0,
+                        'gia_ban'            => 0,
+                        'so_luong_ton_kho'   => 0,
+                        'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
+                        'mo_ta'              => $data['mo_ta'] ?? null,
+                        'id_don_vi'          => $baseUnit->id,
+                        'hinh_anh'           => $imagePath,
+                        'trang_thai'         => $data['trang_thai'] ?? true,
+                        'la_san_pham_cha'    => false,
+                        'san_pham_cha_id'    => null,
+                        'loai_bien_the'      => 'don_vi',
+                    ]);
+                } catch (\Illuminate\Database\QueryException $e) {
+                    if ($e->errorInfo[1] === 1062 && str_contains($e->getMessage(), 'ma_vach')) {
+                        throw new \Exception('Mã vạch sản phẩm đã tồn tại trong hệ thống.');
+                    }
+                    throw $e;
+                }
+
+                // 2. Tạo N sản phẩm độc lập từ bảng HCL
+                $hclBarcodes = array_filter(array_column($data['hang_cung_loai'], 'ma_vach'));
+                if (!empty($hclBarcodes) && count($hclBarcodes) !== count(array_unique($hclBarcodes))) {
+                    throw new \Exception('Mã vạch đơn vị không được trùng nhau trong bảng đơn vị.');
+                }
+
+                // Chỉ check DB barcodes KHÔNG trùng với mã vạch form (cho phép trùng cha-HCL)
+                $checkBarcodes = array_filter($hclBarcodes, fn($b) => $b !== $baseBarcode);
+                if (!empty($checkBarcodes) && SanPham::whereIn('ma_vach', $checkBarcodes)->exists()) {
+                    throw new \Exception('Một hoặc nhiều mã vạch đơn vị đã tồn tại trong hệ thống.');
+                }
+
+                foreach ($data['hang_cung_loai'] as $idx => $unit) {
+                    $tenDonVi = trim($unit['ten_don_vi'] ?? '');
+                    $soLuongQuyDoi = (int)($unit['so_luong_quy_doi'] ?? 1);
+
+                    $donVi = DonViSanPham::firstOrCreate(
+                        ['ten_don_vi' => $tenDonVi],
+                        ['so_luong_san_pham_trong_don_vi' => $soLuongQuyDoi, 'trang_thai' => true]
+                    );
+
+                    $unitImgPath = null;
+                    if ($request->hasFile("hang_cung_loai.{$idx}.hinh_anh")) {
+                        $unitImgPath = $this->uploadImage($request->file("hang_cung_loai.{$idx}.hinh_anh"), 'uploads/don-vi');
+                    }
+
+                    SanPham::create([
+                        'id_danh_muc'        => $data['id_danh_muc'],
+                        'ten_san_pham'       => $data['ten_san_pham'] . ' - ' . $tenDonVi,
+                        'ma_hang'            => $this->generateUniqueMaHang(),
+                        'ma_vach'            => !empty($unit['ma_vach']) ? trim($unit['ma_vach']) : $this->generateUniqueMaVach(),
+                        'thuong_hieu'        => $data['thuong_hieu'] ?? null,
+                        'gia_von'            => $data['gia_von'] ?? 0,
+                        'gia_ban'            => (float)($unit['gia_ban_le'] ?? 0),
+                        'so_luong_ton_kho'   => (int)($unit['so_luong'] ?? 0),
+                        'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
+                        'mo_ta'              => $data['mo_ta'] ?? null,
+                        'id_don_vi'          => $donVi->id,
+                        'hinh_anh'           => $unitImgPath ?: $imagePath,
+                        'trang_thai'         => $data['trang_thai'] ?? true,
+                        'la_san_pham_cha'    => false,
+                        'san_pham_cha_id'    => null,
+                        'loai_bien_the'      => 'don_vi',
+                    ]);
+                }
+
+            // === MODE: Thuộc tính - tạo cha + biến thể con ===
+            } else {
+                // Tạo sản phẩm GỐC
+                $sanPham = SanPham::create([
+                    'id_danh_muc'        => $data['id_danh_muc'],
+                    'ten_san_pham'       => $data['ten_san_pham'],
+                    'ma_hang'            => $this->generateUniqueMaHang(),
+                    'ma_vach'            => !empty($data['ma_vach']) ? $data['ma_vach'] : $this->generateUniqueMaVach(),
+                    'thuong_hieu'        => $data['thuong_hieu'] ?? null,
+                    'gia_von'            => $data['gia_von'] ?? 0,
+                    'gia_ban'            => 0,
+                    'so_luong_ton_kho'   => 0,
                     'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
-                    'mo_ta'             => $data['mo_ta'] ?? null,
-                    'id_don_vi'         => $baseUnit->id,
-                    'hinh_anh'          => $variantImage,
-                    'trang_thai'        => $data['trang_thai'] ?? true,
-                    'san_pham_cha_id'   => $sanPhamCha->id,
-                    'la_san_pham_cha'   => false,
+                    'mo_ta'              => $data['mo_ta'] ?? null,
+                    'id_don_vi'          => $baseUnit->id,
+                    'hinh_anh'           => $imagePath,
+                    'trang_thai'         => $data['trang_thai'] ?? true,
+                    'la_san_pham_cha'    => true,
                 ]);
 
-                // Attach thuộc tính vào pivot
-                if (!empty($variant['thuoc_tinh_ids'])) {
-                    $ids = array_map('intval', explode(',', $variant['thuoc_tinh_ids']));
-                    $bienTheSp->thuocTinhs()->attach(array_filter($ids));
+                // Validate mã vạch biến thể
+                $variantBarcodes = array_filter(array_column($bienThe, 'ma_vach'));
+                if (!empty($variantBarcodes)) {
+                    if (count($variantBarcodes) !== count(array_unique($variantBarcodes))) {
+                        throw new \Exception('Mã vạch biến thể không được trùng nhau.');
+                    }
+                    if (SanPham::whereIn('ma_vach', $variantBarcodes)->exists()) {
+                        throw new \Exception('Một hoặc nhiều mã vạch biến thể đã tồn tại trong hệ thống.');
+                    }
+                }
+
+                // Tạo biến thể theo thuộc tính
+                if (!empty($bienThe)) {
+                    foreach ($bienThe as $idx => $variant) {
+                        $variantImage = $variantImages[$idx] ?? $imagePath;
+
+                        $bienTheSp = SanPham::create([
+                            'id_danh_muc'        => $data['id_danh_muc'],
+                            'ten_san_pham'       => $variant['ten_day_du'] ?? $data['ten_san_pham'],
+                            'ma_hang'            => $this->generateUniqueMaHang(),
+                            'ma_vach'            => !empty($variant['ma_vach']) ? $variant['ma_vach'] : $this->generateUniqueMaVach(),
+                            'thuong_hieu'        => $data['thuong_hieu'] ?? null,
+                            'gia_von'            => $data['gia_von'] ?? 0,
+                            'gia_ban'            => $variant['gia_ban'] ?? 0,
+                            'so_luong_ton_kho'   => $variant['so_luong'] ?? 0,
+                            'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
+                            'mo_ta'              => $data['mo_ta'] ?? null,
+                            'id_don_vi'          => $baseUnit->id,
+                            'hinh_anh'           => $variantImage,
+                            'trang_thai'         => $data['trang_thai'] ?? true,
+                            'san_pham_cha_id'    => $sanPham->id,
+                            'la_san_pham_cha'    => false,
+                            'loai_bien_the'      => 'thuoc_tinh',
+                        ]);
+
+                        if (!empty($variant['thuoc_tinh_ids'])) {
+                            $ids = array_map('intval', explode(',', $variant['thuoc_tinh_ids']));
+                            $bienTheSp->thuocTinhs()->attach(array_filter($ids));
+                        }
+                    }
                 }
             }
-        }
 
-        return redirect()->back()->with('success', 'Đã thêm sản phẩm mới.');
+            return redirect()->back()->with('success', 'Đã thêm sản phẩm mới.');
+        });
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->errorInfo[1] === 1062 && str_contains($e->getMessage(), 'ma_vach')) {
+                return redirect()->back()->withInput()->withErrors(['ma_vach' => 'Mã vạch đã tồn tại trong hệ thống.']);
+            }
+            throw $e;
+        } catch (\Exception $e) {
+            return redirect()->back()->withInput()->withErrors(['hang_cung_loai' => $e->getMessage()]);
+        }
     }
 
     public function edit($id)
@@ -206,15 +284,17 @@ class SanPhamController extends Controller
         // Xử lý đơn vị
         $baseUnit = $this->findOrCreateDonVi($data['don_vi_text'] ?? $sanPham->donVi->ten_don_vi ?? 'Cái', 1);
 
-        if ($isParent) {
+        try {
+            return DB::transaction(function () use ($sanPham, $data, $request, $imagePath, $baseUnit) {
+            $isParent = (bool) $sanPham->la_san_pham_cha;
+
+            if ($isParent) {
             // === SẢN PHẨM CHA ===
             $sanPham->update([
                 'id_danh_muc' => $data['id_danh_muc'],
                 'ten_san_pham' => $data['ten_san_pham'],
                 'thuong_hieu' => $data['thuong_hieu'] ?? null,
                 'gia_von' => $data['gia_von'] ?? 0,
-                'gia_ban' => 0,
-                'so_luong_ton_kho' => 0,
                 'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
                 'mo_ta' => $data['mo_ta'] ?? null,
                 'id_don_vi' => $baseUnit->id,
@@ -238,7 +318,7 @@ class SanPhamController extends Controller
             foreach ($data['bien_the'] ?? [] as $idx => $variant) {
                 $existingId = $variant['id'] ?? null;
 
-                if ($existingId && $sanPham->bienThe->contains($existingId)) {
+                if ($existingId && $sanPham->bienThe()->where('loai_bien_the', 'thuoc_tinh')->where('id', $existingId)->exists()) {
                     // Cập nhật biến thể hiện có
                     $bienThe = SanPham::find($existingId);
                     $oldVariantImg = $bienThe->hinh_anh;
@@ -255,6 +335,7 @@ class SanPhamController extends Controller
                         'id_don_vi' => $baseUnit->id,
                         'hinh_anh' => $newVariantImg,
                         'trang_thai' => $data['trang_thai'] ?? true,
+                        'loai_bien_the' => 'thuoc_tinh',
                     ]);
 
                     if ($oldVariantImg && $oldVariantImg !== $newVariantImg && !str_starts_with($oldVariantImg, 'http')) {
@@ -280,6 +361,7 @@ class SanPhamController extends Controller
                         'trang_thai' => $data['trang_thai'] ?? true,
                         'san_pham_cha_id' => $sanPham->id,
                         'la_san_pham_cha' => false,
+                        'loai_bien_the' => 'thuoc_tinh',
                     ]);
 
                     $incomingIds[] = $bienThe->id;
@@ -293,12 +375,12 @@ class SanPhamController extends Controller
                 }
             }
 
-            // Refresh để lấy lại danh sách biến thể (có thể đã tạo mới ở trên)
+            // Refresh để lấy lại danh sách biến thể thuộc tính (có thể đã tạo mới ở trên)
             $sanPham->refresh();
             $sanPham->load('bienThe.thuocTinhs');
 
-            // Xóa biến thể bị loại bỏ (bị xóa khỏi form)
-            foreach ($sanPham->bienThe as $bienThe) {
+            // Xóa biến thể thuộc tính bị loại bỏ (bị xóa khỏi form)
+            foreach ($sanPham->bienThe()->where('loai_bien_the', 'thuoc_tinh')->get() as $bienThe) {
                 if (!in_array($bienThe->id, $incomingIds)) {
                     $variantImg = $bienThe->hinh_anh;
                     $bienThe->thuocTinhs()->detach();
@@ -309,16 +391,106 @@ class SanPhamController extends Controller
                 }
             }
 
-            // Xóa biến thể bị đánh dấu xóa từ form
+            // Xóa biến thể thuộc tính bị đánh dấu xóa từ form
             $deletedIds = $request->input('deleted_variant_ids', []);
             foreach ($deletedIds as $delId) {
                 $bienThe = SanPham::find($delId);
-                if ($bienThe && $bienThe->san_pham_cha_id === $sanPham->id) {
+                if ($bienThe && $bienThe->san_pham_cha_id === $sanPham->id && $bienThe->loai_bien_the === 'thuoc_tinh') {
                     $variantImg = $bienThe->hinh_anh;
                     $bienThe->thuocTinhs()->detach();
                     $bienThe->delete();
                     if ($variantImg && !str_starts_with($variantImg, 'http')) {
                         $this->deleteProductImageIfUnused($variantImg, $bienThe->id);
+                    }
+                }
+            }
+
+            // === CRUD BIẾN THỂ THEO ĐƠN VỊ (hang_cung_loai) ===
+            if (!empty($data['hang_cung_loai'])) {
+                $hclBarcodes = array_filter(array_column($data['hang_cung_loai'], 'ma_vach'));
+                if (!empty($hclBarcodes) && collect($hclBarcodes)->duplicates()->isNotEmpty()) {
+                    throw new \Exception('Mã vạch đơn vị không được trùng nhau.');
+                }
+                if (!empty($hclBarcodes)) {
+                    $excludeId = $sanPham->id;
+                    $existingHclIds = $sanPham->bienThe()->where('loai_bien_the', 'don_vi')->pluck('id')->toArray();
+                    $conflict = SanPham::whereIn('ma_vach', $hclBarcodes)
+                        ->where('id', '!=', $excludeId)
+                        ->whereNotIn('id', $existingHclIds)
+                        ->exists();
+                    if ($conflict) {
+                        throw new \Exception('Một hoặc nhiều mã vạch đơn vị đã tồn tại trong hệ thống.');
+                    }
+                }
+
+                foreach ($data['hang_cung_loai'] as $idx => $unit) {
+                    $tenDonVi = trim($unit['ten_don_vi'] ?? '');
+                    $soLuongQuyDoi = (int)($unit['so_luong_quy_doi'] ?? 1);
+                    $existingUnitId = $unit['id'] ?? null;
+
+                    $donVi = DonViSanPham::firstOrCreate(
+                        ['ten_don_vi' => $tenDonVi],
+                        ['so_luong_san_pham_trong_don_vi' => $soLuongQuyDoi, 'trang_thai' => true]
+                    );
+
+                    $unitImgPath = null;
+                    if ($request->hasFile("hang_cung_loai.{$idx}.hinh_anh")) {
+                        $unitImgPath = $this->uploadImage($request->file("hang_cung_loai.{$idx}.hinh_anh"), 'uploads/don-vi');
+                    }
+
+                    if ($existingUnitId && $sanPham->bienThe()->where('loai_bien_the', 'don_vi')->where('id', $existingUnitId)->exists()) {
+                        $donViSp = SanPham::find($existingUnitId);
+                        $oldImg = $donViSp->hinh_anh;
+                        $donViSp->update([
+                            'ten_san_pham' => $data['ten_san_pham'] . ' - ' . $tenDonVi,
+                            'ma_vach' => !empty($unit['ma_vach']) ? trim($unit['ma_vach']) : null,
+                            'gia_ban' => (float)($unit['gia_ban_le'] ?? 0),
+                            'so_luong_ton_kho' => (int)($unit['so_luong'] ?? 0),
+                            'id_don_vi' => $donVi->id,
+                            'hinh_anh' => $unitImgPath ?: $donViSp->hinh_anh,
+                            'trang_thai' => $data['trang_thai'] ?? true,
+                        ]);
+                        if ($oldImg && $unitImgPath && $oldImg !== $unitImgPath && !str_starts_with($oldImg, 'http')) {
+                            $this->deleteProductImageIfUnused($oldImg, $donViSp->id);
+                        }
+                    } else {
+                        $donViSp = SanPham::create([
+                            'id_danh_muc' => $data['id_danh_muc'],
+                            'ten_san_pham' => $data['ten_san_pham'] . ' - ' . $tenDonVi,
+                            'ma_hang' => $this->generateUniqueMaHang(),
+                            'ma_vach' => !empty($unit['ma_vach']) ? trim($unit['ma_vach']) : $this->generateUniqueMaVach(),
+                            'thuong_hieu' => $data['thuong_hieu'] ?? null,
+                            'gia_von' => $data['gia_von'] ?? 0,
+                            'gia_ban' => (float)($unit['gia_ban_le'] ?? 0),
+                            'so_luong_ton_kho' => (int)($unit['so_luong'] ?? 0),
+                            'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
+                            'mo_ta' => $data['mo_ta'] ?? null,
+                            'id_don_vi' => $donVi->id,
+                            'hinh_anh' => $unitImgPath ?: $imagePath,
+                            'trang_thai' => $data['trang_thai'] ?? true,
+                            'san_pham_cha_id' => $sanPham->id,
+                            'la_san_pham_cha' => false,
+                            'loai_bien_the' => 'don_vi',
+                        ]);
+                    }
+                }
+            }
+
+            // Xóa biến thể đơn vị bị loại bỏ khỏi form
+            $existingUnitIds = [];
+            if (!empty($data['hang_cung_loai'])) {
+                foreach ($data['hang_cung_loai'] as $unit) {
+                    if (!empty($unit['id'])) {
+                        $existingUnitIds[] = (int)$unit['id'];
+                    }
+                }
+            }
+            foreach ($sanPham->bienThe()->where('loai_bien_the', 'don_vi')->get() as $donViSp) {
+                if (!in_array($donViSp->id, $existingUnitIds)) {
+                    $img = $donViSp->hinh_anh;
+                    $donViSp->delete();
+                    if ($img && !str_starts_with($img, 'http')) {
+                        $this->deleteProductImageIfUnused($img, $donViSp->id);
                     }
                 }
             }
@@ -349,7 +521,11 @@ class SanPhamController extends Controller
         }
 
         return redirect(url('admin/san-pham'))->with('success', 'Cập nhật sản phẩm thành công.');
-    }
+    });
+        } catch (\Exception $e) {
+            return redirect()->back()->withInput()->withErrors(['hang_cung_loai' => $e->getMessage()]);
+        }
+}
 
     public function destroy(int $id): RedirectResponse
     {
@@ -388,7 +564,7 @@ class SanPhamController extends Controller
                 foreach ($sanPhams as $sanPham) {
                     // Xóa biến thể nếu là sản phẩm cha
                     if ($sanPham->la_san_pham_cha) {
-                        foreach ($sanPham->bienThe as $bienThe) {
+                        foreach ($sanPham->bienThe()->where('loai_bien_the', 'thuoc_tinh')->get() as $bienThe) {
                             $bienThe->delete();
                         }
                     }
@@ -469,11 +645,15 @@ class SanPhamController extends Controller
         return $path;
     }
 
-    protected function uploadImage($file): string
+    protected function uploadImage($file, string $subDir = 'san-pham'): string
     {
+        $dir = public_path("uploads/{$subDir}");
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
         $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9\.\-_]/', '_', $file->getClientOriginalName());
-        $file->move($this->uploadDirectory(), $filename);
-        return 'uploads/san-pham/' . $filename;
+        $file->move($dir, $filename);
+        return "uploads/{$subDir}/" . $filename;
     }
 
     protected function deleteProductImageIfUnused(?string $imagePath, ?int $excludeId = null): void
@@ -508,7 +688,6 @@ class SanPhamController extends Controller
             'trang_thai' => true,
         ]);
     }
-
     protected function generateUniqueMaHang(): string
     {
         do {

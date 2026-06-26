@@ -10,7 +10,7 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary-color: #0d6efd;
@@ -19,7 +19,9 @@
             --sidebar-active: #0f3460;
         }
         body {
-            font-family: 'Roboto', sans-serif;
+            font-family: 'Nunito', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
             background-color: #f5f6fa;
         }
         .sidebar {
@@ -32,6 +34,9 @@
             padding-top: 20px;
             z-index: 1000;
             transition: all 0.3s ease;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
         }
         .sidebar .logo {
             text-align: center;
@@ -290,7 +295,30 @@
                 <a href="{{ url('nguoi-dung') }}" class="nav-link {{ request()->routeIs('nguoi-dung.index') ? 'active' : '' }}" {{ request()->is('nguoi-dung*') ? 'active' : '' }}">
                     <i class="fas fa-user-tie"></i>
                     <span>Nhân sự</span>
-                </a>    
+                </a>
+            </li>
+            <li class="nav-item dropdown">
+                <a href="#" class="nav-link dropdown-toggle {{ request()->is('admin/thiet-lap-luong*', 'admin/bang-luong*', 'admin/phieu-luong*') ? 'active' : '' }}" data-bs-toggle="dropdown">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span>Lương</span>
+                </a>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a href="{{ route('thiet-lap-luong.index') }}" class="dropdown-item {{ request()->is('admin/thiet-lap-luong*') ? 'active' : '' }}">
+                            <i class="fas fa-cog me-2"></i>Thiết lập lương
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('bang-luong.index') }}" class="dropdown-item {{ request()->is('admin/bang-luong*') ? 'active' : '' }}">
+                            <i class="fas fa-file-invoice-dollar me-2"></i>Bảng lương
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('phieu-luong.index') }}" class="dropdown-item {{ request()->is('admin/phieu-luong*') ? 'active' : '' }}">
+                            <i class="fas fa-receipt me-2"></i>Phiếu lương
+                        </a>
+                    </li>
+                </ul>
             </li>
             <li class="nav-item">
                 <a href="{{ route('ca-lam-viec.index') }}" class="nav-link {{ request()->is('admin/ca-lam-viec*') ? 'active' : '' }}">
@@ -407,6 +435,8 @@
         </div>
     </main>
 
+    <!-- jQuery (required by kho-hang page) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Font Awesome JS -->

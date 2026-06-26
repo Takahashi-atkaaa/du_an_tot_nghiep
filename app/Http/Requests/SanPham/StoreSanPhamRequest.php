@@ -31,6 +31,13 @@ class StoreSanPhamRequest extends FormRequest
             'bien_the.*.so_luong'     => 'nullable|integer|min:0',
             'bien_the.*.thuoc_tinh_ids' => 'nullable|string',
             'bien_the.*.hinh_anh'    => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'hang_cung_loai'        => 'sometimes|array',
+            'hang_cung_loai.*.ten_don_vi'       => 'required|string|max:255',
+            'hang_cung_loai.*.so_luong_quy_doi' => 'required|integer|min:1',
+            'hang_cung_loai.*.gia_ban_le'       => 'required|numeric|min:0',
+            'hang_cung_loai.*.gia_ban_si'       => 'nullable|numeric|min:0',
+            'hang_cung_loai.*.ma_vach'          => 'nullable|string|max:100',
+            'hang_cung_loai.*.so_luong'         => 'nullable|integer|min:0',
         ];
     }
 

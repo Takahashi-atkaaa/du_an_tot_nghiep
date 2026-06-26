@@ -16,6 +16,10 @@ public function handle(Request $request, Closure $next, string $permission = nul
 
     $user = auth()->user();
 
+    if (!$user->vaiTro) {
+        abort(403, 'Tài khoản chưa được phân quyền.');
+    }
+
     if ($user->vaiTro->ten_vai_tro === 'Admin') {
         return $next($request);
     }
