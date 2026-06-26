@@ -100,7 +100,7 @@ class SanPhamController extends Controller
 
         $bienThe = $data['bien_the'] ?? [];
 
-        return DB::transaction(function () use ($data, $bienThe, $baseUnit, $request) {
+        return DB::transaction(function () use ($data, $bienThe, $baseUnit, $request, $imagePath, $variantImages) {
             if (empty($bienThe)) {
                 // Không có biến thể → tạo 1 sản phẩm duy nhất
                 $sanPham = SanPham::create([
@@ -167,9 +167,8 @@ class SanPhamController extends Controller
                 }
             }
 
-            // Lưu đơn vị bán hàng (hang_cung_loai)
+            // Lưu đơn vị bán hàng (hang_cung_loai) — mỗi đơn vị tạo 1 SanPham riêng
             if (!empty($data['hang_cung_loai'])) {
-                $firstKey = array_key_first($data['hang_cung_loai']);
                 foreach ($data['hang_cung_loai'] as $idx => $unit) {
                     $tenDonVi = trim($unit['ten_don_vi'] ?? '');
                     $soLuongQuyDoi = (int)($unit['so_luong_quy_doi'] ?? 1);
@@ -184,16 +183,22 @@ class SanPhamController extends Controller
                         $unitImgPath = $this->uploadImage($request->file("hang_cung_loai.{$idx}.hinh_anh"), 'uploads/don-vi');
                     }
 
-                    DonViSanPhamSanPham::create([
-                        'id_san_pham'         => $sanPham->id,
-                        'id_don_vi'          => $donVi->id,
-                        'ten_don_vi'         => $tenDonVi,
-                        'so_luong_quy_doi'   => $soLuongQuyDoi,
-                        'gia_ban_le'         => (float)($unit['gia_ban_le'] ?? 0),
-                        'gia_ban_si'         => isset($unit['gia_ban_si']) ? (float)$unit['gia_ban_si'] : null,
-                        'ma_vach'            => !empty($unit['ma_vach']) ? trim($unit['ma_vach']) : null,
-                        'hinh_anh'           => $unitImgPath,
-                        'la_don_vi_mac_dinh' => ($idx === $firstKey),
+                    SanPham::create([
+                        'id_danh_muc'       => $data['id_danh_muc'],
+                        'ten_san_pham'      => $data['ten_san_pham'] . ' - ' . $tenDonVi,
+                        'ma_hang'           => $this->generateUniqueMaHang(),
+                        'ma_vach'           => !empty($unit['ma_vach']) ? trim($unit['ma_vach']) : $this->generateUniqueMaVach(),
+                        'thuong_hieu'       => $data['thuong_hieu'] ?? null,
+                        'gia_von'           => $data['gia_von'] ?? 0,
+                        'gia_ban'           => (float)($unit['gia_ban_le'] ?? 0),
+                        'so_luong_ton_kho'  => 0,
+                        'dinh_muc_toi_thieu' => $data['dinh_muc_toi_thieu'] ?? 0,
+                        'mo_ta'             => $data['mo_ta'] ?? null,
+                        'id_don_vi'         => $donVi->id,
+                        'hinh_anh'          => $unitImgPath ?? $imagePath,
+                        'trang_thai'        => $data['trang_thai'] ?? true,
+                        'san_pham_cha_id'   => $sanPham->id,
+                        'la_san_pham_cha'   => false,
                     ]);
                 }
             }
@@ -394,6 +399,9 @@ class SanPhamController extends Controller
 
         // Xóa biến thể trước (nếu là sản phẩm cha)
         foreach ($sanPham->bienThe as $bienThe) {
+            if ($bienThe->hinh_anh && !str_starts_with($bienThe->hinh_anh, 'http')) {
+                $this->deleteProductImageIfUnused($bienThe->hinh_anh, $bienThe->id);
+            }
             $bienThe->delete();
         }
 
@@ -425,6 +433,9 @@ class SanPhamController extends Controller
                     // Xóa biến thể nếu là sản phẩm cha
                     if ($sanPham->la_san_pham_cha) {
                         foreach ($sanPham->bienThe as $bienThe) {
+                            if ($bienThe->hinh_anh && !str_starts_with($bienThe->hinh_anh, 'http')) {
+                                $this->deleteProductImageIfUnused($bienThe->hinh_anh, $bienThe->id);
+                            }
                             $bienThe->delete();
                         }
                     }
