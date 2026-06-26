@@ -65,7 +65,7 @@ class NhanSuSeeder extends Seeder
                 'email' => 'tunganh@smartmart.vn',
                 'mat_khau' => bcrypt('Admin@123'),
                 'sdt' => '0912345678',
-                'id_vai_tro' => VaiTro::where('ten_vai_tro', 'Admin')->first()->id,
+                'id_vai_tro' => VaiTro::where('ten_vai_tro', '1')->first()->id,
                 'trang_thai' => true,
                 'deleted_at' => null,
                 'created_at' => now(),

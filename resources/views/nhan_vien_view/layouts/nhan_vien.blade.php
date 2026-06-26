@@ -180,6 +180,12 @@
         </div>
         <ul class="nav flex-column mt-3">
             <li class="nav-item">
+                <a href="{{ url('/admin/dashboard') }}" class="nav-link {{ request()->is('nhan-vien/hoa-don*') ? 'active' : '' }}">
+                    <i class="fas fa-file-invoice"></i>
+                    <span>Trang quản trị</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="{{ url('nhan-vien/') }}" class="nav-link {{ request()->is('nhan-vien') || request()->is('nhan-vien/') ? 'active' : '' }}">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>Dashboard</span>

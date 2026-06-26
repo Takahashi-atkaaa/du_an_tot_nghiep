@@ -803,6 +803,13 @@
 
     <!-- Sidebar -->
     <nav class="pos-sidebar">
+        @if (auth()->user()->id_vai_tro == 1)
+            <a href="{{ url('/admin/dashboard') }}" class="nav-btn" title="Dashboard">
+                <i class="bi bi-arrow-left-circle"></i>
+                <span>Quản trị</span>
+            </a>
+        @endif
+        
         <a href="{{ url('nhan-vien/') }}" class="nav-btn" title="Dashboard">
             <i class="fas fa-home"></i>
             <span>Home</span>

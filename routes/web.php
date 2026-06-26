@@ -30,6 +30,7 @@ use App\Http\Controllers\nhan_vien\KhachHangController as NhanVienKhachHangContr
 use App\Http\Middleware\AuthAdmin;
 use App\Http\Middleware\KiemTraVaiTro;
 use App\Http\Middleware\KTVaiTro;
+use App\Http\Middleware\VaiTroBanHang;
 use App\Models\NhaCungCap;
 
 Route::get('/', function () {
@@ -177,8 +178,7 @@ Route::get('/admin/cai-dat', function () {
 
     //quản lý sản phẩm
 
-    Route::get('/admin/san-pham', [SanPhamController::class, 'index'])
-        ->middleware('permission:xem_san_pham')->name('san-pham.index');
+    Route::get('/admin/san-pham', [SanPhamController::class, 'index'])->middleware('permission:xem_san_pham')->name('san-pham.index');
     Route::post('/admin/san-pham', [SanPhamController::class, 'store'])->middleware('permission:them_san_pham');
     Route::post('/admin/san-pham/bulk-action', [SanPhamController::class, 'bulkAction'])->middleware('permission:sua_san_pham');
     Route::get('/admin/san-pham/trash', [SanPhamController::class, 'trash'])->middleware('permission:xoa_san_pham')->name('san-pham.trash');
@@ -354,7 +354,7 @@ Route::get('/admin/cai-dat', function () {
 
 
 // Routes nhân viên (Preview)
-Route::middleware([KTVaiTro::class])->prefix('nhan-vien')->group(function () {
+Route::middleware([VaiTroBanHang::class])->prefix('nhan-vien')->group(function () {
     Route::get('/', [NhanVienController::class, 'index'])->name('nhan-vien.dashboard');
     Route::get('/ban-hang', [NhanVienController::class, 'banHang'])->name('nhan-vien.ban-hang');
     Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don');

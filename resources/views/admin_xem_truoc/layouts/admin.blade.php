@@ -254,7 +254,7 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('admin/ban-hang') }}" class="nav-link {{ request()->is('admin/ban-hang*') ? 'active' : '' }}">
+                <a href="{{ url('/nhan-vien/ban-hang') }}" class="nav-link">
                     <i class="fas fa-cash-register"></i>
                     <span>Bán hàng</span>
                 </a>

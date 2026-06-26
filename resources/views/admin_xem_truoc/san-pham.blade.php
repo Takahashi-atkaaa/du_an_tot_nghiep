@@ -629,6 +629,7 @@
     </div>
 </div>
 
+
 <style>
     /* ======= Modal Full Height ======= */
     #addProductModal .modal-fullheight {
