@@ -372,6 +372,7 @@ Route::middleware([KTVaiTro::class])->prefix('nhan-vien')->group(function () {
   
     Route::get('/khach-hang', [NhanVienKhachHangController::class, 'index'])->name('nhan-vien.khach-hang.index');
     Route::get('/khach-hang/create', [NhanVienKhachHangController::class, 'create'])->name('nhan-vien.khach-hang.create');
+     Route::post('/khach-hang/them-nhanh',[NhanVienKhachHangController::class, 'themNhanh'])->name('nhan-vien.khach-hang.them-nhanh');
     Route::post('/khach-hang', [NhanVienKhachHangController::class, 'store'])->name('nhan-vien.khach-hang.store');
     Route::get('/khach-hang/{khachHang}', [NhanVienKhachHangController::class, 'show'])->name('nhan-vien.khach-hang.show');
     Route::get('/khach-hang/{khachHang}/edit-phone', [NhanVienKhachHangController::class, 'editPhone'])->name('nhan-vien.khach-hang.edit_phone');
