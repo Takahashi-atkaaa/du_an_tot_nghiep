@@ -100,7 +100,7 @@
 
                     <div>
                         <div class="text-muted">Ngày </div>
-                        <h5 class="mb-0">{{ $ngay }}</h5>
+                        <h5 class="mb-0">{{ date('Y/m/d', strtotime($ngay)) }}</h5>
                     </div>
                 </div>
             </div>
@@ -115,7 +115,7 @@
                     </div>
 
                     <div>
-                        <div class="text-muted">Ca hiện tại</div>
+                        <div class="text-muted">Tên ca</div>
                         <h4 class="mb-0">
                             {{ $ca->ten_ca }}
                         </h4>
@@ -333,14 +333,52 @@
                                 </td>
 
                                 <td>
-                                    @if(in_array($nv->id, $danhSachDiemDanh))
-                                        <a href="{{route('lich-su-ca-lam.chi_tiet_diem_danh', ['id_chia_ca_lam_viec'=>$nv->id, 'id_nv'=>$nv->id_nguoi_dung])}}" class="btn btn-warning">
-                                            Chi tiết
-                                        </a>
+                                    @if( auth()->user()->id_vai_tro == 1)
+
+                                        @if(in_array($nv->id, $danhSachDiemDanh))
+                                            <a href="{{ route('lich-su-ca-lam.chi_tiet_diem_danh', [
+                                                'id_chia_ca_lam_viec' => $nv->id,
+                                                'id_nv' => $nv->id_nguoi_dung
+                                            ]) }}" class="btn btn-warning">
+                                                Chi tiết
+                                            </a>
+                                        @else
+                                            <a href="{{ route('lich-su-ca-lam.tao-diem-danh-bu', [
+                                                'id_chia_ca_lam_viec' => $nv->id,
+                                                'id_nv' => $nv->id_nguoi_dung
+                                            ]) }}" class="btn btn-primary">
+                                                Chấm công bù
+                                            </a>
+                                        @endif
+                                         
                                     @else
-                                        <a href="{{route('lich-su-ca-lam.tao-diem-danh-bu', ['id_chia_ca_lam_viec'=>$nv->id, 'id_nv'=>$nv->id_nguoi_dung])}}" class="btn btn-primary">Chấm công bù</a>
+                                        {{-- nếu không phải admin thì phải kiểm tra id của trưởng ca kia có nằm trong có đó hay không --}}
+                                        @foreach($danhSachTrongCaTrongCa as $truong_ca)
+                                            @if($truong_ca->id_nguoi_dung == Auth::id())
+
+                                                @if(in_array($nv->id, $danhSachDiemDanh))
+                                                    <a href="{{ route('lich-su-ca-lam.chi_tiet_diem_danh', [
+                                                        'id_chia_ca_lam_viec' => $nv->id,
+                                                        'id_nv' => $nv->id_nguoi_dung
+                                                    ]) }}" class="btn btn-warning">
+                                                        Chi tiết
+                                                    </a>
+                                                @else
+                                                    <a href="{{ route('lich-su-ca-lam.tao-diem-danh-bu', [
+                                                        'id_chia_ca_lam_viec' => $nv->id,
+                                                        'id_nv' => $nv->id_nguoi_dung
+                                                    ]) }}" class="btn btn-primary">
+                                                        Chấm công bù
+                                                    </a>
+                                                @endif
+
+                                                @break
+                                            @endif
+                                        @endforeach
                                     @endif
+
                                 </td>
+                                
 
                             </tr>
 

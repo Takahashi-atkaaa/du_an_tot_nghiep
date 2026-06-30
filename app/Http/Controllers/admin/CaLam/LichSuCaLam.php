@@ -75,7 +75,12 @@ class LichSuCaLam extends Controller
         $danhSachDiemDanh = DiemDanh::pluck('id_chia_ca_lam_viec')
             ->toArray();
 
-        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.chi-tiet-ca-lam', compact('ca', 'danhSachHoaDon', 'danhSachNhanVienTrongCa', 'tongDoanhThuCuaCa', 'tongNhanVienTrongCa', 'tongHoaDoncuaCa', 'ngay', 'danhSachDiemDanh'));
+        $danhSachTrongCaTrongCa = ChiaCaLamViec::whereDate('ngay', $ngay)
+            ->where('id_ca_lam_viec', $id_ca)
+            ->where('vai_tro_trong_ca', 'truong_ca')
+            ->get();
+
+        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.chi-tiet-ca-lam', compact('ca', 'danhSachHoaDon', 'danhSachNhanVienTrongCa', 'tongDoanhThuCuaCa', 'tongNhanVienTrongCa', 'tongHoaDoncuaCa', 'ngay', 'danhSachDiemDanh','danhSachTrongCaTrongCa'));
     }
 
     //chi tiết hóa đơn trong lịch sử ca làm

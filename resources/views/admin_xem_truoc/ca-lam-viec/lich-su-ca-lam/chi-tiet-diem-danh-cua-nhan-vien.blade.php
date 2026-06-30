@@ -2,6 +2,12 @@
 
 @section('content')
 
+<style>
+    .nut{
+        
+    }
+</style>
+
 @if(session('thong_bao'))
     <div class="alert alert-success">
         {{ session('thong_bao') }}
@@ -93,9 +99,16 @@
         </select>
     </div>
 
-    <button type="submit" class="btn btn-primary">
-        Cập nhật
-    </button>
+    <div class="d-flex justify-content-between">
+        <a href="{{url()->previous()}}" class="btn btn-secondary">
+            Quay lại
+        </a>
+
+        <button type="submit" class="btn btn-primary">
+           Cập nhật
+       </button>
+    </div>
+    
 </form>
 
 @endsection

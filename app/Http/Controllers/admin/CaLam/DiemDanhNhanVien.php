@@ -64,7 +64,7 @@ public function cap_nhat_diem_danh(Request $request, $id)
         'trang_thai_tan_ca' => $request->trang_thai_tan_ca,
     ]);
 
-    return back()->with(
+    return redirect()->back()->with(
         'thong_bao',
         'Cập nhật thành công.'
     );
