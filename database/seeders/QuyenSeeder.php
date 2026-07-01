@@ -157,6 +157,10 @@ class QuyenSeeder extends Seeder
                 'ma_quyen' => 'sua_phieu_luong',
                 'ten_quyen' => 'Sửa phiếu lương'
             ],
+            [
+                'ma_quyen' => 'ca_lam',
+                'ten_quyen' => 'quản lý ca làm'
+            ],
 
         ];
 

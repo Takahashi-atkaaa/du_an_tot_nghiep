@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CaLamViec;
 use App\Models\ChiaCaLamViec;
 use App\Models\ChiTietHoaDon;
+use App\Models\DiemDanh;
 use App\Models\HoaDon;
 use Illuminate\Http\Request;
 
@@ -22,17 +23,17 @@ public function index()
         ->where('gio_ket_thuc', '>=', $gio_hien_tai)
         ->first();
 
-if (!$ca_hien_tai) {
-    return redirect()
-        ->back()
-        ->with('warning', 'Hiện tại không có ca làm việc.');
-}
+    if (!$ca_hien_tai) {
+        return redirect()
+            ->back()
+            ->with('warning', 'Hiện tại không có ca làm việc.');
+    }
 
     $tong_doanh_thu_cua_ca = HoaDon::where(
         'id_ca_lam_viec', $ca_hien_tai->id
         )
         ->whereDate('created_at', $ngay_hien_tai)
-        ->sum('tong_tien_hang');    
+        ->sum('khach_can_tra');    
 
     $tong_nhan_vien_cua_ca = ChiaCaLamViec::where('id_ca_lam_viec', $ca_hien_tai->id)
         ->where('ngay', $ngay_hien_tai)
@@ -52,7 +53,7 @@ if (!$ca_hien_tai) {
 
          
     return view(
-        'admin_xem_truoc.ca-lam-viec.thong-tin',
+        'admin_xem_truoc.ca-lam-viec.ca-lam-viec-hien-tai.thong-tin',
         compact(
             'ngay_hien_tai',
             'gio_hien_tai',
@@ -75,8 +76,9 @@ if (!$ca_hien_tai) {
         ->where('id_hoa_don', $id_hoadon)
         ->get();
 
-    return view('admin_xem_truoc.ca-lam-viec.chi-tiet-hoa-don', compact('chiTietHoaDon', 'hoaDon'));
+    return view('admin_xem_truoc.ca-lam-viec.ca-lam-viec-hien-tai.chi-tiet-hoa-don', compact('chiTietHoaDon', 'hoaDon'));
  }
+
 
 
 }

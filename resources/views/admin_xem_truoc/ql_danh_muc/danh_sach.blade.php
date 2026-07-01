@@ -10,33 +10,7 @@
             Thêm danh mục mới
         </button>
     </div>
-
-    {{-- Đoạn code hiển thị lỗi cũ của bạn --}}
-    @if ($errors->any())
-        <div class="alert alert-danger">
-            <ul>
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    {{-- CHÈN THÊM ĐOẠN NÀY ĐỂ HIỂN THỊ THÔNG BÁO THÀNH CÔNG --}}
-    @if (session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <strong>Thành công!</strong> {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-    @endif
-
-    @if (session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <strong>Thất bại!</strong> {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-    @endif
-
+    
     {{-- //modol thêm danh mục --}}
     <div class="modal fade" id="modalThemDanhMuc" tabindex="-1">
         <div class="modal-dialog">

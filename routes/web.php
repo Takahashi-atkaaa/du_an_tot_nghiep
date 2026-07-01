@@ -21,6 +21,7 @@ use App\Http\Controllers\admin\Api\ThuocTinhApiController;
 use App\Http\Controllers\admin\Api\SanPhamApiController;
 use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
 use App\Http\Controllers\admin\CaLam\CaLam;
+use App\Http\Controllers\admin\CaLam\DiemDanhNhanVien;
 use App\Http\Controllers\admin\CaLam\LichSuCaLam;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\admin\KhuyenMaiController;
@@ -33,6 +34,7 @@ use App\Http\Controllers\nhan_vien\DiemDanhController as NhanVienDiemDanhControl
 use App\Http\Middleware\AuthAdmin;
 use App\Http\Middleware\KiemTraVaiTro;
 use App\Http\Middleware\KTVaiTro;
+use App\Http\Middleware\VaiTroBanHang;
 use App\Models\NhaCungCap;
 
 Route::get('/', function () {
@@ -180,8 +182,7 @@ Route::get('/admin/cai-dat', function () {
 
     //quản lý sản phẩm
 
-    Route::get('/admin/san-pham', [SanPhamController::class, 'index'])
-        ->middleware('permission:xem_san_pham')->name('san-pham.index');
+    Route::get('/admin/san-pham', [SanPhamController::class, 'index'])->middleware('permission:xem_san_pham')->name('san-pham.index');
     Route::post('/admin/san-pham', [SanPhamController::class, 'store'])->middleware('permission:them_san_pham');
     Route::post('/admin/san-pham/bulk-action', [SanPhamController::class, 'bulkAction'])->middleware('permission:sua_san_pham');
     Route::get('/admin/san-pham/trash', [SanPhamController::class, 'trash'])->middleware('permission:xoa_san_pham')->name('san-pham.trash');
@@ -312,6 +313,21 @@ Route::get('/admin/cai-dat', function () {
     Route::put('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'update'])->name('chia-ca-lam-viec.update')->middleware('permission:sua_chia_ca_lam_viec');
     Route::delete('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'destroy'])->name('chia-ca-lam-viec.destroy')->middleware('permission:xoa_chia_ca_lam_viec');
 
+        // quản lý ca làm hiện tại 
+        Route::get('/ca-lam',[CaLam::class, 'index'])->name('ca-lam.index')->middleware('permission:ca_lam');
+        Route::get('/chi-tiet-hoa-don/{id_hoadon}',[CaLam::class, 'show'])->name('chi-tiet-hoa-don.show')->middleware('permission:ca_lam');
+        //lịch sử ca làm
+        Route::get('/lich-su-ca-lam-viec',[LichSuCaLam::class, 'index'])->name('lich-su-ca-lam-viec.index')->middleware('permission:ca_lam');
+        Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}',[LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:ca_lam');
+        Route::get('/lich-su-ca-lam-chi_tiet_ca_lam/{id_ca}/{ngay}',[LichSuCaLam::class, 'chi_tiet_ca'])->name('lich-su-ngay-lam-viec.chi_tiet_ca_lam')->middleware('permission:ca_lam');
+        Route::get('/lich-su-ca-lam-chi_tiet-hoa-don/{id_hoaDon}/{ngay}',[LichSuCaLam::class, 'chi_tiet_hoa_don'])->name('lich-su-ca-lam-chi-tiet-hoa-don.show')->middleware('permission:ca_lam');
+       
+      //điểm danh
+        Route::get('/chi-tiet-diem-danh-nhan-vien/{id_chia_ca_lam_viec}/{id_nv}',[DiemDanhNhanVien::class, 'chi_tiet_diem_danh'])->name('lich-su-ca-lam.chi_tiet_diem_danh')->middleware('permission:ca_lam');
+        Route::get('/tao-diem-danh-nhan-vien/{id_chia_ca_lam_viec}/{id_nv}',[DiemDanhNhanVien::class, 'diem_danh_bu'])->name('lich-su-ca-lam.tao-diem-danh-bu')->middleware('permission:ca_lam');
+        Route::post('/luu-diem-danh-nhan-vien',[DiemDanhNhanVien::class, 'luu_diem_danh_bu'])->name('diem-danh.luu-diem-danh-bu')->middleware('permission:ca_lam');
+        Route::put('/cap-nhat-diem-danh-nhan-vien/{id}',[DiemDanhNhanVien::class, 'cap_nhat_diem_danh'])->name('diem-danh.cap-nhat')->middleware('permission:ca_lam');
+
     // Quản lý điểm danh
     Route::get('/admin/diem-danh', [DiemDanhController::class, 'index'])->name('diem-danh.index');
     Route::post('/admin/diem-danh/{chiaCaLamViec}/xac-nhan', [DiemDanhController::class, 'xacNhanDiemDanh'])->name('diem-danh.xac-nhan');
@@ -320,14 +336,7 @@ Route::get('/admin/cai-dat', function () {
     Route::get('/admin/diem-danh/lich-su', [DiemDanhController::class, 'lichSu'])->name('diem-danh.lich-su');
     Route::get('/admin/diem-danh/thong-ke', [DiemDanhController::class, 'thongKe'])->name('diem-danh.thong-ke');
 
-    // quản lý ca làm
-    Route::get('/ca-lam', [CaLam::class, 'index'])->name('ca-lam.index')->middleware('permission::ca-lam');
-    Route::get('/chi-tiet-hoa-don/{id_hoadon}', [CaLam::class, 'show'])->name('chi-tiet-hoa-don.show')->middleware('permission::ca-lam');
-    //lịch sử ca làm
-    Route::get('/lich-su-ca-lam-viec', [LichSuCaLam::class, 'index'])->name('lich-su-ca-lam-viec.index')->middleware('permission::ca-lam');
-    Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}', [LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission::ca-lam');
-    Route::get('/lich-su-ca-lam-chi_tiet_ca_lam/{id_ca}/{ngay}', [LichSuCaLam::class, 'chi_tiet_ca'])->name('lich-su-ngay-lam-viec.chi_tiet_ca_lam')->middleware('permission::ca-lam');
-    Route::get('/lich-su-ca-lam-chi_tiet-hoa-don/{id_hoaDon}/{ngay}', [LichSuCaLam::class, 'chi_tiet_hoa_don'])->name('lich-su-ca-lam-chi-tiet-hoa-don.show')->middleware('permission::ca-lam');
+  
 
 
     // Thiết lập lương
@@ -358,7 +367,7 @@ Route::get('/admin/cai-dat', function () {
 
 
 // Routes nhân viên (Preview)
-Route::middleware([KTVaiTro::class])->prefix('nhan-vien')->group(function () {
+Route::middleware([VaiTroBanHang::class])->prefix('nhan-vien')->group(function () {
     Route::get('/', [NhanVienController::class, 'index'])->name('nhan-vien.dashboard');
     Route::get('/ban-hang', [NhanVienController::class, 'banHang'])->name('nhan-vien.ban-hang');
     Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don');
