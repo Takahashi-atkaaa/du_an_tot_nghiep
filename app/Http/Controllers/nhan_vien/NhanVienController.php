@@ -295,6 +295,15 @@ public function thanhToan(Request $request)
         $tienGiamGia = min((float) $request->tien_giam_gia, $tongTienHang);
         $khachCanTra = $tongTienHang - $tienGiamGia;
        $diemSuDung = (int) $request->diem_su_dung;
+       // số điểm tối đa có thể dùng
+        $maxUsePoint = floor($tongTienHang / 100);
+
+        // không cho dùng quá số điểm đang có
+        $diemSuDung = min(
+            $diemSuDung,
+            $khachHang->diem_tich_luy,
+            $maxUsePoint
+        );
         $tienGiamGia = 0;
 
         if ($request->id_khach_hang && $diemSuDung > 0) {
