@@ -60,13 +60,58 @@ class NhanVienController extends Controller
     {
         return view('nhan_vien_view.san-pham.index');
     }
-
-  
-
-
-    public function lichLamViec(Request $request)
+    public function lichLamViec(Request $request): View
     {
-        return $this->lichLamViecTuan($request);
+        return $this->lichSuCaLam($request);
+    }
+
+    public function lichSuCaLam(Request $request): View
+    {
+        $nguoiDung = $this->resolvePreviewEmployee($request);
+
+        $query = ChiaCaLamViec::query()
+            ->with('caLamViec')
+            ->where('id_nguoi_dung', $nguoiDung->id);
+
+        if ($request->filled('tu_ngay')) {
+            $query->whereDate('ngay', '>=', $request->input('tu_ngay'));
+        }
+
+        if ($request->filled('den_ngay')) {
+            $query->whereDate('ngay', '<=', $request->input('den_ngay'));
+        }
+
+        $lichSuCaLam = (clone $query)
+            ->orderByDesc('ngay')
+            ->orderByDesc('id')
+            ->paginate(12)
+            ->withQueryString();
+
+        $tongSoCa = (clone $query)->count();
+        $tongSoNgayLam = (clone $query)
+            ->distinct('ngay')
+            ->count('ngay');
+        $caGanNhat = (clone $query)
+            ->orderByDesc('ngay')
+            ->orderByDesc('id')
+            ->first();
+        $caDauTien = (clone $query)
+            ->orderBy('ngay')
+            ->orderBy('id')
+            ->first();
+
+        return view('nhan_vien_view.lich-lam-viec.lich-su', [
+            'nguoiDung' => $nguoiDung,
+            'lichSuCaLam' => $lichSuCaLam,
+            'tongSoCa' => $tongSoCa,
+            'tongSoNgayLam' => $tongSoNgayLam,
+            'caGanNhat' => $caGanNhat,
+            'caDauTien' => $caDauTien,
+            'boLoc' => [
+                'tu_ngay' => $request->input('tu_ngay'),
+                'den_ngay' => $request->input('den_ngay'),
+            ],
+        ]);
     }
 
     public function lichLamViecTuan(Request $request): View
@@ -295,6 +340,15 @@ public function thanhToan(Request $request)
         $tienGiamGia = min((float) $request->tien_giam_gia, $tongTienHang);
         $khachCanTra = $tongTienHang - $tienGiamGia;
        $diemSuDung = (int) $request->diem_su_dung;
+       // số điểm tối đa có thể dùng
+        $maxUsePoint = floor($tongTienHang / 100);
+
+        // không cho dùng quá số điểm đang có
+        $diemSuDung = min(
+            $diemSuDung,
+            $khachHang->diem_tich_luy,
+            $maxUsePoint
+        );
         $tienGiamGia = 0;
 
         if ($request->id_khach_hang && $diemSuDung > 0) {
