@@ -222,6 +222,13 @@ Route::get('/admin/cai-dat', function () {
 
     Route::get('/admin/hoa-don/{id}', [HoaDonController::class, 'show'])
     ->name('admin.hoa-don.show');
+    Route::post('/admin/hoa-don/{id}/huy', [HoaDonController::class, 'huy'])
+    ->name('admin.hoa-don.huy');
+    Route::get('/admin/hoa-don/{id}/tra-hang', [HoaDonController::class, 'formTraHang'])
+    ->name('admin.hoa-don.tra-hang');
+
+Route::post('/admin/hoa-don/{id}/tra-hang', [HoaDonController::class, 'xuLyTraHang'])
+    ->name('admin.hoa-don.xu-ly-tra-hang');
 
 
     // Trang kho hang

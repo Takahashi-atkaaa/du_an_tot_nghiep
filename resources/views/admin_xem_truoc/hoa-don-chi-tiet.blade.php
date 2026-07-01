@@ -16,6 +16,12 @@
         <button onclick="window.print()" class="btn btn-success">
             <i class="fas fa-print me-1"></i> In hóa đơn
         </button>
+        @if($hoaDon->trang_thai !== 'Đã hủy')
+    <a href="{{ route('admin.hoa-don.tra-hang', $hoaDon->id) }}"
+       class="btn btn-warning">
+        <i class="fas fa-undo me-1"></i> Trả hàng
+    </a>
+@endif
     </div>
 </div>
 

@@ -3,6 +3,13 @@
 @section('title', 'Quản lý Hóa đơn - SmartMart')
 
 @section('content')
+@if(session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+@endif
+
+@if(session('error'))
+    <div class="alert alert-danger">{{ session('error') }}</div>
+@endif
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h4 class="fw-bold mb-1">Quản lý Hóa đơn</h4>
@@ -144,6 +151,17 @@
                                    title="In">
                                     <i class="fas fa-print"></i>
                                 </a>
+                                @if($hoaDon->trang_thai !== 'Đã hủy')
+                                <form action="{{ route('admin.hoa-don.huy', $hoaDon->id) }}"
+                                    method="POST"
+                                    class="d-inline"
+                                    onsubmit="return confirm('Bạn có chắc muốn hủy hóa đơn này không? Tồn kho sẽ được hoàn lại.')">
+                                    @csrf
+                                    <button class="btn btn-sm btn-outline-danger btn-action" title="Hủy">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </form>
+                            @endif
                             </td>
                         </tr>
                     @empty
