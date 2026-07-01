@@ -33,7 +33,17 @@
                 <p><strong>Nhân viên:</strong> {{ $hoaDon->ten_nhan_vien ?? 'Nhân viên' }}</p>
             </div>
             <div class="col-md-6">
-                <p><strong>Khách hàng:</strong> {{ $hoaDon->ten_khach_hang ?? 'Khách lẻ' }}</p>
+               <p>
+                <strong>Khách hàng:</strong>
+                {{ $hoaDon->ten_khach_hang ?? 'Khách lẻ' }}
+            </p>
+
+            @if(isset($hoaDon->diem_tich_luy))
+            <p>
+                <strong>Điểm hiện có:</strong>
+                {{ number_format($hoaDon->diem_tich_luy) }} điểm
+            </p>
+            @endif
                @php
     $phuongThucThanhToan = [
         'cash' => 'Tiền mặt',
@@ -100,6 +110,23 @@
                     <span>Tiền thừa:</span>
                     <strong>{{ number_format($hoaDon->tien_thua, 0, ',', '.') }}đ</strong>
                 </div>
+                 @if($hoaDon->id_khach_hang)
+                <div class="d-flex justify-content-between text-primary">
+                    <span>Điểm tích lũy nhận được:</span>
+                    <strong>+{{ $hoaDon->diem_thu_duoc ?? 0 }} điểm</strong>
+                </div>
+                @endif
+
+               
+
+                @if(($hoaDon->diem_su_dung ?? 0) > 0)
+                <div class="d-flex justify-content-between">
+                    <span>Điểm đã dùng:</span>
+                    <strong class="text-danger">
+                        -{{ number_format($hoaDon->diem_su_dung) }} điểm
+                    </strong>
+                </div>
+                @endif
             </div>
         </div>
 

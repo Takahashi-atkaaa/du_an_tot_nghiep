@@ -21,8 +21,12 @@ class BangLuongController extends Controller
     {
         $query = BangLuong::orderBy('created_at', 'desc');
 
-        if ($request->filled('ky_lam_viec')) {
-            $query->where('ky_lam_viec', 'like', '%' . $request->ky_lam_viec . '%');
+        if ($request->filled('ngay_bat_dau')) {
+            $query->whereDate('ngay_bat_dau', $request->ngay_bat_dau);
+        }
+
+        if ($request->filled('ngay_ket_thuc')) {
+            $query->whereDate('ngay_ket_thuc', $request->ngay_ket_thuc);
         }
 
         if ($request->filled('trang_thai')) {
@@ -83,12 +87,8 @@ class BangLuongController extends Controller
 
     public function tinhLuong(BangLuong $bangLuong): RedirectResponse
     {
-        $kyLamViec = $bangLuong->ky_lam_viec;
-        $parts = explode('/', $kyLamViec);
-        $thang = (int) $parts[0];
-        $nam = (int) $parts[1];
-        $startOfMonth = Carbon::create($nam, $thang, 1)->startOfMonth();
-        $endOfMonth = Carbon::create($nam, $thang, 1)->endOfMonth();
+        $startOfMonth = Carbon::parse($bangLuong->ngay_bat_dau)->startOfDay();
+        $endOfMonth = Carbon::parse($bangLuong->ngay_ket_thuc)->endOfDay();
 
         PhieuLuong::where('id_bang_luong', $bangLuong->id)->delete();
 

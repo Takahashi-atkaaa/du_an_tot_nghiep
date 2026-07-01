@@ -61,8 +61,8 @@
             <div class="card-body d-flex align-items-center">
                 <div class="icon me-3"><i class="fas fa-calendar-alt"></i></div>
                 <div>
-                    <h6 class="text-muted mb-1">Kỳ làm việc</h6>
-                    <h4 class="mb-0">{{ $bangLuong->ky_lam_viec }}</h4>
+                    <h6 class="text-muted mb-1">Ngày làm việc</h6>
+                    <h4 class="mb-0">{{ $bangLuong->ngay_bat_dau ? \Carbon\Carbon::parse($bangLuong->ngay_bat_dau)->format('d/m/Y') : '-' }} - {{ $bangLuong->ngay_ket_thuc ? \Carbon\Carbon::parse($bangLuong->ngay_ket_thuc)->format('d/m/Y') : '-' }}</h4>
                 </div>
             </div>
         </div>

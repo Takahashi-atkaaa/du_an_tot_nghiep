@@ -26,8 +26,11 @@
 <div class="card table-admin mb-4">
     <div class="card-body">
         <form method="GET" action="{{ route('bang-luong.index') }}" class="row g-3">
-            <div class="col-md-4">
-                <input type="text" name="ky_lam_viec" value="{{ request('ky_lam_viec') }}" class="form-control" placeholder="Tìm theo kỳ (VD: 06/2026)...">
+            <div class="col-md-3">
+                <input type="date" name="ngay_bat_dau" value="{{ request('ngay_bat_dau') }}" class="form-control" placeholder="Ngày bắt đầu">
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="ngay_ket_thuc" value="{{ request('ngay_ket_thuc') }}" class="form-control" placeholder="Ngày kết thúc">
             </div>
             <div class="col-md-3">
                 <select name="trang_thai" class="form-select">
@@ -51,7 +54,8 @@
                 <thead>
                     <tr>
                         <th>Tên bảng lương</th>
-                        <th>Kỳ làm việc</th>
+                        <th>Ngày bắt đầu</th>
+                        <th>Ngày kết thúc</th>
                         <th>Số nhân viên</th>
                         <th>Tổng lương</th>
                         <th>Trạng thái</th>
@@ -62,7 +66,8 @@
                     @forelse($bangLuongs as $item)
                         <tr>
                             <td class="fw-semibold">{{ $item->ten_bang_luong }}</td>
-                            <td>{{ $item->ky_lam_viec }}</td>
+                            <td>{{ $item->ngay_bat_dau ? \Carbon\Carbon::parse($item->ngay_bat_dau)->format('d/m/Y') : '-' }}</td>
+                            <td>{{ $item->ngay_ket_thuc ? \Carbon\Carbon::parse($item->ngay_ket_thuc)->format('d/m/Y') : '-' }}</td>
                             <td>{{ $item->so_nhan_vien }} nhân viên</td>
                             <td class="text-primary fw-semibold">{{ number_format($item->tong_luong_tat_ca_nhan_vien, 0, ',', '.') }}đ</td>
                             <td>
@@ -92,7 +97,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-5">Chưa có bảng lương nào.</td>
+                            <td colspan="7" class="text-center text-muted py-5">Chưa có bảng lương nào.</td>
                         </tr>
                     @endforelse
                 </tbody>
