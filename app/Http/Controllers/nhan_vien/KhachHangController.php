@@ -73,6 +73,24 @@ class KhachHangController extends Controller
         );
     }
 
+public function themNhanh(NhanvienThemKhachHangRequest $request)
+{
+    $validated = $request->validated();
+    $khachHang = KhachHang::create([
+        'ten_khach_hang' => $validated['ten_khach_hang'],
+        'so_dien_thoai'  => $validated['so_dien_thoai'],
+        'email'          => $validated['email'],
+        'dia_chi'        => $validated['dia_chi'],
+        'diem_tich_luy'  => 0,
+        'tong_chi_tieu'  => 0,
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'khach_hang' => $khachHang
+    ]);
+}
+
     /**
      * Form sửa số điện thoại
      */

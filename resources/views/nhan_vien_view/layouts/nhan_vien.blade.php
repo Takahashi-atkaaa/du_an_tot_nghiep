@@ -241,7 +241,7 @@
         <!-- Topbar -->
         <header class="topbar">
             <div class="d-flex align-items-center">
-                <h5 class="mb-0 text-secondary">Xem trước giao diện nhân viên</h5>
+                <h5 class="mb-0 text-secondary"> giao diện nhân viên</h5>
             </div>
             <div class="user-info">
                 <div class="dropdown">

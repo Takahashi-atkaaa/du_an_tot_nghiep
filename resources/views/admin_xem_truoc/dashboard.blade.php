@@ -5,18 +5,29 @@
 @section('content')
 <!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
+
     <div>
-        <h4 class="fw-bold mb-1">Dashboard</h4>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="#">Admin</a></li>
-                <li class="breadcrumb-item active">Dashboard</li>
-            </ol>
-        </nav>
+
+        <h2 class="fw-bold text-primary mb-0">
+            <i class="fas fa-chart-line me-2"></i>
+            Dashboard
+        </h2>
+
+        <small class="text-muted">
+            Tổng quan hoạt động kinh doanh
+        </small>
+
     </div>
-    <div>
-        <span class="text-muted">Ngày: {{ date('d/m/Y') }}</span>
+
+    <div class="text-end">
+
+        <span class="badge bg-primary fs-6 px-3 py-2">
+            <i class="fas fa-calendar"></i>
+            {{ now()->format('d/m/Y') }}
+        </span>
+
     </div>
+
 </div>
 
 <!-- Stats Cards -->
@@ -29,7 +40,9 @@
                 </div>
                 <div>
                     <h6 class="text-muted mb-1">Doanh thu hôm nay</h6>
-                    <h3 class="mb-0">15,680,000 đ</h3>
+                    <h3 class="mb-0">
+                    {{ number_format($doanhThuNgay,0,',','.') }} đ
+                </h3>
                     <small class="text-success">
                         <i class="fas fa-arrow-up"></i> +12.5%
                     </small>
@@ -41,11 +54,13 @@
         <div class="card card-stat green h-100">
             <div class="card-body d-flex align-items-center">
                 <div class="icon me-3">
-                    <i class="fas fa-shopping-cart"></i>
+                    <i class="fas fa-calendar-alt"></i>
                 </div>
                 <div>
-                    <h6 class="text-muted mb-1">Đơn hàng hôm nay</h6>
-                    <h3 class="mb-0">48 đơn</h3>
+                    <h6 class="text-muted mb-1">Doanh thu tháng</h6>
+                    <h3 class="mb-0">
+                        {{ number_format($doanhThuThang,0,',','.') }} đ
+                    </h3>
                     <small class="text-success">
                         <i class="fas fa-arrow-up"></i> +8.2%
                     </small>
@@ -60,8 +75,10 @@
                     <i class="fas fa-users"></i>
                 </div>
                 <div>
-                    <h6 class="text-muted mb-1">Khách hàng mới</h6>
-                    <h3 class="mb-0">12 khách</h3>
+                    <h6 class="text-muted mb-1">Doanh thu năm</h6>
+                    <h3 class="mb-0">
+                        {{ number_format($doanhThuNam,0,',','.') }} đ
+                    </h3>
                     <small class="text-success">
                         <i class="fas fa-arrow-up"></i> +5.3%
                     </small>
@@ -89,108 +106,126 @@
 
 <!-- Charts & Tables -->
 <div class="row g-4">
-    <!-- Revenue Chart -->
+
+    <!-- Biểu đồ doanh thu -->
     <div class="col-xl-8">
-        <div class="card table-admin">
+
+        <!-- Doanh thu 7 ngày -->
+        <div class="card table-admin mb-4">
+
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold">Doanh thu 7 ngày gần đây</h5>
-                <div class="btn-group">
-                    <button class="btn btn-sm btn-outline-secondary">Ngày</button>
-                    <button class="btn btn-sm btn-primary">Tuần</button>
-                    <button class="btn btn-sm btn-outline-secondary">Tháng</button>
-                </div>
+
+                <h5 class="mb-0 fw-bold">
+                    Doanh thu 7 ngày gần đây
+                </h5>
+
+            
+
             </div>
+
             <div class="card-body">
-                <div class="text-center py-5" style="background: #f8f9fa; border-radius: 8px;">
-                    <i class="fas fa-chart-line fa-4x text-muted mb-3"></i>
-                    <p class="text-muted">Biểu đồ doanh thu (Chart.js)</p>
-                    <div class="row mt-4 px-4">
-                        <div class="col-2">
-                            <div class="bg-primary rounded py-3 text-white">
-                                <small>T2</small>
-                                <h6>12.5M</h6>
-                            </div>
-                        </div>
-                        <div class="col-2">
-                            <div class="bg-primary rounded py-3 text-white">
-                                <small>T3</small>
-                                <h6>15.2M</h6>
-                            </div>
-                        </div>
-                        <div class="col-2">
-                            <div class="bg-primary rounded py-3 text-white">
-                                <small>T4</small>
-                                <h6>14.8M</h6>
-                            </div>
-                        </div>
-                        <div class="col-2">
-                            <div class="bg-primary rounded py-3 text-white">
-                                <small>T5</small>
-                                <h6>18.1M</h6>
-                            </div>
-                        </div>
-                        <div class="col-2">
-                            <div class="bg-primary rounded py-3 text-white">
-                                <small>T6</small>
-                                <h6>20.3M</h6>
-                            </div>
-                        </div>
-                        <div class="col-2">
-                            <div class="bg-primary rounded py-3 text-white">
-                                <small>T7</small>
-                                <h6>22.5M</h6>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <canvas id="chart7Ngay" height="120"></canvas>
             </div>
+
         </div>
+
+        <!-- Doanh thu 12 tháng -->
+        <div class="card table-admin">
+
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold">
+                    Doanh thu 12 tháng
+                </h5>
+            </div>
+
+            <div class="card-body">
+                <canvas id="chart12Thang" height="120"></canvas>
+            </div>
+
+        </div>
+
+    </div>
+ 
+
+            <div class="col-xl-4">
+
+    <div class="card table-admin">
+
+        <div class="card-header bg-white">
+
+            <h5 class="mb-0 fw-bold">
+                Doanh thu theo năm
+            </h5>
+
+        </div>
+
+        <div class="card-body">
+
+            <canvas id="chartNam"></canvas>
+
+        </div>
+
     </div>
 
-    <!-- Top Products -->
+</div>
+    <!-- Top sản phẩm bán chạy -->
     <div class="col-xl-4">
+
         <div class="card table-admin">
+
             <div class="card-header bg-white py-3">
-                <h5 class="mb-0 fw-bold">Top sản phẩm bán chạy</h5>
+                <h5 class="mb-0 fw-bold">
+                    Top 10 sản phẩm bán chạy
+                </h5>
             </div>
+
             <div class="card-body p-0">
+
                 <div class="list-group list-group-flush">
-                    <div class="list-group-item d-flex align-items-center py-3">
-                        <img src="https://via.placeholder.com/50" class="rounded me-3" alt="Product">
-                        <div class="flex-grow-1">
-                            <h6 class="mb-0">Sữa tươi Vinamilk 180ml</h6>
-                            <small class="text-muted">Đã bán 245 cái</small>
+
+                    @forelse($topSanPham as $sp)
+
+                        <div class="list-group-item">
+
+                            <div class="d-flex justify-content-between align-items-center">
+
+                                <div>
+
+                                    <h6 class="mb-1">
+                                        {{ $sp->ten_san_pham }}
+                                    </h6>
+
+                                    <small class="text-muted">
+                                        Đã bán:
+                                        <strong>{{ number_format($sp->tong_ban) }}</strong>
+                                    </small>
+
+                                </div>
+
+                                <span class="badge bg-success fs-6">
+                                    {{ number_format($sp->doanh_thu,0,',','.') }} đ
+                                </span>
+
+                            </div>
+
                         </div>
-                        <span class="badge bg-primary rounded-pill">245</span>
-                    </div>
-                    <div class="list-group-item d-flex align-items-center py-3">
-                        <img src="https://via.placeholder.com/50" class="rounded me-3" alt="Product">
-                        <div class="flex-grow-1">
-                            <h6 class="mb-0">Bánh Oreo 133g</h6>
-                            <small class="text-muted">Đã bán 198 cái</small>
+
+                    @empty
+
+                        <div class="list-group-item text-center text-muted py-4">
+                            Chưa có dữ liệu sản phẩm.
                         </div>
-                        <span class="badge bg-primary rounded-pill">198</span>
-                    </div>
-                    <div class="list-group-item d-flex align-items-center py-3">
-                        <img src="https://via.placeholder.com/50" class="rounded me-3" alt="Product">
-                        <div class="flex-grow-1">
-                            <h6 class="mb-0">Mì Hảo Tấm gói</h6>
-                            <small class="text-muted">Đã bán 156 cái</small>
-                        </div>
-                        <span class="badge bg-primary rounded-pill">156</span>
-                    </div>
-                    <div class="list-group-item d-flex align-items-center py-3">
-                        <img src="https://via.placeholder.com/50" class="rounded me-3" alt="Product">
-                        <div class="flex-grow-1">
-                            <h6 class="mb-0">Nước ngọt Coca Cola 330ml</h6>
-                            <small class="text-muted">Đã bán 142 cái</small>
-                        </div>
-                        <span class="badge bg-primary rounded-pill">142</span>
-                    </div>
+
+                    @endforelse
+
                 </div>
+
             </div>
+
         </div>
+
     </div>
+
 </div>
 
 <!-- Recent Orders -->
@@ -203,7 +238,7 @@
                     Xem tất cả <i class="fas fa-arrow-right ms-1"></i>
                 </a>
             </div>
-            <div class="card-body p-0">
+            {{-- <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>
@@ -295,8 +330,200 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </div> --}}
         </div>
     </div>
 </div>
 @endsection
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    // ===========================
+    // Biểu đồ doanh thu 7 ngày
+    // ===========================
+
+    const chart7 = document.getElementById('chart7Ngay');
+
+    if (chart7) {
+
+        const labels7 = @json($doanhThu7Ngay ? collect($doanhThu7Ngay)->pluck('ngay') : []);
+
+        const data7 = @json($doanhThu7Ngay ? collect($doanhThu7Ngay)->pluck('tong') : []);
+
+        new Chart(chart7, {
+
+            type: 'line',
+
+            data: {
+
+                labels: labels7,
+
+                datasets: [{
+
+                    label: 'Doanh thu 7 ngày',
+
+                    data: data7,
+
+                    borderColor: '#0d6efd',
+
+                    backgroundColor: 'rgba(13,110,253,0.2)',
+
+                    borderWidth: 2,
+
+                    fill: true,
+
+                    tension: 0.4
+
+                }]
+
+            },
+
+            options: {
+
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+                plugins: {
+
+                    legend: {
+
+                        display: true
+
+                    }
+
+                },
+
+                scales: {
+
+                    y: {
+
+                        beginAtZero: true
+
+                    }
+
+                }
+
+            }
+
+        });
+
+    }
+
+
+    // ===========================
+    // Biểu đồ doanh thu 12 tháng
+    // ===========================
+
+    const chart12 = document.getElementById('chart12Thang');
+
+    if (chart12) {
+
+        const labels12 = @json($doanhThu12Thang ? collect($doanhThu12Thang)->pluck('thang') : []);
+
+        const data12 = @json($doanhThu12Thang ? collect($doanhThu12Thang)->pluck('tong') : []);
+
+        new Chart(chart12, {
+
+            type: 'bar',
+
+            data: {
+
+                labels: labels12,
+
+                datasets: [{
+
+                    label: 'Doanh thu 12 tháng',
+
+                    data: data12,
+
+                    backgroundColor: '#198754',
+
+                    borderColor: '#198754',
+
+                    borderWidth: 1
+
+                }]
+
+            },
+
+            options: {
+
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+                plugins: {
+
+                    legend: {
+
+                        display: true
+
+                    }
+
+                },
+
+                scales: {
+
+                    y: {
+
+                        beginAtZero: true
+
+                    }
+
+                }
+
+            }
+
+        });
+
+    }
+
+});
+
+const labelsNam=@json($doanhThuTheoNam->pluck('nam'));
+
+const dataNam=@json($doanhThuTheoNam->pluck('doanh_thu'));
+
+new Chart(document.getElementById('chartNam'),{
+
+type:'bar',
+
+data:{
+
+labels:labelsNam,
+
+datasets:[{
+
+label:'Doanh thu',
+
+data:dataNam,
+
+backgroundColor:'#fd7e14'
+
+}]
+
+},
+
+options:{
+
+responsive:true,
+
+plugins:{
+
+legend:{
+
+display:true
+
+}
+
+}
+
+}
+
+});
+
+</script>

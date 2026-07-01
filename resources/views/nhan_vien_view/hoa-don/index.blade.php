@@ -57,6 +57,7 @@
                         <th>Khách hàng</th>
                         <th>Nhân viên</th>
                         <th>Tổng tiền</th>
+                        <th>Điểm nhận</th>
                         <th>Thanh toán</th>
                         <th>Trạng thái</th>
                         <th class="text-center">Thao tác</th>
@@ -74,7 +75,18 @@
 
                             <td>{{ $hoaDon->ten_nhan_vien ?? 'Nhân viên' }}</td>
 
-                            <td><strong>{{ number_format($hoaDon->khach_can_tra, 0, ',', '.') }}đ</strong></td>
+                            <td>
+                                <strong>
+                                    {{ number_format($hoaDon->khach_can_tra, 0, ',', '.') }}đ
+                                </strong>
+                            </td>
+
+                            <td>
+                                <span class="badge bg-info">
+                                    +{{ $hoaDon->diem_thu_duoc ?? 0 }}
+                                </span>
+                            </td>
+
 
                             <td>@php
                                  $pttt = [
@@ -123,7 +135,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center py-4 text-muted">
+                            <td colspan="9" class="text-center py-4 text-muted">
                                 Chưa có hóa đơn nào
                             </td>
                         </tr>
