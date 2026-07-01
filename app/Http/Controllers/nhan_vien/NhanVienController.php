@@ -63,6 +63,7 @@ class NhanVienController extends Controller
 
   
 
+
     public function lichLamViec(Request $request)
     {
         return $this->lichLamViecTuan($request);
@@ -263,6 +264,7 @@ public function thanhToan(Request $request)
         'id_khach_hang' => 'nullable|integer|exists:khach_hang,id',
         'tien_giam_gia' => 'nullable|numeric|min:0',
     'id_khuyen_mai' => 'nullable|integer|exists:khuyen_mai,id',
+        'diem_su_dung' => 'nullable|integer|min:0',
     ]);
 
     return DB::transaction(function () use ($request) {
@@ -292,8 +294,36 @@ public function thanhToan(Request $request)
 
         $tienGiamGia = min((float) $request->tien_giam_gia, $tongTienHang);
         $khachCanTra = $tongTienHang - $tienGiamGia;
+       $diemSuDung = (int) $request->diem_su_dung;
+        $tienGiamGia = 0;
+
+        if ($request->id_khach_hang && $diemSuDung > 0) {
+
+            $khachHang = KhachHang::lockForUpdate()->find($request->id_khach_hang);
+
+            if (!$khachHang) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không tìm thấy khách hàng.'
+                ], 422);
+            }
+
+            if ($diemSuDung > $khachHang->diem_tich_luy) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Khách không đủ điểm.'
+                ], 422);
+            }
+
+            // 1 điểm = 100đ
+            $tienGiamGia = $diemSuDung * 100;
+        }
+
+        $khachCanTra = max(0, $tongTienHang - $tienGiamGia);
         $tienKhachDua = $request->tien_khach_dua;
         $tienThua = max(0, $tienKhachDua - $khachCanTra);
+        // 10.000 VNĐ = 1 điểm
+        $diemThuDuoc = floor($khachCanTra / 10000);
         $phuongThucMap = [
         'cash' => 'Tiền mặt',
         'transfer' => 'Chuyển khoản',
@@ -313,7 +343,7 @@ public function thanhToan(Request $request)
         }
 
         $hoaDonId = DB::table('hoa_don')->insertGetId([
-            'id_nguoi_dung' => 1,
+            'id_nguoi_dung' => auth()->user()->id,
             'id_khach_hang' => $request->id_khach_hang,
             'id_ca_lam_viec' => null,
             'id_khuyen_mai' => $request->id_khuyen_mai,
@@ -324,12 +354,51 @@ public function thanhToan(Request $request)
             'tien_thua' => $tienThua,
             'phuong_thuc_thanh_toan' => $phuongThucThanhToan,
             'trang_thai' => 'Hoàn thành',
-            'diem_su_dung' => 0,
-            'diem_thu_duoc' => 0,
+            'diem_su_dung' => $diemSuDung,
+            'diem_thu_duoc' => $diemThuDuoc,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+// Cộng điểm cho khách hàng
+if ($request->id_khach_hang) {
 
+    $khachHang = KhachHang::lockForUpdate()
+        ->find($request->id_khach_hang);
+
+    if ($khachHang) {
+
+      $diemMoi = $khachHang->diem_tich_luy - $diemSuDung + $diemThuDuoc;
+
+        DB::table('khach_hang')
+            ->where('id', $khachHang->id)
+            ->update([
+                'diem_tich_luy' => $diemMoi,
+                'tong_chi_tieu' => $khachHang->tong_chi_tieu + $khachCanTra,
+                'updated_at' => now(),
+            ]);
+
+            
+            if ($diemSuDung > 0) {
+                DB::table('lich_su_tich_diem')->insert([
+                    'id_khach_hang' => $khachHang->id,
+                    'id_hoa_don' => $hoaDonId,
+                    'loai_bien_dong' => 'tru',
+                    'so_diem' => $diemSuDung,
+                    'ly_do' => 'Sử dụng điểm thanh toán',
+                    'created_at' => now(),
+                ]);
+            }
+        // Lưu lịch sử tích điểm
+        DB::table('lich_su_tich_diem')->insert([
+            'id_khach_hang' => $khachHang->id,
+            'id_hoa_don' => $hoaDonId,
+            'loai_bien_dong' => 'cong',
+            'so_diem' => $diemThuDuoc,
+            'ly_do' => 'Tích điểm từ hóa đơn',
+            'created_at' => now(),
+        ]);
+    }
+}
         foreach ($items as $item) {
             DB::table('chi_tiet_hoa_don')->insert([
                 'id_hoa_don' => $hoaDonId,
@@ -409,7 +478,21 @@ public function huyHoaDon($id)
                 ->where('id', $item->id_san_pham)
                 ->increment('so_luong_ton_kho', $item->so_luong);
         }
+if ($hoaDon->id_khach_hang && $hoaDon->diem_thu_duoc > 0) {
 
+    DB::table('khach_hang')
+        ->where('id', $hoaDon->id_khach_hang)
+        ->decrement('diem_tich_luy', $hoaDon->diem_thu_duoc);
+
+    DB::table('lich_su_tich_diem')->insert([
+        'id_khach_hang' => $hoaDon->id_khach_hang,
+        'id_hoa_don' => $hoaDon->id,
+        'loai_bien_dong' => 'tru',
+        'so_diem' => $hoaDon->diem_thu_duoc,
+        'ly_do' => 'Hủy hóa đơn',
+        'ngay_tao' => now(),
+    ]);
+}
         DB::table('hoa_don')
             ->where('id', $id)
             ->update([

@@ -756,6 +756,26 @@
                 width: 240px;
             }
         }
+        .modal-content{
+            border-radius:16px;
+            overflow:hidden;
+        }
+
+        .form-floating > label{
+            color:#6c757d;
+        }
+
+        .form-control{
+            border-radius:10px;
+        }
+
+        .btn{
+            border-radius:10px;
+        }
+
+        .modal-header{
+            padding:1rem 1.5rem;
+        }
 
         @media (max-width: 700px) {
             .pos-sidebar {
@@ -798,11 +818,124 @@
     </div>
 </header>
 
+<div class="modal fade" id="addCustomerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+
+            <!-- Header -->
+            <div class="modal-header bg-success text-white border-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-user-plus me-2"></i>
+                    Thêm khách hàng mới
+                </h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body p-4">
+
+                <div class="alert alert-light border mb-4">
+                    <i class="fas fa-info-circle text-primary me-2"></i>
+                    Thông tin khách hàng sẽ được lưu và tự động chọn cho hóa đơn hiện tại.
+                </div>
+
+                <div class="row g-3">
+
+                    <!-- Tên -->
+                    <div class="col-12">
+                        <div class="form-floating">
+                            <input type="text"
+                                   class="form-control"
+                                   id="kh_ten"
+                                   placeholder="Tên khách hàng">
+                            <label>
+                                <i class="fas fa-user me-1"></i>
+                                Tên khách hàng
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- SĐT -->
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text"
+                                   class="form-control"
+                                   id="kh_sdt"
+                                   placeholder="Số điện thoại">
+                            <label>
+                                <i class="fas fa-phone me-1"></i>
+                                Số điện thoại
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="email"
+                                   class="form-control"
+                                   id="kh_email"
+                                   placeholder="Email">
+                            <label>
+                                <i class="fas fa-envelope me-1"></i>
+                                Email
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Địa chỉ -->
+                    <div class="col-12">
+                        <div class="form-floating">
+                            <textarea class="form-control"
+                                      id="kh_dia_chi"
+                                      placeholder="Địa chỉ"
+                                      style="height:100px"></textarea>
+
+                            <label>
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                Địa chỉ
+                            </label>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer border-0 px-4 pb-4">
+
+                <button type="button"
+                        class="btn btn-light border px-4"
+                        data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>
+                    Hủy
+                </button>
+
+                <button type="button"
+                        class="btn btn-success px-4"
+                        onclick="saveCustomerQuick()">
+                    <i class="fas fa-save me-1"></i>
+                    Lưu khách hàng
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+</div>
 <!-- ── POS Body ── -->
 <div class="pos-body">
 
     <!-- Sidebar -->
     <nav class="pos-sidebar">
+        <a href="{{ url('admin/dashboard') }}" class="nav-btn" title="Dashboard">
+            <i class="fas fa-home"></i>
+            <span>Admin</span>
+        </a>
         <a href="{{ url('nhan-vien/') }}" class="nav-btn" title="Dashboard">
             <i class="fas fa-home"></i>
             <span>Home</span>
@@ -848,11 +981,22 @@
 
         <!-- Search -->
         <div class="mb-2 position-relative">
-    <input type="text"
-           id="customerSearchInput"
-           class="form-control"
-           placeholder="Tìm khách hàng theo tên / SĐT..."
-           oninput="searchCustomers()">
+
+    <div class="d-flex gap-2">
+        <input type="text"
+               id="customerSearchInput"
+               class="form-control"
+               placeholder="Tìm khách hàng theo tên / SĐT..."
+               oninput="searchCustomers()">
+
+     <button type="button"
+        class="btn btn-success"
+        data-bs-toggle="modal"
+        data-bs-target="#addCustomerModal">
+    <i class="fas fa-user-plus"></i>
+    
+</button>
+    </div>
 
     <input type="hidden" id="selectedCustomerId">
 
@@ -916,6 +1060,42 @@
             </select>
         </div>
         <div class="cart-summary" id="cartSummary" style="display:none;">
+            @if(isset($khachHang))
+            <div class="summary-row">
+                <span>Điểm hiện có:</span>
+                <strong class="text-primary">
+                    {{ number_format($khachHang->diem_tich_luy ?? 0) }}
+                </strong>
+            </div>
+            @endif
+
+            <div class="summary-row">
+                <span>Điểm nhận thêm:</span>
+                <strong class="text-success" id="diemThuDuoc">
+                    +0
+                </strong>
+            </div>
+
+            <div class="summary-row">
+                <span>Điểm hiện có</span>
+               <strong id="customerPoint">0</strong>
+            </div>
+
+            <div class="money-input-group mt-2">
+                <label>Sử dụng điểm</label>
+                <input
+                type="number"
+                id="usePoint"
+                class="form-control"
+                value="0"
+                min="0"
+                oninput="calculateTotal(); calculateChange();">
+            </div>
+
+            <div class="summary-row text-danger">
+                <span>Giảm từ điểm</span>
+                <span id="pointDiscount">0đ</span>
+            </div>
             <div class="summary-row">
                 <span>Tạm tính</span>
                 <span id="subtotal">0đ</span>
@@ -931,6 +1111,7 @@
         </div>
 
         <div class="pos-payment">
+            
             <div class="money-input-group">
                 <label>Khách đưa tiền</label>
                 <input type="number" id="customerMoney" placeholder="0" oninput="calculateChange()">
@@ -1199,18 +1380,49 @@ function renderCart() {
         `;
     }).join('');
 
+   calculateTotal();
+   calculateChange();
+}
+
+function calculateTotal() {
+
     const subtotal = cart.reduce((s, i) => s + Number(i.gia_ban) * i.qty, 0);
     discountAmount = tinhTienGiam(subtotal);
 const total = Math.max(0, subtotal - discountAmount);
-
-    document.getElementById('subtotal').textContent = formatCurrency(subtotal);
-    document.getElementById('discount').textContent = '-' + formatCurrency(discountAmount);
-    document.getElementById('totalAmount').textContent = formatCurrency(total);
-}
-
     // Update summary
     
 
+    const customerPoint = selectedCustomer
+        ? selectedCustomer.diem_tich_luy
+        : 0;
+
+    let usePoint = parseInt(document.getElementById("usePoint")?.value || 0);
+
+    if (usePoint > customerPoint) {
+        usePoint = customerPoint;
+        document.getElementById("usePoint").value = usePoint;
+    }
+
+    let pointDiscount = usePoint * 100;
+
+    if (pointDiscount > subtotal) {
+        pointDiscount = subtotal;
+        usePoint = Math.floor(subtotal / 100);
+        document.getElementById("usePoint").value = usePoint;
+    }
+
+    const total = subtotal - pointDiscount;
+
+    const diemThuDuoc = Math.floor(total / 10000);
+
+    document.getElementById("subtotal").textContent = formatCurrency(subtotal);
+    document.getElementById("discount").textContent = "-" + formatCurrency(pointDiscount);
+    document.getElementById("pointDiscount").textContent = "-" + formatCurrency(pointDiscount);
+    document.getElementById("totalAmount").textContent = formatCurrency(total);
+    document.getElementById("diemThuDuoc").textContent = "+" + diemThuDuoc;
+    calculateChange();
+
+}
 
 // ─────────────────────────────────────────────
 // Update Quantity
@@ -1252,14 +1464,33 @@ function clearCart() {
 function calculateChange() {
     const customer = parseFloat(document.getElementById('customerMoney').value) || 0;
 
-    const subtotal = cart.reduce((s, i) => s + Number(i.gia_ban) * i.qty, 0);
+  
     const discount = tinhTienGiam(subtotal);
     const total = Math.max(0, subtotal - discount);
 
     const change = customer - total;
 
-    document.getElementById('changeAmount').textContent =
-        formatCurrency(Math.max(0, change));
+ 
+
+    const subtotal = cart.reduce(
+        (s, i) => s + Number(i.gia_ban) * i.qty,
+        0
+    );
+
+    const usePoint =
+        parseInt(document.getElementById("usePoint").value) || 0;
+
+    const pointDiscount = usePoint * 100;
+
+    const total = subtotal - pointDiscount;
+
+    const customer =
+        parseFloat(document.getElementById("customerMoney").value) || 0;
+
+    const change = Math.max(0, customer - total);
+
+    document.getElementById("changeAmount").textContent =
+        formatCurrency(change);
 }
 
 // ─────────────────────────────────────────────
@@ -1281,11 +1512,19 @@ async function processPayment() {
         return;
     }
 
-    const subtotal = cart.reduce((s, i) => s + Number(i.gia_ban) * i.qty, 0);
+  
 const discount = tinhTienGiam(subtotal);
 const total = Math.max(0, subtotal - discount);
 
-let customer = parseFloat(document.getElementById('customerMoney').value) || 0;
+
+   const subtotal = cart.reduce((s, i) => s + Number(i.gia_ban) * i.qty, 0);
+
+const usePoint = parseInt(document.getElementById("usePoint").value || 0);
+
+const pointDiscount = usePoint * 100;
+
+const total = subtotal - pointDiscount;
+    let customer = parseFloat(document.getElementById('customerMoney').value) || 0;
 
 if (selectedPayment === 'cash') {
     if (customer < total) {
@@ -1299,24 +1538,26 @@ if (selectedPayment === 'cash') {
     // 
 
     try {
-        const response = await fetch('/nhan-vien/ban-hang/thanh-toan', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            },
-            body: JSON.stringify({
-                cart: cart.map(item => ({
-                    id: item.id,
-                    qty: item.qty
-                })),
-                id_khach_hang: selectedCustomer ? selectedCustomer.id : null,
-                tien_khach_dua: customer,
-                id_khuyen_mai: selectedPromotion ? selectedPromotion.id : null,
-                tien_giam_gia: discount,
-                phuong_thuc_thanh_toan: selectedPayment
-            })
-        });
+       const diemThuDuoc = Math.floor(total / 10000);
+
+const response = await fetch('/nhan-vien/ban-hang/thanh-toan', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+    },
+    body: JSON.stringify({
+        cart: cart.map(item => ({
+            id: item.id,
+            qty: item.qty
+        })),
+        id_khach_hang: selectedCustomer ? selectedCustomer.id : null,
+        tien_khach_dua: customer,
+        phuong_thuc_thanh_toan: selectedPayment,
+        diem_su_dung: usePoint,
+        diem_thu_duoc: diemThuDuoc
+    })
+});
 
         const data = await response.json();
 
@@ -1453,6 +1694,12 @@ function searchCustomers() {
 function selectCustomer(customer) {
     selectedCustomer = customer;
 
+document.getElementById("customerPoint").innerText =
+    customer.diem_tich_luy;
+
+document.getElementById("usePoint").value = 0;
+
+
     document.getElementById('selectedCustomerId').value = customer.id;
     document.getElementById('customerSearchInput').value = '';
     document.getElementById('customerSearchResult').style.display = 'none';
@@ -1461,6 +1708,9 @@ function selectCustomer(customer) {
         `<strong>${customer.ten_khach_hang}</strong> - ${customer.so_dien_thoai ?? ''} - Điểm: ${customer.diem_tich_luy ?? 0}`;
 
     document.getElementById('selectedCustomerBox').style.display = 'block';
+
+    calculateTotal();
+    calculateChange();
 }
 
 function clearSelectedCustomer() {
@@ -1574,6 +1824,79 @@ async function handleSearchEnter(event) {
     }
 }
 
+function capNhatDiem() {
+    const tongTien = parseInt(document.getElementById('tongTien').value || 0);
+    const diem = Math.floor(tongTien / 10000);
+
+    const el = document.getElementById('diemThuDuoc');
+    if (el) {
+        el.innerText = '+' + diem;
+    }
+}
+
+async function saveCustomerQuick() {
+    try {
+        const response = await fetch(
+            "{{ route('nhan-vien.khach-hang.them-nhanh') }}",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": document.querySelector(
+                        'meta[name="csrf-token"]'
+                    ).content,
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify({
+                    ten_khach_hang: document.getElementById('kh_ten').value,
+                    so_dien_thoai: document.getElementById('kh_sdt').value,
+                    email: document.getElementById('kh_email').value,
+                    dia_chi: document.getElementById('kh_dia_chi').value
+                })
+            }
+        );
+
+       if (!response.ok) {
+    const data = await response.json();
+
+    if (response.status === 422) {
+        let errors = [];
+
+        Object.values(data.errors).forEach(arr => {
+            errors.push(...arr);
+        });
+
+        showToast(errors.join(' | '), 'error');
+        return;
+    }
+
+    throw new Error(data.message || "Có lỗi xảy ra");
+}
+
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('selectedCustomerId').value =
+                data.khach_hang.id;
+
+            document.getElementById('customerSearchInput').value =
+                data.khach_hang.ten_khach_hang + ' - ' +
+                data.khach_hang.so_dien_thoai;
+
+            bootstrap.Modal.getInstance(
+                document.getElementById('addCustomerModal')
+            ).hide();
+
+            showToast('Thêm khách hàng thành công!', 'success');
+        } else {
+            showToast(data.message || 'Có lỗi xảy ra', 'danger');
+        }
+
+    } catch (error) {
+        console.error(error);
+        showToast('Không thể thêm khách hàng', 'danger');
+    }
+}
 // ─────────────────────────────────────────────
 // Init
 // ─────────────────────────────────────────────

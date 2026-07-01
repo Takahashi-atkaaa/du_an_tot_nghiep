@@ -3,12 +3,58 @@
 namespace App\Http\Controllers\admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\DanhMucSanPham;
 use App\Models\SanPham;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class SanPhamApiController extends Controller
 {
+    public function index(Request $request): JsonResponse
+    {
+        $q = $request->query('q');
+        $danhMuc = $request->query('danh_muc');
+        $trangThai = $request->query('trang_thai');
+        $includeVariants = $request->boolean('include_variants', false);
+
+        $query = SanPham::with(['danhMuc', 'donVi', 'chiTietLoHangTon'])
+            ->sanPhamCha()
+            ->when($q, fn($w) => $w->where(fn($inner) =>
+                $inner->where('ten_san_pham', 'like', "%{$q}%")
+                    ->orWhere('ma_vach', 'like', "%{$q}%")
+                    ->orWhere('ma_hang', 'like', "%{$q}%")
+            ))
+            ->when($danhMuc, fn($w) => $w->where('id_danh_muc', $danhMuc))
+            ->when(!is_null($trangThai) && $trangThai !== '', fn($w) => $w->where('trang_thai', $trangThai))
+            ->orderBy('ten_san_pham')
+            ->limit(20);
+
+        $items = $query->get(['id', 'ten_san_pham', 'ma_vach', 'ma_hang', 'hinh_anh', 'gia_ban', 'id_danh_muc', 'id_don_vi', 'trang_thai', 'san_pham_cha_id', 'la_san_pham_cha']);
+
+        if ($includeVariants) {
+            $items->load(['bienThe' => fn($q) => $q->orderBy('ten_san_pham'), 'bienThe.thuocTinhs', 'bienThe.chiTietLoHangTon']);
+        }
+
+        $items->each(function ($sp) use ($includeVariants) {
+            $sp->chi_tiet_lo_hang_ton_sum_so_luong_ton = $sp->chiTietLoHangTon->sum('so_luong_ton');
+            if ($includeVariants) {
+                $sp->bien_the = $sp->bienThe->map(function ($bt) {
+                    $bt->chi_tiet_lo_hang_ton_sum_so_luong_ton = $bt->chiTietLoHangTon->sum('so_luong_ton');
+                    return $bt;
+                })->toArray();
+            }
+        });
+
+        $dataArray = $items->toArray();
+
+        return response()->json([
+            'success' => true,
+            'data' => $dataArray,
+            'danh_muc_list' => DanhMucSanPham::orderBy('ten_danh_muc')->get(['id', 'ten_danh_muc'])->toArray(),
+        ]);
+    }
+
     public function show(int $id): JsonResponse
     {
         $sanPham = SanPham::with([
@@ -39,24 +85,28 @@ class SanPhamApiController extends Controller
             ->limit(20)
             ->get();
 
-        $loHang = DB::table('chi_tiet_phieu')
-            ->where('id_san_pham', $id)
-            ->whereNotNull('ma_lo')
+        $loHang = DB::table('chi_tiet_lo_hang as ct')
+            ->join('lo_hang as lh', 'lh.id', '=', 'ct.id_lo_hang')
+            ->where('ct.id_san_pham', $id)
+            ->where('ct.so_luong_ton', '>', 0)
+            ->orderBy('ct.han_su_dung', 'asc')
             ->select(
-                'ma_lo as maLo',
-                'han_su_dung as hanSuDung',
-                'so_luong',
-                'so_luong_con_lai as soLuongConLai'
+                'ct.id as idChiTietLo',
+                'lh.ma_lo as maLo',
+                'ct.han_su_dung as hanSuDung',
+                'ct.so_luong_nhap as so_luong',
+                'ct.so_luong_ton as soLuongConLai',
+                'ct.gia_nhap as giaNhap'
             )
-            ->groupBy('ma_lo', 'han_su_dung', 'so_luong', 'so_luong_con_lai')
-            ->orderBy('han_su_dung')
             ->get();
+
+        $sanPham->load(['danhMuc', 'donVi', 'thuocTinhs', 'bienThe.thuocTinhs']);
 
         return response()->json([
             'success' => true,
             'data' => [
-                'sanPham' => $sanPham,
-                'bienThe' => $sanPham->bienThe,
+                'sanPham' => $sanPham->toArray(),
+                'bienThe' => $sanPham->bienThe->toArray(),
                 'theKho' => $theKho,
                 'loHang' => $loHang,
             ],
