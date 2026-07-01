@@ -803,6 +803,10 @@
 
     <!-- Sidebar -->
     <nav class="pos-sidebar">
+        <a href="{{ url('admin/dashboard') }}" class="nav-btn" title="Dashboard">
+            <i class="fas fa-home"></i>
+            <span>Admin</span>
+        </a>
         <a href="{{ url('nhan-vien/') }}" class="nav-btn" title="Dashboard">
             <i class="fas fa-home"></i>
             <span>Home</span>

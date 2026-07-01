@@ -361,6 +361,13 @@
                             </a>
                         </li>
 
+                        <li class="nav-item">
+                            <a href="{{ route('diem-danh.index') }}"
+                            class="nav-link {{ request()->is('admin/diem-danh*') ? 'active' : '' }}">
+                                Điểm danh
+                            </a>
+                        </li>
+
                     </ul>
                 </div>
             </li>

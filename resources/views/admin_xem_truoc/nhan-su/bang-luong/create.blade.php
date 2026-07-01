@@ -32,10 +32,17 @@
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label">Kỳ làm việc <span class="text-danger">*</span></label>
-                    <input type="text" name="ky_lam_viec" value="{{ old('ky_lam_viec') }}" class="form-control @error('ky_lam_viec') is-invalid @enderror" placeholder="VD: 06/2026">
-                    <small class="text-muted">Nhập theo định dạng: MM/YYYY</small>
-                    @error('ky_lam_viec')
+                    <label class="form-label">Ngày bắt đầu <span class="text-danger">*</span></label>
+                    <input type="date" name="ngay_bat_dau" value="{{ old('ngay_bat_dau') }}" class="form-control @error('ngay_bat_dau') is-invalid @enderror">
+                    @error('ngay_bat_dau')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Ngày kết thúc <span class="text-danger">*</span></label>
+                    <input type="date" name="ngay_ket_thuc" value="{{ old('ngay_ket_thuc') }}" class="form-control @error('ngay_ket_thuc') is-invalid @enderror">
+                    @error('ngay_ket_thuc')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>

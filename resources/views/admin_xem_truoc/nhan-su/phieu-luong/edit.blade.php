@@ -40,8 +40,8 @@
                         <td>{{ $phieuLuong->bangLuong->ten_bang_luong ?? 'N/A' }}</td>
                     </tr>
                     <tr>
-                        <td class="text-muted">Kỳ</td>
-                        <td>{{ $phieuLuong->bangLuong->ky_lam_viec ?? 'N/A' }}</td>
+                        <td class="text-muted">Ngày</td>
+                        <td>{{ $phieuLuong->bangLuong->ngay_bat_dau ? \Carbon\Carbon::parse($phieuLuong->bangLuong->ngay_bat_dau)->format('d/m/Y') : '-' }} - {{ $phieuLuong->bangLuong->ngay_ket_thuc ? \Carbon\Carbon::parse($phieuLuong->bangLuong->ngay_ket_thuc)->format('d/m/Y') : '-' }}</td>
                     </tr>
                 </table>
             </div>
