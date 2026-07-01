@@ -60,13 +60,58 @@ class NhanVienController extends Controller
     {
         return view('nhan_vien_view.san-pham.index');
     }
-
-  
-
-
-    public function lichLamViec(Request $request)
+    public function lichLamViec(Request $request): View
     {
-        return $this->lichLamViecTuan($request);
+        return $this->lichSuCaLam($request);
+    }
+
+    public function lichSuCaLam(Request $request): View
+    {
+        $nguoiDung = $this->resolvePreviewEmployee($request);
+
+        $query = ChiaCaLamViec::query()
+            ->with('caLamViec')
+            ->where('id_nguoi_dung', $nguoiDung->id);
+
+        if ($request->filled('tu_ngay')) {
+            $query->whereDate('ngay', '>=', $request->input('tu_ngay'));
+        }
+
+        if ($request->filled('den_ngay')) {
+            $query->whereDate('ngay', '<=', $request->input('den_ngay'));
+        }
+
+        $lichSuCaLam = (clone $query)
+            ->orderByDesc('ngay')
+            ->orderByDesc('id')
+            ->paginate(12)
+            ->withQueryString();
+
+        $tongSoCa = (clone $query)->count();
+        $tongSoNgayLam = (clone $query)
+            ->distinct('ngay')
+            ->count('ngay');
+        $caGanNhat = (clone $query)
+            ->orderByDesc('ngay')
+            ->orderByDesc('id')
+            ->first();
+        $caDauTien = (clone $query)
+            ->orderBy('ngay')
+            ->orderBy('id')
+            ->first();
+
+        return view('nhan_vien_view.lich-lam-viec.lich-su', [
+            'nguoiDung' => $nguoiDung,
+            'lichSuCaLam' => $lichSuCaLam,
+            'tongSoCa' => $tongSoCa,
+            'tongSoNgayLam' => $tongSoNgayLam,
+            'caGanNhat' => $caGanNhat,
+            'caDauTien' => $caDauTien,
+            'boLoc' => [
+                'tu_ngay' => $request->input('tu_ngay'),
+                'den_ngay' => $request->input('den_ngay'),
+            ],
+        ]);
     }
 
     public function lichLamViecTuan(Request $request): View
@@ -262,6 +307,8 @@ public function thanhToan(Request $request)
         'tien_khach_dua' => 'required|numeric|min:0',
         'phuong_thuc_thanh_toan' => 'required|string',
         'id_khach_hang' => 'nullable|integer|exists:khach_hang,id',
+        'tien_giam_gia' => 'nullable|numeric|min:0',
+    'id_khuyen_mai' => 'nullable|integer|exists:khuyen_mai,id',
         'diem_su_dung' => 'nullable|integer|min:0',
     ]);
 
@@ -290,7 +337,18 @@ public function thanhToan(Request $request)
             ];
         }
 
+        $tienGiamGia = min((float) $request->tien_giam_gia, $tongTienHang);
+        $khachCanTra = $tongTienHang - $tienGiamGia;
        $diemSuDung = (int) $request->diem_su_dung;
+       // số điểm tối đa có thể dùng
+        $maxUsePoint = floor($tongTienHang / 100);
+
+        // không cho dùng quá số điểm đang có
+        $diemSuDung = min(
+            $diemSuDung,
+            $khachHang->diem_tich_luy,
+            $maxUsePoint
+        );
         $tienGiamGia = 0;
 
         if ($request->id_khach_hang && $diemSuDung > 0) {
@@ -342,7 +400,7 @@ public function thanhToan(Request $request)
             'id_nguoi_dung' => auth()->user()->id,
             'id_khach_hang' => $request->id_khach_hang,
             'id_ca_lam_viec' => null,
-            'id_khuyen_mai' => null,
+            'id_khuyen_mai' => $request->id_khuyen_mai,
             'tong_tien_hang' => $tongTienHang,
             'tien_giam_gia' => $tienGiamGia,
             'khach_can_tra' => $khachCanTra,
@@ -524,6 +582,26 @@ public function layKhachHang(Request $request)
         ->orderBy('ten_khach_hang')
         ->limit(10)
         ->get()
+    );
+}
+public function layKhuyenMai()
+{
+    return response()->json(
+        DB::table('khuyen_mai')
+            ->where('trang_thai', 1)
+            ->where('ngay_bat_dau', '<=', now())
+            ->where('ngay_ket_thuc', '>=', now())
+            ->select(
+                'id',
+                'ten_chuong_trinh',
+                'loai_giam_gia',
+                'gia_tri_giam',
+                'giam_toi_da',
+                'so_luong_sp_toi_thieu',
+                'don_hang_toi_thieu'
+            )
+            ->orderByDesc('id')
+            ->get()
     );
 }
 }

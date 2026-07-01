@@ -28,7 +28,7 @@
         <div class="text-center border-bottom pb-4 mb-4">
             <h3 class="fw-bold text-primary">PHIẾU LƯƠNG</h3>
             <h5 class="mb-1">{{ $phieuLuong->bangLuong->ten_bang_luong ?? 'N/A' }}</h5>
-            <p class="mb-0 text-muted">Kỳ: {{ $phieuLuong->bangLuong->ky_lam_viec ?? 'N/A' }}</p>
+            <p class="mb-0 text-muted">Ngày: {{ $phieuLuong->bangLuong->ngay_bat_dau ? \Carbon\Carbon::parse($phieuLuong->bangLuong->ngay_bat_dau)->format('d/m/Y') : '-' }} - {{ $phieuLuong->bangLuong->ngay_ket_thuc ? \Carbon\Carbon::parse($phieuLuong->bangLuong->ngay_ket_thuc)->format('d/m/Y') : '-' }}</p>
             <p class="mb-0 text-muted">Ngày lập: {{ $phieuLuong->created_at->format('d/m/Y') }}</p>
         </div>
 

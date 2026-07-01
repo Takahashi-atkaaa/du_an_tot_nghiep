@@ -15,7 +15,8 @@ class BangLuong extends Model
 
     protected $fillable = [
         'ten_bang_luong',
-        'ky_lam_viec',
+        'ngay_bat_dau',
+        'ngay_ket_thuc',
         'tong_luong_tat_ca_nhan_vien',
         'so_nhan_vien',
         'trang_thai',
@@ -24,6 +25,8 @@ class BangLuong extends Model
     protected $casts = [
         'tong_luong_tat_ca_nhan_vien' => 'decimal:2',
         'so_nhan_vien' => 'integer',
+        'ngay_bat_dau' => 'date',
+        'ngay_ket_thuc' => 'date',
     ];
 
     public function phieuLuongs(): HasMany

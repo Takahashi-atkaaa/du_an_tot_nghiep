@@ -54,7 +54,8 @@
                     <tr>
                         <th>Nhân viên</th>
                         <th>Bảng lương</th>
-                        <th>Kỳ</th>
+                        <th>Ngày bắt đầu</th>
+                        <th>Ngày kết thúc</th>
                         <th>Giờ làm</th>
                         <th>Lương tạm tính</th>
                         <th>Tổng lương</th>
@@ -67,7 +68,8 @@
                         <tr>
                             <td class="fw-semibold">{{ $pl->nguoiDung->ho_ten ?? 'N/A' }}</td>
                             <td>{{ $pl->bangLuong->ten_bang_luong ?? 'N/A' }}</td>
-                            <td>{{ $pl->bangLuong->ky_lam_viec ?? 'N/A' }}</td>
+                            <td>{{ $pl->bangLuong->ngay_bat_dau ? \Carbon\Carbon::parse($pl->bangLuong->ngay_bat_dau)->format('d/m/Y') : '-' }}</td>
+                            <td>{{ $pl->bangLuong->ngay_ket_thuc ? \Carbon\Carbon::parse($pl->bangLuong->ngay_ket_thuc)->format('d/m/Y') : '-' }}</td>
                             <td>{{ number_format($pl->tong_gio_lam_thuc_te, 1, ',', '.') }}h</td>
                             <td>{{ number_format($pl->luong_tam_tinh, 0, ',', '.') }}đ</td>
                             <td class="text-primary fw-semibold">{{ number_format($pl->tong_luong, 0, ',', '.') }}đ</td>

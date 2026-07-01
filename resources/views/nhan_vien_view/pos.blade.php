@@ -1018,11 +1018,17 @@
     </div>
 </div>
         <div class="pos-search-bar">
-            <div class="search-wrapper">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Tìm sản phẩm..." oninput="filterProducts()">
-            </div>
-        </div>
+    <div class="search-wrapper">
+        <i class="fas fa-search"></i>
+
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="Tìm sản phẩm hoặc quét mã vạch..."
+            oninput="filterProducts()"
+            onkeydown="handleSearchEnter(event)">
+    </div>
+</div>
 
         <!-- Product Grid -->
         <div class="pos-product-grid" id="productGrid">
@@ -1050,7 +1056,12 @@
                 <small>Click sản phẩm để thêm vào</small>
             </div>
         </div>
-
+        <div class="p-2 border-top">
+            <label class="form-label mb-1">Khuyến mãi</label>
+            <select id="promotionSelect" class="form-select form-select-sm" onchange="applyPromotion()">
+               <option value="">Không áp dụng</option>
+            </select>
+        </div>
         <div class="cart-summary" id="cartSummary" style="display:none;">
             @if(isset($khachHang))
             <div class="summary-row">
@@ -1162,6 +1173,9 @@
 // ─────────────────────────────────────────────
 let products = [];
 
+let promotions = [];
+let selectedPromotion = null;
+let discountAmount = 0;
 async function loadProducts() {
     try {
         let url = '/nhan-vien/ban-hang/san-pham';
@@ -1373,40 +1387,68 @@ function renderCart() {
    calculateChange();
 }
 
+
 function calculateTotal() {
 
-    const subtotal = cart.reduce((s, i) => s + Number(i.gia_ban) * i.qty, 0);
+    const subtotal = cart.reduce(
+        (sum, item) => sum + Number(item.gia_ban) * item.qty,
+        0
+    );
 
+    // Tiền giảm từ khuyến mãi
+    const promotionDiscount = tinhTienGiam(subtotal);
+
+    // Điểm hiện có của khách
     const customerPoint = selectedCustomer
-        ? selectedCustomer.diem_tich_luy
+        ? Number(selectedCustomer.diem_tich_luy)
         : 0;
 
-    let usePoint = parseInt(document.getElementById("usePoint")?.value || 0);
+    // Điểm khách nhập
+    let usePoint =
+        parseInt(document.getElementById("usePoint").value) || 0;
 
-    if (usePoint > customerPoint) {
-        usePoint = customerPoint;
-        document.getElementById("usePoint").value = usePoint;
-    }
+    // Không được vượt quá số điểm khách đang có
+    usePoint = Math.min(usePoint, customerPoint);
 
-    let pointDiscount = usePoint * 100;
+    // Không được vượt quá số tiền còn lại sau khuyến mãi
+    const maxUsePoint = Math.floor(
+        Math.max(0, subtotal - promotionDiscount) / 100
+    );
 
-    if (pointDiscount > subtotal) {
-        pointDiscount = subtotal;
-        usePoint = Math.floor(subtotal / 100);
-        document.getElementById("usePoint").value = usePoint;
-    }
+    usePoint = Math.min(usePoint, maxUsePoint);
 
-    const total = subtotal - pointDiscount;
+    // Cập nhật lại ô nhập nếu người dùng nhập quá nhiều
+    document.getElementById("usePoint").value = usePoint;
 
+    // Tiền giảm từ điểm
+    const pointDiscount = usePoint * 100;
+
+    // Tổng thanh toán
+    const total = Math.max(
+        0,
+        subtotal - promotionDiscount - pointDiscount
+    );
+
+    // Điểm được cộng sau khi thanh toán
     const diemThuDuoc = Math.floor(total / 10000);
 
-    document.getElementById("subtotal").textContent = formatCurrency(subtotal);
-    document.getElementById("discount").textContent = "-" + formatCurrency(pointDiscount);
-    document.getElementById("pointDiscount").textContent = "-" + formatCurrency(pointDiscount);
-    document.getElementById("totalAmount").textContent = formatCurrency(total);
-    document.getElementById("diemThuDuoc").textContent = "+" + diemThuDuoc;
-    calculateChange();
+    // Hiển thị
+    document.getElementById("subtotal").innerText =
+        formatCurrency(subtotal);
 
+    document.getElementById("discount").innerText =
+        "-" + formatCurrency(promotionDiscount);
+
+    document.getElementById("pointDiscount").innerText =
+        "-" + formatCurrency(pointDiscount);
+
+    document.getElementById("totalAmount").innerText =
+        formatCurrency(total);
+
+    document.getElementById("diemThuDuoc").innerText =
+        "+" + diemThuDuoc;
+
+    calculateChange();
 }
 
 // ─────────────────────────────────────────────
@@ -1437,10 +1479,29 @@ function removeFromCart(id) {
 function clearCart() {
     if (cart.length === 0) return;
     cart = [];
-    document.getElementById('customerMoney').value = '';
-    document.getElementById('changeAmount').textContent = '0đ';
-    renderCart();
-    showToast('Đã xóa giỏ hàng');
+
+// reset khách hàng
+selectedCustomer = null;
+document.getElementById("selectedCustomerId").value = "";
+document.getElementById("selectedCustomerBox").style.display = "none";
+document.getElementById("customerPoint").innerText = "0";
+
+// reset điểm
+document.getElementById("usePoint").value = 0;
+
+// reset khuyến mãi
+selectedPromotion = null;
+document.getElementById("promotionSelect").value = "";
+
+// reset tiền
+document.getElementById("customerMoney").value = "";
+document.getElementById("changeAmount").innerText = "0đ";
+
+renderCart();
+calculateTotal();
+calculateChange();
+
+showToast("Đã xóa giỏ hàng");
 }
 
 // ─────────────────────────────────────────────
@@ -1449,23 +1510,44 @@ function clearCart() {
 function calculateChange() {
 
     const subtotal = cart.reduce(
-        (s, i) => s + Number(i.gia_ban) * i.qty,
+        (sum, item) => sum + Number(item.gia_ban) * item.qty,
         0
     );
 
-    const usePoint =
-        parseInt(document.getElementById("usePoint").value) || 0;
+    const promotionDiscount =
+        tinhTienGiam(subtotal);
 
-    const pointDiscount = usePoint * 100;
+    const customerPoint = selectedCustomer
+    ? Number(selectedCustomer.diem_tich_luy)
+    : 0;
 
-    const total = subtotal - pointDiscount;
+let usePoint =
+    parseInt(document.getElementById("usePoint").value) || 0;
+
+usePoint = Math.min(usePoint, customerPoint);
+
+const maxUsePoint = Math.floor(
+    Math.max(0, subtotal - promotionDiscount) / 100
+);
+
+usePoint = Math.min(usePoint, maxUsePoint);
+
+document.getElementById("usePoint").value = usePoint;
+
+const pointDiscount = usePoint * 100;
+
+    const total = Math.max(
+    0,
+    subtotal - promotionDiscount - pointDiscount
+    );
 
     const customer =
         parseFloat(document.getElementById("customerMoney").value) || 0;
 
-    const change = Math.max(0, customer - total);
+    const change =
+        Math.max(0, customer - total);
 
-    document.getElementById("changeAmount").textContent =
+    document.getElementById("changeAmount").innerText =
         formatCurrency(change);
 }
 
@@ -1488,28 +1570,54 @@ async function processPayment() {
         return;
     }
 
-   const subtotal = cart.reduce((s, i) => s + Number(i.gia_ban) * i.qty, 0);
+  
+const subtotal = cart.reduce(
+    (sum, item) => sum + Number(item.gia_ban) * item.qty,
+    0
+);
 
-const usePoint = parseInt(document.getElementById("usePoint").value || 0);
+const promotionDiscount =
+    tinhTienGiam(subtotal);
+
+const customerPoint = selectedCustomer
+    ? Number(selectedCustomer.diem_tich_luy)
+    : 0;
+
+let usePoint =
+    parseInt(document.getElementById("usePoint").value) || 0;
+
+// Không được vượt quá điểm hiện có
+usePoint = Math.min(usePoint, customerPoint);
+
+// Không được vượt quá số tiền còn phải trả
+const maxUsePoint = Math.floor(
+    Math.max(0, subtotal - promotionDiscount) / 100
+);
+
+usePoint = Math.min(usePoint, maxUsePoint);
+
+// cập nhật lại input
+document.getElementById("usePoint").value = usePoint;
 
 const pointDiscount = usePoint * 100;
 
-const total = subtotal - pointDiscount;
-    let customer = parseFloat(document.getElementById('customerMoney').value) || 0;
+const total = Math.max(
+    0,
+    subtotal - promotionDiscount - pointDiscount
+);
+let customer =
+    parseFloat(document.getElementById("customerMoney").value) || 0;
 
 if (selectedPayment === 'cash') {
     if (customer < total) {
-        showToast('Số tiền khách đưa không đủ!', 'error');
+        showToast('Tiền khách đưa chưa đủ.', 'error');
         return;
     }
 } else {
     customer = total;
 }
 
-    if (selectedPayment === 'cash' && customer < total) {
-        showToast('Số tiền khách đưa không đủ!', 'error');
-        return;
-    }
+    // 
 
     try {
        const diemThuDuoc = Math.floor(total / 10000);
@@ -1526,6 +1634,7 @@ const response = await fetch('/nhan-vien/ban-hang/thanh-toan', {
             qty: item.qty
         })),
         id_khach_hang: selectedCustomer ? selectedCustomer.id : null,
+         id_khuyen_mai:selectedPromotion? selectedPromotion.id: null,
         tien_khach_dua: customer,
         phuong_thuc_thanh_toan: selectedPayment,
         diem_su_dung: usePoint,
@@ -1551,7 +1660,7 @@ const response = await fetch('/nhan-vien/ban-hang/thanh-toan', {
         document.getElementById('customerMoney').value = '';
         document.getElementById('changeAmount').textContent = '0đ';
 
-        renderCart();
+        clearCart();
         loadProducts();
 
         showToast('Thanh toán thành công!');
@@ -1691,6 +1800,116 @@ function clearSelectedCustomer() {
     selectedCustomer = null;
     document.getElementById('selectedCustomerId').value = '';
     document.getElementById('selectedCustomerBox').style.display = 'none';
+    document.getElementById("customerPoint").innerText = "0";
+    document.getElementById("usePoint").value = 0;
+    calculateTotal();
+    calculateChange();
+}
+async function loadPromotions() {
+    const response = await fetch('/nhan-vien/ban-hang/khuyen-mai');
+    promotions = await response.json();
+
+    const select = document.getElementById('promotionSelect');
+    select.innerHTML = '<option value="">Không áp dụng</option>';
+
+    promotions.forEach(km => {
+        select.innerHTML += `
+            <option value="${km.id}">
+                ${km.ten_chuong_trinh}
+            </option>
+        `;
+    });
+}
+function tinhTienGiam(subtotal) {
+    if (!selectedPromotion) return 0;
+
+    const type = String(selectedPromotion.loai_giam_gia || '')
+        .trim()
+        .toLowerCase();
+
+    const minOrder = Number(selectedPromotion.don_hang_toi_thieu || 0);
+    const minQty = Number(selectedPromotion.so_luong_sp_toi_thieu || 0);
+    const totalQty = cart.reduce((s, i) => s + Number(i.qty || 0), 0);
+
+    if (subtotal < minOrder) return 0;
+    if (minQty > 0 && totalQty < minQty) return 0;
+
+    // Mua 1 tặng 1 / BOGO
+    if (type === 'bogo') {
+        let discount = 0;
+
+        cart.forEach(item => {
+            const qty = Number(item.qty || 0);
+            const price = Number(item.gia_ban || 0);
+
+            const freeQty = Math.floor(qty / 2);
+            discount += freeQty * price;
+        });
+
+        return Math.min(discount, subtotal);
+    }
+
+    // Giảm phần trăm
+    if (type === 'phan_tram') {
+        let discount = subtotal * Number(selectedPromotion.gia_tri_giam || 0) / 100;
+
+        if (selectedPromotion.giam_toi_da !== null && selectedPromotion.giam_toi_da !== '') {
+            discount = Math.min(discount, Number(selectedPromotion.giam_toi_da));
+        }
+
+        return Math.min(discount, subtotal);
+    }
+
+    // Giảm tiền trực tiếp
+    const discount = Number(selectedPromotion.gia_tri_giam || 0);
+    return Math.min(discount, subtotal);
+}
+function applyPromotion() {
+    const id = document.getElementById('promotionSelect').value;
+
+    selectedPromotion = promotions.find(km => String(km.id) === String(id)) || null;
+
+    renderCart();
+    calculateTotal();
+    calculateChange();
+} 
+
+// hàm tìm kiếm sản phẩm theo mã vạch khi nhấn Enter
+async function handleSearchEnter(event) {
+    if (event.key !== 'Enter') return;
+
+    event.preventDefault();
+
+    const keyword = event.target.value.trim();
+    if (!keyword) return;
+
+    try {
+        const response = await fetch('/nhan-vien/ban-hang/san-pham?q=' + encodeURIComponent(keyword));
+        const data = await response.json();
+
+        const product = data.find(p =>
+            String(p.ma_vach || '').toLowerCase() === keyword.toLowerCase()
+        );
+
+        if (!product) {
+            showToast('Không tìm thấy mã vạch này!', 'error');
+            return;
+        }
+
+        products = data;
+        addToCart(product.id);
+
+        event.target.value = '';
+        loadProducts();
+
+        setTimeout(() => {
+            event.target.focus();
+        }, 100);
+
+    } catch (error) {
+        console.error(error);
+        showToast('Lỗi quét mã vạch!', 'error');
+    }
 }
 
 function capNhatDiem() {
@@ -1771,6 +1990,7 @@ async function saveCustomerQuick() {
 // ─────────────────────────────────────────────
 loadCategories();
 loadProducts();
+loadPromotions();
 </script>
 </body>
 </html>

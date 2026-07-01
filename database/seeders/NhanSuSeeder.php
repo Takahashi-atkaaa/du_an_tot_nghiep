@@ -148,7 +148,8 @@ class NhanSuSeeder extends Seeder
             // Bang luong - 2 ky
             $bangLuongMayId = DB::table('bang_luong')->insertGetId([
                 'ten_bang_luong' => 'Bảng lương tháng 05/2026',
-                'ky_lam_viec' => '05/2026',
+                'ngay_bat_dau' => '2026-05-01',
+                'ngay_ket_thuc' => '2026-05-31',
                 'tong_luong_tat_ca_nhan_vien' => 85500000,
                 'so_nhan_vien' => 4,
                 'trang_thai' => 'Đã chi',
@@ -158,7 +159,8 @@ class NhanSuSeeder extends Seeder
             ]);
             $bangLuongJuneId = DB::table('bang_luong')->insertGetId([
                 'ten_bang_luong' => 'Bảng lương tháng 06/2026',
-                'ky_lam_viec' => '06/2026',
+                'ngay_bat_dau' => '2026-06-01',
+                'ngay_ket_thuc' => '2026-06-30',
                 'tong_luong_tat_ca_nhan_vien' => 0,
                 'so_nhan_vien' => 0,
                 'trang_thai' => 'Nháp',
