@@ -1389,17 +1389,20 @@ function renderCart() {
 
 function calculateTotal() {
 
-    const subtotal = cart.reduce((s, i) => s + Number(i.gia_ban) * i.qty, 0);
-    discountAmount = tinhTienGiam(subtotal);
-const total = Math.max(0, subtotal - discountAmount);
-    // Update summary
-    
+    const subtotal = cart.reduce(
+        (sum, item) => sum + Number(item.gia_ban) * item.qty,
+        0
+    );
+
+    // giảm theo khuyến mãi
+    const promotionDiscount = tinhTienGiam(subtotal);
 
     const customerPoint = selectedCustomer
-        ? selectedCustomer.diem_tich_luy
+        ? Number(selectedCustomer.diem_tich_luy)
         : 0;
 
-    let usePoint = parseInt(document.getElementById("usePoint")?.value || 0);
+    let usePoint =
+        parseInt(document.getElementById("usePoint").value) || 0;
 
     if (usePoint > customerPoint) {
         usePoint = customerPoint;
@@ -1408,23 +1411,34 @@ const total = Math.max(0, subtotal - discountAmount);
 
     let pointDiscount = usePoint * 100;
 
-    if (pointDiscount > subtotal) {
-        pointDiscount = subtotal;
-        usePoint = Math.floor(subtotal / 100);
-        document.getElementById("usePoint").value = usePoint;
-    }
+    // không được vượt quá tiền còn lại sau KM
+    pointDiscount = Math.min(
+        pointDiscount,
+        subtotal - promotionDiscount
+    );
 
-    const total = subtotal - pointDiscount;
+    const total =
+        subtotal - promotionDiscount - pointDiscount;
 
-    const diemThuDuoc = Math.floor(total / 10000);
+    const diemThuDuoc =
+        Math.floor(total / 10000);
 
-    document.getElementById("subtotal").textContent = formatCurrency(subtotal);
-    document.getElementById("discount").textContent = "-" + formatCurrency(pointDiscount);
-    document.getElementById("pointDiscount").textContent = "-" + formatCurrency(pointDiscount);
-    document.getElementById("totalAmount").textContent = formatCurrency(total);
-    document.getElementById("diemThuDuoc").textContent = "+" + diemThuDuoc;
+    document.getElementById("subtotal").innerText =
+        formatCurrency(subtotal);
+
+    document.getElementById("discount").innerText =
+        "-" + formatCurrency(promotionDiscount);
+
+    document.getElementById("pointDiscount").innerText =
+        "-" + formatCurrency(pointDiscount);
+
+    document.getElementById("totalAmount").innerText =
+        formatCurrency(total);
+
+    document.getElementById("diemThuDuoc").innerText =
+        "+" + diemThuDuoc;
+
     calculateChange();
-
 }
 
 // ─────────────────────────────────────────────
@@ -1465,34 +1479,31 @@ function clearCart() {
 // Calculate Change
 // ─────────────────────────────────────────────
 function calculateChange() {
-    const customer = parseFloat(document.getElementById('customerMoney').value) || 0;
-
-  
-    const discount = tinhTienGiam(subtotal);
-    const total = Math.max(0, subtotal - discount);
-
-    const change = customer - total;
-
- 
 
     const subtotal = cart.reduce(
-        (s, i) => s + Number(i.gia_ban) * i.qty,
+        (sum, item) => sum + Number(item.gia_ban) * item.qty,
         0
     );
+
+    const promotionDiscount =
+        tinhTienGiam(subtotal);
 
     const usePoint =
         parseInt(document.getElementById("usePoint").value) || 0;
 
-    const pointDiscount = usePoint * 100;
+    const pointDiscount =
+        usePoint * 100;
 
-    const total = subtotal - pointDiscount;
+    const total =
+        subtotal - promotionDiscount - pointDiscount;
 
     const customer =
         parseFloat(document.getElementById("customerMoney").value) || 0;
 
-    const change = Math.max(0, customer - total);
+    const change =
+        Math.max(0, customer - total);
 
-    document.getElementById("changeAmount").textContent =
+    document.getElementById("changeAmount").innerText =
         formatCurrency(change);
 }
 
@@ -1516,18 +1527,24 @@ async function processPayment() {
     }
 
   
-const discount = tinhTienGiam(subtotal);
-const total = Math.max(0, subtotal - discount);
+const subtotal = cart.reduce(
+    (sum, item) => sum + Number(item.gia_ban) * item.qty,
+    0
+);
 
+const promotionDiscount =
+    tinhTienGiam(subtotal);
 
-   const subtotal = cart.reduce((s, i) => s + Number(i.gia_ban) * i.qty, 0);
+const usePoint =
+    parseInt(document.getElementById("usePoint").value) || 0;
 
-const usePoint = parseInt(document.getElementById("usePoint").value || 0);
+const pointDiscount =
+    usePoint * 100;
 
-const pointDiscount = usePoint * 100;
-
-const total = subtotal - pointDiscount;
-    let customer = parseFloat(document.getElementById('customerMoney').value) || 0;
+const total =
+    subtotal - promotionDiscount - pointDiscount;
+let customer =
+    parseFloat(document.getElementById("customerMoney").value) || 0;
 
 if (selectedPayment === 'cash') {
     if (customer < total) {
@@ -1555,6 +1572,7 @@ const response = await fetch('/nhan-vien/ban-hang/thanh-toan', {
             qty: item.qty
         })),
         id_khach_hang: selectedCustomer ? selectedCustomer.id : null,
+         id_khuyen_mai:selectedPromotion? selectedPromotion.id: null,
         tien_khach_dua: customer,
         phuong_thuc_thanh_toan: selectedPayment,
         diem_su_dung: usePoint,
@@ -1720,6 +1738,9 @@ function clearSelectedCustomer() {
     selectedCustomer = null;
     document.getElementById('selectedCustomerId').value = '';
     document.getElementById('selectedCustomerBox').style.display = 'none';
+    document.getElementById("customerPoint").innerText = "0";
+    document.getElementById("usePoint").value = 0;
+    calculateTotal();
 }
 async function loadPromotions() {
     const response = await fetch('/nhan-vien/ban-hang/khuyen-mai');
