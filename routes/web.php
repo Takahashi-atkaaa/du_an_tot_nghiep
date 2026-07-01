@@ -22,6 +22,7 @@ use App\Http\Controllers\admin\Api\SanPhamApiController;
 use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
 use App\Http\Controllers\admin\CaLam\CaLam;
 use App\Http\Controllers\admin\CaLam\LichSuCaLam;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\admin\KhuyenMaiController;
 use App\Http\Controllers\admin\PhanQuyenDong\PhanQuyen;
 use App\Http\Controllers\nhan_vien\KhachHangController as NhanVienKhachHangController;
@@ -57,9 +58,9 @@ Route::get('/admin/doi-mat-khau', [AuthController::class, 'showDoiMatKhau'])->na
 Route::post('/admin/doi-mat-khau', [AuthController::class, 'doiMatKhau'])->name('admin.doi-mat-khau.submit');
 
 // Admin Routes - Preview
-Route::get('/admin/dashboard', function () {
-    return view('admin_xem_truoc.dashboard');
-});
+Route::get('/admin/dashboard',
+    [DashboardController::class,'index']
+)->name('admin.dashboard');
 
 
 // Route::get('/admin/ban-hang', function () {
