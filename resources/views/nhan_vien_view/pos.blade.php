@@ -1015,11 +1015,17 @@
     </div>
 </div>
         <div class="pos-search-bar">
-            <div class="search-wrapper">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Tìm sản phẩm..." oninput="filterProducts()">
-            </div>
-        </div>
+    <div class="search-wrapper">
+        <i class="fas fa-search"></i>
+
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="Tìm sản phẩm hoặc quét mã vạch..."
+            oninput="filterProducts()"
+            onkeydown="handleSearchEnter(event)">
+    </div>
+</div>
 
         <!-- Product Grid -->
         <div class="pos-product-grid" id="productGrid">
@@ -1047,7 +1053,12 @@
                 <small>Click sản phẩm để thêm vào</small>
             </div>
         </div>
-
+        <div class="p-2 border-top">
+            <label class="form-label mb-1">Khuyến mãi</label>
+            <select id="promotionSelect" class="form-select form-select-sm" onchange="applyPromotion()">
+               <option value="">Không áp dụng</option>
+            </select>
+        </div>
         <div class="cart-summary" id="cartSummary" style="display:none;">
             @if(isset($khachHang))
             <div class="summary-row">
@@ -1159,6 +1170,9 @@
 // ─────────────────────────────────────────────
 let products = [];
 
+let promotions = [];
+let selectedPromotion = null;
+let discountAmount = 0;
 async function loadProducts() {
     try {
         let url = '/nhan-vien/ban-hang/san-pham';
@@ -1373,6 +1387,10 @@ function renderCart() {
 function calculateTotal() {
 
     const subtotal = cart.reduce((s, i) => s + Number(i.gia_ban) * i.qty, 0);
+    discountAmount = tinhTienGiam(subtotal);
+const total = Math.max(0, subtotal - discountAmount);
+    // Update summary
+    
 
     const customerPoint = selectedCustomer
         ? selectedCustomer.diem_tich_luy
@@ -1444,6 +1462,15 @@ function clearCart() {
 // Calculate Change
 // ─────────────────────────────────────────────
 function calculateChange() {
+    const customer = parseFloat(document.getElementById('customerMoney').value) || 0;
+
+  
+    const discount = tinhTienGiam(subtotal);
+    const total = Math.max(0, subtotal - discount);
+
+    const change = customer - total;
+
+ 
 
     const subtotal = cart.reduce(
         (s, i) => s + Number(i.gia_ban) * i.qty,
@@ -1485,6 +1512,11 @@ async function processPayment() {
         return;
     }
 
+  
+const discount = tinhTienGiam(subtotal);
+const total = Math.max(0, subtotal - discount);
+
+
    const subtotal = cart.reduce((s, i) => s + Number(i.gia_ban) * i.qty, 0);
 
 const usePoint = parseInt(document.getElementById("usePoint").value || 0);
@@ -1496,17 +1528,14 @@ const total = subtotal - pointDiscount;
 
 if (selectedPayment === 'cash') {
     if (customer < total) {
-        showToast('Số tiền khách đưa không đủ!', 'error');
+        showToast('Tiền khách đưa chưa đủ.', 'error');
         return;
     }
 } else {
     customer = total;
 }
 
-    if (selectedPayment === 'cash' && customer < total) {
-        showToast('Số tiền khách đưa không đủ!', 'error');
-        return;
-    }
+    // 
 
     try {
        const diemThuDuoc = Math.floor(total / 10000);
@@ -1689,6 +1718,111 @@ function clearSelectedCustomer() {
     document.getElementById('selectedCustomerId').value = '';
     document.getElementById('selectedCustomerBox').style.display = 'none';
 }
+async function loadPromotions() {
+    const response = await fetch('/nhan-vien/ban-hang/khuyen-mai');
+    promotions = await response.json();
+
+    const select = document.getElementById('promotionSelect');
+    select.innerHTML = '<option value="">Không áp dụng</option>';
+
+    promotions.forEach(km => {
+        select.innerHTML += `
+            <option value="${km.id}">
+                ${km.ten_chuong_trinh}
+            </option>
+        `;
+    });
+}
+function tinhTienGiam(subtotal) {
+    if (!selectedPromotion) return 0;
+
+    const type = String(selectedPromotion.loai_giam_gia || '')
+        .trim()
+        .toLowerCase();
+
+    const minOrder = Number(selectedPromotion.don_hang_toi_thieu || 0);
+    const minQty = Number(selectedPromotion.so_luong_sp_toi_thieu || 0);
+    const totalQty = cart.reduce((s, i) => s + Number(i.qty || 0), 0);
+
+    if (subtotal < minOrder) return 0;
+    if (minQty > 0 && totalQty < minQty) return 0;
+
+    // Mua 1 tặng 1 / BOGO
+    if (type === 'bogo') {
+        let discount = 0;
+
+        cart.forEach(item => {
+            const qty = Number(item.qty || 0);
+            const price = Number(item.gia_ban || 0);
+
+            const freeQty = Math.floor(qty / 2);
+            discount += freeQty * price;
+        });
+
+        return Math.min(discount, subtotal);
+    }
+
+    // Giảm phần trăm
+    if (type === 'phan_tram') {
+        let discount = subtotal * Number(selectedPromotion.gia_tri_giam || 0) / 100;
+
+        if (selectedPromotion.giam_toi_da !== null && selectedPromotion.giam_toi_da !== '') {
+            discount = Math.min(discount, Number(selectedPromotion.giam_toi_da));
+        }
+
+        return Math.min(discount, subtotal);
+    }
+
+    // Giảm tiền trực tiếp
+    const discount = Number(selectedPromotion.gia_tri_giam || 0);
+    return Math.min(discount, subtotal);
+}
+function applyPromotion() {
+    const id = document.getElementById('promotionSelect').value;
+
+    selectedPromotion = promotions.find(km => String(km.id) === String(id)) || null;
+
+    renderCart();
+    calculateChange();
+} 
+
+// hàm tìm kiếm sản phẩm theo mã vạch khi nhấn Enter
+async function handleSearchEnter(event) {
+    if (event.key !== 'Enter') return;
+
+    event.preventDefault();
+
+    const keyword = event.target.value.trim();
+    if (!keyword) return;
+
+    try {
+        const response = await fetch('/nhan-vien/ban-hang/san-pham?q=' + encodeURIComponent(keyword));
+        const data = await response.json();
+
+        const product = data.find(p =>
+            String(p.ma_vach || '').toLowerCase() === keyword.toLowerCase()
+        );
+
+        if (!product) {
+            showToast('Không tìm thấy mã vạch này!', 'error');
+            return;
+        }
+
+        products = data;
+        addToCart(product.id);
+
+        event.target.value = '';
+        loadProducts();
+
+        setTimeout(() => {
+            event.target.focus();
+        }, 100);
+
+    } catch (error) {
+        console.error(error);
+        showToast('Lỗi quét mã vạch!', 'error');
+    }
+}
 
 function capNhatDiem() {
     const tongTien = parseInt(document.getElementById('tongTien').value || 0);
@@ -1768,6 +1902,7 @@ async function saveCustomerQuick() {
 // ─────────────────────────────────────────────
 loadCategories();
 loadProducts();
+loadPromotions();
 </script>
 </body>
 </html>
