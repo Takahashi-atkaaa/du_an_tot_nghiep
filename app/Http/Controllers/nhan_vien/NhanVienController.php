@@ -262,7 +262,6 @@ public function thanhToan(Request $request)
         'tien_khach_dua' => 'required|numeric|min:0',
         'phuong_thuc_thanh_toan' => 'required|string',
         'id_khach_hang' => 'nullable|integer|exists:khach_hang,id',
-        'tien_giam_gia' => 'nullable|numeric|min:0',
     'id_khuyen_mai' => 'nullable|integer|exists:khuyen_mai,id',
         'diem_su_dung' => 'nullable|integer|min:0',
     ]);
@@ -292,23 +291,71 @@ public function thanhToan(Request $request)
             ];
         }
 
-        $tienGiamGia = min((float) $request->tien_giam_gia, $tongTienHang);
-        $khachCanTra = $tongTienHang - $tienGiamGia;
-       $diemSuDung = (int) $request->diem_su_dung;
-       // số điểm tối đa có thể dùng
-        $maxUsePoint = floor($tongTienHang / 100);
-
-        // không cho dùng quá số điểm đang có
-        $diemSuDung = min(
-            $diemSuDung,
-            $khachHang->diem_tich_luy,
-            $maxUsePoint
-        );
         $tienGiamGia = 0;
+        $diemSuDung = (int)$request->diem_su_dung;
+        if ($request->id_khuyen_mai) {
 
-        if ($request->id_khach_hang && $diemSuDung > 0) {
+            $khuyenMai = DB::table('khuyen_mai')
+                ->where('id', $request->id_khuyen_mai)
+                ->where('trang_thai', 1)
+                ->first();
 
-            $khachHang = KhachHang::lockForUpdate()->find($request->id_khach_hang);
+            if ($khuyenMai) {
+
+                $tongSoLuong = collect($items)->sum('so_luong');
+
+                if (
+                    $tongTienHang >= $khuyenMai->don_hang_toi_thieu &&
+                    $tongSoLuong >= $khuyenMai->so_luong_sp_toi_thieu
+                ) {
+
+                    switch ($khuyenMai->loai_giam_gia) {
+
+                        case 'phan_tram':
+
+                            $tienGiamGia =
+                                $tongTienHang * $khuyenMai->gia_tri_giam / 100;
+
+                            if ($khuyenMai->giam_toi_da) {
+                                $tienGiamGia = min(
+                                    $tienGiamGia,
+                                    $khuyenMai->giam_toi_da
+                                );
+                            }
+
+                            break;
+
+                        case 'bogo':
+
+                            foreach ($items as $item) {
+
+                                $freeQty = floor($item['so_luong'] / 2);
+
+                                $tienGiamGia +=
+                                    $freeQty * $item['gia_ban'];
+                            }
+
+                            break;
+
+                        default:
+
+                            $tienGiamGia =
+                                $khuyenMai->gia_tri_giam;
+                    }
+
+                    $tienGiamGia = min(
+                        $tienGiamGia,
+                        $tongTienHang
+                    );
+                }
+            }
+        }
+        $khachHang = null;
+
+        if ($request->id_khach_hang) {
+
+            $khachHang = KhachHang::lockForUpdate()
+                ->find($request->id_khach_hang);
 
             if (!$khachHang) {
                 return response()->json([
@@ -317,16 +364,26 @@ public function thanhToan(Request $request)
                 ], 422);
             }
 
-            if ($diemSuDung > $khachHang->diem_tich_luy) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Khách không đủ điểm.'
-                ], 422);
+            $maxUsePoint = floor(
+                max(0, $tongTienHang - $tienGiamGia) / 100
+            );
+
+            $diemSuDung = min(
+                $diemSuDung,
+                $khachHang->diem_tich_luy,
+                $maxUsePoint
+            );
+
+            $tienGiamGia += $diemSuDung * 100;
             }
 
-            // 1 điểm = 100đ
-            $tienGiamGia = $diemSuDung * 100;
-        }
+            $khachCanTra = max(
+                0,
+                $tongTienHang - $tienGiamGia
+            );
+
+
+        
 
         $khachCanTra = max(0, $tongTienHang - $tienGiamGia);
         $tienKhachDua = $request->tien_khach_dua;
