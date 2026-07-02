@@ -1629,17 +1629,16 @@ const response = await fetch('/nhan-vien/ban-hang/thanh-toan', {
         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
     },
     body: JSON.stringify({
-        cart: cart.map(item => ({
-            id: item.id,
-            qty: item.qty
-        })),
-        id_khach_hang: selectedCustomer ? selectedCustomer.id : null,
-         id_khuyen_mai:selectedPromotion? selectedPromotion.id: null,
-        tien_khach_dua: customer,
-        phuong_thuc_thanh_toan: selectedPayment,
-        diem_su_dung: usePoint,
-        diem_thu_duoc: diemThuDuoc
-    })
+    cart: cart.map(item => ({
+        id: item.id,
+        qty: item.qty
+    })),
+    id_khach_hang: selectedCustomer ? selectedCustomer.id : null,
+    id_khuyen_mai: selectedPromotion ? selectedPromotion.id : null,
+    tien_khach_dua: customer,
+    phuong_thuc_thanh_toan: selectedPayment,
+    diem_su_dung: usePoint
+})
 });
 
         const data = await response.json();
@@ -1656,9 +1655,6 @@ const response = await fetch('/nhan-vien/ban-hang/thanh-toan', {
         );
         window.open('/nhan-vien/hoa-don/' + data.hoa_don_id, '_blank');
 
-        cart = [];
-        document.getElementById('customerMoney').value = '';
-        document.getElementById('changeAmount').textContent = '0đ';
 
         clearCart();
         loadProducts();
