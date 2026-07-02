@@ -32,16 +32,21 @@ class NhanVienController extends Controller
     $query = DB::table('hoa_don')
         ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
         ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
+        ->leftJoin('ca_lam_viec', 'hoa_don.id_ca_lam_viec', '=', 'ca_lam_viec.id')
         ->select(
             'hoa_don.*',
             'khach_hang.ten_khach_hang',
-            'nguoi_dung.ho_ten as ten_nhan_vien'
+            'nguoi_dung.ho_ten as ten_nhan_vien',
+            'ca_lam_viec.ten_ca'
         )
         ->orderByDesc('hoa_don.id');
 
     if ($request->filled('q')) {
         $query->where('hoa_don.id', preg_replace('/[^0-9]/', '', $request->q));
     }
+    if ($request->filled('id_ca_lam_viec')) {
+    $query->where('hoa_don.id_ca_lam_viec', $request->id_ca_lam_viec);
+}
 
     if ($request->filled('ngay')) {
         $query->whereDate('hoa_don.created_at', $request->ngay);
@@ -53,7 +58,10 @@ class NhanVienController extends Controller
 
     $hoaDons = $query->paginate(10)->withQueryString();
 
-    return view('nhan_vien_view.hoa-don.index', compact('hoaDons'));
+    $caLamViecs = DB::table('ca_lam_viec')
+    ->orderBy('gio_bat_dau')
+    ->get();
+    return view('nhan_vien_view.hoa-don.index', compact('hoaDons', 'caLamViecs'));
 }
 
     public function sanPham()
@@ -307,7 +315,7 @@ public function thanhToan(Request $request)
         'tien_khach_dua' => 'required|numeric|min:0',
         'phuong_thuc_thanh_toan' => 'required|string',
         'id_khach_hang' => 'nullable|integer|exists:khach_hang,id',
-    'id_khuyen_mai' => 'nullable|integer|exists:khuyen_mai,id',
+        'id_khuyen_mai' => 'nullable|integer|exists:khuyen_mai,id',
         'diem_su_dung' => 'nullable|integer|min:0',
     ]);
 
@@ -456,7 +464,7 @@ public function thanhToan(Request $request)
         $hoaDonId = DB::table('hoa_don')->insertGetId([
             'id_nguoi_dung' => auth()->user()->id,
             'id_khach_hang' => $request->id_khach_hang,
-            'id_ca_lam_viec' => null,
+            'id_ca_lam_viec' => session('id_ca_lam_viec') ?? null,
             'id_khuyen_mai' => $request->id_khuyen_mai,
             'tong_tien_hang' => $tongTienHang,
             'tien_giam_gia' => $tienGiamGia,
