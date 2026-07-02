@@ -120,7 +120,7 @@
                                     <i class="fas fa-print"></i>
                                 </a>
 
-                                @if($hoaDon->trang_thai !== 'Đã hủy')
+                                {{-- @if($hoaDon->trang_thai !== 'Đã hủy')
                                     <form action="{{ route('nhan-vien.hoa-don.huy', $hoaDon->id) }}"
                                           method="POST"
                                           class="d-inline"
@@ -130,7 +130,7 @@
                                             <i class="fas fa-times"></i>
                                         </button>
                                     </form>
-                                @endif
+                                @endif --}}
                             </td>
                         </tr>
                     @empty
