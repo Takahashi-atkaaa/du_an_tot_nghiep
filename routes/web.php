@@ -36,6 +36,7 @@ use App\Http\Middleware\KiemTraVaiTro;
 use App\Http\Middleware\KTVaiTro;
 use App\Http\Middleware\VaiTroBanHang;
 use App\Models\NhaCungCap;
+use App\Http\Controllers\admin\BanHang\HoaDonController;
 
 Route::get('/', function () {
     return view('admin_xem_truoc.auth.login');
@@ -213,9 +214,14 @@ Route::get('/admin/cai-dat', function () {
     Route::delete('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'destroy'])->name('ca-lam-viec.destroy')->middleware('permission:xoa_ca_lam_viec');
 
     // Trang hoa don
-    Route::get('/admin/hoa-don', function () {
-        return view('admin_xem_truoc.hoa-don');
-    });
+    // Route::get('/admin/hoa-don', function () {
+    //     return view('admin_xem_truoc.hoa-don');
+    // });
+    Route::get('/admin/hoa-don', [HoaDonController::class, 'index'])
+    ->name('admin.hoa-don.index');
+
+    Route::get('/admin/hoa-don/{id}', [HoaDonController::class, 'show'])
+    ->name('admin.hoa-don.show');
 
 
     // Trang kho hang
