@@ -262,8 +262,6 @@ Route::middleware([KTVaiTro::class])->group(function () {
 
     // Quản lý điểm danh
     Route::get('/admin/diem-danh', [DiemDanhController::class, 'index'])->name('diem-danh.index');
-    Route::post('/admin/diem-danh/{chiaCaLamViec}/xac-nhan', [DiemDanhController::class, 'xacNhanDiemDanh'])->name('diem-danh.xac-nhan');
-    Route::post('/admin/diem-danh/{chiaCaLamViec}/ket-thuc-ca', [DiemDanhController::class, 'ketThucCa'])->name('diem-danh.ket-thuc-ca');
     Route::delete('/admin/diem-danh/{diemDanh}', [DiemDanhController::class, 'huyDiemDanh'])->name('diem-danh.destroy');
     Route::get('/admin/diem-danh/lich-su', [DiemDanhController::class, 'lichSu'])->name('diem-danh.lich-su');
     Route::get('/admin/diem-danh/thong-ke', [DiemDanhController::class, 'thongKe'])->name('diem-danh.thong-ke');

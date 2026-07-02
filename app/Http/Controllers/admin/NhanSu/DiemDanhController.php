@@ -4,7 +4,6 @@ namespace App\Http\Controllers\admin\NhanSu;
 
 use App\Http\Controllers\Controller;
 use App\Models\CaLamViec;
-use App\Models\ChiaCaLamViec;
 use App\Models\DiemDanh;
 use App\Models\NguoiDung;
 use App\Models\VaiTro;
@@ -57,95 +56,6 @@ class DiemDanhController extends Controller
             'chuaDiemDanh',
             'diMuon'
         ));
-    }
-
-    public function xacNhanDiemDanh(ChiaCaLamViec $chiaCaLamViec): RedirectResponse
-    {
-        if ($chiaCaLamViec->diemDanh) {
-            return redirect()
-                ->back()
-                ->with('warning', 'Nhân viên này đã được xác nhận điểm danh rồi.');
-        }
-
-        $caLamViec = $chiaCaLamViec->caLamViec;
-        $gioVao = now();
-        $gioBatDau = $caLamViec->gio_bat_dau;
-        $soPhutTreToiDa = $caLamViec->so_phut_di_lam_tre_toi_da ?? 0;
-
-        $gioBatDauParts = explode(':', $gioBatDau);
-        $gioVaoParts = [$gioVao->hour, $gioVao->minute, $gioVao->second];
-
-        $phutBatDau = $gioBatDauParts[0] * 60 + $gioBatDauParts[1];
-        $phutVao = $gioVaoParts[0] * 60 + $gioVaoParts[1];
-        $chenhLechPhut = $phutVao - $phutBatDau;
-
-        if ($chenhLechPhut > $soPhutTreToiDa) {
-            $trangThaiVaoLam = 'Đi muộn';
-            $soGioDiLamMuon = max(0, $chenhLechPhut);
-        } else {
-            $trangThaiVaoLam = 'Đúng giờ';
-            $soGioDiLamMuon = 0;
-        }
-
-        DiemDanh::create([
-            'id_chia_ca_lam_viec' => $chiaCaLamViec->id,
-            'gio_vao' => $gioVao,
-            'trang_thai_vao_lam' => $trangThaiVaoLam,
-            'so_gio_di_lam_muon' => $soGioDiLamMuon,
-        ]);
-
-        return redirect()
-            ->back()
-            ->with('success', 'Đã xác nhận điểm danh cho nhân viên.');
-    }
-
-    public function ketThucCa(ChiaCaLamViec $chiaCaLamViec): RedirectResponse
-    {
-        $diemDanh = $chiaCaLamViec->diemDanh;
-
-        if (!$diemDanh) {
-            return redirect()
-                ->back()
-                ->with('warning', 'Chưa xác nhận điểm danh. Vui lòng xác nhận điểm danh trước.');
-        }
-
-        if ($diemDanh->gio_tan_ca) {
-            return redirect()
-                ->back()
-                ->with('warning', 'Ca đã được kết thúc rồi.');
-        }
-
-        $caLamViec = $chiaCaLamViec->caLamViec;
-        $gioTanCa = now();
-        $gioKetThuc = $caLamViec->gio_ket_thuc;
-
-        $gioKetThucParts = explode(':', $gioKetThuc);
-        $gioTanCaParts = [$gioTanCa->hour, $gioTanCa->minute, $gioTanCa->second];
-
-        $phutKetThuc = $gioKetThucParts[0] * 60 + $gioKetThucParts[1];
-        $phutTanCa = $gioTanCaParts[0] * 60 + $gioTanCaParts[1];
-        $chenhLechPhut = $phutTanCa - $phutKetThuc;
-
-        if ($chenhLechPhut < 0) {
-            $trangThaiTanCa = 'Về sớm';
-            $soGioLamThem = 0;
-        } elseif ($chenhLechPhut > 0) {
-            $trangThaiTanCa = 'Tăng ca';
-            $soGioLamThem = round($chenhLechPhut / 60, 2);
-        } else {
-            $trangThaiTanCa = 'Đúng giờ';
-            $soGioLamThem = 0;
-        }
-
-        $diemDanh->update([
-            'gio_tan_ca' => $gioTanCa,
-            'trang_thai_tan_ca' => $trangThaiTanCa,
-            'so_gio_lam_them' => $soGioLamThem,
-        ]);
-
-        return redirect()
-            ->back()
-            ->with('success', 'Đã kết thúc ca cho nhân viên.');
     }
 
     public function huyDiemDanh(DiemDanh $diemDanh): RedirectResponse

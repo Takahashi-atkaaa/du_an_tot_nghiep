@@ -222,25 +222,10 @@
                                 @endif
                             </td>
                             <td class="text-end">
-                                @if(!$item->diemDanh)
-                                    <form action="{{ route('diem-danh.xac-nhan', $item) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        <button type="submit" class="btn btn-sm btn-success btn-action" title="Xác nhận điểm danh">
-                                            <i class="fas fa-check"></i> Xác nhận
-                                        </button>
-                                    </form>
-                                @elseif(!$item->diemDanh->gio_tan_ca)
-                                    <form action="{{ route('diem-danh.ket-thuc-ca', $item) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        <button type="submit" class="btn btn-sm btn-warning btn-action" title="Kết thúc ca">
-                                            <i class="fas fa-sign-out-alt"></i> Kết thúc ca
-                                        </button>
-                                    </form>
-                                @else
-                                    <span class="badge bg-success"><i class="fas fa-check-double me-1"></i>Hoàn tất</span>
-                                @endif
-
                                 @if($item->diemDanh)
+                                    @if($item->diemDanh->gio_tan_ca)
+                                        <span class="badge bg-success"><i class="fas fa-check-double me-1"></i>Hoàn tất</span>
+                                    @endif
                                     <form action="{{ route('diem-danh.destroy', $item->diemDanh) }}" method="POST" class="d-inline" onsubmit="return confirm('Hủy điểm danh này?')">
                                         @csrf
                                         @method('DELETE')
