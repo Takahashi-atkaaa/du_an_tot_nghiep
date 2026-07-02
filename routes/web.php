@@ -398,8 +398,8 @@ Route::middleware([VaiTroBanHang::class])->prefix('nhan-vien')->group(function (
   ->name('nhan-vien.hoa-don.chi-tiet');
   Route::get('/hoa-don/{id}/in', [NhanVienController::class, 'inHoaDon'])
   ->name('nhan-vien.hoa-don.in');
-  Route::post('/hoa-don/{id}/huy', [NhanVienController::class, 'huyHoaDon'])
-  ->name('nhan-vien.hoa-don.huy');
+//   Route::post('/hoa-don/{id}/huy', [NhanVienController::class, 'huyHoaDon'])
+//   ->name('nhan-vien.hoa-don.huy');
   Route::get('/ban-hang/khach-hang', [NhanVienController::class, 'layKhachHang'])
   ->name('nhan-vien.ban-hang.khach-hang');
   Route::get('/ban-hang/khuyen-mai', [NhanVienController::class, 'layKhuyenMai'])
