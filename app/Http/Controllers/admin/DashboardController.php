@@ -147,9 +147,52 @@ class DashboardController extends Controller
 
             ->orderByDesc('tong_ban')
 
-            ->limit(10)
+            ->limit(5)
 
             ->get();
+
+        //Các sản phẩm bán chậm 
+        $sanPhamBanCham = DB::table('chi_tiet_hoa_don')
+            ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
+            ->select('san_pham.id', 'san_pham.ten_san_pham', 
+                DB::raw('SUM(chi_tiet_hoa_don.so_luong) as tong_ban'), 
+                DB::raw('SUM(chi_tiet_hoa_don.thanh_tien) as doanh_thu'))
+            ->groupBy('san_pham.id', 'san_pham.ten_san_pham')
+            ->orderBy('tong_ban', 'asc')
+            ->limit(5)
+            ->get();
+
+        foreach ($sanPhamBanCham as $sp) {
+            $sp->ton_kho = DB::table('chi_tiet_phieu')
+                ->where('id_san_pham', $sp->id)
+                ->sum('so_luong_con_lai');
+        }
+
+
+        //Tổng sản phẩm tồn kho
+        $tongSanPhamTonKho = DB::table('chi_tiet_phieu')
+             ->sum('so_luong');
+
+        //khách hàng thân thiết
+        $khachHangThanThiet = DB::table('hoa_don')
+             ->join ('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
+             ->select('khach_hang.id', 'khach_hang.ten_khach_hang', 
+                   DB::raw('SUM(hoa_don.khach_can_tra) as tong_mua'))
+            ->groupBy('khach_hang.id', 'khach_hang.ten_khach_hang')
+            ->orderByDesc('tong_mua')   
+            ->limit(5)
+            ->get();
+
+        //Đơn hàng gần đây
+        $donHangGanDay = DB::table('hoa_don')
+            ->join('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
+            ->select('hoa_don.*', 'khach_hang.ten_khach_hang')
+            ->orderByDesc('hoa_don.created_at')
+            ->limit(5)
+            ->get();
+
+        
+
 
 
 
@@ -170,7 +213,15 @@ class DashboardController extends Controller
 
                 'doanhThu12Thang',
 
-                'topSanPham'
+                'topSanPham',
+
+                'tongSanPhamTonKho',
+
+                'khachHangThanThiet',
+
+                'sanPhamBanCham',
+
+                'donHangGanDay'
 
             )
         );
