@@ -94,7 +94,7 @@
                 </div>
                 <div>
                     <h6 class="text-muted mb-1">Sản phẩm tồn kho</h6>
-                    <h3 class="mb-0">1,245 cái</h3>
+                    <h3 class="mb-0">{{ number_format($tongSanPhamTonKho, 0, ',', '.') }} sản phẩm</h3>
                     <small class="text-danger">
                         <i class="fas fa-arrow-down"></i> -3.1%
                     </small>
@@ -112,70 +112,59 @@
 
         <!-- Doanh thu 7 ngày -->
         <div class="card table-admin mb-4">
-
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-
                 <h5 class="mb-0 fw-bold">
                     Doanh thu 7 ngày gần đây
                 </h5>
 
-            
-
             </div>
-
             <div class="card-body">
                 <canvas id="chart7Ngay" height="120"></canvas>
             </div>
-
         </div>
-
-        <!-- Doanh thu 12 tháng -->
-        <div class="card table-admin">
-
-            <div class="card-header bg-white py-3">
-                <h5 class="mb-0 fw-bold">
-                    Doanh thu 12 tháng
-                </h5>
-            </div>
-
-            <div class="card-body">
-                <canvas id="chart12Thang" height="120"></canvas>
-            </div>
-
-        </div>
-
     </div>
  
 
-            <div class="col-xl-4">
+    <div class="col-xl-4">
+        <div class="card table-admin">
+            <div class="card-header bg-white">
+                <h5 class="mb-0 fw-bold">
+                    Doanh thu theo năm
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="chartNam"></canvas>
+            </div>
+        </div>
+</div>
 
-    <div class="card table-admin">
+<!-- Doanh thu 12 tháng -->
+    <div class="card table-admin mb-4">
 
-        <div class="card-header bg-white">
-
+        <div class="card-header bg-white py-3">
             <h5 class="mb-0 fw-bold">
-                Doanh thu theo năm
+                Doanh thu 12 tháng
             </h5>
-
         </div>
 
         <div class="card-body">
-
-            <canvas id="chartNam"></canvas>
-
+            <canvas id="chart12Thang" height="120"></canvas>
         </div>
 
     </div>
 
-</div>
+
+
+
+<div class="row">
     <!-- Top sản phẩm bán chạy -->
-    <div class="col-xl-4">
+    <div class="col-xl-6  mb-4">
 
         <div class="card table-admin">
 
             <div class="card-header bg-white py-3">
                 <h5 class="mb-0 fw-bold">
-                    Top 10 sản phẩm bán chạy
+                    Top 5 sản phẩm bán chạy
                 </h5>
             </div>
 
@@ -226,11 +215,58 @@
 
     </div>
 
+
+    {{-- Top sản phẩm bán chậm --}}
+    <div class="col-xl-6  mb-4">
+        <div class="card table-admin">   
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold">
+                    Top 5 sản phẩm bán chậm
+                </h5>
+            </div>
+
+            <div class="card-body p-0">
+
+                <table class="table table-hover">
+                    <tr>
+                        <th>Tên sản phẩm</th>
+                        <th>Số lượng bán</th>
+                        <th>Tồn kho</th>
+                        <th>Doanh thu</th>
+                    </tr>
+
+                    @forelse($sanPhamBanCham as $spc)
+                        <tr>
+                            <td>{{ $spc->ten_san_pham }}</td>
+                            <td>{{ number_format($spc->tong_ban) }}</td>
+                            <td>{{ number_format($spc->ton_kho) }}</td>
+                            <td>
+                                <span class="badge bg-success fs-6">
+                                    {{ number_format($spc->doanh_thu,0,',','.') }} đ
+                                </span>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">Chưa có dữ liệu sản phẩm.</td>
+                        </tr>
+                    @endforelse
+
+                </table>
+
+
+                </div>
+
+            </div> 
+
+        </div>
+    </div>
+
 </div>
 
 <!-- Recent Orders -->
-<div class="row g-4 mt-2">
-    <div class="col-12">
+<div class="row">
+    <div class="col-lg-6 mb-4">
         <div class="card table-admin">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 fw-bold">Đơn hàng gần đây</h5>
@@ -238,102 +274,77 @@
                     Xem tất cả <i class="fas fa-arrow-right ms-1"></i>
                 </a>
             </div>
-            {{-- <div class="card-body p-0">
+
+            <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
-                                <th>Mã HD</th>
                                 <th>Khách hàng</th>
                                 <th>Ngày tạo</th>
                                 <th>Tổng tiền</th>
-                                <th>Trạng thái</th>
-                                <th>Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td><strong>#HD001</strong></td>
-                                <td>Nguyễn Văn Minh</td>
-                                <td>09/06/2026 14:30</td>
-                                <td><strong>320,000 đ</strong></td>
-                                <td><span class="status-badge status-active">Hoàn thành</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary btn-action" title="Xem chi tiết">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary btn-action" title="In hóa đơn">
-                                        <i class="fas fa-print"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><strong>#HD002</strong></td>
-                                <td>Trần Thị Lan</td>
-                                <td>09/06/2026 13:45</td>
-                                <td><strong>185,000 đ</strong></td>
-                                <td><span class="status-badge status-pending">Đang xử lý</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary btn-action" title="Xem chi tiết">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary btn-action" title="In hóa đơn">
-                                        <i class="fas fa-print"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><strong>#HD003</strong></td>
-                                <td>Lê Hoàng Nam</td>
-                                <td>09/06/2026 12:20</td>
-                                <td><strong>450,000 đ</strong></td>
-                                <td><span class="status-badge status-active">Hoàn thành</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary btn-action" title="Xem chi tiết">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary btn-action" title="In hóa đơn">
-                                        <i class="fas fa-print"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><strong>#HD004</strong></td>
-                                <td>Phạm Thu Hà</td>
-                                <td>09/06/2026 11:00</td>
-                                <td><strong>78,000 đ</strong></td>
-                                <td><span class="status-badge status-inactive">Đã hủy</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary btn-action" title="Xem chi tiết">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary btn-action" title="In hóa đơn">
-                                        <i class="fas fa-print"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><strong>#HD005</strong></td>
-                                <td>Hoàng Đức Anh</td>
-                                <td>09/06/2026 10:30</td>
-                                <td><strong>560,000 đ</strong></td>
-                                <td><span class="status-badge status-active">Hoàn thành</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary btn-action" title="Xem chi tiết">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary btn-action" title="In hóa đơn">
-                                        <i class="fas fa-print"></i>
-                                    </button>
-                                </td>
-                            </tr>
+                            @forelse($donHangGanDay as $dh)
+                                <tr>
+                                    <td>{{ $dh->ten_khach_hang }}</td>
+                                    <td>{{ \Carbon\Carbon::parse($dh->created_at)->format('d/m/Y H:i') }}</td>
+                                    <td><strong>{{ number_format($dh->khach_can_tra,0,',','.') }} đ</strong></td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">
+                                        Chưa có dữ liệu đơn hàng.
+                                    </td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
-            </div> --}}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+        <div class="card table-admin">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold">Khách hàng thân thiết</h5>
+                <a href="{{ url('admin/khach-hang') }}" class="btn btn-sm btn-primary">
+                    Xem tất cả <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Khách hàng</th>
+                                <th>Tổng mua</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($khachHangThanThiet as $kh)
+                                <tr>
+                                    <td>{{ $kh->ten_khach_hang }}</td>
+                                    <td><strong>{{ number_format($kh->tong_mua,0,',','.') }} đ</strong></td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted py-4">
+                                        Chưa có dữ liệu khách hàng.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
 @endsection
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
