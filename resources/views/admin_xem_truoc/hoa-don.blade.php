@@ -10,12 +10,15 @@
 @if(session('error'))
     <div class="alert alert-danger">{{ session('error') }}</div>
 @endif
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h4 class="fw-bold mb-1">Quản lý Hóa đơn</h4>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url('admin/dashboard') }}">Admin</a></li>
+                <li class="breadcrumb-item">
+                    <a href="{{ url('admin/dashboard') }}">Admin</a>
+                </li>
                 <li class="breadcrumb-item active">Hóa đơn</li>
             </ol>
         </nav>
@@ -25,23 +28,50 @@
 <div class="card table-admin mb-4">
     <div class="card-body">
         <form method="GET" action="{{ route('admin.hoa-don.index') }}">
-            <div class="row g-3">
+            <div class="row g-3 align-items-end">
+
                 <div class="col-md-3">
-                    <input type="text" name="q" class="form-control"
+                    <label class="form-label">Tìm kiếm</label>
+                    <input type="text"
+                           name="q"
+                           class="form-control"
                            placeholder="Mã HD / khách hàng / nhân viên"
                            value="{{ request('q') }}">
                 </div>
 
-                <div class="col-md-3">
-                    <input type="date" name="ngay" class="form-control"
+                <div class="col-md-2">
+                    <label class="form-label">Ngày tạo</label>
+                    <input type="date"
+                           name="ngay"
+                           class="form-control"
                            value="{{ request('ngay') }}">
                 </div>
 
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label">Trạng thái</label>
                     <select name="trang_thai" class="form-select">
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="Hoàn thành" {{ request('trang_thai') == 'Hoàn thành' ? 'selected' : '' }}>Hoàn thành</option>
-                        <option value="Đã hủy" {{ request('trang_thai') == 'Đã hủy' ? 'selected' : '' }}>Đã hủy</option>
+                        <option value="">Tất cả</option>
+                        <option value="Hoàn thành" {{ request('trang_thai') == 'Hoàn thành' ? 'selected' : '' }}>
+                            Hoàn thành
+                        </option>
+                        <option value="Đã hủy" {{ request('trang_thai') == 'Đã hủy' ? 'selected' : '' }}>
+                            Đã hủy
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Ca làm việc</label>
+                    <select name="id_ca_lam_viec" class="form-select">
+                        <option value="">Tất cả ca làm việc</option>
+                        @foreach($caLamViecs as $ca)
+                            <option value="{{ $ca->id }}" {{ request('id_ca_lam_viec') == $ca->id ? 'selected' : '' }}>
+                                {{ $ca->ten_ca ?? 'Ca #' . $ca->id }}
+                                @if(isset($ca->gio_bat_dau) && isset($ca->gio_ket_thuc))
+                                    - {{ substr($ca->gio_bat_dau, 0, 5) }} đến {{ substr($ca->gio_ket_thuc, 0, 5) }}
+                                @endif
+                            </option>
+                        @endforeach
                     </select>
                 </div>
 
@@ -50,6 +80,7 @@
                         <i class="fas fa-filter me-2"></i>Lọc
                     </button>
                 </div>
+
             </div>
         </form>
     </div>
@@ -70,9 +101,11 @@
                         <th>Thanh toán</th>
                         <th>PTTT</th>
                         <th>Trạng thái</th>
+                        <th>Ca làm việc</th>
                         <th style="width: 120px;">Thao tác</th>
                     </tr>
                 </thead>
+
                 <tbody>
                     @forelse($hoaDons as $hoaDon)
                         <tr>
@@ -83,6 +116,7 @@
                             </td>
 
                             <td>{{ $hoaDon->ten_khach_hang ?? 'Khách lẻ' }}</td>
+
                             <td>{{ $hoaDon->ten_nhan_vien ?? '---' }}</td>
 
                             <td>
@@ -90,52 +124,70 @@
                             </td>
 
                             <td>
-                                <strong>{{ number_format($hoaDon->tong_tien_hang, 0, ',', '.') }} đ</strong>
+                                <strong>
+                                    {{ number_format($hoaDon->tong_tien_hang ?? 0, 0, ',', '.') }} đ
+                                </strong>
                             </td>
 
                             <td>
-                                @if($hoaDon->tien_giam_gia > 0)
-                                    <span class="text-danger">-{{ number_format($hoaDon->tien_giam_gia, 0, ',', '.') }} đ</span>
+                                @if(($hoaDon->tien_giam_gia ?? 0) > 0)
+                                    <span class="text-danger">
+                                        -{{ number_format($hoaDon->tien_giam_gia, 0, ',', '.') }} đ
+                                    </span>
                                 @else
-                                    <span class="text-muted">-0 đ</span>
+                                    <span class="text-muted">0 đ</span>
                                 @endif
                             </td>
 
                             <td>
                                 <strong class="text-success">
-                                    {{ number_format($hoaDon->khach_can_tra, 0, ',', '.') }} đ
+                                    {{ number_format($hoaDon->khach_can_tra ?? 0, 0, ',', '.') }} đ
                                 </strong>
                             </td>
 
                             <td>
-    @php
-        $pttt = [
-            'cash' => 'Tiền mặt',
-            'tien_mat' => 'Tiền mặt',
-            'Tiền mặt' => 'Tiền mặt',
+                                @php
+                                    $pttt = [
+                                        'cash' => 'Tiền mặt',
+                                        'tien_mat' => 'Tiền mặt',
+                                        'Tiền mặt' => 'Tiền mặt',
 
-            'transfer' => 'Chuyển khoản',
-            'chuyen_khoan' => 'Chuyển khoản',
-            'Chuyển khoản' => 'Chuyển khoản',
+                                        'transfer' => 'Chuyển khoản',
+                                        'chuyen_khoan' => 'Chuyển khoản',
+                                        'Chuyển khoản' => 'Chuyển khoản',
 
-            'card' => 'Quẹt thẻ',
-            'quet_the' => 'Quẹt thẻ',
-            'Quẹt thẻ' => 'Quẹt thẻ',
-        ];
+                                        'card' => 'Quẹt thẻ',
+                                        'quet_the' => 'Quẹt thẻ',
+                                        'Quẹt thẻ' => 'Quẹt thẻ',
+                                    ];
 
-        $tenPttt = $pttt[$hoaDon->phuong_thuc_thanh_toan] ?? $hoaDon->phuong_thuc_thanh_toan;
-    @endphp
+                                    $tenPttt = $pttt[$hoaDon->phuong_thuc_thanh_toan] 
+                                        ?? $hoaDon->phuong_thuc_thanh_toan 
+                                        ?? '---';
+                                @endphp
 
-    <span class="badge bg-light text-dark border">
-        {{ $tenPttt }}
-    </span>
-</td>
+                                <span class="badge bg-light text-dark border">
+                                    {{ $tenPttt }}
+                                </span>
+                            </td>
 
                             <td>
                                 @if($hoaDon->trang_thai === 'Đã hủy')
                                     <span class="badge bg-danger">Đã hủy</span>
                                 @else
-                                    <span class="badge bg-success">{{ $hoaDon->trang_thai }}</span>
+                                    <span class="badge bg-success">
+                                        {{ $hoaDon->trang_thai ?? 'Hoàn thành' }}
+                                    </span>
+                                @endif
+                            </td>
+
+                            <td>
+                                @if(!empty($hoaDon->ten_ca))
+                                    <span class="badge bg-info text-dark">
+                                        {{ $hoaDon->ten_ca }}
+                                    </span>
+                                @else
+                                    <span class="text-muted">Chưa có ca</span>
                                 @endif
                             </td>
 
@@ -151,22 +203,23 @@
                                    title="In">
                                     <i class="fas fa-print"></i>
                                 </a>
+
                                 @if($hoaDon->trang_thai !== 'Đã hủy')
-                                <form action="{{ route('admin.hoa-don.huy', $hoaDon->id) }}"
-                                    method="POST"
-                                    class="d-inline"
-                                    onsubmit="return confirm('Bạn có chắc muốn hủy hóa đơn này không? Tồn kho sẽ được hoàn lại.')">
-                                    @csrf
-                                    <button class="btn btn-sm btn-outline-danger btn-action" title="Hủy">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </form>
-                            @endif
+                                    <form action="{{ route('admin.hoa-don.huy', $hoaDon->id) }}"
+                                          method="POST"
+                                          class="d-inline"
+                                          onsubmit="return confirm('Bạn có chắc muốn hủy hóa đơn này không? Tồn kho sẽ được hoàn lại.')">
+                                        @csrf
+                                        <button class="btn btn-sm btn-outline-danger btn-action" title="Hủy">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="text-center py-4 text-muted">
+                            <td colspan="11" class="text-center py-4 text-muted">
                                 Chưa có hóa đơn nào
                             </td>
                         </tr>
