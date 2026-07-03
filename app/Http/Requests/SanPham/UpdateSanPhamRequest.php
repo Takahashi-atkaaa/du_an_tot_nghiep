@@ -4,6 +4,8 @@ namespace App\Http\Requests\SanPham;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use App\Models\BienTheSanPham;
+use App\Models\DonViQuyDoi;
 
 class UpdateSanPhamRequest extends FormRequest
 {
@@ -14,55 +16,108 @@ class UpdateSanPhamRequest extends FormRequest
 
     public function rules(): array
     {
-        $sanPhamId = $this->route('id') ?? $this->route('san_pham')?->id;
+        $productId = $this->route('id');
 
         return [
             'ten_san_pham' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('san_pham', 'ten_san_pham')->ignore($sanPhamId),
+                Rule::unique('san_pham', 'ten_san_pham')->ignore($productId),
             ],
             'id_danh_muc' => 'required|integer|exists:danh_muc_san_pham,id',
             'thuong_hieu' => 'nullable|string|max:255',
-            'gia_von' => 'required|numeric|min:0',
-            'gia_ban' => 'nullable|numeric|min:0',
-            'so_luong_ton_kho' => 'nullable|integer|min:0',
             'mo_ta' => 'nullable|string',
-            'id_don_vi' => 'nullable|integer|exists:don_vi_san_pham,id',
-            'don_vi_text' => 'nullable|string|max:50',
-            'dinh_muc_toi_thieu' => 'nullable|integer|min:0',
-            'thuoc_tinh_ids' => 'nullable|string',
-            'thuoc_tinh_ids.*' => 'integer|exists:thuoc_tinh_san_pham,id',
             'trang_thai' => 'sometimes|boolean',
-            'hinh_anh' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+
+            // Biến thể
             'bien_the' => 'sometimes|array',
-            'bien_the.*.id' => 'nullable|integer|exists:san_pham,id',
-            'bien_the.*.ten_bien_the' => 'string|max:255',
-            'bien_the.*.so_luong_san_pham_trong_don_vi' => 'nullable|integer|min:1',
-            'bien_the.*.ma_vach' => ['nullable', 'string', Rule::unique('san_pham', 'ma_vach')->where(fn($q) => $q->whereNotNull('ma_vach'))],
-            'bien_the.*.gia_ban' => 'numeric|min:0',
-            'bien_the.*.so_luong' => 'integer|min:0',
+            'bien_the.*.id' => 'nullable|integer|exists:bien_the_san_pham,id',
+            'bien_the.*.ten_bien_the' => 'nullable|string|max:255',
+            'bien_the.*.thuoc_tinh_ids' => 'nullable|string',
+            'bien_the.*.gia_von' => 'nullable|numeric|min:0',
+            'bien_the.*.gia_ban' => 'required|numeric|min:0',
+            'bien_the.*.so_luong_ton' => 'nullable|integer|min:0',
+            'bien_the.*.dinh_muc_toi_thieu' => 'nullable|integer|min:0',
+            'bien_the.*.ma_hang' => 'nullable|string|max:255',
+            'bien_the.*.ma_vach' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+            'bien_the.*.hinh_anh' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'bien_the.*.trang_thai' => 'sometimes|boolean',
+
+            // Đơn vị quy đổi
+            'bien_the.*.units' => 'sometimes|array',
+            'bien_the.*.units.*.id' => 'nullable|integer|exists:don_vi_quy_doi,id',
+            'bien_the.*.units.*.ten_don_vi' => 'required|string|max:255',
+            'bien_the.*.units.*.ty_le_quy_doi' => 'required|integer|min:1',
+            'bien_the.*.units.*.gia_von_quy_doi' => 'nullable|numeric|min:0',
+            'bien_the.*.units.*.gia_ban_quy_doi' => 'required|numeric|min:0',
+            'bien_the.*.units.*.gia_ban_si' => 'nullable|numeric|min:0',
+            'bien_the.*.units.*.ma_vach' => [
+                'nullable',
+                'string',
+            ],
+            'bien_the.*.units.*.hinh_anh' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'ten_san_pham.required' => 'Tên sản phẩm không được để trống',
-            'ten_san_pham.unique' => 'Tên sản phẩm đã tồn tại',
-            'id_danh_muc.required' => 'Danh mục sản phẩm không được để trống',
-            'id_danh_muc.exists' => 'Danh mục sản phẩm không hợp lệ',
-            'gia_von.required' => 'Giá vốn không được để trống',
-            'gia_von.numeric' => 'Giá vốn phải là số',
-            'gia_von.min' => 'Giá vốn phải lớn hơn hoặc bằng 0',
-            'gia_ban.numeric' => 'Giá bán phải là số',
-            'gia_ban.min' => 'Giá bán phải lớn hơn hoặc bằng 0',
-            'so_luong_ton_kho.integer' => 'Số lượng tồn kho phải là số nguyên',
-            'hinh_anh.image' => 'File phải là hình ảnh',
-            'hinh_anh.mimes' => 'Hình ảnh phải là JPEG, PNG, JPG, GIF hoặc WEBP',
-            'hinh_anh.max' => 'Kích thước hình ảnh không được vượt quá 2MB',
-            'bien_the.*.ma_vach.unique' => 'Mã vạch biến thể đã tồn tại',
+            'ten_san_pham.required' => 'Tên sản phẩm không được để trống.',
+            'ten_san_pham.unique' => 'Tên sản phẩm đã tồn tại.',
+            'id_danh_muc.required' => 'Danh mục sản phẩm không được để trống.',
+            'bien_the.*.gia_ban.required' => 'Giá bán biến thể không được để trống.',
+            'bien_the.*.units.*.ten_don_vi.required' => 'Tên đơn vị không được để trống.',
+            'bien_the.*.units.*.ty_le_quy_doi.required' => 'Tỷ lệ quy đổi không được để trống.',
+            'bien_the.*.units.*.gia_ban_quy_doi.required' => 'Giá bán quy đổi không được để trống.',
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $variants = $this->input('bien_the', []);
+
+            // Check variant barcodes uniqueness in DB (ignore current variant id)
+            foreach ($variants as $vIndex => $variant) {
+                $barcode = trim($variant['ma_vach'] ?? '');
+                $variantId = $variant['id'] ?? null;
+                if ($barcode !== '') {
+                    $q = BienTheSanPham::where('ma_vach', $barcode);
+                    if ($variantId) $q->where('id', '!=', $variantId);
+                    if ($q->exists()) {
+                        $validator->errors()->add("bien_the.{$vIndex}.ma_vach", 'Mã vạch biến thể đã tồn tại.');
+                    }
+                }
+
+                // Check variant ma_hang uniqueness in DB
+                $maHang = trim($variant['ma_hang'] ?? '');
+                if ($maHang !== '') {
+                    $mhq = BienTheSanPham::where('ma_hang', $maHang);
+                    if ($variantId) $mhq->where('id', '!=', $variantId);
+                    if ($mhq->exists()) {
+                        $validator->errors()->add("bien_the.{$vIndex}.ma_hang", 'Mã hàng biến thể đã tồn tại.');
+                    }
+                }
+
+                // Check units barcodes uniqueness in DB (ignore current unit id)
+                $units = $variant['units'] ?? [];
+                foreach ($units as $uIndex => $unit) {
+                    $uBarcode = trim($unit['ma_vach'] ?? '');
+                    $unitId = $unit['id'] ?? null;
+                    if ($uBarcode !== '') {
+                        $uq = DonViQuyDoi::where('ma_vach', $uBarcode);
+                        if ($unitId) $uq->where('id', '!=', $unitId);
+                        if ($uq->exists()) {
+                            $validator->errors()->add("bien_the.{$vIndex}.units.{$uIndex}.ma_vach", 'Mã vạch đơn vị quy đổi đã tồn tại.');
+                        }
+                    }
+                }
+            }
+        });
     }
 }

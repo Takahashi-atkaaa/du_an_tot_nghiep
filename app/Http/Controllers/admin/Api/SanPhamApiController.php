@@ -4,7 +4,9 @@ namespace App\Http\Controllers\admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\DanhMucSanPham;
-use App\Models\SanPham;
+use App\Models\Product;
+use App\Models\BienTheSanPham;
+use App\Models\DonViQuyDoi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,35 +20,75 @@ class SanPhamApiController extends Controller
         $trangThai = $request->query('trang_thai');
         $includeVariants = $request->boolean('include_variants', false);
 
-        $query = SanPham::with(['danhMuc', 'donVi', 'chiTietLoHangTon'])
-            ->sanPhamCha()
-            ->when($q, fn($w) => $w->where(fn($inner) =>
-                $inner->where('ten_san_pham', 'like', "%{$q}%")
-                    ->orWhere('ma_vach', 'like', "%{$q}%")
-                    ->orWhere('ma_hang', 'like', "%{$q}%")
-            ))
-            ->when($danhMuc, fn($w) => $w->where('id_danh_muc', $danhMuc))
+        $query = BienTheSanPham::with(['product.danhMuc', 'units'])
+            ->whereHas('product', fn($p) => $p->whereNull('deleted_at'))
+            ->when($q, fn($w) => $w
+                ->whereHas('product', fn($inner) => $inner
+                    ->whereRaw('LOWER(ten_san_pham) LIKE ?', ["%".mb_strtolower($q)."%"]))
+                ->orWhereRaw('LOWER(ten_bien_the) LIKE ?', ["%".mb_strtolower($q)."%"])
+                ->orWhereRaw('LOWER(ma_vach) LIKE ?', ["%".mb_strtolower($q)."%"])
+                ->orWhereRaw('LOWER(ma_hang) LIKE ?', ["%".mb_strtolower($q)."%"])
+            )
+            ->when($danhMuc, fn($w) => $w->whereHas('product', fn($i) => $i->where('id_danh_muc', $danhMuc)))
             ->when(!is_null($trangThai) && $trangThai !== '', fn($w) => $w->where('trang_thai', $trangThai))
-            ->orderBy('ten_san_pham')
-            ->limit(20);
+            ->orderBy('product_id')
+            ->orderBy('ten_bien_the');
 
-        $items = $query->get(['id', 'ten_san_pham', 'ma_vach', 'ma_hang', 'hinh_anh', 'gia_ban', 'id_danh_muc', 'id_don_vi', 'trang_thai', 'san_pham_cha_id', 'la_san_pham_cha']);
+        $items = $query->limit(50)->get();
 
-        if ($includeVariants) {
-            $items->load(['bienThe' => fn($q) => $q->orderBy('ten_san_pham'), 'bienThe.thuocTinhs', 'bienThe.chiTietLoHangTon']);
-        }
+        // Flat list
+        $dataArray = [];
+        foreach ($items as $variant) {
+            $thuocTinhs = $variant->thuocTinhs();
+            $tonKho = $variant->chiTietLoHangTon->sum('so_luong_ton');
 
-        $items->each(function ($sp) use ($includeVariants) {
-            $sp->chi_tiet_lo_hang_ton_sum_so_luong_ton = $sp->chiTietLoHangTon->sum('so_luong_ton');
-            if ($includeVariants) {
-                $sp->bien_the = $sp->bienThe->map(function ($bt) {
-                    $bt->chi_tiet_lo_hang_ton_sum_so_luong_ton = $bt->chiTietLoHangTon->sum('so_luong_ton');
-                    return $bt;
-                })->toArray();
+            $baseRow = [
+                'id' => $variant->id,
+                'product_id' => $variant->product_id,
+                'type' => 'variant',
+                'ten_san_pham' => $variant->product->ten_san_pham ?? '',
+                'ten_bien_the' => $variant->ten_bien_the,
+                'ten_hien_thi' => $variant->ten_hien_thi,
+                'danh_muc' => $variant->product->danhMuc->ten_danh_muc ?? '',
+                'ma_hang' => $variant->ma_hang,
+                'ma_vach' => $variant->ma_vach,
+                'gia_von' => $variant->gia_von,
+                'gia_ban' => $variant->gia_ban,
+                'so_luong_ton' => $variant->so_luong_ton,
+                'chi_tiet_lo_hang_ton' => $tonKho,
+                'thuoc_tinh_labels' => $thuocTinhs->pluck('ten_thuoc_tinh')->toArray(),
+                'thuoc_tinh_ids' => $variant->thuoc_tinh_ids,
+                'hinh_anh' => $variant->hinh_anh,
+                'trang_thai' => $variant->trang_thai,
+                'units' => [],
+            ];
+            $dataArray[] = $baseRow;
+
+            // Mỗi unit là 1 dòng riêng
+            foreach ($variant->units as $unit) {
+                $dataArray[] = [
+                    'id' => $unit->id,
+                    'variant_id' => $variant->id,
+                    'product_id' => $variant->product_id,
+                    'type' => 'unit',
+                    'ten_san_pham' => $variant->product->ten_san_pham ?? '',
+                    'ten_bien_the' => $variant->ten_bien_the,
+                    'ten_hien_thi' => $variant->ten_hien_thi . ' - ' . $unit->ten_don_vi,
+                    'danh_muc' => '',
+                    'ma_hang' => $unit->ma_hang,
+                    'ma_vach' => $unit->ma_vach,
+                    'gia_von' => $unit->gia_von_quy_doi,
+                    'gia_ban' => $unit->gia_ban_quy_doi,
+                    'gia_ban_si' => $unit->gia_ban_si,
+                    'ty_le_quy_doi' => $unit->ty_le_quy_doi,
+                    'so_luong_ton' => $variant->so_luong_ton,
+                    'chi_tiet_lo_hang_ton' => $tonKho,
+                    'thuoc_tinh_labels' => $thuocTinhs->pluck('ten_thuoc_tinh')->toArray(),
+                    'hinh_anh' => $unit->hinh_anh ?: $variant->hinh_anh,
+                    'trang_thai' => $variant->trang_thai,
+                ];
             }
-        });
-
-        $dataArray = $items->toArray();
+        }
 
         return response()->json([
             'success' => true,
@@ -57,20 +99,15 @@ class SanPhamApiController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $sanPham = SanPham::with([
-            'danhMuc',
-            'donVi',
-            'thuocTinhs',
-            'bienThe.thuocTinhs',
-        ])->find($id);
+        $variant = BienTheSanPham::with(['product.danhMuc', 'product', 'units'])->find($id);
 
-        if (!$sanPham) {
-            return response()->json(['success' => false, 'message' => 'Sản phẩm không tồn tại.'], 404);
+        if (!$variant) {
+            return response()->json(['success' => false, 'message' => 'Biến thể không tồn tại.'], 404);
         }
 
         $theKho = DB::table('phieu')
             ->join('chi_tiet_phieu', 'phieu.id', '=', 'chi_tiet_phieu.id_phieu')
-            ->where('chi_tiet_phieu.id_san_pham', $id)
+            ->where('chi_tiet_phieu.variant_id', $id)
             ->select(
                 DB::raw("CONCAT('PN-', phieu.id) as maPhieu"),
                 'phieu.created_at as thoiGian',
@@ -87,7 +124,7 @@ class SanPhamApiController extends Controller
 
         $loHang = DB::table('chi_tiet_lo_hang as ct')
             ->join('lo_hang as lh', 'lh.id', '=', 'ct.id_lo_hang')
-            ->where('ct.id_san_pham', $id)
+            ->where('ct.variant_id', $id)
             ->where('ct.so_luong_ton', '>', 0)
             ->orderBy('ct.han_su_dung', 'asc')
             ->select(
@@ -100,13 +137,12 @@ class SanPhamApiController extends Controller
             )
             ->get();
 
-        $sanPham->load(['danhMuc', 'donVi', 'thuocTinhs', 'bienThe.thuocTinhs']);
-
         return response()->json([
             'success' => true,
             'data' => [
-                'sanPham' => $sanPham->toArray(),
-                'bienThe' => $sanPham->bienThe->toArray(),
+                'product' => $variant->product->toArray(),
+                'variant' => $variant->toArray(),
+                'units' => $variant->units->toArray(),
                 'theKho' => $theKho,
                 'loHang' => $loHang,
             ],
@@ -115,18 +151,24 @@ class SanPhamApiController extends Controller
 
     public function destroyVariant(int $id): JsonResponse
     {
-        $bienThe = SanPham::whereNotNull('san_pham_cha_id')->find($id);
+        $variant = BienTheSanPham::find($id);
 
-        if (!$bienThe) {
+        if (!$variant) {
             return response()->json(['success' => false, 'message' => 'Biến thể không tồn tại.'], 404);
         }
 
-        if ($bienThe->hinh_anh && !str_starts_with($bienThe->hinh_anh, 'http')) {
-            $this->deleteImageIfUnused($bienThe->hinh_anh);
+        foreach ($variant->units as $unit) {
+            if ($unit->hinh_anh && !str_starts_with($unit->hinh_anh, 'http')) {
+                $this->deleteImageIfUnused($unit->hinh_anh);
+            }
+            $unit->delete();
         }
 
-        $bienThe->thuocTinhs()->detach();
-        $bienThe->delete();
+        if ($variant->hinh_anh && !str_starts_with($variant->hinh_anh, 'http')) {
+            $this->deleteImageIfUnused($variant->hinh_anh);
+        }
+
+        $variant->delete();
 
         return response()->json([
             'success' => true,
@@ -134,34 +176,40 @@ class SanPhamApiController extends Controller
         ]);
     }
 
-    public function destroyAllVariants(int $parentId): JsonResponse
+    public function destroyAllVariants(int $productId): JsonResponse
     {
-        $sanPham = SanPham::sanPhamCha()->find($parentId);
+        $product = Product::find($productId);
 
-        if (!$sanPham) {
-            return response()->json(['success' => false, 'message' => 'Sản phẩm cha không tồn tại.'], 404);
+        if (!$product) {
+            return response()->json(['success' => false, 'message' => 'Sản phẩm không tồn tại.'], 404);
         }
 
-        $bienThes = $sanPham->bienThe;
+        $variants = $product->variants;
 
-        foreach ($bienThes as $bienThe) {
-            if ($bienThe->hinh_anh && !str_starts_with($bienThe->hinh_anh, 'http')) {
-                $this->deleteImageIfUnused($bienThe->hinh_anh);
+        foreach ($variants as $variant) {
+            foreach ($variant->units as $unit) {
+                if ($unit->hinh_anh && !str_starts_with($unit->hinh_anh, 'http')) {
+                    $this->deleteImageIfUnused($unit->hinh_anh);
+                }
+                $unit->delete();
             }
-            $bienThe->thuocTinhs()->detach();
-            $bienThe->delete();
+            if ($variant->hinh_anh && !str_starts_with($variant->hinh_anh, 'http')) {
+                $this->deleteImageIfUnused($variant->hinh_anh);
+            }
+            $variant->delete();
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Đã xóa ' . $bienThes->count() . ' biến thể.',
+            'message' => 'Đã xóa ' . $variants->count() . ' biến thể.',
         ]);
     }
 
     private function deleteImageIfUnused(string $path): void
     {
-        $existsInDb = SanPham::where('hinh_anh', $path)->exists();
-        if (!$existsInDb) {
+        $existsInVariant = BienTheSanPham::where('hinh_anh', $path)->exists();
+        $existsInUnit = DonViQuyDoi::where('hinh_anh', $path)->exists();
+        if (!$existsInVariant && !$existsInUnit) {
             $fullPath = public_path($path);
             if (file_exists($fullPath)) {
                 unlink($fullPath);

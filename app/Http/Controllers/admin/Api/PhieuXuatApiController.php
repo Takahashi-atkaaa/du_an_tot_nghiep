@@ -7,7 +7,8 @@ use App\Models\Phieu;
 use App\Models\PhieuXuat;
 use App\Models\ChiTietLoHang;
 use App\Models\ChiTietPhieu;
-use App\Models\SanPham;
+use App\Models\BienTheSanPham;
+use App\Models\DonViQuyDoi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,11 +33,9 @@ class PhieuXuatApiController extends Controller
         if (!empty($loai)) {
             $query->where('loai_xuat', $loai);
         }
-
         if (!empty($tuNgay)) {
             $query->whereDate('created_at', '>=', $tuNgay);
         }
-
         if (!empty($denNgay)) {
             $query->whereDate('created_at', '<=', $denNgay);
         }
@@ -54,7 +53,7 @@ class PhieuXuatApiController extends Controller
         $phieuXuat = PhieuXuat::with([
             'phieu',
             'phieuNhapLienQuan',
-            'chiTietPhieu' => fn($ct) => $ct->with('sanPham', 'chiTietLoHang.loHang'),
+            'chiTietPhieu' => fn($ct) => $ct->with('variant.product', 'chiTietLoHang'),
         ])->find($id);
 
         if (!$phieuXuat) {
@@ -76,14 +75,13 @@ class PhieuXuatApiController extends Controller
             'ly_do' => 'nullable|string|max:500',
             'ghi_chu' => 'nullable|string',
             'chi_tiet' => 'required|array|min:1',
-            'chi_tiet.*.id_san_pham' => 'required|integer|exists:san_pham,id',
+            'chi_tiet.*.variant_id' => 'required|integer|exists:bien_the_san_pham,id',
             'chi_tiet.*.id_chi_tiet_lo_hang' => 'required|integer|exists:chi_tiet_lo_hang,id',
             'chi_tiet.*.so_luong' => 'required|integer|min:1',
         ], [
             'chi_tiet.required' => 'Phải có ít nhất một sản phẩm.',
             'chi_tiet.*.so_luong.min' => 'Số lượng xuất phải lớn hơn 0.',
             'chi_tiet.*.id_chi_tiet_lo_hang.required' => 'Phải chọn lô hàng cho từng sản phẩm.',
-            'chi_tiet.*.id_chi_tiet_lo_hang.exists' => 'Lô hàng đã chọn không tồn tại.',
         ]);
 
         $loaiPhieuEnum = $data['loai_xuat'] === 'tra_hang_nha_cung_cap'
@@ -115,20 +113,25 @@ class PhieuXuatApiController extends Controller
                     'ghi_chu' => $data['ghi_chu'] ?? null,
                 ]);
 
+                $variantIds = collect($data['chi_tiet'])->pluck('variant_id')->unique()->all();
+                $variantMap = BienTheSanPham::whereIn('id', $variantIds)
+                    ->pluck('product_id', 'id')
+                    ->toArray();
+
                 foreach ($data['chi_tiet'] as $ct) {
                     $soLuongCanXuat = (int) $ct['so_luong'];
 
                     $ctLo = ChiTietLoHang::where('id', $ct['id_chi_tiet_lo_hang'])
-                        ->where('id_san_pham', $ct['id_san_pham'])
+                        ->where('variant_id', $ct['variant_id'])
                         ->lockForUpdate()
                         ->first();
 
                     if (!$ctLo) {
-                        throw new \Exception("Lô hàng đã chọn không tồn tại hoặc không thuộc sản phẩm ID {$ct['id_san_pham']}.");
+                        throw new \Exception("Lô hàng đã chọn không tồn tại hoặc không thuộc variant ID {$ct['variant_id']}.");
                     }
 
                     if ($ctLo->so_luong_ton < $soLuongCanXuat) {
-                        throw new \Exception("Sản phẩm ID {$ct['id_san_pham']}: lô đã chọn chỉ tồn {$ctLo->so_luong_ton}, không đủ để xuất {$soLuongCanXuat}.");
+                        throw new \Exception("Variant ID {$ct['variant_id']}: lô đã chọn chỉ tồ {$ctLo->so_luong_ton}, không đủ để xuất {$soLuongCanXuat}.");
                     }
 
                     $soLuongTonTruocKhiXuat = (int) $ctLo->so_luong_ton;
@@ -138,7 +141,8 @@ class PhieuXuatApiController extends Controller
 
                     ChiTietPhieu::create([
                         'id_phieu' => $phieu->id,
-                        'id_san_pham' => $ct['id_san_pham'],
+                        'id_san_pham' => $variantMap[$ct['variant_id']] ?? null,
+                        'variant_id' => $ct['variant_id'],
                         'id_lo_hang' => $ctLo->id_lo_hang,
                         'id_chi_tiet_lo_hang' => $ctLo->id,
                         'so_luong' => $soLuongCanXuat,
@@ -147,10 +151,12 @@ class PhieuXuatApiController extends Controller
                         'so_luong_con_lai' => $soLuongTonSauKhiXuat,
                     ]);
 
-                    SanPham::where('id', $ct['id_san_pham'])->decrement('so_luong_ton_kho', $soLuongCanXuat);
+                    // Trừ tồn kho variant gốc
+                    BienTheSanPham::where('id', $ct['variant_id'])
+                        ->decrement('so_luong_ton', $soLuongCanXuat);
                 }
 
-                return $phieuXuat->load('phieu', 'chiTietPhieu.sanPham', 'chiTietPhieu.chiTietLoHang.loHang');
+                return $phieuXuat->load('phieu', 'chiTietPhieu.variant', 'chiTietPhieu.chiTietLoHang');
             });
         } catch (\Illuminate\Validation\ValidationException $e) {
             throw $e;
@@ -214,16 +220,19 @@ class PhieuXuatApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Phiếu xuất không tồn tại.'], 404);
         }
 
-        $chiTiets = \App\Models\ChiTietPhieu::where('id_phieu', $phieuXuat->id_phieu)->get();
+        $chiTiets = ChiTietPhieu::where('id_phieu', $phieuXuat->id_phieu)->get();
         foreach ($chiTiets as $ct) {
-            \App\Models\ChiTietLoHang::where('id', $ct->id_chi_tiet_lo_hang)
-                ->increment('so_luong_ton', $ct->so_luong);
-            \App\Models\SanPham::where('id', $ct->id_san_pham)
-                ->increment('so_luong_ton_kho', $ct->so_luong);
+            // Hoàn tăng tồn kho variant
+            if ($ct->variant_id) {
+                BienTheSanPham::where('id', $ct->variant_id)
+                    ->increment('so_luong_ton', $ct->so_luong);
+                ChiTietLoHang::where('id', $ct->id_chi_tiet_lo_hang)
+                    ->increment('so_luong_ton', $ct->so_luong);
+            }
         }
 
         DB::transaction(function () use ($phieuXuat) {
-            \App\Models\ChiTietPhieu::where('id_phieu', $phieuXuat->id_phieu)->delete();
+            ChiTietPhieu::where('id_phieu', $phieuXuat->id_phieu)->delete();
             $phieuXuat->phieu->delete();
             $phieuXuat->delete();
         });

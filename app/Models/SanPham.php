@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
-use App\Models\BaseModel;
-use App\Models\DanhMucSanPham;
-use App\Models\DonViSanPham;
-use App\Models\ThuocTinhSanPham;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Model SanPham - đồng bộ với Product (cùng trỏ tới bảng san_pham).
+ * Bảng san_pham chỉ còn các cột thông tin chung của sản phẩm cha:
+ * id, id_danh_muc, ten_san_pham, thuong_hieu, mo_ta, trang_thai.
+ * Các dữ liệu về giá, tồn kho, mã vạch, mã hàng, đơn vị, biến thể…
+ * đã được chuyển sang bien_the_san_pham + don_vi_quy_doi.
+ */
 class SanPham extends BaseModel
 {
     use HasFactory, SoftDeletes;
@@ -18,24 +21,12 @@ class SanPham extends BaseModel
     protected $fillable = [
         'id_danh_muc',
         'ten_san_pham',
-        'ma_hang',
-        'ma_vach',
-        'hinh_anh',
         'thuong_hieu',
-        'gia_von',
-        'gia_ban',
-        'so_luong_ton_kho',
         'mo_ta',
-        'id_don_vi',
-        'dinh_muc_toi_thieu',
         'trang_thai',
-        'san_pham_cha_id',
-        'la_san_pham_cha',
     ];
 
     protected $casts = [
-        'gia_von' => 'decimal:2',
-        'gia_ban' => 'decimal:2',
         'trang_thai' => 'boolean',
     ];
 
@@ -44,75 +35,8 @@ class SanPham extends BaseModel
         return $this->belongsTo(DanhMucSanPham::class, 'id_danh_muc');
     }
 
-    public function donVi()
+    public function bienTheSanPhams()
     {
-        return $this->belongsTo(DonViSanPham::class, 'id_don_vi');
-    }
-
-    public function thuocTinhs()
-    {
-        return $this->belongsToMany(ThuocTinhSanPham::class, 'san_pham_thuoc_tinh', 'id_san_pham', 'id_thuoc_tinh');
-    }
-
-    public function sanPhamCha()
-    {
-        return $this->belongsTo(SanPham::class, 'san_pham_cha_id');
-    }
-
-    public function bienThe()
-    {
-        return $this->hasMany(SanPham::class, 'san_pham_cha_id');
-    }
-
-    public function scopeSanPhamCha($query)
-    {
-        return $query->where('san_pham_cha_id', null);
-    }
-
-    public function getSoBienTheAttribute()
-    {
-        return $this->bienThe()->count();
-    }
-
-    public function getGiaBanHienThiAttribute()
-    {
-        if ($this->san_pham_cha_id) {
-            return $this->gia_ban;
-        }
-
-        $bienThe = $this->bienThe;
-        if ($bienThe->isNotEmpty()) {
-            $min = $bienThe->min('gia_ban');
-            $max = $bienThe->max('gia_ban');
-            if ($min == $max) {
-                return $min;
-            }
-            return "{$min} - {$max}";
-        }
-
-        return $this->gia_ban;
-    }
-
-    public function getTonKhoTongAttribute()
-    {
-        if ($this->san_pham_cha_id) {
-            return $this->so_luong_ton_kho;
-        }
-        return $this->so_luong_ton_kho + $this->bienThe->sum('so_luong_ton_kho');
-    }
-
-    public function chiTietLoHang()
-    {
-        return $this->hasMany(ChiTietLoHang::class, 'id_san_pham');
-    }
-
-    public function chiTietLoHangTon()
-    {
-        return $this->hasMany(ChiTietLoHang::class, 'id_san_pham')->where('so_luong_ton', '>', 0);
-    }
-
-    public function donViSanPhams(): \Illuminate\Database\Eloquent\Relations\HasMany
-    {
-        return $this->hasMany(\App\Models\DonViSanPhamSanPham::class, 'id_san_pham');
+        return $this->hasMany(BienTheSanPham::class, 'product_id');
     }
 }

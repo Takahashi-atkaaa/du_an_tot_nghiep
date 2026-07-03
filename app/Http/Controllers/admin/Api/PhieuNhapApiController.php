@@ -8,7 +8,7 @@ use App\Models\PhieuNhap;
 use App\Models\LoHang;
 use App\Models\ChiTietLoHang;
 use App\Models\ChiTietPhieu;
-use App\Models\SanPham;
+use App\Models\BienTheSanPham;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,11 +34,9 @@ class PhieuNhapApiController extends Controller
         if (!empty($loai)) {
             $query->where('loai_nhap', $loai);
         }
-
         if (!empty($tuNgay)) {
             $query->whereDate('created_at', '>=', $tuNgay);
         }
-
         if (!empty($denNgay)) {
             $query->whereDate('created_at', '<=', $denNgay);
         }
@@ -56,7 +54,7 @@ class PhieuNhapApiController extends Controller
         $phieuNhap = PhieuNhap::with([
             'phieu',
             'hoaDon',
-            'chiTietPhieu' => fn($ct) => $ct->with('sanPham', 'chiTietLoHang'),
+            'chiTietPhieu' => fn($ct) => $ct->with('variant.product', 'chiTietLoHang'),
         ])->find($id);
 
         if (!$phieuNhap) {
@@ -80,13 +78,13 @@ class PhieuNhapApiController extends Controller
             'tao_lo_moi' => 'required|in:0,1',
             'id_lo_hang' => 'required_if:tao_lo_moi,0|nullable|integer|exists:lo_hang,id',
             'chi_tiet' => 'required|array|min:1',
-            'chi_tiet.*.id_san_pham' => 'required|integer|exists:san_pham,id',
+            'chi_tiet.*.variant_id' => 'required|integer|exists:bien_the_san_pham,id',
             'chi_tiet.*.so_luong_nhap' => 'required|integer|min:1',
             'chi_tiet.*.gia_nhap' => 'required|numeric|min:0',
             'chi_tiet.*.han_su_dung' => 'required|date',
         ], [
             'chi_tiet.required' => 'Phải có ít nhất một sản phẩm.',
-            'chi_tiet.*.id_san_pham.required' => 'Mỗi sản phẩm phải có ID.',
+            'chi_tiet.*.variant_id.required' => 'Mỗi sản phẩm phải có variant_id.',
             'chi_tiet.*.so_luong_nhap.min' => 'Số lượng nhập phải lớn hơn 0.',
             'id_lo_hang.required_if' => 'Vui lòng chọn lô hàng khi không tạo lô mới.',
         ]);
@@ -114,6 +112,11 @@ class PhieuNhapApiController extends Controller
             ]);
 
             if ($data['tao_lo_moi'] == '1') {
+                $variantIds = collect($data['chi_tiet'])->pluck('variant_id')->unique()->all();
+                $variantMap = BienTheSanPham::whereIn('id', $variantIds)
+                    ->pluck('product_id', 'id')
+                    ->toArray();
+
                 $loHang = LoHang::create([
                     'id_phieu' => $phieu->id,
                     'id_nha_cung_cap' => $data['id_nha_cung_cap'] ?? null,
@@ -123,7 +126,8 @@ class PhieuNhapApiController extends Controller
                 foreach ($data['chi_tiet'] as $ct) {
                     $chiTietLoHang = ChiTietLoHang::create([
                         'id_lo_hang' => $loHang->id,
-                        'id_san_pham' => $ct['id_san_pham'],
+                        'id_san_pham' => $variantMap[$ct['variant_id']] ?? null,
+                        'variant_id' => $ct['variant_id'],
                         'so_luong_nhap' => $ct['so_luong_nhap'],
                         'so_luong_ton' => $ct['so_luong_nhap'],
                         'gia_nhap' => $ct['gia_nhap'],
@@ -132,7 +136,8 @@ class PhieuNhapApiController extends Controller
 
                     ChiTietPhieu::create([
                         'id_phieu' => $phieu->id,
-                        'id_san_pham' => $ct['id_san_pham'],
+                        'id_san_pham' => $variantMap[$ct['variant_id']] ?? null,
+                        'variant_id' => $ct['variant_id'],
                         'id_lo_hang' => $loHang->id,
                         'id_chi_tiet_lo_hang' => $chiTietLoHang->id,
                         'so_luong' => $ct['so_luong_nhap'],
@@ -141,19 +146,27 @@ class PhieuNhapApiController extends Controller
                         'so_luong_con_lai' => $ct['so_luong_nhap'],
                     ]);
 
-                    SanPham::where('id', $ct['id_san_pham'])->increment('so_luong_ton_kho', $ct['so_luong_nhap']);
+                    // Cộng tồn kho variant gốc
+                    BienTheSanPham::where('id', $ct['variant_id'])
+                        ->increment('so_luong_ton', $ct['so_luong_nhap']);
                 }
             } else {
                 $idLoHang = $data['id_lo_hang'];
+                $variantIds = collect($data['chi_tiet'])->pluck('variant_id')->unique()->all();
+                $variantMap = BienTheSanPham::whereIn('id', $variantIds)
+                    ->pluck('product_id', 'id')
+                    ->toArray();
+
                 foreach ($data['chi_tiet'] as $ct) {
                     $chiTietLoHang = ChiTietLoHang::where('id_lo_hang', $idLoHang)
-                        ->where('id_san_pham', $ct['id_san_pham'])
+                        ->where('variant_id', $ct['variant_id'])
                         ->whereDate('han_su_dung', $ct['han_su_dung'])
                         ->first();
 
                     ChiTietLoHang::create([
                         'id_lo_hang' => $idLoHang,
-                        'id_san_pham' => $ct['id_san_pham'],
+                        'id_san_pham' => $variantMap[$ct['variant_id']] ?? null,
+                        'variant_id' => $ct['variant_id'],
                         'so_luong_nhap' => $ct['so_luong_nhap'],
                         'so_luong_ton' => $ct['so_luong_nhap'],
                         'gia_nhap' => $ct['gia_nhap'],
@@ -162,7 +175,8 @@ class PhieuNhapApiController extends Controller
 
                     ChiTietPhieu::create([
                         'id_phieu' => $phieu->id,
-                        'id_san_pham' => $ct['id_san_pham'],
+                        'id_san_pham' => $variantMap[$ct['variant_id']] ?? null,
+                        'variant_id' => $ct['variant_id'],
                         'id_lo_hang' => $idLoHang,
                         'id_chi_tiet_lo_hang' => $chiTietLoHang?->id,
                         'so_luong' => $ct['so_luong_nhap'],
@@ -171,12 +185,14 @@ class PhieuNhapApiController extends Controller
                         'so_luong_con_lai' => $ct['so_luong_nhap'],
                     ]);
 
-                    SanPham::where('id', $ct['id_san_pham'])->increment('so_luong_ton_kho', $ct['so_luong_nhap']);
+                    // Cộng tồn kho variant gốc
+                    BienTheSanPham::where('id', $ct['variant_id'])
+                        ->increment('so_luong_ton', $ct['so_luong_nhap']);
                 }
             }
 
-            return $phieuNhap->load('phieu', 'chiTietPhieu.sanPham', 'chiTietPhieu.chiTietLoHang');
-    });
+            return $phieuNhap->load('phieu', 'chiTietPhieu.variant', 'chiTietPhieu.chiTietLoHang');
+        });
 
         return response()->json([
             'success' => true,
@@ -221,14 +237,17 @@ class PhieuNhapApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Phiếu nhập không tồn tại.'], 404);
         }
 
-        $chiTiets = \App\Models\ChiTietPhieu::where('id_phieu', $phieuNhap->id_phieu)->get();
+        $chiTiets = ChiTietPhieu::where('id_phieu', $phieuNhap->id_phieu)->get();
         foreach ($chiTiets as $ct) {
-            \App\Models\SanPham::where('id', $ct->id_san_pham)
-                ->decrement('so_luong_ton_kho', $ct->so_luong);
+            // Trừ tồn kho variant
+            if ($ct->variant_id) {
+                BienTheSanPham::where('id', $ct->variant_id)
+                    ->decrement('so_luong_ton', $ct->so_luong);
+            }
         }
 
         DB::transaction(function () use ($phieuNhap) {
-            \App\Models\ChiTietPhieu::where('id_phieu', $phieuNhap->id_phieu)->delete();
+            ChiTietPhieu::where('id_phieu', $phieuNhap->id_phieu)->delete();
             $phieuNhap->phieu->delete();
             $phieuNhap->delete();
         });
@@ -241,12 +260,12 @@ class PhieuNhapApiController extends Controller
 
     public function danhSachLoHang(Request $request): JsonResponse
     {
-        $idSanPham = $request->query('id_san_pham');
+        $variantId = $request->query('variant_id');
         $query = LoHang::with('nhaCungCap', 'chiTietLoHang')
             ->whereHas('chiTietLoHang', fn($q) => $q->where('so_luong_ton', '>', 0));
 
-        if ($idSanPham) {
-            $query->whereHas('chiTietLoHang', fn($q) => $q->where('id_san_pham', $idSanPham));
+        if ($variantId) {
+            $query->whereHas('chiTietLoHang', fn($q) => $q->where('variant_id', $variantId));
         }
 
         $items = $query->orderByDesc('id')->limit(50)->get();

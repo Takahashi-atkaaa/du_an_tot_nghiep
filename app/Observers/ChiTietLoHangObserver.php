@@ -3,33 +3,41 @@
 namespace App\Observers;
 
 use App\Models\ChiTietLoHang;
-use App\Models\SanPham;
+use App\Models\BienTheSanPham;
 
 class ChiTietLoHangObserver
 {
     public function created(ChiTietLoHang $model): void
     {
-        $this->syncTonKho($model->id_san_pham);
+        if ($model->variant_id) {
+            $this->syncTonKhoVariant($model->variant_id);
+        }
     }
 
     public function updated(ChiTietLoHang $model): void
     {
-        if ($model->wasChanged('id_san_pham') || $model->wasChanged('so_luong_ton')) {
-            $this->syncTonKho($model->getOriginal('id_san_pham'));
-            $this->syncTonKho($model->id_san_pham);
-        } elseif ($model->isDirty('so_luong_ton')) {
-            $this->syncTonKho($model->id_san_pham);
+        if ($model->wasChanged('variant_id')) {
+            $this->syncTonKhoVariant($model->getOriginal('variant_id'));
+            $this->syncTonKhoVariant($model->variant_id);
+        } elseif ($model->wasChanged('so_luong_ton')) {
+            $this->syncTonKhoVariant($model->variant_id);
         }
     }
 
     public function deleted(ChiTietLoHang $model): void
     {
-        $this->syncTonKho($model->id_san_pham);
+        if ($model->variant_id) {
+            $this->syncTonKhoVariant($model->variant_id);
+        }
     }
 
-    private function syncTonKho(int $idSanPham): void
+    private function syncTonKhoVariant(?int $variantId): void
     {
-        $tongTon = ChiTietLoHang::where('id_san_pham', $idSanPham)->sum('so_luong_ton');
-        SanPham::where('id', $idSanPham)->update(['so_luong_ton_kho' => $tongTon]);
+        if (!$variantId) {
+            return;
+        }
+
+        $tongTon = ChiTietLoHang::where('variant_id', $variantId)->sum('so_luong_ton');
+        BienTheSanPham::where('id', $variantId)->update(['so_luong_ton' => $tongTon]);
     }
 }

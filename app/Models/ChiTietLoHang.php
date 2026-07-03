@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Product;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -14,6 +15,7 @@ class ChiTietLoHang extends Model
     protected $fillable = [
         'id_lo_hang',
         'id_san_pham',
+        'variant_id',
         'so_luong_nhap',
         'so_luong_ton',
         'gia_nhap',
@@ -32,9 +34,14 @@ class ChiTietLoHang extends Model
         return $this->belongsTo(LoHang::class, 'id_lo_hang');
     }
 
-    public function sanPham()
+    public function variant()
     {
-        return $this->belongsTo(SanPham::class, 'id_san_pham');
+        return $this->belongsTo(BienTheSanPham::class, 'variant_id');
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class, 'id_san_pham');
     }
 
     public function chiTietPhieu()

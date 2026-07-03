@@ -158,44 +158,13 @@
 @endsection
 
 @push('scripts')
-<script>
-    document.getElementById('loaiThuocTinhSelect').addEventListener('change', function() {
-        const wrapper = document.getElementById('thuocTinhChaSelectWrapper');
-        wrapper.style.display = this.value === 'con' ? 'block' : 'none';
-    });
-
-    function toggleEditDonVi(id) {
-        const item = document.getElementById('donvi-item-' + id);
-        const viewEl = item.querySelector('.donvi-view');
-        const editEl = item.querySelector('.donvi-edit');
-        const actionsEl = item.querySelector('.donvi-actions');
-
-        if (editEl.classList.contains('d-none')) {
-            viewEl.classList.add('d-none');
-            actionsEl.classList.add('d-none');
-            editEl.classList.remove('d-none');
-        } else {
-            viewEl.classList.remove('d-none');
-            actionsEl.classList.remove('d-none');
-            editEl.classList.add('d-none');
-        }
-    }
-
-    function toggleEditTt(id) {
-        const item = document.getElementById('tt-item-' + id);
-        const viewEl = item.querySelector('.tt-view');
-        const editEl = item.querySelector('.tt-edit');
-        const actionsEl = item.querySelector('.tt-actions');
-
-        if (editEl.classList.contains('d-none')) {
-            viewEl.classList.add('d-none');
-            actionsEl.classList.add('d-none');
-            editEl.classList.remove('d-none');
-        } else {
-            viewEl.classList.remove('d-none');
-            actionsEl.classList.remove('d-none');
-            editEl.classList.add('d-none');
-        }
-    }
-</script>
+<script src="{{ asset('js/admin/san-pham.js') }}"></script>
 @endpush
+
+@section('styles')
+<link rel="stylesheet" href="{{ asset('css/admin/san-pham.css') }}">
+@endsection
+
+@section('page_scripts')
+<script src="{{ asset('js/admin/san-pham.js') }}"></script>
+@endsection
