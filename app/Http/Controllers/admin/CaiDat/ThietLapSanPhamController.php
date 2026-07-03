@@ -18,7 +18,7 @@ class ThietLapSanPhamController extends Controller
             ->orderBy('ten_thuoc_tinh')
             ->get();
 
-        return view('admin_xem_truoc.cai-dat-san-pham', compact('donVis', 'thuocTinhChas'));
+        return view('admin_xem_truoc.san-pham.cai-dat', compact('donVis', 'thuocTinhChas'));
     }
 
     public function storeDonVi(Request $request)

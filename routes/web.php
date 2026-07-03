@@ -212,7 +212,7 @@ Route::get('/admin/cai-dat', function () {
     Route::get('/admin/kho-hang', function () {
         $nhaCungCaps = NhaCungCap::orderBy('id', 'asc')->get();
 
-        return view('admin_xem_truoc.kho-hang', compact('nhaCungCaps'));
+        return view('admin_xem_truoc.kho-hang.index', compact('nhaCungCaps'));
     });
 
     Route::get('/admin/kho-hang/lo-hang', function () {

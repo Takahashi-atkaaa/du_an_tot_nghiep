@@ -14,6 +14,7 @@ class ChiTietPhieu extends Model
     protected $fillable = [
         'id_phieu',
         'id_san_pham',
+        'variant_id',
         'id_lo_hang',
         'id_chi_tiet_lo_hang',
         'so_luong',
@@ -29,9 +30,9 @@ class ChiTietPhieu extends Model
         return $this->belongsTo(Phieu::class, 'id_phieu');
     }
 
-    public function sanPham()
+    public function variant()
     {
-        return $this->belongsTo(SanPham::class, 'id_san_pham');
+        return $this->belongsTo(BienTheSanPham::class, 'variant_id');
     }
 
     public function loHang()

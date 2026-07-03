@@ -18,8 +18,8 @@ class DatabaseSeeder extends Seeder
             NhanSuSeeder::class,
             KhachHangSeeder::class,
             NhaCungCapSeeder::class,
-            KhoHangSeeder::class,
             SanPhamSeeder::class,
+            KhoHangSeeder::class,
             BanHangSeeder::class,
             KhoHangFefoSeeder::class,
         ]);

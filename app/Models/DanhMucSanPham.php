@@ -29,6 +29,6 @@ class DanhMucSanPham extends Model
 
     public function sanPhams()
 {
-    return $this->hasMany(SanPham::class, 'id_danh_muc');
+    return $this->hasMany(Product::class, 'id_danh_muc');
 }
 }   

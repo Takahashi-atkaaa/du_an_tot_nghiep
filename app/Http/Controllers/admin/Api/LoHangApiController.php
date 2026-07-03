@@ -7,7 +7,7 @@ use App\Models\LoHang;
 use App\Models\ChiTietLoHang;
 use App\Models\NhaCungCap;
 use App\Models\Phieu;
-use App\Models\SanPham;
+use App\Models\BienTheSanPham;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +19,7 @@ class LoHangApiController extends Controller
         $q = $request->query('q');
         $ncc = $request->query('id_nha_cung_cap');
 
-        $query = LoHang::with(['nhaCungCap', 'chiTietLoHang.sanPham'])
+        $query = LoHang::with(['nhaCungCap', 'chiTietLoHang.variant'])
             ->withSum('chiTietLoHang', 'so_luong_ton')
             ->withSum('chiTietLoHang', 'so_luong_nhap')
             ->orderByDesc('id');
@@ -51,7 +51,7 @@ class LoHangApiController extends Controller
     {
         $loHang = LoHang::with([
             'nhaCungCap',
-            'chiTietLoHang.sanPham',
+            'chiTietLoHang.variant',
             'phieu',
         ])->find($id);
 
@@ -73,13 +73,13 @@ class LoHangApiController extends Controller
             'ngay_nhap' => 'required|date',
             'ghi_chu' => 'nullable|string',
             'chi_tiet' => 'required|array|min:1',
-            'chi_tiet.*.id_san_pham' => 'required|integer|exists:san_pham,id',
+            'chi_tiet.*.variant_id' => 'required|integer|exists:bien_the_san_pham,id',
             'chi_tiet.*.so_luong_nhap' => 'required|integer|min:1',
             'chi_tiet.*.gia_nhap' => 'required|numeric|min:0',
             'chi_tiet.*.han_su_dung' => 'required|date|after_or_equal:ngay_nhap',
         ], [
             'chi_tiet.required' => 'Phải có ít nhất một sản phẩm trong lô.',
-            'chi_tiet.*.id_san_pham.required' => 'Mỗi sản phẩm phải có ID.',
+            'chi_tiet.*.variant_id.required' => 'Mỗi sản phẩm phải có variant_id.',
             'chi_tiet.*.so_luong_nhap.min' => 'Số lượng nhập phải lớn hơn 0.',
             'chi_tiet.*.han_su_dung.after_or_equal' => 'Hạn sử dụng phải sau ngày nhập.',
         ]);
@@ -99,20 +99,28 @@ class LoHangApiController extends Controller
                 'ghi_chu' => $data['ghi_chu'] ?? null,
             ]);
 
+            $variantIds = collect($data['chi_tiet'])->pluck('variant_id')->unique()->all();
+            $variantMap = BienTheSanPham::whereIn('id', $variantIds)
+                ->pluck('product_id', 'id')
+                ->toArray();
+
             foreach ($data['chi_tiet'] as $ct) {
                 ChiTietLoHang::create([
                     'id_lo_hang' => $lo->id,
-                    'id_san_pham' => $ct['id_san_pham'],
+                    'id_san_pham' => $variantMap[$ct['variant_id']] ?? null,
+                    'variant_id' => $ct['variant_id'],
                     'so_luong_nhap' => $ct['so_luong_nhap'],
                     'so_luong_ton' => $ct['so_luong_nhap'],
                     'gia_nhap' => $ct['gia_nhap'],
                     'han_su_dung' => $ct['han_su_dung'],
                 ]);
 
-                SanPham::where('id', $ct['id_san_pham'])->increment('so_luong_ton_kho', $ct['so_luong_nhap']);
+                // Cộng tồn kho variant
+                BienTheSanPham::where('id', $ct['variant_id'])
+                    ->increment('so_luong_ton', $ct['so_luong_nhap']);
             }
 
-            return $lo->load('chiTietLoHang.sanPham', 'nhaCungCap');
+            return $lo->load('chiTietLoHang.variant', 'nhaCungCap');
         });
 
         return response()->json([
@@ -173,17 +181,28 @@ class LoHangApiController extends Controller
 
     public function tonKho(Request $request): JsonResponse
     {
-        $idSanPham = $request->query('id_san_pham');
-        if (!$idSanPham) {
-            return response()->json(['success' => false, 'message' => 'Thiếu id_san_pham.'], 400);
+        $variantId = $request->query('variant_id');
+        $sanPhamId = $request->query('id_san_pham');
+
+        if (!$variantId && !$sanPhamId) {
+            return response()->json(['success' => false, 'message' => 'Thiếu variant_id hoặc id_san_pham.'], 400);
         }
 
-        $tonKho = ChiTietLoHang::with('loHang.nhaCungCap', 'sanPham')
-            ->where('id_san_pham', $idSanPham)
-            ->where('so_luong_ton', '>', 0)
-            ->orderBy('han_su_dung', 'asc')
-            ->get();
+        $query = ChiTietLoHang::with('loHang.nhaCungCap', 'variant');
 
+        if ($variantId) {
+            $variant = BienTheSanPham::find($variantId);
+            $query->where(function ($q) use ($variantId, $variant) {
+                $q->where('variant_id', $variantId);
+                if ($variant && $variant->product_id) {
+                    $q->orWhere('id_san_pham', $variant->product_id);
+                }
+            });
+        } else {
+            $query->where('id_san_pham', $sanPhamId);
+        }
+
+        $tonKho = $query->orderBy('han_su_dung', 'asc')->get();
         $tongTon = $tonKho->sum('so_luong_ton');
 
         return response()->json([
@@ -212,15 +231,15 @@ class LoHangApiController extends Controller
         $ngayHsdNguyHiem = now()->addDays(30)->toDateString();
         $homNay = now()->toDateString();
 
-        // Sản phẩm sắp hết HSD (distinct product count)
         $sapHetHsd = ChiTietLoHang::where('so_luong_ton', '>', 0)
             ->where('han_su_dung', '>=', $homNay)
             ->where('han_su_dung', '<=', $ngayHsdNguyHiem)
-            ->distinct('id_san_pham')
-            ->count('id_san_pham');
+            ->distinct('variant_id')
+            ->count('variant_id');
 
-        $duoiDinhMuc = \App\Models\SanPham::whereColumn('so_luong_ton_kho', '<=', 'dinh_muc_toi_thieu')
-            ->where('so_luong_ton_kho', '>', 0)
+        $duoiDinhMuc = BienTheSanPham::with('product')
+            ->whereColumn('bien_the_san_pham.so_luong_ton', '<=', 'bien_the_san_pham.dinh_muc_toi_thieu')
+            ->where('bien_the_san_pham.so_luong_ton', '>', 0)
             ->count();
 
         return response()->json([
@@ -239,14 +258,14 @@ class LoHangApiController extends Controller
         $ngayHsdNguyHiem = now()->addDays(30)->toDateString();
         $homNay = now()->toDateString();
 
-        $hetHan = ChiTietLoHang::with('loHang.nhaCungCap', 'sanPham')
+        $hetHan = ChiTietLoHang::with(['loHang.nhaCungCap', 'variant.product', 'product.danhMuc'])
             ->where('han_su_dung', '<', $homNay)
             ->where('so_luong_ton', '>', 0)
             ->orderBy('han_su_dung', 'asc')
             ->limit(50)
             ->get();
 
-        $sapHetHan = ChiTietLoHang::with('loHang.nhaCungCap', 'sanPham')
+        $sapHetHan = ChiTietLoHang::with(['loHang.nhaCungCap', 'variant.product', 'product.danhMuc'])
             ->where('han_su_dung', '>=', $homNay)
             ->where('han_su_dung', '<=', $ngayHsdNguyHiem)
             ->where('so_luong_ton', '>', 0)
@@ -254,15 +273,15 @@ class LoHangApiController extends Controller
             ->limit(50)
             ->get();
 
-        $duoiDinhMuc = \App\Models\SanPham::with('danhMuc')
-            ->whereColumn('so_luong_ton_kho', '<=', 'dinh_muc_toi_thieu')
-            ->where('so_luong_ton_kho', '>', 0)
-            ->orderBy('so_luong_ton_kho', 'asc')
+        $duoiDinhMuc = BienTheSanPham::with('product.danhMuc')
+            ->whereColumn('bien_the_san_pham.so_luong_ton', '<=', 'bien_the_san_pham.dinh_muc_toi_thieu')
+            ->where('bien_the_san_pham.so_luong_ton', '>', 0)
+            ->orderBy('bien_the_san_pham.so_luong_ton', 'asc')
             ->limit(50)
             ->get();
 
-        $hetHang = \App\Models\SanPham::with('danhMuc')
-            ->where('so_luong_ton_kho', 0)
+        $hetHang = BienTheSanPham::with('product.danhMuc')
+            ->where('so_luong_ton', 0)
             ->where('trang_thai', true)
             ->limit(50)
             ->get();
@@ -280,15 +299,55 @@ class LoHangApiController extends Controller
 
     public function tonKhoTong(): JsonResponse
     {
-        $items = SanPham::with('danhMuc')
-            ->withSum('chiTietLoHang', 'so_luong_ton')
-            ->sanPhamCha()
-            ->get(['id', 'ten_san_pham', 'ma_vach', 'so_luong_ton_kho', 'dinh_muc_toi_thieu', 'id_danh_muc'])
-            ->map(function ($sp) {
-                $sp->tong_ton = $sp->chi_tiet_lo_hang_sum_so_luong_ton ?? 0;
-                return $sp;
+        $variantRows = DB::table('chi_tiet_lo_hang')
+            ->selectRaw('variant_id, SUM(so_luong_ton) AS total_ton')
+            ->whereNotNull('variant_id')
+            ->groupBy('variant_id')
+            ->get();
+
+        $genericProductRows = DB::table('chi_tiet_lo_hang')
+            ->selectRaw('id_san_pham, SUM(so_luong_ton) AS total_ton')
+            ->whereNull('variant_id')
+            ->groupBy('id_san_pham')
+            ->get();
+
+        $sumByVariant = [];
+        foreach ($variantRows as $row) {
+            $sumByVariant[$row->variant_id] = (int) $row->total_ton;
+        }
+
+        $sumByProduct = [];
+        foreach ($genericProductRows as $row) {
+            if ($row->id_san_pham) {
+                $sumByProduct[$row->id_san_pham] = (int) $row->total_ton;
+            }
+        }
+
+        $items = BienTheSanPham::with('product.danhMuc')
+            ->get(['id', 'product_id', 'ten_bien_the', 'ma_vach', 'so_luong_ton', 'dinh_muc_toi_thieu'])
+            ->map(function ($variant) use ($sumByVariant, $sumByProduct) {
+                $fallbackTon = $variant->so_luong_ton ?? 0;
+                $productTon = $sumByProduct[$variant->product_id] ?? 0;
+                $variantTon = $sumByVariant[$variant->id] ?? 0;
+                $tongTon = $variantTon + $productTon;
+                if ($tongTon === 0) {
+                    $tongTon = $fallbackTon;
+                }
+
+                return [
+                    'id' => $variant->id,
+                    'product_id' => $variant->product_id,
+                    'ten_bien_the' => $variant->ten_bien_the,
+                    'ma_vach' => $variant->ma_vach,
+                    'so_luong_ton' => $variant->so_luong_ton,
+                    'tong_ton' => $tongTon,
+                    'ten_san_pham' => $variant->product->ten_san_pham ?? '',
+                    'dinh_muc_toi_thieu' => $variant->dinh_muc_toi_thieu ?? 0,
+                    'thuong_hieu' => $variant->product->thuong_hieu ?? '',
+                    'danh_muc' => $variant->product->danhMuc->ten_danh_muc ?? '',
+                ];
             })
-            ->sortBy('ten_san_pham')
+            ->sortBy(fn($v) => $v['ten_san_pham'] ?? '')
             ->values();
 
         return response()->json([
