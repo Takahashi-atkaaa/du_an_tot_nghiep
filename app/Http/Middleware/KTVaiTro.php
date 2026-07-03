@@ -4,7 +4,6 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class KTVaiTro
@@ -16,21 +15,20 @@ class KTVaiTro
         }
 
         $user = auth()->user();
-        $vaiTroQuanHe = $user->vaiTro;
-        $tenVaiTro = $vaiTroQuanHe?->ten_vai_tro;
-        $tenVaiTroChuanHoa = Str::of((string) $tenVaiTro)
-            ->lower()
-            ->ascii()
-            ->replace(' ', '_')
-            ->value();
 
-        if (in_array($tenVaiTroChuanHoa, ['admin', 'quan_tri', 'quantri'], true)) {
+        if ($user->id_vai_tro === 3 && $request->is('admin/*')) {
+            return redirect('/nhan-vien/');
+        }
+
+        if ($user->id_vai_tro === 1) {
             return $next($request);
         }
 
         if (!$permission) {
             return $next($request);
         }
+
+        $vaiTroQuanHe = $user->vaiTro;
 
         if (!$vaiTroQuanHe) {
             abort(403, 'Tài khoản chưa được gán vai trò hợp lệ.');

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\admin\NhanSu;
 use App\Http\Controllers\Controller;
 use App\Models\BangLuong;
 use App\Models\PhieuLuong;
-use App\Requests\PhieuLuong\UpdatePhieuLuongRequest;
+use App\Http\Requests\PhieuLuong\UpdatePhieuLuongRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;

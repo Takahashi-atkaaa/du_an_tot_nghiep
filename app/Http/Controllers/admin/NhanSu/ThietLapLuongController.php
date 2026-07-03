@@ -5,8 +5,9 @@ namespace App\Http\Controllers\admin\NhanSu;
 use App\Http\Controllers\Controller;
 use App\Models\NguoiDung;
 use App\Models\ThietLapLuong;
-use App\Requests\ThietLapLuong\StoreThietLapLuongRequest;
-use App\Requests\ThietLapLuong\UpdateThietLapLuongRequest;
+use App\Models\VaiTro;
+use App\Http\Requests\ThietLapLuong\StoreThietLapLuongRequest;
+use App\Http\Requests\ThietLapLuong\UpdateThietLapLuongRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -30,15 +31,16 @@ class ThietLapLuongController extends Controller
         }
 
         $thietLapLuongs = $query->paginate(10);
+        $nhanViens = NguoiDung::where('id_vai_tro', VaiTro::where('ten_vai_tro', 'Nhân viên')->first()?->id)->orderBy('ho_ten')->get();
 
-        return view('admin_xem_truoc.nhan-su.thiet-lap-luong.index', compact('thietLapLuongs'));
+        return view('admin_xem_truoc.nhan-su.thiet-lap-luong.index', compact('thietLapLuongs', 'nhanViens'));
     }
 
     public function create(): View
     {
         return view('admin_xem_truoc.nhan-su.thiet-lap-luong.create', [
             'thietLapLuong' => new ThietLapLuong(),
-            'nhanViens' => NguoiDung::where('vai_tro', 'nhan_vien')->orderBy('ho_ten')->get(),
+            'nhanViens' => NguoiDung::where('id_vai_tro', VaiTro::where('ten_vai_tro', 'Nhân viên')->first()?->id)->orderBy('ho_ten')->get(),
         ]);
     }
 
@@ -61,7 +63,7 @@ class ThietLapLuongController extends Controller
     public function edit(ThietLapLuong $thietLapLuong): View
     {
         $thietLapLuong->load('nguoiDung');
-        $nhanViens = NguoiDung::where('vai_tro', 'nhan_vien')->orderBy('ho_ten')->get();
+        $nhanViens = NguoiDung::where('id_vai_tro', VaiTro::where('ten_vai_tro', 'Nhân viên')->first()?->id)->orderBy('ho_ten')->get();
 
         return view('admin_xem_truoc.nhan-su.thiet-lap-luong.edit', compact('thietLapLuong', 'nhanViens'));
     }

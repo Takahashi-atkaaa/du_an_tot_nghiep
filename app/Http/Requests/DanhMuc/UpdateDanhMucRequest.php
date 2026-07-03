@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Requests\DanhMuc;
+namespace App\Http\Requests\DanhMuc;
 
 use Illuminate\Foundation\Http\FormRequest;
 

@@ -20,7 +20,7 @@ class NguoiDung extends Authenticatable
 
     // Tat ca cac cot co the gan hang loat khi tao/sua
     protected $fillable = [
-        'ho_ten',
+    'ho_ten',
     'email',
     'sdt',
     'mat_khau',

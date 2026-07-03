@@ -32,4 +32,8 @@ class CaLamViec extends Model
     {
         return $this->hasMany(ChiaCaLamViec::class, 'id_ca_lam_viec');
     }
+
+    public function hoaDon(){
+        return $this->HasMany(HoaDon::class, 'id_ca_lam_viec', 'id');
+    }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Requests\NhanSu;
+namespace App\Http\Requests\NhanSu;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -65,11 +65,6 @@ class CapNhatNhanVienRequest extends FormRequest
                 'required',
                 'boolean'
             ],
-            'anh_dai_dien' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-            'anh_cccd_mat_truoc' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
-            'anh_cccd_mat_sau' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
-            'id_vai_tro' => ['required', 'integer', 'exists:vai_tro,id'],
-            'trang_thai' => ['required', 'boolean'],
         ];
     }
 

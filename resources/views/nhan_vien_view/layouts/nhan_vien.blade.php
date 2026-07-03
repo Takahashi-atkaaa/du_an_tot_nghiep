@@ -245,7 +245,7 @@
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="{{ url('nhan-vien/ho-so') }}"><i class="fas fa-user me-2"></i>Hồ sơ</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="{{ url('login') }}"><i class="fas fa-sign-out-alt me-2"></i>Đăng xuất</a></li>
+                        <li><a class="dropdown-item" href="{{ url('admin/logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Đăng xuất</a></li>
                     </ul>
                 </div>
             </div>

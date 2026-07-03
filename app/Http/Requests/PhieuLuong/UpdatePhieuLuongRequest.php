@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Requests\PhieuLuong;
+namespace App\Http\Requests\PhieuLuong;
 
 use Illuminate\Foundation\Http\FormRequest;
 

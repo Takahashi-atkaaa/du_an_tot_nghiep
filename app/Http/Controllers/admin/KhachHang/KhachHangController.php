@@ -4,8 +4,8 @@ namespace App\Http\Controllers\admin\KhachHang;
 
 use App\Http\Controllers\Controller;
 use App\Models\KhachHang;
-use App\Requests\KhachHang\CapNhatKhachHangRequest;
-use App\Requests\KhachHang\ThemKhachHangRequest;
+use App\Http\Requests\KhachHang\CapNhatKhachHangRequest;
+use App\Http\Requests\KhachHang\ThemKhachHangRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;

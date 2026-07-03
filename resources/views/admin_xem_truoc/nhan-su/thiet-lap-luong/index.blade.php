@@ -32,7 +32,7 @@
             <div class="col-md-3">
                 <select name="id_nguoi_dung" class="form-select">
                     <option value="">-- Tất cả nhân viên --</option>
-                    @foreach(\App\Models\NguoiDung::where('vai_tro', 'nhan_vien')->orderBy('ho_ten')->get() as $nv)
+                    @foreach($nhanViens as $nv)
                         <option value="{{ $nv->id }}" {{ request('id_nguoi_dung') == $nv->id ? 'selected' : '' }}>{{ $nv->ho_ten }}</option>
                     @endforeach
                 </select>

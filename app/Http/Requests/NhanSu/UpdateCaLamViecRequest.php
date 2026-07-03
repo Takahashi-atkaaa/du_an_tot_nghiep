@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Requests\NhanSu;
+namespace App\Http\Requests\NhanSu;
 
 use App\Models\CaLamViec;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreCaLamViecRequest extends FormRequest
+class UpdateCaLamViecRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -15,12 +15,16 @@ class StoreCaLamViecRequest extends FormRequest
 
     public function rules(): array
     {
+        $caLamViecId = $this->route('caLamViec')?->id ?? $this->route('caLamViec');
+
         return [
             'ten_ca' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('ca_lam_viec', 'ten_ca')->whereNull('deleted_at'),
+                Rule::unique('ca_lam_viec', 'ten_ca')
+                    ->ignore($caLamViecId)
+                    ->whereNull('deleted_at'),
             ],
             'gio_bat_dau' => ['required', 'date_format:H:i'],
             'gio_ket_thuc' => ['required', 'date_format:H:i'],
@@ -63,9 +67,12 @@ class StoreCaLamViecRequest extends FormRequest
                 return;
             }
 
+            $caLamViecId = $this->route('caLamViec')?->id ?? $this->route('caLamViec');
+
             $isDuplicateTimeRange = CaLamViec::query()
                 ->where('gio_bat_dau', $this->input('gio_bat_dau'))
                 ->where('gio_ket_thuc', $this->input('gio_ket_thuc'))
+                ->where('id', '!=', $caLamViecId)
                 ->whereNull('deleted_at')
                 ->exists();
 

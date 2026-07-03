@@ -1,124 +1,146 @@
 @extends('nhan_vien_view.layouts.nhan_vien')
 
-@section('title', 'Khách hàng')
-
 @section('content')
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Danh sách Khách hàng</h1>
+
+<div class="container-fluid">
+
+    {{-- Header --}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+                <h3 class="fw-bold mb-1 text-primary">
+                    <i class="fas fa-users"></i> Danh sách khách hàng
+                </h3>
+                <small class="text-muted">
+                    Quản lý thông tin khách hàng và điểm tích lũy
+                </small>
+            </div>
+
+            <a href="{{ route('nhan-vien.khach-hang.create') }}"
+               class="btn btn-success px-4">
+                <i class="fas fa-plus-circle me-1"></i>
+                Thêm khách hàng
+            </a>
+        </div>
+    </div>
+
+    {{-- Search --}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET">
+                <div class="row g-2">
+                    <div class="col-md-10">
+                        <input type="text"
+                               name="keyword"
+                               class="form-control form-control-lg"
+                               value="{{ $keyword }}"
+                               placeholder="🔍 Nhập tên khách hàng, số điện thoại hoặc email...">
+                    </div>
+
+                    <div class="col-md-2">
+                        <button class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-search"></i>
+                            Tìm kiếm
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Table --}}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle">
+
+                    <thead class="table-primary">
+                        <tr>
+                            <th>Khách hàng</th>
+                            <th>SĐT</th>
+                            <th>Email</th>
+                            <th>Điểm tích lũy</th>
+                            <th>Tổng chi tiêu</th>
+                            <th width="120">Thao tác</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                    @forelse($khachHangs as $kh)
+                        <tr>
+
+                            <td>
+                                <div class="fw-semibold">
+                                    {{ $kh->ten_khach_hang }}
+                                </div>
+                            </td>
+
+                            <td>
+                                <span class="badge bg-info">
+                                    {{ $kh->so_dien_thoai }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {{ $kh->email }}
+                            </td>
+
+                            <td>
+                                <span class="badge bg-warning text-dark px-3 py-2">
+                                    {{ $kh->diem_tich_luy }} điểm
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="fw-bold text-success">
+                                    {{ number_format($kh->tong_chi_tieu) }} đ
+                                </span>
+                            </td>
+
+                            <td>
+                                <a href="{{ route('nhan-vien.khach-hang.show',$kh) }}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                    Xem
+                                </a>
+                            </td>
+
+                        </tr>
+                    @empty
+
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <img src="https://cdn-icons-png.flaticon.com/512/7486/7486740.png"
+                                     width="80"
+                                     class="mb-3">
+
+                                <h5>Không có dữ liệu</h5>
+
+                                <p class="text-muted mb-0">
+                                    Chưa tìm thấy khách hàng nào
+                                </p>
+                            </td>
+                        </tr>
+
+                    @endforelse
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+    </div>
+
+    {{-- Pagination --}}
+    <div class="mt-4 d-flex justify-content-center">
+        {{ $khachHangs->links() }}
+    </div>
+
 </div>
 
-<div class="card">
-    <div class="card-header bg-white">
-        <div class="row">
-            <div class="col-md-5">
-                <input type="text" class="form-control" placeholder="Tìm theo tên, SĐT, email...">
-            </div>
-            <div class="col-md-4">
-                <select class="form-select">
-                    <option>Tất cả nhóm khách</option>
-                    <option>Khách VIP</option>
-                    <option>Khách thường</option>
-                    <option>Khách mới</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <button class="btn btn-outline-success"><i class="fas fa-search me-2"></i>Tìm</button>
-            </div>
-        </div>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-nv mb-0">
-                <thead>
-                    <tr>
-                        <th>Khách hàng</th>
-                        <th>SĐT</th>
-                        <th>Email</th>
-                        <th>Địa chỉ</th>
-                        <th>Tổng chi tiêu</th>
-                        <th>Nhóm</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div class="user-avatar me-2" style="width:35px;height:35px;font-size:14px;background:#2e7d32;">NA</div>
-                                <strong>Nguyễn Văn A</strong>
-                            </div>
-                        </td>
-                        <td>0901234567</td>
-                        <td>nvana@email.com</td>
-                        <td>123 Đường A, Q1</td>
-                        <td><strong class="text-success">15.500.000đ</strong></td>
-                        <td><span class="status-badge status-success">VIP</span></td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div class="user-avatar me-2" style="width:35px;height:35px;font-size:14px;background:#1976d2;">TB</div>
-                                <strong>Trần Thị B</strong>
-                            </div>
-                        </td>
-                        <td>0902345678</td>
-                        <td>ttb@email.com</td>
-                        <td>456 Đường B, Q2</td>
-                        <td><strong class="text-success">8.200.000đ</strong></td>
-                        <td><span class="status-badge status-info">Thường</span></td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div class="user-avatar me-2" style="width:35px;height:35px;font-size:14px;background:#e65100;">LC</div>
-                                <strong>Lê Văn C</strong>
-                            </div>
-                        </td>
-                        <td>0903456789</td>
-                        <td>lvc@email.com</td>
-                        <td>789 Đường C, Q3</td>
-                        <td><strong class="text-success">3.500.000đ</strong></td>
-                        <td><span class="status-badge status-info">Thường</span></td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div class="user-avatar me-2" style="width:35px;height:35px;font-size:14px;background:#7b1fa2;">PD</div>
-                                <strong>Phạm Thị D</strong>
-                            </div>
-                        </td>
-                        <td>0904567890</td>
-                        <td>ptd@email.com</td>
-                        <td>321 Đường D, Q4</td>
-                        <td><strong class="text-success">25.000.000đ</strong></td>
-                        <td><span class="status-badge status-success">VIP</span></td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div class="user-avatar me-2" style="width:35px;height:35px;font-size:14px;background:#c62828;">HE</div>
-                                <strong>Hoàng Văn E</strong>
-                            </div>
-                        </td>
-                        <td>0905678901</td>
-                        <td>hve@email.com</td>
-                        <td>654 Đường E, Q5</td>
-                        <td><strong class="text-success">1.800.000đ</strong></td>
-                        <td><span class="status-badge status-warning">Mới</span></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <div class="card-footer bg-white">
-        <nav>
-            <ul class="pagination mb-0 justify-content-end">
-                <li class="page-item disabled"><a class="page-link" href="#">Trước</a></li>
-                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                <li class="page-item"><a class="page-link" href="#">Sau</a></li>
-            </ul>
-        </nav>
-    </div>
-</div>
 @endsection
