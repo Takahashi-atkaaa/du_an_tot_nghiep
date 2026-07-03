@@ -32,16 +32,21 @@ class NhanVienController extends Controller
     $query = DB::table('hoa_don')
         ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
         ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
+        ->leftJoin('ca_lam_viec', 'hoa_don.id_ca_lam_viec', '=', 'ca_lam_viec.id')
         ->select(
             'hoa_don.*',
             'khach_hang.ten_khach_hang',
-            'nguoi_dung.ho_ten as ten_nhan_vien'
+            'nguoi_dung.ho_ten as ten_nhan_vien',
+            'ca_lam_viec.ten_ca'
         )
         ->orderByDesc('hoa_don.id');
 
     if ($request->filled('q')) {
         $query->where('hoa_don.id', preg_replace('/[^0-9]/', '', $request->q));
     }
+    if ($request->filled('id_ca_lam_viec')) {
+    $query->where('hoa_don.id_ca_lam_viec', $request->id_ca_lam_viec);
+}
 
     if ($request->filled('ngay')) {
         $query->whereDate('hoa_don.created_at', $request->ngay);
@@ -53,19 +58,68 @@ class NhanVienController extends Controller
 
     $hoaDons = $query->paginate(10)->withQueryString();
 
-    return view('nhan_vien_view.hoa-don.index', compact('hoaDons'));
+    $caLamViecs = DB::table('ca_lam_viec')
+    ->orderBy('gio_bat_dau')
+    ->get();
+    return view('nhan_vien_view.hoa-don.index', compact('hoaDons', 'caLamViecs'));
 }
 
     public function sanPham()
     {
         return view('nhan_vien_view.san-pham.index');
     }
-
-  
-
-    public function lichLamViec(Request $request)
+    public function lichLamViec(Request $request): View
     {
-        return $this->lichLamViecTuan($request);
+        return $this->lichSuCaLam($request);
+    }
+
+    public function lichSuCaLam(Request $request): View
+    {
+        $nguoiDung = $this->resolvePreviewEmployee($request);
+
+        $query = ChiaCaLamViec::query()
+            ->with('caLamViec')
+            ->where('id_nguoi_dung', $nguoiDung->id);
+
+        if ($request->filled('tu_ngay')) {
+            $query->whereDate('ngay', '>=', $request->input('tu_ngay'));
+        }
+
+        if ($request->filled('den_ngay')) {
+            $query->whereDate('ngay', '<=', $request->input('den_ngay'));
+        }
+
+        $lichSuCaLam = (clone $query)
+            ->orderByDesc('ngay')
+            ->orderByDesc('id')
+            ->paginate(12)
+            ->withQueryString();
+
+        $tongSoCa = (clone $query)->count();
+        $tongSoNgayLam = (clone $query)
+            ->distinct('ngay')
+            ->count('ngay');
+        $caGanNhat = (clone $query)
+            ->orderByDesc('ngay')
+            ->orderByDesc('id')
+            ->first();
+        $caDauTien = (clone $query)
+            ->orderBy('ngay')
+            ->orderBy('id')
+            ->first();
+
+        return view('nhan_vien_view.lich-lam-viec.lich-su', [
+            'nguoiDung' => $nguoiDung,
+            'lichSuCaLam' => $lichSuCaLam,
+            'tongSoCa' => $tongSoCa,
+            'tongSoNgayLam' => $tongSoNgayLam,
+            'caGanNhat' => $caGanNhat,
+            'caDauTien' => $caDauTien,
+            'boLoc' => [
+                'tu_ngay' => $request->input('tu_ngay'),
+                'den_ngay' => $request->input('den_ngay'),
+            ],
+        ]);
     }
 
     public function lichLamViecTuan(Request $request): View
@@ -261,6 +315,8 @@ public function thanhToan(Request $request)
         'tien_khach_dua' => 'required|numeric|min:0',
         'phuong_thuc_thanh_toan' => 'required|string',
         'id_khach_hang' => 'nullable|integer|exists:khach_hang,id',
+        'id_khuyen_mai' => 'nullable|integer|exists:khuyen_mai,id',
+        'diem_su_dung' => 'nullable|integer|min:0',
     ]);
 
     return DB::transaction(function () use ($request) {
@@ -289,9 +345,104 @@ public function thanhToan(Request $request)
         }
 
         $tienGiamGia = 0;
-        $khachCanTra = $tongTienHang - $tienGiamGia;
+        $diemSuDung = (int)$request->diem_su_dung;
+        if ($request->id_khuyen_mai) {
+
+            $khuyenMai = DB::table('khuyen_mai')
+                ->where('id', $request->id_khuyen_mai)
+                ->where('trang_thai', 1)
+                ->first();
+
+            if ($khuyenMai) {
+
+                $tongSoLuong = collect($items)->sum('so_luong');
+
+                if (
+                    $tongTienHang >= $khuyenMai->don_hang_toi_thieu &&
+                    $tongSoLuong >= $khuyenMai->so_luong_sp_toi_thieu
+                ) {
+
+                    switch ($khuyenMai->loai_giam_gia) {
+
+                        case 'phan_tram':
+
+                            $tienGiamGia =
+                                $tongTienHang * $khuyenMai->gia_tri_giam / 100;
+
+                            if ($khuyenMai->giam_toi_da) {
+                                $tienGiamGia = min(
+                                    $tienGiamGia,
+                                    $khuyenMai->giam_toi_da
+                                );
+                            }
+
+                            break;
+
+                        case 'bogo':
+
+                            foreach ($items as $item) {
+
+                                $freeQty = floor($item['so_luong'] / 2);
+
+                                $tienGiamGia +=
+                                    $freeQty * $item['gia_ban'];
+                            }
+
+                            break;
+
+                        default:
+
+                            $tienGiamGia =
+                                $khuyenMai->gia_tri_giam;
+                    }
+
+                    $tienGiamGia = min(
+                        $tienGiamGia,
+                        $tongTienHang
+                    );
+                }
+            }
+        }
+        $khachHang = null;
+
+        if ($request->id_khach_hang) {
+
+            $khachHang = KhachHang::lockForUpdate()
+                ->find($request->id_khach_hang);
+
+            if (!$khachHang) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không tìm thấy khách hàng.'
+                ], 422);
+            }
+
+            $maxUsePoint = floor(
+                max(0, $tongTienHang - $tienGiamGia) / 100
+            );
+
+            $diemSuDung = min(
+                $diemSuDung,
+                $khachHang->diem_tich_luy,
+                $maxUsePoint
+            );
+
+            $tienGiamGia += $diemSuDung * 100;
+            }
+
+            $khachCanTra = max(
+                0,
+                $tongTienHang - $tienGiamGia
+            );
+
+
+        
+
+        $khachCanTra = max(0, $tongTienHang - $tienGiamGia);
         $tienKhachDua = $request->tien_khach_dua;
         $tienThua = max(0, $tienKhachDua - $khachCanTra);
+        // 10.000 VNĐ = 1 điểm
+        $diemThuDuoc = floor($khachCanTra / 10000);
         $phuongThucMap = [
         'cash' => 'Tiền mặt',
         'transfer' => 'Chuyển khoản',
@@ -311,10 +462,10 @@ public function thanhToan(Request $request)
         }
 
         $hoaDonId = DB::table('hoa_don')->insertGetId([
-            'id_nguoi_dung' => 1,
+            'id_nguoi_dung' => auth()->user()->id,
             'id_khach_hang' => $request->id_khach_hang,
-            'id_ca_lam_viec' => null,
-            'id_khuyen_mai' => null,
+            'id_ca_lam_viec' => session('id_ca_lam_viec') ?? null,
+            'id_khuyen_mai' => $request->id_khuyen_mai,
             'tong_tien_hang' => $tongTienHang,
             'tien_giam_gia' => $tienGiamGia,
             'khach_can_tra' => $khachCanTra,
@@ -322,12 +473,51 @@ public function thanhToan(Request $request)
             'tien_thua' => $tienThua,
             'phuong_thuc_thanh_toan' => $phuongThucThanhToan,
             'trang_thai' => 'Hoàn thành',
-            'diem_su_dung' => 0,
-            'diem_thu_duoc' => 0,
+            'diem_su_dung' => $diemSuDung,
+            'diem_thu_duoc' => $diemThuDuoc,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+// Cộng điểm cho khách hàng
+if ($request->id_khach_hang) {
 
+    $khachHang = KhachHang::lockForUpdate()
+        ->find($request->id_khach_hang);
+
+    if ($khachHang) {
+
+      $diemMoi = $khachHang->diem_tich_luy - $diemSuDung + $diemThuDuoc;
+
+        DB::table('khach_hang')
+            ->where('id', $khachHang->id)
+            ->update([
+                'diem_tich_luy' => $diemMoi,
+                'tong_chi_tieu' => $khachHang->tong_chi_tieu + $khachCanTra,
+                'updated_at' => now(),
+            ]);
+
+            
+            if ($diemSuDung > 0) {
+                DB::table('lich_su_tich_diem')->insert([
+                    'id_khach_hang' => $khachHang->id,
+                    'id_hoa_don' => $hoaDonId,
+                    'loai_bien_dong' => 'tru',
+                    'so_diem' => $diemSuDung,
+                    'ly_do' => 'Sử dụng điểm thanh toán',
+                    'created_at' => now(),
+                ]);
+            }
+        // Lưu lịch sử tích điểm
+        DB::table('lich_su_tich_diem')->insert([
+            'id_khach_hang' => $khachHang->id,
+            'id_hoa_don' => $hoaDonId,
+            'loai_bien_dong' => 'cong',
+            'so_diem' => $diemThuDuoc,
+            'ly_do' => 'Tích điểm từ hóa đơn',
+            'created_at' => now(),
+        ]);
+    }
+}
         foreach ($items as $item) {
             DB::table('chi_tiet_hoa_don')->insert([
                 'id_hoa_don' => $hoaDonId,
@@ -407,7 +597,21 @@ public function huyHoaDon($id)
                 ->where('id', $item->id_san_pham)
                 ->increment('so_luong_ton_kho', $item->so_luong);
         }
+if ($hoaDon->id_khach_hang && $hoaDon->diem_thu_duoc > 0) {
 
+    DB::table('khach_hang')
+        ->where('id', $hoaDon->id_khach_hang)
+        ->decrement('diem_tich_luy', $hoaDon->diem_thu_duoc);
+
+    DB::table('lich_su_tich_diem')->insert([
+        'id_khach_hang' => $hoaDon->id_khach_hang,
+        'id_hoa_don' => $hoaDon->id,
+        'loai_bien_dong' => 'tru',
+        'so_diem' => $hoaDon->diem_thu_duoc,
+        'ly_do' => 'Hủy hóa đơn',
+        'ngay_tao' => now(),
+    ]);
+}
         DB::table('hoa_don')
             ->where('id', $id)
             ->update([
@@ -443,6 +647,26 @@ public function layKhachHang(Request $request)
         ->orderBy('ten_khach_hang')
         ->limit(10)
         ->get()
+    );
+}
+public function layKhuyenMai()
+{
+    return response()->json(
+        DB::table('khuyen_mai')
+            ->where('trang_thai', 1)
+            ->where('ngay_bat_dau', '<=', now())
+            ->where('ngay_ket_thuc', '>=', now())
+            ->select(
+                'id',
+                'ten_chuong_trinh',
+                'loai_giam_gia',
+                'gia_tri_giam',
+                'giam_toi_da',
+                'so_luong_sp_toi_thieu',
+                'don_hang_toi_thieu'
+            )
+            ->orderByDesc('id')
+            ->get()
     );
 }
 }
