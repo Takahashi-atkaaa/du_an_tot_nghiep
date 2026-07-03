@@ -731,6 +731,7 @@ body {
     border-radius: 11px;
 }
 
+
 /* SCROLLBAR */
 ::-webkit-scrollbar {
     width: 6px;
@@ -771,6 +772,9 @@ body {
     .user-info {
         display: none;
     }
+}
+.pos-product-card{
+    min-height:260px;
 }
     </style>
 </head>
@@ -1221,6 +1225,7 @@ function renderProducts(filter = '') {
         const q = filter.toLowerCase();
         filtered = filtered.filter(p =>
             (p.ten_san_pham && p.ten_san_pham.toLowerCase().includes(q)) ||
+            (p.ma_hang && String(p.ma_hang).toLowerCase().includes(q)) ||
             (p.ma_vach && String(p.ma_vach).toLowerCase().includes(q))
         );
     }
@@ -1237,20 +1242,34 @@ function renderProducts(filter = '') {
 
     grid.innerHTML = filtered.map(p => {
         const ten = p.ten_san_pham ?? 'Chưa có tên';
-        const gia = Number(p.gia_ban ?? 0);
+
+        const gia = Number(
+            p.gia_ban ??
+            p.gia ??
+            p.don_gia ??
+            p.gia_ban_le ??
+            0
+        );
+
         const ton = Number(p.so_luong_ton_kho ?? 0);
-      const hinh = p.hinh_anh
-    ? '/' + p.hinh_anh.replace(/^\/+/, '')
-    : 'https://via.placeholder.com/300x300?text=No+Image';
+
+        const hinh = p.hinh_anh
+            ? '/' + p.hinh_anh.replace(/^\/+/, '')
+            : 'https://via.placeholder.com/300x300?text=No+Image';
 
         return `
             <div class="pos-product-card" onclick="addToCart(${p.id})">
                 <div class="product-img">
                     <img src="${hinh}" alt="${ten}">
                 </div>
+
                 <div class="product-info">
                     <div class="product-name">${ten}</div>
-                    <div class="product-price">${formatCurrency(gia)}</div>
+
+                    <div class="product-price">
+                        ${formatCurrency(gia)}
+                    </div>
+
                     <div class="product-stock ${ton < 5 ? 'low' : ''}">
                         ${ton < 5 ? '⚠ Sắp hết' : 'Còn ' + ton}
                     </div>

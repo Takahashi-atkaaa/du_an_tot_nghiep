@@ -64,7 +64,7 @@
                 @foreach($chiTiet as $item)
                     <tr>
                         <td>{{ $item->ten_san_pham }}</td>
-                        <td>{{ $item->ma_vach }}</td>
+                        <td>{{ $item->ma_vach ?? 'N/A' }}</td>
                         <td class="text-center">{{ $item->so_luong }}</td>
                         <td class="text-end">{{ number_format($item->gia_ban, 0, ',', '.') }}đ</td>
                         <td class="text-end">{{ number_format($item->thanh_tien, 0, ',', '.') }}đ</td>
