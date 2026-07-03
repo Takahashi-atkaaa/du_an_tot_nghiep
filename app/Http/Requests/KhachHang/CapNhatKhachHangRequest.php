@@ -41,11 +41,11 @@ class CapNhatKhachHangRequest extends FormRequest
 				'max:255',
 			],
 
-			'cong_no' => [
-				'required',
-				'numeric',
-				'min:0',
-			],
+			// 'cong_no' => [
+			// 	'required',
+			// 	'numeric',
+			// 	'min:0',
+			// ],
 
 			'phi_chu' => [
 				'nullable',
@@ -71,8 +71,8 @@ class CapNhatKhachHangRequest extends FormRequest
 
 			'email.email' => 'Email không đúng định dạng.',
 
-			'cong_no.required' => 'Vui lòng nhập công nợ.',
-			'cong_no.min' => 'Công nợ không được nhỏ hơn 0.',
+			// 'cong_no.required' => 'Vui lòng nhập công nợ.',
+			// 'cong_no.min' => 'Công nợ không được nhỏ hơn 0.',
 
 			'trang_thai.required' => 'Vui lòng chọn trạng thái.',
 		];

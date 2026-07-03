@@ -32,7 +32,7 @@ class KhachHangController extends Controller
 			'tongKhachHang' => KhachHang::withTrashed()->count(),
 			'dangHoatDong' => KhachHang::query()->where('trang_thai', true)->count(),
 			'ngungHoatDong' => KhachHang::query()->where('trang_thai', false)->count(),
-			'tongCongNo' => KhachHang::withTrashed()->sum('cong_no'),
+			// 'tongCongNo' => KhachHang::withTrashed()->sum('cong_no'),
 			'tongDiemTichLuy' => KhachHang::withTrashed()->sum('diem_tich_luy'),
 		]);
 	}
@@ -53,7 +53,7 @@ class KhachHangController extends Controller
 			'so_dien_thoai' => $validated['so_dien_thoai'],
 			'email' => $validated['email'] ?? null,
 			'dia_chi' => $validated['dia_chi'] ?? null,
-			'cong_no' => 0,
+			// 'cong_no' => 0,
 			'phi_chu' => $validated['phi_chu'] ?? null,
 			'trang_thai' => $request->boolean('trang_thai'),
 			'diem_tich_luy' => 0,
@@ -95,7 +95,7 @@ class KhachHangController extends Controller
 			'so_dien_thoai' => $validated['so_dien_thoai'],
 			'email' => $validated['email'] ?? null,
 			'dia_chi' => $validated['dia_chi'] ?? null,
-			'cong_no' => $validated['cong_no'],
+			// 'cong_no' => $validated['cong_no'],
 			'phi_chu' => $validated['phi_chu'] ?? null,
 			'trang_thai' => $request->boolean('trang_thai'),
 		]);

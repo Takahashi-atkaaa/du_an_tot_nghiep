@@ -96,7 +96,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            {{-- <div class="col-md-4">
                 <div class="card card-stat red soft-panel h-100">
                     <div class="card-body d-flex align-items-center">
                         <div class="icon me-3"><i class="fas fa-sack-dollar"></i></div>
@@ -106,7 +106,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> --}}
         </div>
 
         <div class="card soft-panel mb-4">
