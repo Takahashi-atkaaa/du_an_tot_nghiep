@@ -99,6 +99,7 @@ class SanPhamApiController extends Controller
 
     public function show(int $id): JsonResponse
     {
+        // Lấy thông tin variant + lịch sử thẻ kho + lô hàng
         $variant = BienTheSanPham::with(['product.danhMuc', 'product', 'units'])->find($id);
 
         if (!$variant) {
@@ -145,6 +146,80 @@ class SanPhamApiController extends Controller
                 'units' => $variant->units->toArray(),
                 'theKho' => $theKho,
                 'loHang' => $loHang,
+            ],
+        ]);
+    }
+
+    /**
+     * Lấy thông tin chi tiết 1 sản phẩm (gồm tất cả biến thể + đơn vị).
+     * Dùng cho drawer chi tiết ở trang danh sách sản phẩm.
+     */
+    public function showProduct(int $id): JsonResponse
+    {
+        $product = Product::with([
+            'danhMuc',
+            'variants' => fn($q) => $q->orderBy('id'),
+            'variants.units',
+        ])->find($id);
+
+        if (!$product) {
+            return response()->json(['success' => false, 'message' => 'Sản phẩm không tồn tại.'], 404);
+        }
+
+        $variantsPayload = [];
+        $totalTonKho = 0;
+        $minGia = null;
+        $maxGia = null;
+        foreach ($product->variants as $v) {
+            $tonKho = (int)$v->so_luong_ton;
+            $totalTonKho += $tonKho;
+            if ($minGia === null || (float)$v->gia_ban < $minGia) $minGia = (float)$v->gia_ban;
+            if ($maxGia === null || (float)$v->gia_ban > $maxGia) $maxGia = (float)$v->gia_ban;
+
+            $variantsPayload[] = [
+                'id' => $v->id,
+                'ten_bien_the' => $v->ten_bien_the,
+                'ma_hang' => $v->ma_hang,
+                'ma_vach' => $v->ma_vach,
+                'gia_von' => (float)$v->gia_von,
+                'gia_ban' => (float)$v->gia_ban,
+                'so_luong_ton' => $tonKho,
+                'dinh_muc_toi_thieu' => (int)$v->dinh_muc_toi_thieu,
+                'trang_thai' => (bool)$v->trang_thai,
+                'hinh_anh' => $v->hinh_anh,
+                'units' => $v->units->map(fn($u) => [
+                    'id' => $u->id,
+                    'ten_don_vi' => $u->ten_don_vi,
+                    'ty_le_quy_doi' => (int)$u->ty_le_quy_doi,
+                    'gia_von_quy_doi' => (float)$u->gia_von_quy_doi,
+                    'gia_ban_quy_doi' => (float)$u->gia_ban_quy_doi,
+                    'ma_vach' => $u->ma_vach,
+                    'la_don_vi_mac_dinh' => (bool)$u->la_don_vi_mac_dinh,
+                ])->toArray(),
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'product' => [
+                    'id' => $product->id,
+                    'ten_san_pham' => $product->ten_san_pham,
+                    'thuong_hieu' => $product->thuong_hieu,
+                    'mo_ta' => $product->mo_ta,
+                    'trang_thai' => (bool)$product->trang_thai,
+                    'created_at' => $product->created_at,
+                    'updated_at' => $product->updated_at,
+                    'danh_muc' => $product->danhMuc ? [
+                        'id' => $product->danhMuc->id,
+                        'ten_danh_muc' => $product->danhMuc->ten_danh_muc,
+                    ] : null,
+                ],
+                'variants' => $variantsPayload,
+                'total_ton_kho' => $totalTonKho,
+                'min_gia_ban' => $minGia,
+                'max_gia_ban' => $maxGia,
+                'so_bien_the' => count($variantsPayload),
             ],
         ]);
     }

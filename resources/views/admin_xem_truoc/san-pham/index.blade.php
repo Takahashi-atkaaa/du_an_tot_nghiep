@@ -113,7 +113,7 @@
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span class="text-muted small">Tong: <strong id="totalProducts">{{ $variants->total() }}</strong> dong</span>
+                <span class="text-muted small">Tong: <strong id="totalProducts">{{ $variants->total() }}</strong> san pham</span>
             </div>
         </div>
 
@@ -122,95 +122,77 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th style="width:40px;"></th>
-                        <th style="width:60px;">Anh</th>
+                        <th style="width: 40px;"></th>
+                        <th style="width: 60px;">Anh</th>
                         <th>Ten san pham</th>
                         <th>Danh muc</th>
-                        <th>Loai</th>
-                        <th style="width:130px;">Gia ban</th>
-                        <th style="width:80px;">Ton kho</th>
-                        <th style="width:100px;">Trang thai</th>
+                        <th style="width: 110px;">Bien the</th>
+                        <th style="width: 160px;">Khoang gia</th>
+                        <th style="width: 80px;">Ton kho</th>
+                        <th style="width: 110px;">Trang thai</th>
                     </tr>
                 </thead>
                 <tbody id="productTableBody">
                     @foreach($flatItems as $item)
-                        @php
-                            $isUnit = ($item['type'] ?? '') === 'unit';
-                            $trangThai = $item['trang_thai'] ?? true;
-                            $tonKho = $item['so_luong_ton'] ?? 0;
-                            $dinhMuc = $item['dinh_muc_toi_thieu'] ?? 0;
-                        @endphp
-                        <tr class="{{ $isUnit ? 'unit-row' : 'variant-row' }}"
-                            style="cursor:pointer; {{ $isUnit ? 'background:#fafafa;' : '' }}"
-                            data-id="{{ $item['id'] }}"
-                            data-type="{{ $item['type'] ?? 'variant' }}"
-                            data-product-id="{{ $item['product_id'] }}"
-                            onclick="window.openProductDrawer && window.openProductDrawer('{{ $item['id'] }}')">
-                            <td onclick="event.stopPropagation();">
-                                <input type="checkbox" class="form-check-input product-checkbox" value="{{ $item['id'] }}">
-                            </td>
-                            <td>
-                                @if(!empty($item['hinh_anh']))
-                                    <img src="{{ asset($item['hinh_anh']) }}" alt="{{ $item['ten_san_pham'] }}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
-                                @else
-                                    <div style="width:48px;height:48px;border-radius:6px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;">
-                                        <i class="fas fa-image text-muted"></i>
-                                    </div>
-                                @endif
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    @if($isUnit)
-                                        <i class="fas fa-arrow-turn-down-right text-muted" style="font-size:0.6rem;"></i>
-                                    @endif
-                                    <div>
-                                        <span class="fw-semibold" style="font-size:0.88rem;">{{ $item['ten_san_pham'] }}</span>
-                                        @if(!empty($item['ten_bien_the']))
-                                            <div class="small text-muted">{{ $item['ten_bien_the'] }}</div>
-                                        @endif
-                                        @if(!empty($item['thuoc_tinh_labels']))
-                                            <div class="d-flex gap-1 mt-1">
-                                                @foreach($item['thuoc_tinh_labels'] as $label)
-                                                    <span class="badge bg-light text-dark border" style="font-size:0.65rem;">{{ $label }}</span>
-                                                @endforeach
-                                            </div>
-                                        @endif
-                                        @if(!empty($item['ma_vach']))
-                                            <div class="small text-muted">#{{ $item['ma_vach'] }}</div>
-                                        @endif
-                                    </div>
+                    <tr class="product-row" style="cursor:pointer;"
+                        data-product-id="{{ $item['product_id'] }}"
+                        onclick="window.openProductDrawer && window.openProductDrawer({{ $item['product_id'] }})">
+                        <td onclick="event.stopPropagation();">
+                            <input type="checkbox" class="form-check-input product-checkbox"
+                                   value="{{ $item['product_id'] }}" data-product-id="{{ $item['product_id'] }}">
+                        </td>
+                        <td>
+                            @if(!empty($item['hinh_anh']))
+                                <img src="{{ asset($item['hinh_anh']) }}" alt="{{ $item['ten_san_pham'] }}"
+                                     style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
+                            @else
+                                <div style="width:48px;height:48px;border-radius:6px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;">
+                                    <i class="fas fa-image text-muted"></i>
                                 </div>
-                            </td>
-                            <td>
-                                <span class="text-muted small">{{ $item['danh_muc'] ?: '-' }}</span>
-                            </td>
-                            <td>
-                                @if($isUnit)
-                                    <span class="badge bg-info" style="font-size:0.7rem;">Don vi QD</span>
-                                @else
-                                    <span class="badge bg-secondary" style="font-size:0.7rem;">Bien the</span>
-                                @endif
-                            </td>
-                            <td>
-                                <span class="fw-bold text-primary" style="font-size:0.88rem;">
-                                    {{ number_format((float)($item['gia_ban'] ?? 0), 0, ',', '.') }} d
+                            @endif
+                        </td>
+                        <td>
+                            <span class="fw-semibold" style="font-size:0.9rem;">{{ $item['ten_san_pham'] }}</span>
+                            @if(!empty($item['thuong_hieu']))
+                                <div class="text-muted small">{{ $item['thuong_hieu'] }}</div>
+                            @endif
+                        </td>
+                        <td>
+                            <span class="text-muted small">{{ $item['danh_muc'] ?: '-' }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-info-subtle text-info border" style="font-size:0.78rem;">
+                                {{ $item['so_bien_the'] }} bien the
+                            </span>
+                        </td>
+                        <td>
+                            @if($item['min_gia_ban'] === null)
+                                <span class="text-muted small">-</span>
+                            @elseif($item['min_gia_ban'] == $item['max_gia_ban'])
+                                <span class="fw-bold text-primary" style="font-size:0.88rem;">{{ number_format($item['min_gia_ban'], 0, ',', '.') }} d</span>
+                            @else
+                                <span class="fw-bold text-primary" style="font-size:0.85rem;">
+                                    {{ number_format($item['min_gia_ban'], 0, ',', '.') }}
+                                    <span class="text-muted">~</span>
+                                    {{ number_format($item['max_gia_ban'], 0, ',', '.') }} d
                                 </span>
-                            </td>
-                            <td>
-                                <span class="{{ $tonKho <= $dinhMuc ? 'text-warning' : 'text-muted' }} small">{{ $tonKho }}</span>
-                            </td>
-                            <td>
-                                @if(!$trangThai)
-                                    <span class="badge bg-danger">Ngung ban</span>
-                                @elseif($tonKho <= 0)
-                                    <span class="badge bg-secondary">Het hang</span>
-                                @elseif($tonKho <= $dinhMuc)
-                                    <span class="badge bg-warning text-dark">Sap het</span>
-                                @else
-                                    <span class="badge bg-success">Con hang</span>
-                                @endif
-                            </td>
-                        </tr>
+                            @endif
+                        </td>
+                        <td>
+                            <span class="{{ $item['total_ton_kho'] <= 0 ? 'text-warning' : 'text-muted' }} small fw-medium">
+                                {{ $item['total_ton_kho'] }}
+                            </span>
+                        </td>
+                        <td>
+                            @if(!$item['trang_thai'])
+                                <span class="badge bg-danger">Ngung ban</span>
+                            @elseif($item['total_ton_kho'] <= 0)
+                                <span class="badge bg-secondary">Het hang</span>
+                            @else
+                                <span class="badge bg-success">Con hang</span>
+                            @endif
+                        </td>
+                    </tr>
                     @endforeach
                 </tbody>
             </table>
@@ -225,7 +207,7 @@
     <div class="card-footer bg-white">
         <div class="d-flex justify-content-between align-items-center">
             <span class="text-muted">
-                Hien thi {{ $variants->firstItem() ?? 0 }} - {{ $variants->lastItem() ?? 0 }} tren {{ $variants->total() }} dong
+                Hien thi {{ $variants->firstItem() ?? 0 }} - {{ $variants->lastItem() ?? 0 }} tren {{ $variants->total() }} san pham
             </span>
             <nav>{{ $variants->links('pagination::bootstrap-5') }}</nav>
         </div>
@@ -241,7 +223,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
     </div>
-    <div class="offcanvas-body p-0" id="drawerBody" style="overflow-y:auto;">
+    <div class="offcanvas-body p-0" id="drawerBody" style="overflow-y:auto; max-height: calc(100vh - 70px);">
         <div class="d-flex justify-content-center align-items-center" style="min-height:300px;">
             <div class="text-center">
                 <div class="spinner-border text-primary mb-3" role="status"></div>

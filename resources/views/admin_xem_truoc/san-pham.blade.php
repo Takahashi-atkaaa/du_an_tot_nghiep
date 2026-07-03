@@ -128,160 +128,91 @@
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span class="text-muted small">Tổng: <strong id="totalProducts">{{ $sanPhams->total() }}</strong> sản phẩm</span>
+                <span class="text-muted small">Tổng: <strong id="totalProducts">{{ $variants->total() }}</strong> sản phẩm</span>
             </div>
         </div>
 
-        @if($sanPhams->count() > 0)
+        @if($variants->count() > 0)
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
                         <th style="width: 40px;"></th>
                         <th style="width: 60px;">Ảnh</th>
-                        <th>Mã SP</th>
                         <th>Tên sản phẩm</th>
                         <th>Danh mục</th>
-                        <th>Đơn vị</th>
-                        <th style="width: 80px;">Định mức</th>
-                        <th style="width: 130px;">Giá bán</th>
+                        <th style="width: 110px;">Biến thể</th>
+                        <th style="width: 160px;">Khoảng giá</th>
                         <th style="width: 80px;">Tồn kho</th>
-                        <th style="width: 100px;">Trạng thái</th>
+                        <th style="width: 110px;">Trạng thái</th>
                     </tr>
                 </thead>
                 <tbody id="productTableBody">
-                    @foreach($sanPhams as $sanPham)
-                    <?php
-                        $soBienThe = $sanPham->bienThe->count();
-                        $hasVariants = $soBienThe > 0;
-                        $tongTonKho = $sanPham->ton_kho_tong;
-                        $giaHienThi = $sanPham->gia_ban_hien_thi;
-                    ?>
-                    <tr class="product-row" style="cursor:pointer;" data-product-id="{{ $sanPham->id }}" data-has-variants="{{ $hasVariants ? '1' : '0' }}">
+                    @forelse($flatItems as $item)
+                    <tr class="product-row" style="cursor:pointer;" data-product-id="{{ $item['product_id'] }}" onclick="openProductDrawer({{ $item['product_id'] }});">
                         <td onclick="event.stopPropagation();">
-                            <input type="checkbox" class="form-check-input product-checkbox" value="{{ $sanPham->id }}">
+                            <input type="checkbox" class="form-check-input product-checkbox" value="{{ $item['product_id'] }}" data-product-id="{{ $item['product_id'] }}">
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
-                            @if($sanPham->hinh_anh)
-                                <img src="{{ asset($sanPham->hinh_anh) }}"
-                                     alt="{{ $sanPham->ten_san_pham }}"
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $item['product_id'] }});">
+                            @if(!empty($item['hinh_anh']))
+                                <img src="{{ asset($item['hinh_anh']) }}"
+                                     alt="{{ $item['ten_san_pham'] }}"
                                      style="width:48px; height:48px; object-fit:cover; border-radius:6px;">
                             @else
                                 <div style="width:48px; height:48px; border-radius:6px; background:#f0f0f0; display:flex; align-items:center; justify-content:center;">
                                     <i class="fas fa-image text-muted"></i>
                                 </div>
                             @endif
-                        </td> 
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
-                            <span class="text-muted small">#{{ $sanPham->ma_hang ?? $sanPham->ma_vach ?? $sanPham->id }}</span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
-                            <div class="d-flex align-items-center gap-2">
-                                @if($hasVariants)
-                                    <a href="javascript:void(0)" onclick="event.stopPropagation(); toggleVariants({{ $sanPham->id }})" class="text-decoration-none expand-btn" id="expandBtn{{ $sanPham->id }}" title="Xem biến thể">
-                                        <i class="fas fa-chevron-right text-muted" style="transition:transform 0.2s;"></i>
-                                    </a>
-                                @else
-                                    <span style="width:16px;display:inline-block;"></span>
-                                @endif
-                                <span class="fw-semibold" style="font-size:0.88rem;">{{ $sanPham->ten_san_pham }}</span>
-                                @if($hasVariants)
-                                    <span class="badge bg-secondary" style="font-size:0.7rem;">{{ $soBienThe }} biến thể</span>
-                                @endif
-                            </div>
-                        </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
-                            <span class="text-muted small">{{ $sanPham->danhMuc->ten_danh_muc ?? '-' }}</span>
-                        </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
-                            <span class="text-muted small">{{ $sanPham->donVi->ten_don_vi ?? '-' }}</span>
-                        </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
-                            <span class="text-muted small text-center d-block">{{ $sanPham->dinh_muc_toi_thieu ?? 0 }}</span>
-                        </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
-                            @if(is_numeric($giaHienThi))
-                                <span class="fw-bold text-primary" style="font-size:0.88rem;">{{ number_format($giaHienThi, 0, ',', '.') }} đ</span>
-                            @else
-                                <span class="fw-bold text-primary" style="font-size:0.8rem;">{{ $giaHienThi }} đ</span>
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $item['product_id'] }});">
+                            <span class="fw-semibold" style="font-size:0.9rem;">{{ $item['ten_san_pham'] }}</span>
+                            @if($item['thuong_hieu'])
+                                <div class="text-muted small">{{ $item['thuong_hieu'] }}</div>
                             @endif
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
-                            <span class="{{ $tongTonKho <= ($sanPham->dinh_muc_toi_thieu ?? 0) ? 'text-warning' : 'text-muted' }} small">
-                                {{ $tongTonKho }}
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $item['product_id'] }});">
+                            <span class="text-muted small">{{ $item['danh_muc'] ?? '-' }}</span>
+                        </td>
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $item['product_id'] }});">
+                            <span class="badge bg-info-subtle text-info border" style="font-size:0.78rem;">
+                                {{ $item['so_bien_the'] }} biến thể
                             </span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
-                            @php
-                                $displayStock = $tongTonKho;
-                                $minStock = $sanPham->dinh_muc_toi_thieu ?? 0;
-                                $trangThaiSanPham = $sanPham->trang_thai;
-                            @endphp
-                            @if(!$trangThaiSanPham)
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $item['product_id'] }});">
+                            @if($item['min_gia_ban'] === null)
+                                <span class="text-muted small">-</span>
+                            @elseif($item['min_gia_ban'] == $item['max_gia_ban'])
+                                <span class="fw-bold text-primary" style="font-size:0.88rem;">
+                                    {{ number_format($item['min_gia_ban'], 0, ',', '.') }} đ
+                                </span>
+                            @else
+                                <span class="fw-bold text-primary" style="font-size:0.85rem;">
+                                    {{ number_format($item['min_gia_ban'], 0, ',', '.') }}
+                                    <span class="text-muted">~</span>
+                                    {{ number_format($item['max_gia_ban'], 0, ',', '.') }} đ
+                                </span>
+                            @endif
+                        </td>
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $item['product_id'] }});">
+                            <span class="{{ $item['total_ton_kho'] <= 0 ? 'text-warning' : 'text-muted' }} small fw-medium">
+                                {{ $item['total_ton_kho'] }}
+                            </span>
+                        </td>
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $item['product_id'] }});">
+                            @if(!$item['trang_thai'])
                                 <span class="badge bg-danger">Ngừng bán</span>
-                            @elseif($displayStock <= 0)
+                            @elseif($item['total_ton_kho'] <= 0)
                                 <span class="badge bg-secondary">Hết hàng</span>
-                            @elseif($displayStock <= $minStock)
-                                <span class="badge bg-warning text-dark">Sắp hết</span>
                             @else
                                 <span class="badge bg-success">Còn hàng</span>
                             @endif
                         </td>
                     </tr>
-                    {{-- Biến thể rows (hidden by default) --}}
-                    @foreach($sanPham->bienThe as $bienThe)
-                    <tr class="variant-row" id="variantRow{{ $sanPham->id }}_{{ $bienThe->id }}" style="display:none; background:#fafafa;">
-                        <td></td>
-                        <td onclick="event.stopPropagation();">
-                            @if($bienThe->hinh_anh)
-                                <img src="{{ asset($bienThe->hinh_anh) }}" alt="" style="width:36px; height:36px; object-fit:cover; border-radius:4px; border:1px solid #eee;">
-                            @else
-                                <div style="width:36px; height:36px; border-radius:4px; background:#eee; display:flex; align-items:center; justify-content:center;">
-                                    <i class="fas fa-image text-muted" style="font-size:0.7rem;"></i>
-                                </div>
-                            @endif
-                        </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
-                            <span class="text-muted small">#{{ $bienThe->ma_hang ?? $bienThe->ma_vach ?? $bienThe->id }}</span>
-                        </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
-                            <div class="d-flex align-items-center gap-2" style="padding-left:20px;">
-                                <i class="fas fa-arrow-turn-down-right text-muted" style="font-size:0.6rem;"></i>
-                                <span class="text-muted" style="font-size:0.82rem;">
-                                    @foreach($bienThe->thuocTinhs as $tt)
-                                        <span class="badge bg-light text-dark border me-1" style="font-size:0.7rem;">{{ $tt->ten_thuoc_tinh }}</span>
-                                    @endforeach
-                                    @if($bienThe->thuocTinhs->isEmpty())
-                                        <em class="small text-muted">Biến thể</em>
-                                    @endif
-                                </span>
-                            </div>
-                        </td>
-                        <td></td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
-                            <span class="text-muted small">{{ $bienThe->donVi->ten_don_vi ?? '-' }}</span>
-                        </td>
-                        <td></td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
-                            <span class="fw-bold text-primary" style="font-size:0.82rem;">{{ number_format($bienThe->gia_ban, 0, ',', '.') }} đ</span>
-                        </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
-                            <span class="{{ ($bienThe->so_luong_ton_kho ?? 0) <= ($bienThe->dinh_muc_toi_thieu ?? 0) ? 'text-warning' : 'text-muted' }} small">{{ $bienThe->so_luong_ton_kho ?? 0 }}</span>
-                        </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
-                            @if(!$bienThe->trang_thai)
-                                <span class="badge bg-danger">Ngừng</span>
-                            @elseif(($bienThe->so_luong_ton_kho ?? 0) <= 0)
-                                <span class="badge bg-secondary">Hết</span>
-                            @elseif(($bienThe->so_luong_ton_kho ?? 0) <= ($bienThe->dinh_muc_toi_thieu ?? 0))
-                                <span class="badge bg-warning text-dark">Sắp hết</span>
-                            @else
-                                <span class="badge bg-success">Còn</span>
-                            @endif
-                        </td>
+                    @empty
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">Không có sản phẩm nào.</td>
                     </tr>
-                    @endforeach
-                    @endforeach
+                    @endforelse
                 </tbody>
             </table>
         </div>
@@ -296,11 +227,11 @@
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <span class="text-muted">
-                    Hiển thị {{ $sanPhams->firstItem() ?? 0 }} - {{ $sanPhams->lastItem() ?? 0 }} trên {{ $sanPhams->total() }} sản phẩm
+                    Hiển thị {{ $variants->firstItem() ?? 0 }} - {{ $variants->lastItem() ?? 0 }} trên {{ $variants->total() }} biến thể
                 </span>
             </div>
             <nav>
-                {{ $sanPhams->links('pagination::bootstrap-5') }}
+                {{ $variants->links('pagination::bootstrap-5') }}
             </nav>
         </div>
     </div>
@@ -1789,7 +1720,7 @@
         modal.show();
 
         try {
-            const res = await fetch(`/admin/api/san-pham/${id}`);
+            const res = await fetch(`/admin/api/san-pham/product/${id}`);
             const json = await res.json();
             if (!json.success) {
                 drawerBody.innerHTML = `<div class="p-4 text-center text-danger">${json.message || 'Không tìm thấy sản phẩm.'}</div>`;
@@ -1835,147 +1766,114 @@
     }
 
     function renderDrawerContent(data) {
-        const sp = data.sanPham;
+        // Hỗ trợ cả cấu trúc cũ (sanPham + bienThe + units) và mới (product + variants[].units)
+        const product = data.product || data.sanPham || {};
+        const variants = data.variants || data.bienThe || [];
         const theKho = data.theKho || [];
         const loHang = data.loHang || [];
+        const totalTonKho = (data.total_ton_kho !== undefined) ? data.total_ton_kho : (product.so_luong_ton_kho ?? 0);
+        const minGiaBan = (data.min_gia_ban !== undefined) ? data.min_gia_ban : (product.gia_ban ?? 0);
+        const maxGiaBan = (data.max_gia_ban !== undefined) ? data.max_gia_ban : (product.gia_ban ?? 0);
+        const soBienThe = (data.so_bien_the !== undefined) ? data.so_bien_the : variants.length;
 
-        const trangThaiLabel = !sp.trang_thai
+        const isHetHang = totalTonKho <= 0;
+        const trangThaiLabel = !product.trang_thai
             ? '<span class="badge bg-danger">Ngừng bán</span>'
-            : (sp.so_luong_ton_kho <= 0
+            : (isHetHang
                 ? '<span class="badge bg-secondary">Hết hàng</span>'
-                : (sp.so_luong_ton_kho <= (sp.dinh_muc_toi_thieu || 0)
-                    ? '<span class="badge bg-warning text-dark">Sắp hết hàng</span>'
-                    : '<span class="badge bg-success">Còn hàng</span>'));
+                : '<span class="badge bg-success">Còn hàng</span>');
 
-        const thuocTinhLabels = (sp.thuoc_tinhs || []).map(tt =>
+        const thuocTinhLabels = (product.thuoc_tinhs || []).map(tt =>
             `<span class="badge bg-info text-dark me-1">${tt.ten_thuoc_tinh}</span>`
         ).join('');
 
+        // Bảng biến thể: mỗi biến thể hiển thị đầy đủ đơn vị + số lượng từng đơn vị
         const bienTheHtml = (() => {
-            const bt = data.bienThe || [];
-            if (bt.length === 0) return '';
+            if (variants.length === 0) return '';
             return `
             <div class="mb-3">
-                <h6 class="fw-bold mb-2"><i class="fas fa-layer-group me-1"></i>Biến thể <span class="fw-normal text-muted small">(${bt.length})</span></h6>
-                <table class="table table-sm table-bordered mb-0" style="font-size:0.82rem;">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Ảnh</th>
-                            <th>Thuộc tính</th>
-                            <th>Mã vạch</th>
-                            <th class="text-end">Giá bán</th>
-                            <th class="text-end">Tồn kho</th>
-                            <th>Trạng thái</th>
-                            <th class="text-center">Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${bt.map(v => `
-                        <tr>
-                            <td>
-                                ${v.hinh_anh
-                                    ? `<img src="/${v.hinh_anh}" style="width:32px;height:32px;object-fit:cover;border-radius:4px;">`
-                                    : `<div style="width:32px;height:32px;border-radius:4px;background:#eee;display:flex;align-items:center;justify-content:center;"><i class="fas fa-image text-muted" style="font-size:0.6rem;"></i></div>`
-                                }
-                            </td>
-                            <td>
-                                ${(v.thuoc_tinhs || []).length > 0
-                                    ? v.thuoc_tinhs.map(tt => `<span class="badge bg-light text-dark border me-1">${tt.ten_thuoc_tinh}</span>`).join('')
-                                    : '<em class="text-muted">—</em>'
-                                }
-                            </td>
-                            <td class="small">${v.ma_vach || '-'}</td>
-                            <td class="text-end fw-bold text-primary">${formatMoney(v.gia_ban)} đ</td>
-                            <td class="text-end ${(v.so_luong_ton_kho ?? 0) <= (v.dinh_muc_toi_thieu || 0) ? 'text-warning' : 'text-muted'}">${v.so_luong_ton_kho ?? 0}</td>
-                            <td>
-                                ${!v.trang_thai
-                                    ? '<span class="badge bg-danger">Ngừng</span>'
-                                    : (v.so_luong_ton_kho <= 0
-                                        ? '<span class="badge bg-secondary">Hết</span>'
-                                        : '<span class="badge bg-success">Còn</span>'
-                                    )
-                                }
-                            </td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteVariant(${v.id}, ${sp.id})" title="Xóa biến thể">
-                                    <i class="fas fa-trash"></i>
+                <h6 class="fw-bold mb-2">
+                    <i class="fas fa-layer-group me-1"></i>Biến thể
+                    <span class="fw-normal text-muted small">(${variants.length})</span>
+                </h6>
+                <div class="accordion accordion-flush" id="variantsAccordion">
+                    ${variants.map((v, idx) => {
+                        const vId = v.id;
+                        const tenBT = v.ten_bien_the || 'Mặc định';
+                        const units = v.units || [];
+                        const tonKho = v.so_luong_ton ?? 0;
+                        return `
+                        <div class="accordion-item border rounded mb-2">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button ${idx === 0 ? '' : 'collapsed'} bg-light"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#variantCollapse${vId}">
+                                    <div class="d-flex justify-content-between w-100 align-items-center me-2">
+                                        <span class="fw-semibold">${tenBT}</span>
+                                        <span class="badge bg-primary-subtle text-primary ms-2">
+                                            Tồn: <strong class="ms-1">${tonKho}</strong>
+                                        </span>
+                                        <span class="text-muted small ms-3">
+                                            Giá bán: <strong class="text-primary">${formatMoney(v.gia_ban ?? 0)} đ</strong>
+                                        </span>
+                                    </div>
                                 </button>
-                            </td>
-                        </tr>`).join('')}
-                    </tbody>
-                </table>
+                            </h2>
+                            <div id="variantCollapse${vId}" class="accordion-collapse collapse ${idx === 0 ? 'show' : ''}" data-bs-parent="#variantsAccordion">
+                                <div class="accordion-body p-2">
+                                    <div class="row g-2 small mb-2">
+                                        <div class="col-6"><strong>Mã hàng:</strong> ${v.ma_hang || '-'}</div>
+                                        <div class="col-6"><strong>Mã vạch:</strong> ${v.ma_vach || '-'}</div>
+                                        <div class="col-6"><strong>Giá vốn:</strong> ${formatMoney(v.gia_von ?? 0)} đ</div>
+                                        <div class="col-6"><strong>Định mức tối thiểu:</strong> ${v.dinh_muc_toi_thieu ?? 0}</div>
+                                    </div>
+                                    ${units.length > 0 ? `
+                                    <h6 class="small fw-bold mt-2 mb-1">
+                                        <i class="fas fa-ruler-combined me-1"></i>Đơn vị quy đổi (${units.length})
+                                    </h6>
+                                    <table class="table table-sm table-bordered mb-0" style="font-size:0.8rem;">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Đơn vị</th>
+                                                <th class="text-end">Tỷ lệ</th>
+                                                <th class="text-end">Giá vốn</th>
+                                                <th class="text-end">Giá bán</th>
+                                                <th>Mã vạch</th>
+                                                <th>Mặc định</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${units.map(u => `
+                                            <tr>
+                                                <td class="fw-medium">${u.ten_don_vi || '-'}</td>
+                                                <td class="text-end">${u.ty_le_quy_doi ?? 1}</td>
+                                                <td class="text-end">${formatMoney(u.gia_von_quy_doi ?? 0)} đ</td>
+                                                <td class="text-end fw-bold text-primary">${formatMoney(u.gia_ban_quy_doi ?? 0)} đ</td>
+                                                <td class="small">${u.ma_vach || '-'}</td>
+                                                <td class="text-center">
+                                                    ${u.la_don_vi_mac_dinh
+                                                        ? '<i class="fas fa-check-circle text-success" title="Đơn vị mặc định"></i>'
+                                                        : '<span class="text-muted">—</span>'}
+                                                </td>
+                                            </tr>`).join('')}
+                                        </tbody>
+                                    </table>` : '<p class="text-muted small mb-0 mt-2">Chưa có đơn vị quy đổi.</p>'}
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
             </div>`;
         })();
 
-        const hinhAnh = sp.hinh_anh
-            ? `<img src="/${sp.hinh_anh}" class="img-fluid rounded" alt="${sp.ten_san_pham}" style="max-height:220px; object-fit:contain; background:#f8f9fa;">`
+        const hinhAnh = product.hinh_anh
+            ? `<img src="/${product.hinh_anh}" class="img-fluid rounded" alt="${product.ten_san_pham}" style="max-height:220px; object-fit:contain; background:#f8f9fa;">`
             : `<div class="text-center text-muted py-5 bg-light rounded"><i class="fas fa-image fa-3x"></i><p class="mt-2 mb-0">Không có ảnh</p></div>`;
 
-        const galleryHtml = '';
-
-        // Thẻ kho
-        let theKhoHtml = '';
-        if (theKho.length > 0) {
-            theKhoHtml = `
-            <div class="table-scroll-wrap">
-                <table class="table table-sm table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Mã phiếu</th>
-                            <th>Thời gian</th>
-                            <th>Loại</th>
-                            <th>Lô</th>
-                            <th>Giá nhập</th>
-                            <th>SL</th>
-                            <th>SL còn lại</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${theKho.map(item => `
-                        <tr>
-                            <td class="small">${item.maPhieu || '-'}</td>
-                            <td class="small">${formatDate(item.thoiGian)}</td>
-                            <td>${loaiPhieuLabel(item.loaiPhieu)}</td>
-                            <td class="small">${item.maLo || '-'}</td>
-                            <td class="small text-end">${formatMoney(item.gia)} đ</td>
-                            <td class="small text-center">${item.soLuong}</td>
-                            <td class="small text-center">${item.soLuongConLai ?? '-'}</td>
-                        </tr>`).join('')}
-                    </tbody>
-                </table>
-            </div>`;
-        } else {
-            theKhoHtml = `<p class="text-muted text-center py-3 mb-0 small">Chưa có dữ liệu thẻ kho.</p>`;
-        }
-
-        // Lô hàng
-        let loHangHtml = '';
-        if (loHang.length > 0) {
-            loHangHtml = `
-            <table class="table table-sm table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Số lô</th>
-                        <th>Hạn sử dụng</th>
-                        <th class="text-end">SL nhập</th>
-                        <th class="text-end">SL còn lại</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${loHang.map(item => {
-                        const isExpired = item.hanSuDung && new Date(item.hanSuDung) < new Date();
-                        return `<tr>
-                            <td class="small">${item.maLo || '-'}</td>
-                            <td class="small ${isExpired ? 'text-danger' : ''}">${formatDate(item.hanSuDung)} ${isExpired ? '<i class="fas fa-exclamation-circle"></i>' : ''}</td>
-                            <td class="small text-end">${item.so_luong ?? '-'}</td>
-                            <td class="small text-end">${item.soLuongConLai ?? '-'}</td>
-                        </tr>`;
-                    }).join('')}
-                </tbody>
-            </table>`;
-        } else {
-            loHangHtml = `<p class="text-muted text-center py-3 mb-0 small">Chưa có lô hàng.</p>`;
-        }
+        const giaHienThi = (minGiaBan === maxGiaBan)
+            ? `${formatMoney(minGiaBan)} đ`
+            : `${formatMoney(minGiaBan)} <span class="text-muted">~</span> ${formatMoney(maxGiaBan)} đ`;
 
         drawerBody.innerHTML = `
         <div class="p-3">
@@ -1986,48 +1884,92 @@
                 <div class="col-8">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <h5 class="fw-bold mb-1">${sp.ten_san_pham}</h5>
-                            <p class="text-muted small mb-1">#${sp.ma_hang || sp.ma_vach || sp.id}</p>
+                            <h5 class="fw-bold mb-1">${product.ten_san_pham || '-'}</h5>
+                            <p class="text-muted small mb-1">#${product.ma_hang || product.ma_vach || product.id || ''}</p>
                             ${trangThaiLabel}
                         </div>
                         <div class="text-end">
-                            <p class="fw-bold text-primary mb-0" style="font-size:1.4rem;">${formatMoney(sp.gia_ban)} đ</p>
-                            <p class="text-muted small mb-0">Giá vốn: ${formatMoney(sp.gia_von)} đ</p>
+                            <p class="fw-bold text-primary mb-0" style="font-size:1.3rem;">${giaHienThi}</p>
+                            <p class="text-muted small mb-0">${soBienThe} biến thể • Tổng tồn: <strong>${totalTonKho}</strong></p>
                         </div>
                     </div>
                     <hr>
                     <div class="row g-2 small">
-                        <div class="col-6"><strong>Danh mục:</strong> ${sp.danh_muc?.ten_danh_muc || '-'}</div>
-                        <div class="col-6"><strong>Thương hiệu:</strong> ${sp.thuong_hieu || '-'}</div>
-                        <div class="col-6"><strong>Đơn vị:</strong> ${sp.don_vi?.ten_don_vi || '-'}</div>
-                        <div class="col-6"><strong>Mã vạch:</strong> ${sp.ma_vach || '-'}</div>
-                        <div class="col-6"><strong>Tồn kho:</strong> ${sp.so_luong_ton_kho ?? 0}</div>
-                        <div class="col-6"><strong>Định mức:</strong> ${sp.dinh_muc_toi_thieu ?? 0}</div>
+                        <div class="col-6"><strong>Danh mục:</strong> ${(product.danh_muc && product.danh_muc.ten_danh_muc) || (product.danhMuc && product.danhMuc.ten_danh_muc) || '-'}</div>
+                        <div class="col-6"><strong>Thương hiệu:</strong> ${product.thuong_hieu || '-'}</div>
                     </div>
                     ${thuocTinhLabels ? `<div class="mt-2">${thuocTinhLabels}</div>` : ''}
                 </div>
             </div>
 
-            ${sp.mo_ta ? `
+            ${product.mo_ta ? `
             <div class="mb-3">
                 <h6 class="fw-bold mb-2"><i class="fas fa-align-left me-1"></i>Mô tả</h6>
-                <div class="bg-light rounded p-2 small text-muted" style="white-space:pre-line;">${sp.mo_ta}</div>
+                <div class="bg-light rounded p-2 small text-muted" style="white-space:pre-line;">${product.mo_ta}</div>
             </div>` : ''}
 
             ${bienTheHtml}
 
+            ${theKho.length > 0 ? `
             <div class="mb-3">
                 <h6 class="fw-bold mb-2"><i class="fas fa-history me-1"></i>Thẻ kho <span class="fw-normal text-muted small">(${theKho.length})</span></h6>
-                ${theKhoHtml}
-            </div>
+                <div class="table-scroll-wrap">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mã phiếu</th>
+                                <th>Thời gian</th>
+                                <th>Loại</th>
+                                <th>Lô</th>
+                                <th class="text-end">Giá nhập</th>
+                                <th class="text-center">SL</th>
+                                <th class="text-center">SL còn lại</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${theKho.map(item => `
+                            <tr>
+                                <td class="small">${item.maPhieu || '-'}</td>
+                                <td class="small">${formatDate(item.thoiGian)}</td>
+                                <td>${loaiPhieuLabel(item.loaiPhieu)}</td>
+                                <td class="small">${item.maLo || '-'}</td>
+                                <td class="small text-end">${formatMoney(item.gia)} đ</td>
+                                <td class="small text-center">${item.soLuong}</td>
+                                <td class="small text-center">${item.soLuongConLai ?? '-'}</td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>` : ''}
 
+            ${loHang.length > 0 ? `
             <div class="mb-3">
                 <h6 class="fw-bold mb-2"><i class="fas fa-boxes-stacked me-1"></i>Lô - Hạn sử dụng <span class="fw-normal text-muted small">(${loHang.length})</span></h6>
-                ${loHangHtml}
-            </div>
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Số lô</th>
+                            <th>Hạn sử dụng</th>
+                            <th class="text-end">SL nhập</th>
+                            <th class="text-end">SL còn lại</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${loHang.map(item => {
+                            const isExpired = item.hanSuDung && new Date(item.hanSuDung) < new Date();
+                            return `<tr>
+                                <td class="small">${item.maLo || '-'}</td>
+                                <td class="small ${isExpired ? 'text-danger' : ''}">${formatDate(item.hanSuDung)} ${isExpired ? '<i class="fas fa-exclamation-circle"></i>' : ''}</td>
+                                <td class="small text-end">${item.so_luong ?? '-'}</td>
+                                <td class="small text-end">${item.soLuongConLai ?? '-'}</td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>` : ''}
 
             <div class="text-muted small border-top pt-2">
-                <i class="fas fa-clock me-1"></i>Tạo: ${formatDate(sp.created_at)} | Cập nhật: ${formatDate(sp.updated_at)}
+                <i class="fas fa-clock me-1"></i>Tạo: ${formatDate(product.created_at)} | Cập nhật: ${formatDate(product.updated_at)}
             </div>
         </div>`;
     }

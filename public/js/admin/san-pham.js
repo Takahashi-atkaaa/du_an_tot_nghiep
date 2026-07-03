@@ -49,7 +49,7 @@ function toggleSection(headerEl) {
         if (checked.length === 0) return;
 
         var messages = {
-            'delete': 'Ban co chac muon xoa ' + checked.length + ' san pham da chon?',
+            'delete': 'Ban co chac muon xoa ' + checked.length + ' san pham da chon? (Se xoa luon cac bien the va don vi)',
             'activate': 'Bat trang thai cho ' + checked.length + ' san pham?',
             'deactivate': 'Tat trang thai cho ' + checked.length + ' san pham?'
         };
@@ -191,6 +191,8 @@ function toggleSection(headerEl) {
 
     window.openProductDrawer = async function(id) {
         var modal = new bootstrap.Offcanvas(drawer);
+        // Dispose tất cả Collapse/Accordion instances cũ trước khi reset HTML
+        disposeDrawerBootstrapComponents();
         drawerBody.innerHTML = '<div class="d-flex justify-content-center align-items-center" style="min-height:300px;">' +
             '<div class="text-center">' +
                 '<div class="spinner-border text-primary mb-3" role="status"></div>' +
@@ -202,7 +204,7 @@ function toggleSection(headerEl) {
         modal.show();
 
         try {
-            var res = await fetch('/admin/api/san-pham/' + id);
+            var res = await fetch('/admin/api/san-pham/product/' + id);
             var json = await res.json();
             if (!json.success) {
                 drawerBody.innerHTML = '<div class="p-4 text-center text-danger">' + (json.message || 'Khong tim thay san pham.') + '</div>';
@@ -213,6 +215,56 @@ function toggleSection(headerEl) {
             drawerBody.innerHTML = '<div class="p-4 text-center text-danger">Loi tai du lieu: ' + e.message + '</div>';
         }
     };
+
+    // Dispose tất cả Bootstrap Accordion + Collapse instances đang tồn tại trong drawer body
+    // để tránh cache khi re-render cùng product (id trùng → Bootstrap giữ state cũ).
+    function disposeDrawerBootstrapComponents() {
+        if (!window.bootstrap || !drawerBody) return;
+        var elements = drawerBody.querySelectorAll('[data-bs-toggle="collapse"], [data-bs-toggle="accordion"]');
+        elements.forEach(function(el) {
+            // Dispose Collapse instance nếu có
+            var collapseInstance = bootstrap.Collapse.getInstance(el);
+            if (collapseInstance) {
+                try { collapseInstance.dispose(); } catch(e) {}
+            }
+            var accordionInstance = bootstrap.Accordion && bootstrap.Accordion.getInstance
+                ? bootstrap.Accordion.getInstance(el)
+                : null;
+            if (accordionInstance) {
+                try { accordionInstance.dispose(); } catch(e) {}
+            }
+        });
+    }
+
+    // Force-open accordion đầu tiên bằng JS (bypass class collapse), đảm bảo body hiển thị
+    function forceOpenFirstAccordion() {
+        if (!drawerBody) return;
+        var firstCollapse = drawerBody.querySelector('.accordion-collapse.show, .accordion-collapse');
+        if (firstCollapse) {
+            firstCollapse.classList.add('show');
+            firstCollapse.style.display = '';
+        }
+        var firstButton = drawerBody.querySelector('.accordion-button');
+        if (firstButton) {
+            firstButton.classList.remove('collapsed');
+            firstButton.setAttribute('aria-expanded', 'true');
+        }
+        // Các accordion còn lại đảm bảo collapsed
+        var otherButtons = drawerBody.querySelectorAll('.accordion-button');
+        otherButtons.forEach(function(btn) {
+            if (btn !== firstButton) {
+                btn.classList.add('collapsed');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        });
+        var otherCollapses = drawerBody.querySelectorAll('.accordion-collapse');
+        otherCollapses.forEach(function(col) {
+            if (col !== firstCollapse) {
+                col.classList.remove('show');
+                col.style.display = '';
+            }
+        });
+    }
 
     window.confirmDeleteFromDrawer = function() {
         if (!window.currentDrawerProductId) return;
@@ -247,66 +299,98 @@ function toggleSection(headerEl) {
     }
 
     function renderDrawerContent(data) {
-        var sp = data.product || {};
-        var variant = data.variant || {};
-        var units = data.units || [];
+        var product = data.product || {};
+        var variants = data.variants || data.bienThe || [];
         var theKho = data.theKho || [];
         var loHang = data.loHang || [];
+        var totalTonKho = (data.total_ton_kho !== undefined) ? data.total_ton_kho : (product.so_luong_ton_kho || 0);
+        var minGiaBan = (data.min_gia_ban !== undefined) ? data.min_gia_ban : (product.gia_ban || 0);
+        var maxGiaBan = (data.max_gia_ban !== undefined) ? data.max_gia_ban : (product.gia_ban || 0);
+        var soBienThe = (data.so_bien_the !== undefined) ? data.so_bien_the : variants.length;
 
-        var trangThaiVariant = !variant.trang_thai
+        var trangThaiLabel = !product.trang_thai
             ? '<span class="badge bg-danger">Ngung ban</span>'
-            : ((variant.so_luong_ton ?? 0) <= 0
+            : (totalTonKho <= 0
                 ? '<span class="badge bg-secondary">Het hang</span>'
-                : ((variant.dinh_muc_toi_thieu && (variant.so_luong_ton ?? 0) <= variant.dinh_muc_toi_thieu)
-                    ? '<span class="badge bg-warning text-dark">Sap het hang</span>'
-                    : '<span class="badge bg-success">Con hang</span>'));
+                : '<span class="badge bg-success">Con hang</span>');
 
-        var thuocTinhLabels = '';
-        if (variant.thuoc_tinh_ids && Array.isArray(variant.thuoc_tinh_ids)) {
-            var thuocTinhChas = window.thuocTinhChasData || [];
-            variant.thuoc_tinh_ids.forEach(function(ttId) {
-                var found = thuocTinhChas.find(function(t) { return String(t.id) === String(ttId); });
-                if (found) {
-                    thuocTinhLabels += '<span class="badge bg-info text-dark me-1">' + found.ten_thuoc_tinh + '</span>';
-                }
-            });
-        }
-
-        var variantHinhAnh = variant.hinh_anh
-            ? '<img src="/' + variant.hinh_anh + '" style="width:32px;height:32px;object-fit:cover;border-radius:4px;">'
-            : '<div style="width:32px;height:32px;border-radius:4px;background:#eee;display:flex;align-items:center;justify-content:center;"><i class="fas fa-image text-muted" style="font-size:0.6rem;"></i></div>';
-
-        var mainHinhAnh = variant.hinh_anh
-            ? '<img src="/' + variant.hinh_anh + '" class="img-fluid rounded" alt="' + (sp.ten_san_pham || '') + '" style="max-height:220px; object-fit:contain; background:#f8f9fa;">'
+        var mainHinhAnh = product.hinh_anh
+            ? '<img src="/' + product.hinh_anh + '" class="img-fluid rounded" alt="' + (product.ten_san_pham || '') + '" style="max-height:220px; object-fit:contain; background:#f8f9fa;">'
             : '<div class="text-center text-muted py-5 bg-light rounded"><i class="fas fa-image fa-3x"></i><p class="mt-2 mb-0">Khong co anh</p></div>';
 
-        var unitsHtml = '';
-        if (units.length > 0) {
-            unitsHtml = '<div class="mb-3">' +
-                '<h6 class="fw-bold mb-2"><i class="fas fa-balance-scale me-1"></i>Don vi quy doi <span class="fw-normal text-muted small">(' + units.length + ')</span></h6>' +
-                '<table class="table table-sm table-bordered mb-0" style="font-size:0.82rem;">' +
-                    '<thead class="table-light">' +
-                        '<tr>' +
-                            '<th>Ten don vi</th>' +
-                            '<th class="text-center">Ty le QD</th>' +
-                            '<th class="text-end">Gia von</th>' +
-                            '<th class="text-end">Gia ban</th>' +
-                            '<th class="text-end">Gia ban si</th>' +
-                            '<th>Ma vach</th>' +
-                        '</tr>' +
-                    '</thead>' +
-                    '<tbody>';
-            units.forEach(function(unit) {
-                unitsHtml += '<tr>' +
-                    '<td class="small">' + (unit.ten_don_vi || '-') + '</td>' +
-                    '<td class="text-center small">' + (unit.ty_le_quy_doi || '-') + '</td>' +
-                    '<td class="text-end small">' + formatMoney(unit.gia_von_quy_doi) + ' d</td>' +
-                    '<td class="text-end small fw-bold text-primary">' + formatMoney(unit.gia_ban_quy_doi) + ' d</td>' +
-                    '<td class="text-end small">' + formatMoney(unit.gia_ban_si) + ' d</td>' +
-                    '<td class="small text-muted">' + (unit.ma_vach || '-') + '</td>' +
-                '</tr>';
+        var giaHienThi = (minGiaBan === maxGiaBan)
+            ? formatMoney(minGiaBan) + ' d'
+            : formatMoney(minGiaBan) + ' <span class="text-muted">~</span> ' + formatMoney(maxGiaBan) + ' d';
+
+        // Accordion biến thể: mỗi variant là 1 card có thể expand, bên trong hiển thị units
+        // Dùng render suffix unique (timestamp + random) để tránh cache collision khi
+        // re-render cùng product id (Bootstrap5 Accordion cache state nếu id trùng).
+        var renderSuffix = '_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+        var variantsHtml = '';
+        if (variants.length > 0) {
+            var accordionId = 'variantsAccordion_' + (product.id || '') + renderSuffix;
+            variantsHtml = '<div class="mb-3">' +
+                '<h6 class="fw-bold mb-2"><i class="fas fa-layer-group me-1"></i>Bien the <span class="fw-normal text-muted small">(' + variants.length + ')</span></h6>' +
+                '<div class="accordion accordion-flush" id="' + accordionId + '">';
+            variants.forEach(function(v, idx) {
+                var vId = v.id + renderSuffix;
+                var tenBT = v.ten_bien_the || 'Mac dinh';
+                var units = v.units || [];
+                var tonKho = v.so_luong_ton || 0;
+                var collapseId = 'variantCollapse_' + vId;
+                variantsHtml += '<div class="accordion-item border rounded mb-2">' +
+                    '<h2 class="accordion-header">' +
+                        '<button class="accordion-button ' + (idx === 0 ? '' : 'collapsed') + ' bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#' + collapseId + '" aria-expanded="' + (idx === 0 ? 'true' : 'false') + '">' +
+                            '<div class="d-flex justify-content-between w-100 align-items-center me-2">' +
+                                '<span class="fw-semibold">' + tenBT + '</span>' +
+                                '<span class="badge bg-primary-subtle text-primary ms-2">Ton: <strong class="ms-1">' + tonKho + '</strong></span>' +
+                                '<span class="text-muted small ms-3">Gia ban: <strong class="text-primary">' + formatMoney(v.gia_ban || 0) + ' d</strong></span>' +
+                            '</div>' +
+                        '</button>' +
+                    '</h2>' +
+                    '<div id="' + collapseId + '" class="accordion-collapse collapse ' + (idx === 0 ? 'show' : '') + '" data-bs-parent="#' + accordionId + '">' +
+                        '<div class="accordion-body p-2">' +
+                            '<div class="row g-2 small mb-2">' +
+                                '<div class="col-6"><strong>Ma hang:</strong> ' + (v.ma_hang || '-') + '</div>' +
+                                '<div class="col-6"><strong>Ma vach:</strong> ' + (v.ma_vach || '-') + '</div>' +
+                                '<div class="col-6"><strong>Gia von:</strong> ' + formatMoney(v.gia_von || 0) + ' d</div>' +
+                                '<div class="col-6"><strong>Dinh muc toi thieu:</strong> ' + (v.dinh_muc_toi_thieu || 0) + '</div>' +
+                            '</div>';
+                if (units.length > 0) {
+                    variantsHtml += '<h6 class="small fw-bold mt-2 mb-1"><i class="fas fa-ruler-combined me-1"></i>Don vi quy doi (' + units.length + ')</h6>' +
+                        '<table class="table table-sm table-bordered mb-0" style="font-size:0.8rem;">' +
+                            '<thead class="table-light">' +
+                                '<tr>' +
+                                    '<th>Don vi</th>' +
+                                    '<th class="text-end">Ty le</th>' +
+                                    '<th class="text-end">Gia von</th>' +
+                                    '<th class="text-end">Gia ban</th>' +
+                                    '<th>Ma vach</th>' +
+                                    '<th>Mac dinh</th>' +
+                                '</tr>' +
+                            '</thead>' +
+                            '<tbody>';
+                    units.forEach(function(u) {
+                        variantsHtml += '<tr>' +
+                            '<td class="fw-medium">' + (u.ten_don_vi || '-') + '</td>' +
+                            '<td class="text-end">' + (u.ty_le_quy_doi || 1) + '</td>' +
+                            '<td class="text-end">' + formatMoney(u.gia_von_quy_doi || 0) + ' d</td>' +
+                            '<td class="text-end fw-bold text-primary">' + formatMoney(u.gia_ban_quy_doi || 0) + ' d</td>' +
+                            '<td class="small">' + (u.ma_vach || '-') + '</td>' +
+                            '<td class="text-center">' +
+                                (u.la_don_vi_mac_dinh
+                                    ? '<i class="fas fa-check-circle text-success" title="Don vi mac dinh"></i>'
+                                    : '<span class="text-muted">-</span>') +
+                            '</td>' +
+                        '</tr>';
+                    });
+                    variantsHtml += '</tbody></table>';
+                } else {
+                    variantsHtml += '<p class="text-muted small mb-0 mt-2">Chua co don vi quy doi.</p>';
+                }
+                variantsHtml += '</div></div></div>';
             });
-            unitsHtml += '</tbody></table></div>';
+            variantsHtml += '</div></div>';
         }
 
         var theKhoHtml = '';
@@ -367,52 +451,49 @@ function toggleSection(headerEl) {
             loHangHtml = '<p class="text-muted text-center py-3 mb-0 small">Chua co lo hang.</p>';
         }
 
+        var danhMucName = '-';
+        if (product.danh_muc && product.danh_muc.ten_danh_muc) danhMucName = product.danh_muc.ten_danh_muc;
+        else if (product.danhMuc && product.danhMuc.ten_danh_muc) danhMucName = product.danhMuc.ten_danh_muc;
+
         drawerBody.innerHTML = '<div class="p-3">' +
             '<div class="row g-3 mb-3">' +
                 '<div class="col-4">' + mainHinhAnh + '</div>' +
                 '<div class="col-8">' +
                     '<div class="d-flex justify-content-between align-items-start">' +
                         '<div>' +
-                            '<h5 class="fw-bold mb-1">' + (sp.ten_san_pham || '-') + '</h5>' +
-                            '<p class="text-muted small mb-1">#' + (variant.ma_hang || variant.ma_vach || variant.id || sp.id || '-') + '</p>' +
-                            trangThaiVariant +
+                            '<h5 class="fw-bold mb-1">' + (product.ten_san_pham || '-') + '</h5>' +
+                            '<p class="text-muted small mb-1">#' + (product.ma_hang || product.ma_vach || product.id || '-') + '</p>' +
+                            trangThaiLabel +
                         '</div>' +
                         '<div class="text-end">' +
-                            '<p class="fw-bold text-primary mb-0" style="font-size:1.4rem;">' + formatMoney(variant.gia_ban) + ' d</p>' +
-                            '<p class="text-muted small mb-0">Gia von: ' + formatMoney(variant.gia_von) + ' d</p>' +
+                            '<p class="fw-bold text-primary mb-0" style="font-size:1.3rem;">' + giaHienThi + '</p>' +
+                            '<p class="text-muted small mb-0">' + soBienThe + ' bien the | Tong ton: <strong>' + totalTonKho + '</strong></p>' +
                         '</div>' +
                     '</div>' +
                     '<hr>' +
                     '<div class="row g-2 small">' +
-                        '<div class="col-6"><strong>Danh muc:</strong> ' + (sp.danh_muc?.ten_danh_muc || '-') + '</div>' +
-                        '<div class="col-6"><strong>Thuong hieu:</strong> ' + (sp.thuong_hieu || '-') + '</div>' +
-                        '<div class="col-6"><strong>Ten bien the:</strong> ' + (variant.ten_bien_the || '-') + '</div>' +
-                        '<div class="col-6"><strong>Ma vach:</strong> ' + (variant.ma_vach || '-') + '</div>' +
-                        '<div class="col-6"><strong>Ton kho:</strong> ' + (variant.so_luong_ton ?? 0) + '</div>' +
-                        '<div class="col-6"><strong>Dinh muc:</strong> ' + (variant.dinh_muc_toi_thieu ?? 0) + '</div>' +
+                        '<div class="col-6"><strong>Danh muc:</strong> ' + danhMucName + '</div>' +
+                        '<div class="col-6"><strong>Thuong hieu:</strong> ' + (product.thuong_hieu || '-') + '</div>' +
                     '</div>' +
-                    (thuocTinhLabels ? '<div class="mt-2">' + thuocTinhLabels + '</div>' : '') +
                 '</div>' +
             '</div>' +
-
-            (sp.mo_ta ? '<div class="mb-3"><h6 class="fw-bold mb-2"><i class="fas fa-align-left me-1"></i>Mo ta</h6><div class="bg-light rounded p-2 small text-muted" style="white-space:pre-line;">' + sp.mo_ta + '</div></div>' : '') +
-
-            unitsHtml +
-
+            (product.mo_ta ? '<div class="mb-3"><h6 class="fw-bold mb-2"><i class="fas fa-align-left me-1"></i>Mo ta</h6><div class="bg-light rounded p-2 small text-muted" style="white-space:pre-line;">' + product.mo_ta + '</div></div>' : '') +
+            variantsHtml +
             '<div class="mb-3">' +
                 '<h6 class="fw-bold mb-2"><i class="fas fa-history me-1"></i>The kho <span class="fw-normal text-muted small">(' + theKho.length + ')</span></h6>' +
                 theKhoHtml +
             '</div>' +
-
             '<div class="mb-3">' +
                 '<h6 class="fw-bold mb-2"><i class="fas fa-boxes-stacked me-1"></i>Lo - Han su dung <span class="fw-normal text-muted small">(' + loHang.length + ')</span></h6>' +
                 loHangHtml +
             '</div>' +
-
             '<div class="text-muted small border-top pt-2">' +
-                '<i class="fas fa-clock me-1"></i>Tao: ' + formatDate(sp.created_at) + ' | Cap nhat: ' + formatDate(sp.updated_at) +
+                '<i class="fas fa-clock me-1"></i>Tao: ' + formatDate(product.created_at) + ' | Cap nhat: ' + formatDate(product.updated_at) +
             '</div>' +
         '</div>';
+
+        // Đảm bảo accordion đầu tiên thực sự mở (bypass Bootstrap collapse state cũ)
+        setTimeout(function() { forceOpenFirstAccordion(); }, 0);
     }
 })();
 

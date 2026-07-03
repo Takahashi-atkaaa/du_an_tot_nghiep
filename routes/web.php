@@ -137,6 +137,7 @@ Route::get('/admin/cai-dat', function () {
         // API - phải đặt TRƯỚC san-pham/{id} để tránh bị match nhầm (KHÔNG bị chặn bởi KTVaiTro)
         Route::get('/admin/api/san-pham', [SanPhamApiController::class, 'index']);
         Route::get('/admin/api/san-pham/{id}', [SanPhamApiController::class, 'show']);
+        Route::get('/admin/api/san-pham/product/{id}', [SanPhamApiController::class, 'showProduct']);
         Route::delete('/admin/api/san-pham/variant/{id}', [SanPhamApiController::class, 'destroyVariant']);
         Route::delete('/admin/api/san-pham/{id}/variants', [SanPhamApiController::class, 'destroyAllVariants']);
         Route::get('/admin/api/thuoc-tinh/con/{id}', [ThuocTinhApiController::class, 'getThuocTinhCon']);
