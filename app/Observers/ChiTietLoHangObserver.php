@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\ChiTietLoHang;
 use App\Models\BienTheSanPham;
+use Illuminate\Support\Facades\Log;
 
 class ChiTietLoHangObserver
 {
@@ -17,8 +18,11 @@ class ChiTietLoHangObserver
     public function updated(ChiTietLoHang $model): void
     {
         if ($model->wasChanged('variant_id')) {
-            $this->syncTonKhoVariant($model->getOriginal('variant_id'));
-            $this->syncTonKhoVariant($model->variant_id);
+            $oldVariantId = $model->getOriginal('variant_id');
+            $newVariantId = $model->variant_id;
+
+            $this->syncTonKhoVariant($oldVariantId);
+            $this->syncTonKhoVariant($newVariantId);
         } elseif ($model->wasChanged('so_luong_ton')) {
             $this->syncTonKhoVariant($model->variant_id);
         }
@@ -37,7 +41,16 @@ class ChiTietLoHangObserver
             return;
         }
 
-        $tongTon = ChiTietLoHang::where('variant_id', $variantId)->sum('so_luong_ton');
-        BienTheSanPham::where('id', $variantId)->update(['so_luong_ton' => $tongTon]);
+        try {
+            $tongTon = ChiTietLoHang::where('variant_id', $variantId)->sum('so_luong_ton');
+            BienTheSanPham::where('id', $variantId)->update(['so_luong_ton' => (int) $tongTon]);
+        } catch (\Throwable $e) {
+            // Không để observer làm fail cả request CRUD.
+            // Ghi log để debug nếu cần thiết.
+            Log::warning('ChiTietLoHangObserver syncTonKhoVariant failed', [
+                'variant_id' => $variantId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

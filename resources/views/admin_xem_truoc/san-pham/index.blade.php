@@ -123,35 +123,46 @@
                 <thead>
                     <tr>
                         <th style="width:40px;"></th>
+                        <th style="width:40px;"></th>
                         <th style="width:60px;">Anh</th>
                         <th>Ten san pham</th>
                         <th>Danh muc</th>
-                        <th>Loai</th>
                         <th style="width:130px;">Gia ban</th>
                         <th style="width:80px;">Ton kho</th>
                         <th style="width:100px;">Trang thai</th>
                     </tr>
                 </thead>
                 <tbody id="productTableBody">
-                    @foreach($flatItems as $item)
+                    @foreach($productGroups as $group)
                         @php
-                            $isUnit = ($item['type'] ?? '') === 'unit';
-                            $trangThai = $item['trang_thai'] ?? true;
-                            $tonKho = $item['so_luong_ton'] ?? 0;
-                            $dinhMuc = $item['dinh_muc_toi_thieu'] ?? 0;
+                            $variantsOfGroup = $group['variants'];
+                            $variantCount = count($variantsOfGroup);
+                            $tonKho = $group['so_luong_ton'];
+                            $trangThai = $group['trang_thai'] ?? true;
+                            $hasVariants = $variantCount > 0;
+                            $isMultiVariant = $variantCount > 1;
+                            $firstVariant = $variantsOfGroup[0] ?? null;
                         @endphp
-                        <tr class="{{ $isUnit ? 'unit-row' : 'variant-row' }}"
-                            style="cursor:pointer; {{ $isUnit ? 'background:#fafafa;' : '' }}"
-                            data-id="{{ $item['id'] }}"
-                            data-type="{{ $item['type'] ?? 'variant' }}"
-                            data-product-id="{{ $item['product_id'] }}"
-                            onclick="window.openProductDrawer && window.openProductDrawer('{{ $item['id'] }}')">
+                        <tr class="product-row"
+                            style="cursor:pointer;"
+                            data-id="{{ $firstVariant['id'] ?? $group['id'] }}"
+                            data-type="product"
+                            data-product-id="{{ $group['product_id'] }}"
+                            data-first-variant-id="{{ $firstVariant['id'] ?? '' }}"
+                            onclick="window.openProductDrawer && window.openProductDrawer('{{ $firstVariant['id'] ?? $group['id'] }}')">
                             <td onclick="event.stopPropagation();">
-                                <input type="checkbox" class="form-check-input product-checkbox" value="{{ $item['id'] }}">
+                                <input type="checkbox" class="form-check-input product-checkbox" value="{{ $group['id'] }}">
+                            </td>
+                            <td onclick="event.stopPropagation();">
+                                @if($hasVariants)
+                                    <span class="toggle-variants-btn" onclick="toggleProductVariants(this, event)" style="cursor:pointer; color:#0d6efd;" title="Xem biến thể ({{ $variantCount }})">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </span>
+                                @endif
                             </td>
                             <td>
-                                @if(!empty($item['hinh_anh']))
-                                    <img src="{{ asset($item['hinh_anh']) }}" alt="{{ $item['ten_san_pham'] }}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
+                                @if(!empty($group['hinh_anh']))
+                                    <img src="{{ asset($group['hinh_anh']) }}" alt="{{ $group['ten_san_pham'] }}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
                                 @else
                                     <div style="width:48px;height:48px;border-radius:6px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;">
                                         <i class="fas fa-image text-muted"></i>
@@ -159,58 +170,112 @@
                                 @endif
                             </td>
                             <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    @if($isUnit)
-                                        <i class="fas fa-arrow-turn-down-right text-muted" style="font-size:0.6rem;"></i>
+                                <div>
+                                    <span class="fw-semibold" style="font-size:0.9rem;">{{ $group['ten_san_pham'] }}</span>
+                                    @if($isMultiVariant)
+                                        <span class="badge bg-light text-muted border ms-1" style="font-size:0.65rem;">{{ $variantCount }} biến thể</span>
                                     @endif
-                                    <div>
-                                        <span class="fw-semibold" style="font-size:0.88rem;">{{ $item['ten_san_pham'] }}</span>
-                                        @if(!empty($item['ten_bien_the']))
-                                            <div class="small text-muted">{{ $item['ten_bien_the'] }}</div>
-                                        @endif
-                                        @if(!empty($item['thuoc_tinh_labels']))
-                                            <div class="d-flex gap-1 mt-1">
-                                                @foreach($item['thuoc_tinh_labels'] as $label)
-                                                    <span class="badge bg-light text-dark border" style="font-size:0.65rem;">{{ $label }}</span>
-                                                @endforeach
-                                            </div>
-                                        @endif
-                                        @if(!empty($item['ma_vach']))
-                                            <div class="small text-muted">#{{ $item['ma_vach'] }}</div>
-                                        @endif
-                                    </div>
                                 </div>
                             </td>
                             <td>
-                                <span class="text-muted small">{{ $item['danh_muc'] ?: '-' }}</span>
+                                <span class="text-muted small">{{ $group['danh_muc'] ?: '-' }}</span>
                             </td>
                             <td>
-                                @if($isUnit)
-                                    <span class="badge bg-info" style="font-size:0.7rem;">Don vi QD</span>
+                                @if($isMultiVariant)
+                                    <span class="fw-semibold text-primary" style="font-size:0.85rem;">
+                                        {{ number_format((float)$group['gia_min'], 0, ',', '.') }} - {{ number_format((float)$group['gia_max'], 0, ',', '.') }} đ
+                                    </span>
                                 @else
-                                    <span class="badge bg-secondary" style="font-size:0.7rem;">Bien the</span>
+                                    <span class="fw-bold text-primary" style="font-size:0.88rem;">
+                                        {{ number_format((float)$group['gia_min'], 0, ',', '.') }} đ
+                                    </span>
                                 @endif
                             </td>
                             <td>
-                                <span class="fw-bold text-primary" style="font-size:0.88rem;">
-                                    {{ number_format((float)($item['gia_ban'] ?? 0), 0, ',', '.') }} d
-                                </span>
-                            </td>
-                            <td>
-                                <span class="{{ $tonKho <= $dinhMuc ? 'text-warning' : 'text-muted' }} small">{{ $tonKho }}</span>
+                                <span class="small text-muted">{{ $tonKho }}</span>
                             </td>
                             <td>
                                 @if(!$trangThai)
-                                    <span class="badge bg-danger">Ngung ban</span>
+                                    <span class="badge bg-danger">Ngưng bán</span>
                                 @elseif($tonKho <= 0)
-                                    <span class="badge bg-secondary">Het hang</span>
-                                @elseif($tonKho <= $dinhMuc)
-                                    <span class="badge bg-warning text-dark">Sap het</span>
+                                    <span class="badge bg-secondary">Hết hàng</span>
                                 @else
-                                    <span class="badge bg-success">Con hang</span>
+                                    <span class="badge bg-success">Còn hàng</span>
                                 @endif
                             </td>
                         </tr>
+                        @if($hasVariants)
+                        <tr class="product-variants-row" data-product-id="{{ $group['id'] }}" style="display:none; background:#fafafa;">
+                            <td colspan="8" style="padding: 14px 20px;">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="fw-semibold small text-muted">
+                                        <i class="fas fa-list-ul me-1"></i>
+                                        Danh sách biến thể & đơn vị quy đổi ({{ $variantCount }})
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none text-muted" onclick="toggleProductVariants(this, event)">
+                                        <i class="fas fa-times"></i> Đóng
+                                    </button>
+                                </div>
+                                <table class="table table-sm mb-0 align-middle" style="background:#fff;">
+                                    <thead class="small text-muted">
+                                        <tr style="background:#f5f5f5;">
+                                            <th>Biến thể</th>
+                                            <th>Thuộc tính</th>
+                                            <th>Mã vạch</th>
+                                            <th class="text-end">Giá bán</th>
+                                            <th class="text-center">Tồn</th>
+                                            <th class="text-center">Đơn vị QĐ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($variantsOfGroup as $v)
+                                            @php $vHasUnits = !empty($v['units']); @endphp
+                                            <tr>
+                                                <td class="small">
+                                                    <span class="fw-semibold">{{ $v['ten_bien_the'] ?: '(Mặc định)' }}</span>
+                                                </td>
+                                                <td class="small">
+                                                    @if(!empty($v['thuoc_tinh_labels']))
+                                                        @foreach($v['thuoc_tinh_labels'] as $label)
+                                                            <span class="badge bg-light text-dark border me-1" style="font-size:0.7rem;">{{ $label }}</span>
+                                                        @endforeach
+                                                    @else
+                                                        <span class="text-muted">-</span>
+                                                    @endif
+                                                </td>
+                                                <td class="small text-muted">{{ $v['ma_vach'] ?? '-' }}</td>
+                                                <td class="small text-end fw-semibold text-primary">{{ number_format((float)($v['gia_ban'] ?? 0), 0, ',', '.') }} đ</td>
+                                                <td class="small text-center">{{ $v['so_luong_ton'] }}</td>
+                                                <td class="small text-center">
+                                                    @if($vHasUnits)
+                                                        <span class="badge bg-info text-dark" style="font-size:0.7rem;">{{ count($v['units']) }} đơn vị</span>
+                                                    @else
+                                                        <span class="text-muted">-</span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                            @if($vHasUnits)
+                                            <tr style="background:#fafafa;">
+                                                <td colspan="6" class="ps-4 py-2">
+                                                    <div class="d-flex flex-wrap gap-3 small">
+                                                        @foreach($v['units'] as $u)
+                                                            <div class="d-inline-flex align-items-center gap-2 bg-white px-2 py-1 rounded border" style="font-size:0.78rem;">
+                                                                <i class="fas fa-cube text-muted"></i>
+                                                                <span class="fw-semibold">{{ $u['ten_don_vi'] }}</span>
+                                                                <span class="text-muted">×{{ $u['ty_le_quy_doi'] }}</span>
+                                                                <span class="text-success fw-semibold">{{ number_format((float)($u['gia_ban_quy_doi'] ?? 0), 0, ',', '.') }} đ</span>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            @endif
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                        @endif
                     @endforeach
                 </tbody>
             </table>

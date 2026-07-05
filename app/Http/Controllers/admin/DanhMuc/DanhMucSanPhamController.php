@@ -7,6 +7,7 @@ use App\Http\Requests\DanhMuc\StoreCreateRequest;
 use App\Http\Requests\DanhMuc\UpdateDanhMucRequest;
 use App\Models\DanhMucSanPham;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
  
 class DanhMucSanPhamController extends Controller
 {
@@ -34,22 +35,31 @@ class DanhMucSanPhamController extends Controller
         // 1. Tìm danh mục sản phẩm theo ID, nếu không thấy sẽ tự trả về lỗi 404
         $danh_muc = DanhMucSanPham::findOrFail($id);
 
-        /* * 2. Kiểm tra xem danh mục này có sản phẩm nào liên kết không.
-         * LƯU Ý: Bạn kiểm tra lại trong Model DanhMucSanPham xem hàm relationship 
-         * đang viết là 'sanPhams' hay 'san_phams' để điền vào đây cho đúng nhé.
-         */
-        if ($danh_muc->sanPhams()->exists()) {
+        // Đếm cả sản phẩm chưa xóa và đã xóa mềm để báo lỗi chính xác.
+        $activeCount = $danh_muc->sanPhams()->count();
+        $trashedCount = $danh_muc->sanPhams()->onlyTrashed()->count();
+
+        if ($activeCount > 0) {
             return redirect()
                 ->route('danh_muc.index')
-                ->with('error', 'Không thể xóa danh mục này vì đang có sản phẩm liên kết với nó!');
+                ->with('error', "Không thể xóa danh mục \"{$danh_muc->ten_danh_muc}\" vì đang có {$activeCount} sản phẩm liên kết. Vui lòng chuyển các sản phẩm sang danh mục khác trước khi xóa.");
+        }
+
+        // Có sản phẩm đã xóa mềm nhưng vẫn liên kết FK → cũng không thể xóa cứng
+        if ($trashedCount > 0) {
+            return redirect()
+                ->route('danh_muc.index')
+                ->with('error', "Không thể xóa danh mục \"{$danh_muc->ten_danh_muc}\" vì vẫn còn {$trashedCount} sản phẩm đã xóa mềm liên kết. Vui lòng xóa vĩnh viễn hoặc khôi phục chúng trước.");
         }
 
         // 3. Nếu không có sản phẩm nào thì tiến hành xóa
-        $danh_muc->delete();
+        DB::transaction(function () use ($danh_muc) {
+            $danh_muc->delete();
+        });
 
         return redirect()
             ->route('danh_muc.index')
-            ->with('success', 'Danh mục sản phẩm đã được xóa thành công.');
+            ->with('success', "Danh mục \"{$danh_muc->ten_danh_muc}\" đã được xóa thành công.");
     }
 
     // Sửa danh mục sản phẩm

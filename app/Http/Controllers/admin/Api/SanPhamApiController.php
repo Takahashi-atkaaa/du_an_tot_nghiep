@@ -42,6 +42,18 @@ class SanPhamApiController extends Controller
             $thuocTinhs = $variant->thuocTinhs();
             $tonKho = $variant->chiTietLoHangTon->sum('so_luong_ton');
 
+            $unitRows = $variant->units->map(fn($u) => [
+                'id' => $u->id,
+                'ten_don_vi' => $u->ten_don_vi,
+                'ty_le_quy_doi' => $u->ty_le_quy_doi,
+                'ma_hang' => $u->ma_hang,
+                'ma_vach' => $u->ma_vach,
+                'gia_von_quy_doi' => $u->gia_von_quy_doi,
+                'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
+                'gia_ban_si' => $u->gia_ban_si,
+                'hinh_anh' => $u->hinh_anh,
+            ])->toArray();
+
             $baseRow = [
                 'id' => $variant->id,
                 'product_id' => $variant->product_id,
@@ -60,34 +72,9 @@ class SanPhamApiController extends Controller
                 'thuoc_tinh_ids' => $variant->thuoc_tinh_ids,
                 'hinh_anh' => $variant->hinh_anh,
                 'trang_thai' => $variant->trang_thai,
-                'units' => [],
+                'units' => $unitRows,
             ];
             $dataArray[] = $baseRow;
-
-            // Mỗi unit là 1 dòng riêng
-            foreach ($variant->units as $unit) {
-                $dataArray[] = [
-                    'id' => $unit->id,
-                    'variant_id' => $variant->id,
-                    'product_id' => $variant->product_id,
-                    'type' => 'unit',
-                    'ten_san_pham' => $variant->product->ten_san_pham ?? '',
-                    'ten_bien_the' => $variant->ten_bien_the,
-                    'ten_hien_thi' => $variant->ten_hien_thi . ' - ' . $unit->ten_don_vi,
-                    'danh_muc' => '',
-                    'ma_hang' => $unit->ma_hang,
-                    'ma_vach' => $unit->ma_vach,
-                    'gia_von' => $unit->gia_von_quy_doi,
-                    'gia_ban' => $unit->gia_ban_quy_doi,
-                    'gia_ban_si' => $unit->gia_ban_si,
-                    'ty_le_quy_doi' => $unit->ty_le_quy_doi,
-                    'so_luong_ton' => $variant->so_luong_ton,
-                    'chi_tiet_lo_hang_ton' => $tonKho,
-                    'thuoc_tinh_labels' => $thuocTinhs->pluck('ten_thuoc_tinh')->toArray(),
-                    'hinh_anh' => $unit->hinh_anh ?: $variant->hinh_anh,
-                    'trang_thai' => $variant->trang_thai,
-                ];
-            }
         }
 
         return response()->json([

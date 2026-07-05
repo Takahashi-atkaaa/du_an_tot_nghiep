@@ -16,7 +16,7 @@ function toggleSection(headerEl) {
 // ============================================================
 (function() {
     var selectAllCheckbox = document.getElementById('selectAllCheckbox');
-    var productCheckboxes = document.querySelectorAll('.product-checkbox');
+    var productCheckboxes = document.querySelectorAll('.product-row .product-checkbox');
     var bulkActionButtons = document.getElementById('bulkActionButtons');
     var selectedCount = document.getElementById('selectedCount');
     var bulkActionForm = document.getElementById('bulkActionForm');
@@ -33,14 +33,35 @@ function toggleSection(headerEl) {
         }
     }
 
-    productCheckboxes.forEach(function(cb) {
-        cb.addEventListener('change', updateBulkUI);
-    });
+    function syncSelectAllState() {
+        if (!selectAllCheckbox) return;
+        var total = productCheckboxes.length;
+        var checkedCount = Array.from(productCheckboxes).filter(function(cb) { return cb.checked; }).length;
+        selectAllCheckbox.checked = total > 0 && checkedCount === total;
+        selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < total;
+    }
+
+    function refreshCheckboxes() {
+        productCheckboxes = document.querySelectorAll('.product-row .product-checkbox');
+        productCheckboxes.forEach(function(cb) {
+            cb.removeEventListener('change', onCheckboxChange);
+            cb.addEventListener('change', onCheckboxChange);
+        });
+        syncSelectAllState();
+    }
+
+    function onCheckboxChange() {
+        updateBulkUI();
+        syncSelectAllState();
+    }
+
+    refreshCheckboxes();
 
     if (selectAllCheckbox) {
         selectAllCheckbox.addEventListener('change', function() {
             productCheckboxes.forEach(function(cb) { cb.checked = this.checked; }, this);
             updateBulkUI();
+            syncSelectAllState();
         });
     }
 
@@ -67,6 +88,8 @@ function toggleSection(headerEl) {
         if (bulkActionInput) bulkActionInput.value = action;
         if (bulkActionForm) bulkActionForm.submit();
     };
+
+    window.refreshBulkActionCheckboxes = refreshCheckboxes;
 })();
 
 // ============================================================
@@ -182,12 +205,48 @@ function toggleSection(headerEl) {
     var productTableBody = document.getElementById('productTableBody');
     if (productTableBody) {
         productTableBody.addEventListener('click', function(e) {
-            var row = e.target.closest('.variant-row, .unit-row, tr[data-id]');
+            // Không trigger drawer khi click vào checkbox, toggle button, hoặc row variants-detail
+            if (e.target.closest('.product-variants-row')) return;
+            if (e.target.closest('.toggle-variants-btn')) return;
+            if (e.target.closest('input[type="checkbox"]')) return;
+            var row = e.target.closest('.product-row, tr[data-id]');
             if (!row) return;
-            var id = row.dataset.id || row.dataset.productId;
+            // Ưu tiên variant_id đầu tiên của product (drawer fetch theo variant)
+            var id = row.dataset.firstVariantId || row.dataset.id || row.dataset.productId;
             if (id) window.openProductDrawer(id);
         });
     }
+
+    // Toggle row danh sách biến thể dưới mỗi product row
+    window.toggleProductVariants = function(el, evt) {
+        if (evt) {
+            evt.stopPropagation();
+            evt.preventDefault();
+        }
+        var productRow = el.closest('.product-row');
+        if (!productRow) {
+            // Trường hợp click vào nút "Đóng" trong row variants
+            var variantsRow = el.closest('.product-variants-row');
+            if (variantsRow) {
+                var pid = variantsRow.dataset.productId;
+                var refRow = document.querySelector('.product-row[data-id="' + pid + '"]');
+                if (refRow) productRow = refRow;
+            }
+            if (!productRow) return;
+        }
+        var productId = productRow.dataset.id;
+        if (!productId) return;
+        var variantsRow = document.querySelector('.product-variants-row[data-product-id="' + productId + '"]');
+        if (!variantsRow) return;
+
+        var isOpen = variantsRow.style.display !== 'none';
+        variantsRow.style.display = isOpen ? 'none' : '';
+        var toggleIcon = productRow.querySelector('.toggle-variants-btn i');
+        if (toggleIcon) {
+            toggleIcon.style.transform = isOpen ? '' : 'rotate(90deg)';
+            toggleIcon.style.transition = 'transform 0.2s ease';
+        }
+    };
 
     window.openProductDrawer = async function(id) {
         var modal = new bootstrap.Offcanvas(drawer);
