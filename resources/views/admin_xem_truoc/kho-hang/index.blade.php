@@ -659,13 +659,15 @@
 </div>
 
 <div class="table-responsive">
-                        
+                    
 <table class="table table-sm table-bordered mb-0">                            
 
 <thead class="table-light">                                
 <tr>                                    
-<th style="width:35%">Sản phẩm</th>
+<th style="width:30%">Sản phẩm</th>
                                     
+<th style="width:22%">Đơn vị nhập <span class="text-danger">*</span></th>
+
 <th style="width:90px">SL nhập</th>
                                     
 <th style="width:110px">Giá nhập</th>
@@ -677,7 +679,7 @@
 </tr>
 </thead>
                             
-<tbody id="pn-ds-sp">                                <tr id="pn-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td>
+<tbody id="pn-ds-sp">                                <tr id="pn-empty-row"><td colspan="6" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td>
 </tr>
 </tbody>
 </table>

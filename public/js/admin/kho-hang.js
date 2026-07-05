@@ -259,7 +259,7 @@ function searchProductsNhap(q, danhMuc) {
                     <td class="text-end align-middle small">${Number(bt.gia_ban || 0).toLocaleString()} d</td>
                     <td class="text-center align-middle"><span class="fw-semibold ${btTonClass}">${btTon.toLocaleString()}</span></td>
                     <td class="text-center align-middle">
-                        <button class="btn btn-sm ${btBtnClass} btn-chon-sp-nhap" data-id="${bt.id}" data-ten="${sp.ten_san_pham} ${attrs.replace(/<[^>]+>/g,'').trim()}" data-gia="${bt.gia_ban || 0}" data-variant="1" ${btDisabled}>
+                        <button class="btn btn-sm ${btBtnClass} btn-chon-sp-nhap" data-id="${bt.id}" data-ten="${sp.ten_san_pham} ${attrs.replace(/<[^>]+>/g,'').trim()}" data-gia="${bt.gia_ban || 0}" data-variant="1" data-units='${JSON.stringify(bt.units || [])}' ${btDisabled}>
                             <i class="fas ${btBtnIcon}"></i> ${btBtnText}
                         </button>
                     </td>
@@ -278,7 +278,7 @@ function searchProductsNhap(q, danhMuc) {
                     <td class="text-center align-middle"><span class="fw-semibold ${tonClass}">${totalTon.toLocaleString()}</span></td>
                     <td class="text-center align-middle">
                         ${expandBtn}
-                        <button class="btn btn-sm ${parentBtnClass} btn-chon-sp-nhap" data-id="${sp.id}" data-ten="${sp.ten_san_pham}" data-gia="${sp.gia_ban || 0}" ${parentDisabled}>
+                        <button class="btn btn-sm ${parentBtnClass} btn-chon-sp-nhap" data-id="${sp.id}" data-ten="${sp.ten_san_pham}" data-gia="${sp.gia_ban || 0}" data-units='${JSON.stringify(sp.units || [])}' ${parentDisabled}>
                             <i class="fas ${parentBtnIcon}"></i> ${parentBtnText}
                         </button>
                     </td>
@@ -320,12 +320,23 @@ $(document).on('click', '.btn-chon-sp-nhap', function () {
     selectedPnProducts.add(id);
     const ten = $(this).data('ten');
     const gia = $(this).data('gia');
+    const unitsJson = $(this).attr('data-units') || '[]';
+    let units = [];
+    try { units = JSON.parse(unitsJson); } catch (e) { units = []; }
+    const unitOptions = (units || []).map(u =>
+        `<option value="${u.id}">${u.ten_don_vi || ''}</option>`
+    ).join('') || '<option value="">-- Chọn đơn vị --</option>';
     const idx = pnIdx++;
     $('#pn-empty-row').remove();
     $('#pn-ds-sp').append(`<tr data-sp-id="${id}">
         <td>
             <div class="fw-semibold small">${ten}</div>
             <input type="hidden" name="chi_tiet[${idx}][variant_id]" value="${id}">
+        </td>
+        <td>
+            <select class="form-select form-select-sm pn-unit-select" name="chi_tiet[${idx}][id_don_vi_quy_doi]" required>
+                ${unitOptions}
+            </select>
         </td>
         <td><input type="number" class="form-control form-control-sm" name="chi_tiet[${idx}][so_luong_nhap]" value="1" min="1"></td>
         <td><input type="number" class="form-control form-control-sm" name="chi_tiet[${idx}][gia_nhap]" value="${gia}" min="0" step="100"></td>
@@ -341,7 +352,7 @@ $(document).on('click', '.btn-remove-pn-row', function () {
     selectedPnProducts.delete(spId);
     tr.remove();
     if (!$('#pn-ds-sp tr').length) {
-        $('#pn-ds-sp').html('<tr id="pn-empty-row"><td colspan="5" class="text-center text-muted py-3">Chua chon san pham nao.</td></tr>');
+        $('#pn-ds-sp').html('<tr id="pn-empty-row"><td colspan="6" class="text-center text-muted py-3">Chua chon san pham nao.</td></tr>');
     }
     const btn = $(`.btn-chon-sp-nhap[data-id="${spId}"]`);
     btn.prop('disabled', false).removeClass('btn-secondary').addClass(btn.data('variant') ? 'btn-success' : 'btn-primary').html(`<i class="fas fa-plus"></i> Chon`);

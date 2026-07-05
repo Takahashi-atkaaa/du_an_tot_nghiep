@@ -124,7 +124,8 @@
                         <table class="table table-sm table-bordered mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th style="width:35%">Sản phẩm</th>
+                                    <th style="width:30%">Sản phẩm</th>
+                                    <th style="width:22%">Đơn vị nhập <span class="text-danger">*</span></th>
                                     <th style="width:90px">SL nhập</th>
                                     <th style="width:110px">Giá nhập</th>
                                     <th style="width:130px">Hạn sử dụng</th>
@@ -224,6 +225,15 @@ $(function () {
         if ($('#danh-sach-sp-nhap tr').length > 1) $(this).closest('tr').remove();
     });
 
+    $(document).on('change', '.pn-sp-select', function () {
+        const row = $(this).closest('tr');
+        const spId = $(this).val();
+        const sp = sanPhamListNhap.find(s => s.id == spId);
+        const units = sp?.units || [];
+        const unitOpts = units.map(u => `<option value="${u.id}">${u.ten_don_vi || ''}</option>`).join('') || '<option value="">-- Chọn đơn vị --</option>';
+        row.find('.pn-unit-select').html(unitOpts);
+    });
+
     $('#form-tao-phieu-nhap').submit(function (e) {
         e.preventDefault();
         const data = layDuLieuFormNhap();
@@ -260,7 +270,7 @@ $(function () {
 });
 
 function taiSanPhamNhap() {
-    $.get('/admin/api/san-pham', res => { sanPhamListNhap = res.data?.data || []; });
+    $.get('/admin/api/san-pham', { include_variants: 1 }, res => { sanPhamListNhap = res.data?.data || []; });
 }
 
 function taiNhaCungCapNhap() {
@@ -271,11 +281,15 @@ function taiNhaCungCapNhap() {
     });
 }
 
-function addPnRow(id, sl, gia, hsd) {
+function addPnRow(id, sl, gia, hsd, donViId) {
     const idx = chiTietNhapIndex++;
-    const opts = sanPhamListNhap.map(sp => `<option value="${sp.id}" ${sp.id == id ? 'selected' : ''}>${sp.ten_san_pham} (${sp.ma_vach || sp.id})</option>`).join('');
+    const spOpts = sanPhamListNhap.map(sp => `<option value="${sp.id}" ${sp.id == id ? 'selected' : ''}>${sp.ten_san_pham} (${sp.ma_vach || sp.id})</option>`).join('');
+    const selectedSp = sanPhamListNhap.find(sp => sp.id == id);
+    const units = selectedSp?.units || [];
+    const unitOpts = units.map(u => `<option value="${u.id}" ${u.id == donViId ? 'selected' : ''}>${u.ten_don_vi || ''}</option>`).join('') || '<option value="">-- Chọn đơn vị --</option>';
     $('#danh-sach-sp-nhap').append(`<tr>
-        <td><select class="form-select form-select-sm" name="chi_tiet[${idx}][id_san_pham]">${opts || '<option value="">-- Chọn --</option>'}</select></td>
+        <td><select class="form-select form-select-sm pn-sp-select" name="chi_tiet[${idx}][variant_id]" data-row="${idx}">${spOpts || '<option value="">-- Chọn --</option>'}</select></td>
+        <td><select class="form-select form-select-sm pn-unit-select" name="chi_tiet[${idx}][id_don_vi_quy_doi]" data-row="${idx}" required>${unitOpts}</select></td>
         <td><input type="number" class="form-control form-control-sm" name="chi_tiet[${idx}][so_luong_nhap]" value="${sl || 1}" min="1"></td>
         <td><input type="number" class="form-control form-control-sm" name="chi_tiet[${idx}][gia_nhap]" value="${gia || 0}" min="0" step="100"></td>
         <td><input type="date" class="form-control form-control-sm" name="chi_tiet[${idx}][han_su_dung]" value="${hsd || ''}"></td>
@@ -286,11 +300,12 @@ function addPnRow(id, sl, gia, hsd) {
 function layDuLieuFormNhap() {
     const chi_tiet = [];
     $('#danh-sach-sp-nhap tr').each(function () {
-        const sp = $(this).find('select').val();
+        const sp = $(this).find('.pn-sp-select').val();
+        const donVi = $(this).find('.pn-unit-select').val();
         const sl = $(this).find('input[name*="so_luong_nhap"]').val();
         const gia = $(this).find('input[name*="gia_nhap"]').val();
         const hsd = $(this).find('input[name*="han_su_dung"]').val();
-        if (sp) chi_tiet.push({ id_san_pham: sp, so_luong: sl, so_luong_nhap: sl, gia_nhap: gia, han_su_dung: hsd });
+        if (sp && donVi) chi_tiet.push({ variant_id: sp, id_don_vi_quy_doi: donVi, so_luong_nhap: sl, gia_nhap: gia, han_su_dung: hsd });
     });
     return {
         loai_nhap: $('#pn-loai-nhap').val(),
