@@ -8,7 +8,8 @@
 
 @section('content')
 
-<!-- Page Header -->
+<h1>Hello WORLD</h1>
+{{-- <!-- Page Header -->
 
 <div class="d-flex justify-content-between align-items-center mb-4">
 
@@ -422,7 +423,7 @@
 
     {{-- Top sản phẩm bán chậm --}}
 
-    <div class="col-xl-6  mb-4">
+    {{-- <div class="col-xl-6  mb-4">
 
         <div class="card table-admin">   
 
@@ -659,10 +660,10 @@
 
     </div>
 
-</div>
+</div> --}}
 
 @endsection
-
+{{-- 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 
@@ -787,4 +788,4 @@ if (chartNam) {
 });
 
 
-</script>
+</script> --}}

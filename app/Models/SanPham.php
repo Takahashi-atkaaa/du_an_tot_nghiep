@@ -21,13 +21,11 @@ class SanPham extends BaseModel
     protected $fillable = [
         'id_danh_muc',
         'ten_san_pham',
-        'thuong_hieu',
+        'hinh_anh',
         'mo_ta',
+        'gia_ban',
+        'dinh_muc_toi_thieu',
         'trang_thai',
-    ];
-
-    protected $casts = [
-        'trang_thai' => 'boolean',
     ];
 
     public function danhMuc()
@@ -37,6 +35,10 @@ class SanPham extends BaseModel
 
     public function bienTheSanPhams()
     {
-        return $this->hasMany(BienTheSanPham::class, 'product_id');
+        return $this->hasMany(BienTheSanPham::class, 'id_san_pham');
+    }
+
+    public function khuyenMaiSanPham(){
+        return $this->hasMany(KhuyenMaiSanPham::class, 'id_san_pham');
     }
 }
