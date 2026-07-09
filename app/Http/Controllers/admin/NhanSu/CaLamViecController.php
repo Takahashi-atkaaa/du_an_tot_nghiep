@@ -15,6 +15,7 @@ class CaLamViecController extends Controller
     {
         // Order by fixed sequence: SA -> CH -> TO -> TO3
         $caLamViecs = CaLamViec::query()
+            ->withCount('chiaCaLamViecs')
             ->orderByRaw("FIELD(ten_ca, 'SA1','SA2','CH1','CH2','TO1','TO2','TO3')")
             ->orderBy('gio_bat_dau')
             ->paginate(5);
@@ -54,6 +55,12 @@ class CaLamViecController extends Controller
 
     public function destroy(CaLamViec $caLamViec): RedirectResponse
     {
+        if ($caLamViec->chiaCaLamViecs()->exists()) {
+            return redirect()
+                ->route('ca-lam-viec.index')
+                ->with('error', 'Không thể xóa ca làm việc này vì đang có nhân viên được phân ca.');
+        }
+
         $caLamViec->delete();
 
         return redirect()
