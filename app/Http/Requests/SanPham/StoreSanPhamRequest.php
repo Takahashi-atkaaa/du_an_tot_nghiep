@@ -27,7 +27,7 @@ class StoreSanPhamRequest extends FormRequest
             'bien_the.*.ten_bien_the' => 'nullable|string|max:255',
             'bien_the.*.thuoc_tinh_ids' => 'nullable|string',
             'bien_the.*.gia_von' => 'nullable|numeric|min:0',
-            'bien_the.*.gia_ban' => 'required|numeric|min:0',
+            'bien_the.*.gia_ban' => 'present|numeric|min:0',
             'bien_the.*.so_luong_ton' => 'nullable|integer|min:0',
             'bien_the.*.dinh_muc_toi_thieu' => 'nullable|integer|min:0',
             'bien_the.*.ma_hang' => 'nullable|string|max:255',
@@ -41,10 +41,10 @@ class StoreSanPhamRequest extends FormRequest
             // Đơn vị quy đổi (nested trong bien_the)
             'bien_the.*.units' => 'sometimes|array',
             'bien_the.*.units.*.id' => 'nullable|integer|exists:don_vi_quy_doi,id',
-            'bien_the.*.units.*.ten_don_vi' => 'required|string|max:255',
-            'bien_the.*.units.*.ty_le_quy_doi' => 'required|integer|min:1',
+            'bien_the.*.units.*.ten_don_vi' => 'present|string|max:255',
+            'bien_the.*.units.*.ty_le_quy_doi' => 'present|integer|min:1',
             'bien_the.*.units.*.gia_von_quy_doi' => 'nullable|numeric|min:0',
-            'bien_the.*.units.*.gia_ban_quy_doi' => 'required|numeric|min:0',
+            'bien_the.*.units.*.gia_ban_quy_doi' => 'present|numeric|min:0',
             'bien_the.*.units.*.gia_ban_si' => 'nullable|numeric|min:0',
             'bien_the.*.units.*.ma_vach' => [
                 'nullable',
@@ -52,6 +52,12 @@ class StoreSanPhamRequest extends FormRequest
                 Rule::unique('don_vi_quy_doi', 'ma_vach'),
             ],
             'bien_the.*.units.*.hinh_anh' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+
+            // Thuộc tính mới: thuoc_tinh do user gõ tạo mới
+            'new_attributes' => 'sometimes|array',
+            'new_attributes.*.group_name' => 'required|string|max:255',
+            'new_attributes.*.label' => 'required|string|max:255',
+            'new_attributes.*.parent_id' => 'nullable|integer|exists:thuoc_tinh_san_pham,id',
         ];
     }
 

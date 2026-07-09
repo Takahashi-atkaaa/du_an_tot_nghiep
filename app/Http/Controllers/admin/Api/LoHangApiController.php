@@ -231,11 +231,13 @@ class LoHangApiController extends Controller
         $ngayHsdNguyHiem = now()->addDays(30)->toDateString();
         $homNay = now()->toDateString();
 
-        $sapHetHsd = ChiTietLoHang::where('so_luong_ton', '>', 0)
+        // Đếm distinct variant (hoặc id_san_pham nếu variant_id NULL) sắp hết HSD
+        $sapHetHsd = DB::table('chi_tiet_lo_hang')
+            ->where('so_luong_ton', '>', 0)
             ->where('han_su_dung', '>=', $homNay)
             ->where('han_su_dung', '<=', $ngayHsdNguyHiem)
-            ->distinct('variant_id')
-            ->count('variant_id');
+            ->selectRaw('COUNT(DISTINCT COALESCE(variant_id, id_san_pham)) as cnt')
+            ->value('cnt');
 
         $duoiDinhMuc = BienTheSanPham::with('product')
             ->whereColumn('bien_the_san_pham.so_luong_ton', '<=', 'bien_the_san_pham.dinh_muc_toi_thieu')

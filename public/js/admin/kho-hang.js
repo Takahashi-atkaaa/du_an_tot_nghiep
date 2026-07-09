@@ -103,6 +103,12 @@ function loadStats() {
         if (total > 0) {
             $('#badge-canh-bao').text(total).show();
         }
+        // Update topbar notification badge
+        if (total > 0) {
+            $('#topbar-notify-badge').text(total).show();
+        } else {
+            $('#topbar-notify-badge').hide();
+        }
     }).fail(function(xhr, status, error) {
         console.error('[KHO-HANG] loadStats FAIL:', status, error, xhr.responseText);
         hienBao('danger', 'Loi loadStats (' + status + '): ' + error);

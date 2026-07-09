@@ -22,6 +22,7 @@
 @if(session('error'))
     <div class="alert alert-danger">{{ session('error') }}</div>
 @endif
+<div id="formErrorBox" class="alert alert-danger d-none mb-3"></div>
 
 <div class="modal fade show d-block" id="editProductModal" tabindex="-1" style="background:rgba(0,0,0,0.5);">
     <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:1100px;margin:2rem auto;">
@@ -44,7 +45,7 @@
                         <span class="text-muted small"><i class="fas fa-info-circle me-1"></i> Kiem tra lai thong tin truoc khi luu</span>
                         <div class="d-flex gap-2">
                             <a href="{{ url('admin/san-pham') }}" class="btn btn-outline-secondary">Huy bo</a>
-                            <button type="button" class="btn btn-success px-4" id="btnLuuSanPham">
+                            <button type="button" class="btn btn-success px-4" id="btnLuuSanPham" disabled>
                                 <span class="spinner-border spinner-border-sm me-1 d-none" id="btnLuuSpinner" role="status"></span>
                                 <i class="fas fa-save me-1" id="btnLuuIcon"></i>Luu thay doi
                             </button>
@@ -61,16 +62,34 @@
 <script src="https://unpkg.com/html5-qrcode@2.3.7/minified/html5-qrcode.min.js"></script>
 <script src="https://unpkg.com/vue@3.4.27/dist/vue.global.prod.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
+@php
+    $attrsPayload = $thuocTinhChas->map(function ($g) {
+        return [
+            'id' => $g->id,
+            'name' => $g->ten_thuoc_tinh,
+            'values' => $g->thuocTinhCons->map(function ($v) {
+                return ['id' => $v->id, 'label' => $v->ten_thuoc_tinh];
+            })->values()->all(),
+        ];
+    })->values()->all();
+$unitsPayload = $donViSanPhams->map(fn($u) => [
+    'id'   => $u->id,
+    'name' => $u->ten_don_vi,
+    'qty'  => $u->so_luong_san_pham_trong_don_vi,
+])->values()->all();
+@endphp
 <script>
-window.thuocTinhChasData = @json($thuocTinhs);
+window.thuocTinhChasData = @json($thuocTinhChas);
 window.__CREATE_PRODUCT_DATA__ = {
     danhMucs: @json($danhMucs->map(fn($d)=>['id'=>$d->id,'ten'=>$d->ten_danh_muc])),
     csrfToken: '{{ csrf_token() }}',
     editMode: true,
-    productData: @json($product->toEditVueData())
+    productData: @json($product->toEditVueData()),
+    availableAttributes: @json($attrsPayload),
+    availableUnits: @json($unitsPayload)
 };
 </script>
-<script src="{{ asset('js/admin/san-pham-create-vue.js') }}"></script>
+<script src="{{ asset('js/admin/san-pham-edit-vue.js') }}"></script>
 <script src="{{ asset('js/admin/san-pham.js') }}"></script>
 @endsection
 

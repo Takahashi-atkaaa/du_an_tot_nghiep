@@ -33,6 +33,53 @@ class Product extends BaseModel
         return $this->hasMany(BienTheSanPham::class, 'product_id');
     }
 
+    // Flattened rows for index table: each row = 1 variant unit (gốc hoặc quy đổi)
+    public function getFlattenedRowsAttribute(): \Illuminate\Support\Collection
+    {
+        $rows = collect();
+
+        foreach ($this->variants as $variant) {
+            // Dòng gốc: đơn vị cơ bản lưu trong ten_bien_the của bien_the_san_pham
+            $rows->push((object)[
+                'loai_dong' => 'goc',
+                'product' => $this,
+                'variant' => $variant,
+                'unit' => null,
+                'ten_don_vi' => $variant->ten_bien_the ?? '',
+                'ty_le' => 1,
+                'gia_ban' => $variant->gia_ban ?? 0,
+                'gia_von' => $variant->gia_von ?? 0,
+                'so_luong_ton' => $variant->so_luong_ton ?? 0,
+                'trang_thai' => $variant->trang_thai,
+                'ma_hang' => $variant->ma_hang ?? '',
+                'ma_vach' => $variant->ma_vach ?? '',
+                'hinh_anh' => $variant->hinh_anh,
+            ]);
+
+            // Các dòng quy đổi
+            foreach ($variant->units as $unit) {
+                $tyLe = (int)($unit->ty_le_quy_doi ?: 1);
+                $rows->push((object)[
+                    'loai_dong' => 'quy_doi',
+                    'product' => $this,
+                    'variant' => $variant,
+                    'unit' => $unit,
+                    'ten_don_vi' => $unit->ten_don_vi ?? '',
+                    'ty_le' => $tyLe,
+                    'gia_ban' => $unit->gia_ban_quy_doi ?? 0,
+                    'gia_von' => $unit->gia_von_quy_doi ?? 0,
+                    'so_luong_ton' => $tyLe > 0 ? (int)floor(($variant->so_luong_ton ?? 0) / $tyLe) : 0,
+                    'trang_thai' => $variant->trang_thai,
+                    'ma_hang' => $unit->ma_hang ?? '',
+                    'ma_vach' => $unit->ma_vach ?? '',
+                    'hinh_anh' => $unit->hinh_anh ?? $variant->hinh_anh,
+                ]);
+            }
+        }
+
+        return $rows;
+    }
+
     // Return structured data for Vue edit initializer
     public function toEditVueData(): array
     {
@@ -52,21 +99,31 @@ class Product extends BaseModel
             'imagePreview' => $first->hinh_anh ? asset($first->hinh_anh) : '',
         ];
 
-        // units: gather distinct units across variants
+        // Collect all units: base from bien_the_san_pham.ten_bien_the + conversion from don_vi_quy_doi
         $units = [];
         foreach ($variants as $v) {
+            $baseName = trim($v->ten_bien_the ?? '');
+            if ($baseName !== '' && !isset($units[$baseName])) {
+                $units[$baseName] = [
+                    'name' => $baseName,
+                    'ty_le_quy_doi' => 1,
+                    'gia_ban_quy_doi' => $v->gia_ban,
+                    'gia_von_quy_doi' => $v->gia_von,
+                    'ma_vach' => $v->ma_vach,
+                    'variant_id' => $v->id,
+                ];
+            }
             foreach ($v->units as $u) {
                 $key = trim($u->ten_don_vi);
                 if ($key === '') continue;
                 if (!isset($units[$key])) {
                     $units[$key] = [
-                        'id' => $u->id,
-                        'name' => $u->ten_don_vi,
+                        'name' => $key,
                         'ty_le_quy_doi' => $u->ty_le_quy_doi,
-                        'gia_von_quy_doi' => $u->gia_von_quy_doi,
                         'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
+                        'gia_von_quy_doi' => $u->gia_von_quy_doi,
                         'ma_vach' => $u->ma_vach,
-                        'la_don_vi_mac_dinh' => $u->la_don_vi_mac_dinh,
+                        'variant_id' => $v->id,
                     ];
                 }
             }
@@ -75,7 +132,7 @@ class Product extends BaseModel
         // attributes groups: collect thuocTinhs from variants
         $groups = [];
         foreach ($variants as $v) {
-            $thuocs = $v->thuocTinhs();
+            $thuocs = $v->thuocTinhs;
             foreach ($thuocs as $t) {
                 $parentName = $t->thuoc_tinh_cha_id ? ($t->parent?->ten_thuoc_tinh ?? 'Thuộc tính') : ($t->ten_thuoc_tinh ?: 'Thuộc tính');
                 $gid = $t->thuoc_tinh_cha_id ? 'g_' . $t->thuoc_tinh_cha_id : 'g_root';
@@ -86,9 +143,18 @@ class Product extends BaseModel
             }
         }
 
-        // map variants to simple array
+        // map variants to simple array — each variant carries its base unit in ten_bien_the
         $variantsArr = [];
         foreach ($variants as $v) {
+            $variantUnits = $v->units->map(fn($u) => [
+                'id' => $u->id,
+                'ten_don_vi' => $u->ten_don_vi,
+                'ty_le_quy_doi' => $u->ty_le_quy_doi,
+                'gia_von_quy_doi' => $u->gia_von_quy_doi,
+                'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
+                'ma_vach' => $u->ma_vach,
+                'la_don_vi_mac_dinh' => $u->la_don_vi_mac_dinh,
+            ])->all();
             $variantsArr[] = [
                 'id' => $v->id,
                 'ten_bien_the' => $v->ten_bien_the,
@@ -99,7 +165,7 @@ class Product extends BaseModel
                 'so_luong_ton' => $v->so_luong_ton,
                 'dinh_muc_toi_thieu' => $v->dinh_muc_toi_thieu,
                 'thuoc_tinh_ids' => $v->thuoc_tinh_ids ?? [],
-                'units' => $v->units->map(fn($u) => ['id' => $u->id, 'ten_don_vi' => $u->ten_don_vi, 'ty_le_quy_doi' => $u->ty_le_quy_doi, 'gia_von_quy_doi' => $u->gia_von_quy_doi, 'gia_ban_quy_doi' => $u->gia_ban_quy_doi, 'ma_vach' => $u->ma_vach, 'la_don_vi_mac_dinh' => $u->la_don_vi_mac_dinh])->all(),
+                'units' => $variantUnits,
             ];
         }
 
@@ -109,25 +175,21 @@ class Product extends BaseModel
         $conversionUnits = [];
 
         if (!empty($unitList)) {
-            $baseUnitItem = null;
-            foreach ($unitList as $u) {
-                if (!empty($u['la_don_vi_mac_dinh'])) {
-                    $baseUnitItem = $u;
-                    break;
+            // Lay don vi dau tien lam base (thuong la don vi co ty_le = 1)
+            $baseUnitItem = $unitList[0];
+            $baseUnit = $baseUnitItem['name'];
+            $basePrice = (float)($baseUnitItem['gia_ban_quy_doi'] ?? $basic['defaultPrice']);
+
+            // Cac don vi con lai = conversion units
+            for ($i = 1; $i < count($unitList); $i++) {
+                $u = $unitList[$i];
+                if (trim($u['name']) !== trim($baseUnit)) {
+                    $conversionUnits[] = $u;
                 }
             }
-            if (!$baseUnitItem) {
-                $baseUnitItem = $unitList[0];
-            }
-            if ($baseUnitItem) {
-                $baseUnit = $baseUnitItem['name'];
-                $basePrice = $baseUnitItem['gia_ban_quy_doi'] ?? $basic['defaultPrice'];
-                foreach ($unitList as $u) {
-                    if (trim($u['name']) !== trim($baseUnit)) {
-                        $conversionUnits[] = $u;
-                    }
-                }
-            }
+        } else {
+            $baseUnit = 'Cái';
+            $basePrice = $basic['defaultPrice'];
         }
 
         return [

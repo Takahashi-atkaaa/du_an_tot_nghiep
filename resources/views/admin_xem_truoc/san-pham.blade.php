@@ -157,11 +157,11 @@
                         $tongTonKho = $sanPham->ton_kho_tong;
                         $giaHienThi = $sanPham->gia_ban_hien_thi;
                     ?>
-                    <tr class="product-row" style="cursor:pointer;" data-product-id="{{ $sanPham->id }}" data-has-variants="{{ $hasVariants ? '1' : '0' }}">
+                    <tr class="product-parent-row" style="cursor:pointer;" data-product-id="{{ $sanPham->id }}" data-target-id="{{ $sanPham->id }}" data-row-type="goc" data-has-variants="{{ $hasVariants ? '1' : '0' }}">
                         <td onclick="event.stopPropagation();">
                             <input type="checkbox" class="form-check-input product-checkbox" value="{{ $sanPham->id }}">
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
                             @if($sanPham->hinh_anh)
                                 <img src="{{ asset($sanPham->hinh_anh) }}"
                                      alt="{{ $sanPham->ten_san_pham }}"
@@ -172,10 +172,10 @@
                                 </div>
                             @endif
                         </td> 
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
                             <span class="text-muted small">#{{ $sanPham->ma_hang ?? $sanPham->ma_vach ?? $sanPham->id }}</span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
                             <div class="d-flex align-items-center gap-2">
                                 @if($hasVariants)
                                     <a href="javascript:void(0)" onclick="event.stopPropagation(); toggleVariants({{ $sanPham->id }})" class="text-decoration-none expand-btn" id="expandBtn{{ $sanPham->id }}" title="Xem biến thể">
@@ -190,28 +190,28 @@
                                 @endif
                             </div>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
                             <span class="text-muted small">{{ $sanPham->danhMuc->ten_danh_muc ?? '-' }}</span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
                             <span class="text-muted small">{{ $sanPham->donVi->ten_don_vi ?? '-' }}</span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
                             <span class="text-muted small text-center d-block">{{ $sanPham->dinh_muc_toi_thieu ?? 0 }}</span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
                             @if(is_numeric($giaHienThi))
                                 <span class="fw-bold text-primary" style="font-size:0.88rem;">{{ number_format($giaHienThi, 0, ',', '.') }} đ</span>
                             @else
                                 <span class="fw-bold text-primary" style="font-size:0.8rem;">{{ $giaHienThi }} đ</span>
                             @endif
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
                             <span class="{{ $tongTonKho <= ($sanPham->dinh_muc_toi_thieu ?? 0) ? 'text-warning' : 'text-muted' }} small">
                                 {{ $tongTonKho }}
                             </span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }});">
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
                             @php
                                 $displayStock = $tongTonKho;
                                 $minStock = $sanPham->dinh_muc_toi_thieu ?? 0;
@@ -230,7 +230,7 @@
                     </tr>
                     {{-- Biến thể rows (hidden by default) --}}
                     @foreach($sanPham->bienThe as $bienThe)
-                    <tr class="variant-row" id="variantRow{{ $sanPham->id }}_{{ $bienThe->id }}" style="display:none; background:#fafafa;">
+                    <tr class="variant-child-row" id="variantRow{{ $sanPham->id }}_{{ $bienThe->id }}" style="display:none; background:#fafafa;" data-product-id="{{ $sanPham->id }}" data-target-id="{{ $bienThe->id }}" data-row-type="goc">
                         <td></td>
                         <td onclick="event.stopPropagation();">
                             @if($bienThe->hinh_anh)
@@ -241,10 +241,10 @@
                                 </div>
                             @endif
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $bienThe->id }}, 'goc');">
                             <span class="text-muted small">#{{ $bienThe->ma_hang ?? $bienThe->ma_vach ?? $bienThe->id }}</span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $bienThe->id }}, 'goc');">
                             <div class="d-flex align-items-center gap-2" style="padding-left:20px;">
                                 <i class="fas fa-arrow-turn-down-right text-muted" style="font-size:0.6rem;"></i>
                                 <span class="text-muted" style="font-size:0.82rem;">
@@ -258,17 +258,17 @@
                             </div>
                         </td>
                         <td></td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $bienThe->id }}, 'goc');">
                             <span class="text-muted small">{{ $bienThe->donVi->ten_don_vi ?? '-' }}</span>
                         </td>
                         <td></td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $bienThe->id }}, 'goc');">
                             <span class="fw-bold text-primary" style="font-size:0.82rem;">{{ number_format($bienThe->gia_ban, 0, ',', '.') }} đ</span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $bienThe->id }}, 'goc');">
                             <span class="{{ ($bienThe->so_luong_ton_kho ?? 0) <= ($bienThe->dinh_muc_toi_thieu ?? 0) ? 'text-warning' : 'text-muted' }} small">{{ $bienThe->so_luong_ton_kho ?? 0 }}</span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $bienThe->id }});">
+                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $bienThe->id }}, 'goc');">
                             @if(!$bienThe->trang_thai)
                                 <span class="badge bg-danger">Ngừng</span>
                             @elseif(($bienThe->so_luong_ton_kho ?? 0) <= 0)
