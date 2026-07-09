@@ -731,6 +731,7 @@ body {
     border-radius: 11px;
 }
 
+
 /* SCROLLBAR */
 ::-webkit-scrollbar {
     width: 6px;
@@ -772,6 +773,58 @@ body {
         display: none;
     }
 }
+.pos-product-card{
+    min-height:260px;
+}
+.invoice-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #fff;
+}
+
+#invoiceTabs {
+    display: flex;
+    gap: 6px;
+    flex: 1;
+    overflow-x: auto;
+}
+
+.invoice-tab {
+    padding: 7px 12px;
+    border-radius: 10px;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.invoice-tab.active {
+    background: #16803a;
+    color: #fff;
+}
+
+.invoice-tab .close-tab {
+    margin-left: 8px;
+    color: #ef4444;
+    font-weight: 900;
+}
+
+.btn-new-invoice {
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 10px;
+    background: #16803a;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 900;
+}
+
     </style>
 </head>
 <body>
@@ -1018,6 +1071,13 @@ body {
 
     <!-- Cart Panel -->
     <div class="pos-cart">
+        <div class="invoice-tabs">
+    <div id="invoiceTabs"></div>
+
+    <button type="button" class="btn-new-invoice" onclick="createInvoice()">
+        +
+    </button>
+</div>
         <div class="cart-header">
             <h5>
                 <i class="fas fa-shopping-basket"></i>
@@ -1109,7 +1169,7 @@ body {
                     <i class="fas fa-money-bill-wave"></i>
                     Tiền mặt
                 </button>
-                <button class="pay-btn" data-method="transfer" onclick="selectPayment('transfer')">
+                <button class="pay-btn" data-method="transfer" onclick="selectPayment('transfer'); ">
                     <i class="fas fa-university"></i>
                     Chuyển khoản
                 </button>
@@ -1189,6 +1249,164 @@ async function loadProducts() {
 let cart = [];
 let currentCategory = 'all';
 let selectedPayment = 'cash';
+let invoiceTabs = [
+    {
+        id: 1,
+        name: 'HD1',
+        cart: [],
+        customer: null,
+        promotion: null,
+        payment: 'cash',
+        usePoint: 0,
+        customerMoney: ''
+    }
+];
+
+function getCurrentInvoice() {
+    return invoiceTabs[currentTab];
+}
+function closePaidInvoiceTab() {
+    // Xóa tab vừa thanh toán
+    invoiceTabs.splice(currentTab, 1);
+
+    // Nếu vẫn còn tab khác thì tự chuyển về tab gần nhất
+    if (invoiceTabs.length > 0) {
+        if (currentTab >= invoiceTabs.length) {
+            currentTab = invoiceTabs.length - 1;
+        }
+    } else {
+        // Nếu hết tab thì tạo hóa đơn mới trống
+        tabIndex++;
+
+        invoiceTabs.push({
+            id: tabIndex,
+            name: 'HD' + tabIndex,
+            cart: [],
+            customer: null,
+            promotion: null,
+            payment: 'cash',
+            usePoint: 0,
+            customerMoney: ''
+        });
+
+        currentTab = 0;
+    }
+
+    loadCurrentInvoiceForm();
+    renderInvoiceTabs();
+    renderCart();
+}
+
+function getCurrentCart() {
+    return getCurrentInvoice().cart;
+}
+
+let currentTab = 0;
+let tabIndex = 1;
+
+function renderInvoiceTabs() {
+    const box = document.getElementById('invoiceTabs');
+
+    box.innerHTML = invoiceTabs.map((tab, index) => `
+        <div class="invoice-tab ${index === currentTab ? 'active' : ''}"
+             onclick="switchInvoiceTab(${index})">
+            ${tab.name}
+            ${invoiceTabs.length > 1 ? `
+                <span class="close-tab"
+                      onclick="event.stopPropagation(); closeInvoiceTab(${index})">×</span>
+            ` : ''}
+        </div>
+    `).join('');
+}
+
+function switchInvoiceTab(index) {
+    saveCurrentInvoiceForm();
+
+    currentTab = index;
+
+    loadCurrentInvoiceForm();
+    renderInvoiceTabs();
+    renderCart();
+}
+function saveCurrentInvoiceForm() {
+    const invoice = getCurrentInvoice();
+
+    invoice.customer = selectedCustomer;
+    invoice.promotion = selectedPromotion;
+    invoice.payment = selectedPayment;
+    invoice.usePoint = parseInt(document.getElementById('usePoint')?.value || 0);
+    invoice.customerMoney = document.getElementById('customerMoney')?.value || '';
+}
+
+function loadCurrentInvoiceForm() {
+    const invoice = getCurrentInvoice();
+
+    selectedCustomer = invoice.customer;
+    selectedPromotion = invoice.promotion;
+    selectedPayment = invoice.payment || 'cash';
+
+    document.getElementById('usePoint').value = invoice.usePoint || 0;
+    document.getElementById('customerMoney').value = invoice.customerMoney || '';
+
+    if (selectedCustomer) {
+        document.getElementById('selectedCustomerId').value = selectedCustomer.id;
+        document.getElementById('customerPoint').innerText = selectedCustomer.diem_tich_luy ?? 0;
+        document.getElementById('selectedCustomerText').innerHTML =
+            `<strong>${selectedCustomer.ten_khach_hang}</strong> - ${selectedCustomer.so_dien_thoai ?? ''} - Điểm: ${selectedCustomer.diem_tich_luy ?? 0}`;
+        document.getElementById('selectedCustomerBox').style.display = 'block';
+    } else {
+        document.getElementById('selectedCustomerId').value = '';
+        document.getElementById('customerPoint').innerText = '0';
+        document.getElementById('selectedCustomerBox').style.display = 'none';
+    }
+
+    document.getElementById('promotionSelect').value = selectedPromotion ? selectedPromotion.id : '';
+
+    document.querySelectorAll('.pay-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.method === selectedPayment);
+    });
+
+    calculateTotal();
+    calculateChange();
+}
+
+function createInvoice() {
+    if (invoiceTabs.length >= 5) {
+        showToast('Chỉ được mở tối đa 5 hóa đơn!', 'error');
+        return;
+    }
+
+    tabIndex++;
+
+    invoiceTabs.push({
+    id: tabIndex,
+    name: 'HD' + tabIndex,
+    cart: [],
+    customer: null,
+    promotion: null,
+    payment: 'cash',
+    usePoint: 0,
+    customerMoney: ''
+});
+
+    currentTab = invoiceTabs.length - 1;
+    renderInvoiceTabs();
+}
+
+function closeInvoiceTab(index) {
+    if (invoiceTabs.length <= 1) return;
+
+    if (!confirm('Đóng hóa đơn này?')) return;
+
+    invoiceTabs.splice(index, 1);
+
+    if (currentTab >= invoiceTabs.length) {
+        currentTab = invoiceTabs.length - 1;
+    }
+
+    renderInvoiceTabs();
+    renderCart();
+}
 
 // ─────────────────────────────────────────────
 // Clock
@@ -1209,6 +1427,75 @@ setInterval(updateClock, 1000);
 function formatCurrency(num) {
     return new Intl.NumberFormat('vi-VN').format(num) + 'đ';
 }
+function getCurrentTotal() {
+    const cart = getCurrentCart();
+    const subtotal = cart.reduce(
+        (sum, item) => sum + Number(item.gia_ban) * item.qty,
+        0
+    );
+
+    const promotionDiscount = tinhTienGiam(subtotal);
+
+    const customerPoint = selectedCustomer
+        ? Number(selectedCustomer.diem_tich_luy)
+        : 0;
+
+    let usePoint = parseInt(document.getElementById("usePoint").value) || 0;
+    usePoint = Math.min(usePoint, customerPoint);
+
+    const maxUsePoint = Math.floor(
+        Math.max(0, subtotal - promotionDiscount) / 100
+    );
+
+    usePoint = Math.min(usePoint, maxUsePoint);
+
+    const pointDiscount = usePoint * 100;
+
+    return Math.max(0, subtotal - promotionDiscount - pointDiscount);
+}
+
+function showQrPayment() {
+    const cart = getCurrentCart();
+
+if (cart.length === 0) {
+    showToast('Giỏ hàng trống!', 'error');
+    return;
+}
+
+    const total = getCurrentTotal();
+    const content = 'SMARTMART' + Date.now();
+
+    const bankId = 'MB';
+    const accountNo = '0345511263';
+    const accountName = 'NGUYEN KHAC HUY';
+
+    const qrUrl =
+        `https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png` +
+        `?amount=${total}` +
+        `&addInfo=${encodeURIComponent(content)}` +
+        `&accountName=${encodeURIComponent(accountName)}`;
+
+    document.getElementById('qrPaymentImg').src = qrUrl;
+    document.getElementById('qrPaymentAmount').innerText = formatCurrency(total);
+    document.getElementById('qrPaymentContent').innerText = content;
+
+    new bootstrap.Modal(document.getElementById('qrPaymentModal')).show();
+}
+function confirmTransferPaid() {
+
+    const modal = bootstrap.Modal.getInstance(
+        document.getElementById('qrPaymentModal')
+    );
+
+    if(modal){
+        modal.hide();
+    }
+
+    processPayment(true);
+
+}
+
+
 
 // ─────────────────────────────────────────────
 // Render Products
@@ -1221,6 +1508,7 @@ function renderProducts(filter = '') {
         const q = filter.toLowerCase();
         filtered = filtered.filter(p =>
             (p.ten_san_pham && p.ten_san_pham.toLowerCase().includes(q)) ||
+            (p.ma_hang && String(p.ma_hang).toLowerCase().includes(q)) ||
             (p.ma_vach && String(p.ma_vach).toLowerCase().includes(q))
         );
     }
@@ -1237,20 +1525,34 @@ function renderProducts(filter = '') {
 
     grid.innerHTML = filtered.map(p => {
         const ten = p.ten_san_pham ?? 'Chưa có tên';
-        const gia = Number(p.gia_ban ?? 0);
+
+        const gia = Number(
+            p.gia_ban ??
+            p.gia ??
+            p.don_gia ??
+            p.gia_ban_le ??
+            0
+        );
+
         const ton = Number(p.so_luong_ton_kho ?? 0);
-      const hinh = p.hinh_anh
-    ? '/' + p.hinh_anh.replace(/^\/+/, '')
-    : 'https://via.placeholder.com/300x300?text=No+Image';
+
+        const hinh = p.hinh_anh
+            ? '/' + p.hinh_anh.replace(/^\/+/, '')
+            : 'https://via.placeholder.com/300x300?text=No+Image';
 
         return `
             <div class="pos-product-card" onclick="addToCart(${p.id})">
                 <div class="product-img">
                     <img src="${hinh}" alt="${ten}">
                 </div>
+
                 <div class="product-info">
                     <div class="product-name">${ten}</div>
-                    <div class="product-price">${formatCurrency(gia)}</div>
+
+                    <div class="product-price">
+                        ${formatCurrency(gia)}
+                    </div>
+
                     <div class="product-stock ${ton < 5 ? 'low' : ''}">
                         ${ton < 5 ? '⚠ Sắp hết' : 'Còn ' + ton}
                     </div>
@@ -1287,6 +1589,7 @@ function addToCart(id) {
     const product = products.find(p => p.id === id);
     if (!product) return;
 
+    const cart = getCurrentCart();
     const existing = cart.find(item => item.id === id);
 
     if (existing) {
@@ -1314,6 +1617,7 @@ function addToCart(id) {
 // Render Cart
 // ─────────────────────────────────────────────
 function renderCart() {
+    const cart = getCurrentCart();
     const container = document.getElementById('cartItems');
     const count = document.getElementById('cartCount');
     const summary = document.getElementById('cartSummary');
@@ -1371,7 +1675,7 @@ function renderCart() {
 
 
 function calculateTotal() {
-
+    const cart = getCurrentCart();
     const subtotal = cart.reduce(
         (sum, item) => sum + Number(item.gia_ban) * item.qty,
         0
@@ -1437,6 +1741,7 @@ function calculateTotal() {
 // Update Quantity
 // ─────────────────────────────────────────────
 function updateQuantity(id, change) {
+    const cart = getCurrentCart();
     const item = cart.find(i => i.id === id);
     if (!item) return;
     item.qty += change;
@@ -1451,7 +1756,7 @@ function updateQuantity(id, change) {
 // Remove from Cart
 // ─────────────────────────────────────────────
 function removeFromCart(id) {
-    cart = cart.filter(i => i.id !== id);
+    invoiceTabs[currentTab].cart = getCurrentCart().filter(i => i.id !== id);
     renderCart();
 }
 
@@ -1459,8 +1764,8 @@ function removeFromCart(id) {
 // Clear Cart
 // ─────────────────────────────────────────────
 function clearCart() {
-    if (cart.length === 0) return;
-    cart = [];
+    if (getCurrentCart().length === 0) return;
+    invoiceTabs[currentTab].cart = [];
 
 // reset khách hàng
 selectedCustomer = null;
@@ -1490,7 +1795,7 @@ showToast("Đã xóa giỏ hàng");
 // Calculate Change
 // ─────────────────────────────────────────────
 function calculateChange() {
-
+    const cart = getCurrentCart();
     const subtotal = cart.reduce(
         (sum, item) => sum + Number(item.gia_ban) * item.qty,
         0
@@ -1537,20 +1842,31 @@ const pointDiscount = usePoint * 100;
 // Select Payment Method
 // ─────────────────────────────────────────────
 function selectPayment(method) {
+
     selectedPayment = method;
+    getCurrentInvoice().payment = method;
+
     document.querySelectorAll('.pay-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.method === method);
     });
+
 }
 
 // ─────────────────────────────────────────────
 // Process Payment
 // ─────────────────────────────────────────────
-async function processPayment() {
+async function processPayment(isTransferConfirmed = false) {
+    const cart = getCurrentCart();
     if (cart.length === 0) {
         showToast('Giỏ hàng trống!', 'error');
         return;
     }
+    if (selectedPayment === 'transfer' && !isTransferConfirmed) {
+
+    showQrPayment();
+
+    return;
+}
 
   
 const subtotal = cart.reduce(
@@ -1635,13 +1951,16 @@ const response = await fetch('/nhan-vien/ban-hang/thanh-toan', {
             'Mã hóa đơn: #' + data.hoa_don_id + '\n' +
             'Tổng tiền: ' + formatCurrency(total)
         );
-        window.open('/nhan-vien/hoa-don/' + data.hoa_don_id, '_blank');
+        const hoaDonId = data.hoa_don_id;
 
+// Đóng tab vừa thanh toán
+closePaidInvoiceTab();
 
-        clearCart();
-        loadProducts();
+// Cập nhật lại sản phẩm
+loadProducts();
 
-        showToast('Thanh toán thành công!');
+// Hỏi có muốn in không
+showPrintInvoiceDialog(hoaDonId);
     } catch (error) {
         console.error(error);
         showToast('Lỗi kết nối máy chủ!', 'error');
@@ -1754,7 +2073,7 @@ function searchCustomers() {
 
 function selectCustomer(customer) {
     selectedCustomer = customer;
-
+    getCurrentInvoice().customer = customer;
 document.getElementById("customerPoint").innerText =
     customer.diem_tich_luy;
 
@@ -1776,6 +2095,7 @@ document.getElementById("usePoint").value = 0;
 
 function clearSelectedCustomer() {
     selectedCustomer = null;
+    getCurrentInvoice().customer = null;
     document.getElementById('selectedCustomerId').value = '';
     document.getElementById('selectedCustomerBox').style.display = 'none';
     document.getElementById("customerPoint").innerText = "0";
@@ -1846,6 +2166,7 @@ function applyPromotion() {
     const id = document.getElementById('promotionSelect').value;
 
     selectedPromotion = promotions.find(km => String(km.id) === String(id)) || null;
+    getCurrentInvoice().promotion = selectedPromotion;
 
     renderCart();
     calculateTotal();
@@ -1963,12 +2284,110 @@ async function saveCustomerQuick() {
         showToast('Không thể thêm khách hàng', 'danger');
     }
 }
+function showPrintInvoiceDialog(hoaDonId) {
+
+    document.getElementById('btnPrintInvoice').onclick = function () {
+
+        window.open(
+            '/nhan-vien/hoa-don/' + hoaDonId + '/in',
+            '_blank'
+        );
+
+        bootstrap.Modal
+            .getInstance(document.getElementById('printInvoiceModal'))
+            .hide();
+
+    };
+
+    new bootstrap.Modal(
+        document.getElementById('printInvoiceModal')
+    ).show();
+
+}
 // ─────────────────────────────────────────────
 // Init
 // ─────────────────────────────────────────────
 loadCategories();
 loadProducts();
 loadPromotions();
+renderInvoiceTabs();
 </script>
+<div class="modal fade" id="qrPaymentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-qrcode me-2"></i>QR thanh toán
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body text-center">
+                <img id="qrPaymentImg" src="" style="width:280px;max-width:100%;" class="mb-3">
+
+                <h5 class="fw-bold text-success" id="qrPaymentAmount">0đ</h5>
+                <p class="text-muted mb-1">Ngân hàng: MB Bank</p>
+                <p class="text-muted mb-1">STK: 0123456789</p>
+                <p class="text-muted">Nội dung: <strong id="qrPaymentContent">SMARTMART</strong></p>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-success" onclick="confirmTransferPaid()">
+    Đã nhận tiền
+</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="printInvoiceModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Thanh toán thành công
+                </h5>
+            </div>
+
+            <div class="modal-body text-center">
+
+                <i class="fas fa-receipt text-success"
+                   style="font-size:60px;margin-bottom:15px;"></i>
+
+                <h5>Thanh toán thành công!</h5>
+
+                <p class="text-muted">
+                    Bạn có muốn in hóa đơn không?
+                </p>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal">
+
+                    Không
+
+                </button>
+
+                <button
+                    id="btnPrintInvoice"
+                    class="btn btn-success">
+
+                    <i class="fas fa-print me-1"></i>
+
+                    In hóa đơn
+
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+</div>
 </body>
 </html>

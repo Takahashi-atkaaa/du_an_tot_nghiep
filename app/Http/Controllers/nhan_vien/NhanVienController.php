@@ -267,33 +267,44 @@ class NhanVienController extends Controller
     {
         return Str::of((string) $vaiTro)->lower()->ascii()->value() === 'admin';
     }
-   public function laySanPham(Request $request)
+ public function laySanPham(Request $request)
 {
-    $query = SanPham::query()
-        ->where('trang_thai', 1)
-        ->where('so_luong_ton_kho', '>', 0);
+    $query = DB::table('bien_the_san_pham')
+        ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
+        ->where('san_pham.trang_thai', 1)
+        ->where('bien_the_san_pham.trang_thai', 1)
+        ->whereNull('san_pham.deleted_at')
+        ->whereNull('bien_the_san_pham.deleted_at')
+        ->where('bien_the_san_pham.so_luong_ton', '>', 0);
 
     if ($request->filled('id_danh_muc') && $request->id_danh_muc !== 'all') {
-        $query->where('id_danh_muc', $request->id_danh_muc);
+        $query->where('san_pham.id_danh_muc', $request->id_danh_muc);
     }
 
     if ($request->filled('q')) {
-        $query->where(function ($q) use ($request) {
-            $q->where('ten_san_pham', 'like', '%' . $request->q . '%')
-              ->orWhere('ma_vach', 'like', '%' . $request->q . '%');
+        $keyword = $request->q;
+
+        $query->where(function ($q) use ($keyword) {
+            $q->where('san_pham.ten_san_pham', 'like', "%{$keyword}%")
+              ->orWhere('bien_the_san_pham.ma_hang', 'like', "%{$keyword}%")
+              ->orWhere('bien_the_san_pham.ma_vach', 'like', "%{$keyword}%")
+              ->orWhere('bien_the_san_pham.ten_bien_the', 'like', "%{$keyword}%");
         });
     }
 
     return response()->json(
         $query->select(
-            'id',
-            'id_danh_muc',
-            'ten_san_pham',
-            'ma_vach',
-            'gia_ban',
-            'so_luong_ton_kho',
-            'hinh_anh'
-        )->orderBy('id', 'desc')->get()
+            'bien_the_san_pham.id',
+            'san_pham.id as id_san_pham',
+            'san_pham.id_danh_muc',
+            DB::raw("CONCAT(san_pham.ten_san_pham, ' - ', bien_the_san_pham.ten_bien_the) as ten_san_pham"),
+            'bien_the_san_pham.ma_vach',
+            'bien_the_san_pham.gia_ban',
+            'bien_the_san_pham.so_luong_ton as so_luong_ton_kho',
+            'bien_the_san_pham.hinh_anh'
+        )
+        ->orderByDesc('bien_the_san_pham.id')
+        ->get()
     );
 }
 public function layDanhMuc()
@@ -310,7 +321,7 @@ public function thanhToan(Request $request)
 {
     $request->validate([
         'cart' => 'required|array|min:1',
-        'cart.*.id' => 'required|integer|exists:san_pham,id',
+        'cart.*.id' => 'required|integer|exists:bien_the_san_pham,id',
         'cart.*.qty' => 'required|integer|min:1',
         'tien_khach_dua' => 'required|numeric|min:0',
         'phuong_thuc_thanh_toan' => 'required|string',
@@ -324,91 +335,89 @@ public function thanhToan(Request $request)
         $items = [];
 
         foreach ($request->cart as $item) {
-            $sanPham = SanPham::lockForUpdate()->findOrFail($item['id']);
+            $bienThe = DB::table('bien_the_san_pham')
+                ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
+                ->where('bien_the_san_pham.id', $item['id'])
+                ->whereNull('bien_the_san_pham.deleted_at')
+                ->whereNull('san_pham.deleted_at')
+                ->select(
+                    'bien_the_san_pham.*',
+                    'san_pham.ten_san_pham'
+                )
+                ->lockForUpdate()
+                ->first();
 
-            if ($sanPham->so_luong_ton_kho < $item['qty']) {
+            if (!$bienThe) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Sản phẩm "' . $sanPham->ten_san_pham . '" không đủ tồn kho.'
+                    'message' => 'Không tìm thấy sản phẩm.'
                 ], 422);
             }
 
-            $thanhTien = $sanPham->gia_ban * $item['qty'];
+            if ((int)$bienThe->so_luong_ton < (int)$item['qty']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Sản phẩm "' . $bienThe->ten_san_pham . '" không đủ tồn kho.'
+                ], 422);
+            }
+
+            $thanhTien = $bienThe->gia_ban * $item['qty'];
             $tongTienHang += $thanhTien;
 
             $items[] = [
-                'san_pham' => $sanPham,
-                'so_luong' => $item['qty'],
-                'gia_ban' => $sanPham->gia_ban,
+                'bien_the' => $bienThe,
+                'so_luong' => (int)$item['qty'],
+                'gia_ban' => $bienThe->gia_ban,
                 'thanh_tien' => $thanhTien,
             ];
         }
 
         $tienGiamGia = 0;
-        $diemSuDung = (int)$request->diem_su_dung;
-        if ($request->id_khuyen_mai) {
+        $diemSuDung = (int)($request->diem_su_dung ?? 0);
 
+        if ($request->id_khuyen_mai) {
             $khuyenMai = DB::table('khuyen_mai')
                 ->where('id', $request->id_khuyen_mai)
                 ->where('trang_thai', 1)
                 ->first();
 
             if ($khuyenMai) {
-
                 $tongSoLuong = collect($items)->sum('so_luong');
 
                 if (
-                    $tongTienHang >= $khuyenMai->don_hang_toi_thieu &&
-                    $tongSoLuong >= $khuyenMai->so_luong_sp_toi_thieu
+                    $tongTienHang >= ($khuyenMai->don_hang_toi_thieu ?? 0) &&
+                    $tongSoLuong >= ($khuyenMai->so_luong_sp_toi_thieu ?? 0)
                 ) {
-
                     switch ($khuyenMai->loai_giam_gia) {
-
                         case 'phan_tram':
+                            $tienGiamGia = $tongTienHang * $khuyenMai->gia_tri_giam / 100;
 
-                            $tienGiamGia =
-                                $tongTienHang * $khuyenMai->gia_tri_giam / 100;
-
-                            if ($khuyenMai->giam_toi_da) {
-                                $tienGiamGia = min(
-                                    $tienGiamGia,
-                                    $khuyenMai->giam_toi_da
-                                );
+                            if (!empty($khuyenMai->giam_toi_da)) {
+                                $tienGiamGia = min($tienGiamGia, $khuyenMai->giam_toi_da);
                             }
-
                             break;
 
                         case 'bogo':
-
                             foreach ($items as $item) {
-
                                 $freeQty = floor($item['so_luong'] / 2);
-
-                                $tienGiamGia +=
-                                    $freeQty * $item['gia_ban'];
+                                $tienGiamGia += $freeQty * $item['gia_ban'];
                             }
-
                             break;
 
                         default:
-
-                            $tienGiamGia =
-                                $khuyenMai->gia_tri_giam;
+                            $tienGiamGia = $khuyenMai->gia_tri_giam ?? 0;
+                            break;
                     }
 
-                    $tienGiamGia = min(
-                        $tienGiamGia,
-                        $tongTienHang
-                    );
+                    $tienGiamGia = min($tienGiamGia, $tongTienHang);
                 }
             }
         }
+
         $khachHang = null;
 
         if ($request->id_khach_hang) {
-
-            $khachHang = KhachHang::lockForUpdate()
-                ->find($request->id_khach_hang);
+            $khachHang = KhachHang::lockForUpdate()->find($request->id_khach_hang);
 
             if (!$khachHang) {
                 return response()->json([
@@ -417,44 +426,37 @@ public function thanhToan(Request $request)
                 ], 422);
             }
 
-            $maxUsePoint = floor(
-                max(0, $tongTienHang - $tienGiamGia) / 100
-            );
+            $maxUsePoint = floor(max(0, $tongTienHang - $tienGiamGia) / 100);
 
             $diemSuDung = min(
                 $diemSuDung,
-                $khachHang->diem_tich_luy,
-                $maxUsePoint
+                (int)$khachHang->diem_tich_luy,
+                (int)$maxUsePoint
             );
 
             $tienGiamGia += $diemSuDung * 100;
-            }
-
-            $khachCanTra = max(
-                0,
-                $tongTienHang - $tienGiamGia
-            );
-
-
-        
+        }
 
         $khachCanTra = max(0, $tongTienHang - $tienGiamGia);
-        $tienKhachDua = $request->tien_khach_dua;
+        $tienKhachDua = (float)$request->tien_khach_dua;
         $tienThua = max(0, $tienKhachDua - $khachCanTra);
-        // 10.000 VNĐ = 1 điểm
         $diemThuDuoc = floor($khachCanTra / 10000);
+
         $phuongThucMap = [
-        'cash' => 'Tiền mặt',
-        'transfer' => 'Chuyển khoản',
-         'card' => 'Quẹt thẻ',
-         'tien_mat' => 'Tiền mặt',
+            'cash' => 'Tiền mặt',
+            'transfer' => 'Chuyển khoản',
+            'card' => 'Quẹt thẻ',
+            'tien_mat' => 'Tiền mặt',
             'chuyen_khoan' => 'Chuyển khoản',
         ];
 
         $phuongThucThanhToan = $phuongThucMap[$request->phuong_thuc_thanh_toan]
-         ?? $request->phuong_thuc_thanh_toan;
+            ?? $request->phuong_thuc_thanh_toan;
 
-        if ($request->phuong_thuc_thanh_toan === 'cash' && $tienKhachDua < $khachCanTra) {
+        if (
+            in_array($request->phuong_thuc_thanh_toan, ['cash', 'tien_mat']) &&
+            $tienKhachDua < $khachCanTra
+        ) {
             return response()->json([
                 'success' => false,
                 'message' => 'Tiền khách đưa chưa đủ.'
@@ -478,25 +480,18 @@ public function thanhToan(Request $request)
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-// Cộng điểm cho khách hàng
-if ($request->id_khach_hang) {
 
-    $khachHang = KhachHang::lockForUpdate()
-        ->find($request->id_khach_hang);
+        if ($khachHang) {
+            $diemMoi = $khachHang->diem_tich_luy - $diemSuDung + $diemThuDuoc;
 
-    if ($khachHang) {
+            DB::table('khach_hang')
+                ->where('id', $khachHang->id)
+                ->update([
+                    'diem_tich_luy' => $diemMoi,
+                    'tong_chi_tieu' => $khachHang->tong_chi_tieu + $khachCanTra,
+                    'updated_at' => now(),
+                ]);
 
-      $diemMoi = $khachHang->diem_tich_luy - $diemSuDung + $diemThuDuoc;
-
-        DB::table('khach_hang')
-            ->where('id', $khachHang->id)
-            ->update([
-                'diem_tich_luy' => $diemMoi,
-                'tong_chi_tieu' => $khachHang->tong_chi_tieu + $khachCanTra,
-                'updated_at' => now(),
-            ]);
-
-            
             if ($diemSuDung > 0) {
                 DB::table('lich_su_tich_diem')->insert([
                     'id_khach_hang' => $khachHang->id,
@@ -507,21 +502,23 @@ if ($request->id_khach_hang) {
                     'created_at' => now(),
                 ]);
             }
-        // Lưu lịch sử tích điểm
-        DB::table('lich_su_tich_diem')->insert([
-            'id_khach_hang' => $khachHang->id,
-            'id_hoa_don' => $hoaDonId,
-            'loai_bien_dong' => 'cong',
-            'so_diem' => $diemThuDuoc,
-            'ly_do' => 'Tích điểm từ hóa đơn',
-            'created_at' => now(),
-        ]);
-    }
-}
+
+            if ($diemThuDuoc > 0) {
+                DB::table('lich_su_tich_diem')->insert([
+                    'id_khach_hang' => $khachHang->id,
+                    'id_hoa_don' => $hoaDonId,
+                    'loai_bien_dong' => 'cong',
+                    'so_diem' => $diemThuDuoc,
+                    'ly_do' => 'Tích điểm từ hóa đơn',
+                    'created_at' => now(),
+                ]);
+            }
+        }
+
         foreach ($items as $item) {
             DB::table('chi_tiet_hoa_don')->insert([
                 'id_hoa_don' => $hoaDonId,
-                'id_san_pham' => $item['san_pham']->id,
+                'id_san_pham' => $item['bien_the']->product_id,
                 'id_chi_tiet_phieu' => null,
                 'so_luong' => $item['so_luong'],
                 'gia_ban' => $item['gia_ban'],
@@ -530,7 +527,9 @@ if ($request->id_khach_hang) {
                 'updated_at' => now(),
             ]);
 
-            $item['san_pham']->decrement('so_luong_ton_kho', $item['so_luong']);
+            DB::table('bien_the_san_pham')
+                ->where('id', $item['bien_the']->id)
+                ->decrement('so_luong_ton', $item['so_luong']);
         }
 
         return response()->json([
@@ -560,7 +559,7 @@ public function chiTietHoaDon($id)
         ->select(
             'chi_tiet_hoa_don.*',
             'san_pham.ten_san_pham',
-            'san_pham.ma_vach'
+            DB::raw("'N/A' as ma_vach")
         )
         ->where('chi_tiet_hoa_don.id_hoa_don', $id)
         ->get();
