@@ -1169,7 +1169,7 @@ body {
                     <i class="fas fa-money-bill-wave"></i>
                     Tiền mặt
                 </button>
-                <button class="pay-btn" data-method="transfer" onclick="selectPayment('transfer'); showQrPayment();">
+                <button class="pay-btn" data-method="transfer" onclick="selectPayment('transfer'); ">
                     <i class="fas fa-university"></i>
                     Chuyển khoản
                 </button>
@@ -1482,13 +1482,17 @@ if (cart.length === 0) {
     new bootstrap.Modal(document.getElementById('qrPaymentModal')).show();
 }
 function confirmTransferPaid() {
-    selectedPayment = 'transfer';
 
-    const modalEl = document.getElementById('qrPaymentModal');
-    const modal = bootstrap.Modal.getInstance(modalEl);
-    if (modal) modal.hide();
+    const modal = bootstrap.Modal.getInstance(
+        document.getElementById('qrPaymentModal')
+    );
 
-    processPayment();
+    if(modal){
+        modal.hide();
+    }
+
+    processPayment(true);
+
 }
 
 
@@ -1838,22 +1842,31 @@ const pointDiscount = usePoint * 100;
 // Select Payment Method
 // ─────────────────────────────────────────────
 function selectPayment(method) {
+
     selectedPayment = method;
     getCurrentInvoice().payment = method;
+
     document.querySelectorAll('.pay-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.method === method);
     });
+
 }
 
 // ─────────────────────────────────────────────
 // Process Payment
 // ─────────────────────────────────────────────
-async function processPayment() {
+async function processPayment(isTransferConfirmed = false) {
     const cart = getCurrentCart();
     if (cart.length === 0) {
         showToast('Giỏ hàng trống!', 'error');
         return;
     }
+    if (selectedPayment === 'transfer' && !isTransferConfirmed) {
+
+    showQrPayment();
+
+    return;
+}
 
   
 const subtotal = cart.reduce(
