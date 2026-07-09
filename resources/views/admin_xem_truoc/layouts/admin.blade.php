@@ -429,9 +429,9 @@
                
             </div>
             <div class="user-info">
-                <div class="notify">
+                <div class="notify" style="cursor:pointer" onclick="document.getElementById('tab-canh-bao').click();">
                     <i class="fas fa-bell fs-5 text-secondary"></i>
-                    <span class="badge">3</span>
+                    <span class="badge" id="topbar-notify-badge" style="display:none">0</span>
                 </div>
                 <div class="dropdown">
                     <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown">

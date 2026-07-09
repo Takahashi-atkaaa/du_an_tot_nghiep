@@ -6,9 +6,12 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use App\Models\BienTheSanPham;
 use App\Models\DonViQuyDoi;
+use App\Models\Product;
 
 class UpdateSanPhamRequest extends FormRequest
 {
+    private ?string $currentProductName = null;
+
     public function authorize(): bool
     {
         return true;
@@ -16,15 +19,36 @@ class UpdateSanPhamRequest extends FormRequest
 
     public function rules(): array
     {
-        $productId = $this->route('id');
+        file_put_contents(
+            storage_path('logs/debug_update.txt'),
+            "[" . now()->toDateTimeString() . "]\n" . json_encode([
+                'all_input' => $this->all(),
+                'route_id' => $this->route('id'),
+                'method' => $this->method(),
+            ], JSON_UNESCAPED_UNICODE) . "\n\n",
+            FILE_APPEND
+        );
+        $productId = (int) $this->route('id');
+
+        // Lay ten hien tai cua san pham trong DB
+        $product = Product::withTrashed()->find($productId);
+        $this->currentProductName = $product?->ten_san_pham;
+
+        $tenSanPhamInput = $this->input('ten_san_pham');
+
+        $tenSanPhamRules = ['required', 'string', 'max:255'];
+        // Neu ten KHONG thay doi so voi DB hien tai → khong can kiem tra unique
+        if ($product && trim($tenSanPhamInput) === trim($this->currentProductName)) {
+            // giu nguyen ten → bo qua unique
+        } else {
+            // ten thay doi hoac tao moi → kiem tra unique (bo qua chinh no + soft-deleted)
+            $tenSanPhamRules[] = Rule::unique('san_pham', 'ten_san_pham')
+                ->ignore($productId)
+                ->where(fn($q) => $q->whereNull('deleted_at'));
+        }
 
         return [
-            'ten_san_pham' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('san_pham', 'ten_san_pham')->ignore($productId),
-            ],
+            'ten_san_pham' => $tenSanPhamRules,
             'id_danh_muc' => 'required|integer|exists:danh_muc_san_pham,id',
             'thuong_hieu' => 'nullable|string|max:255',
             'mo_ta' => 'nullable|string',
@@ -36,7 +60,7 @@ class UpdateSanPhamRequest extends FormRequest
             'bien_the.*.ten_bien_the' => 'nullable|string|max:255',
             'bien_the.*.thuoc_tinh_ids' => 'nullable|string',
             'bien_the.*.gia_von' => 'nullable|numeric|min:0',
-            'bien_the.*.gia_ban' => 'required|numeric|min:0',
+            'bien_the.*.gia_ban' => 'present|numeric|min:0',
             'bien_the.*.so_luong_ton' => 'nullable|integer|min:0',
             'bien_the.*.dinh_muc_toi_thieu' => 'nullable|integer|min:0',
             'bien_the.*.ma_hang' => 'nullable|string|max:255',
@@ -51,16 +75,22 @@ class UpdateSanPhamRequest extends FormRequest
             // Đơn vị quy đổi
             'bien_the.*.units' => 'sometimes|array',
             'bien_the.*.units.*.id' => 'nullable|integer|exists:don_vi_quy_doi,id',
-            'bien_the.*.units.*.ten_don_vi' => 'required|string|max:255',
-            'bien_the.*.units.*.ty_le_quy_doi' => 'required|integer|min:1',
+            'bien_the.*.units.*.ten_don_vi' => 'present|string|max:255',
+            'bien_the.*.units.*.ty_le_quy_doi' => 'present|integer|min:1',
             'bien_the.*.units.*.gia_von_quy_doi' => 'nullable|numeric|min:0',
-            'bien_the.*.units.*.gia_ban_quy_doi' => 'required|numeric|min:0',
+            'bien_the.*.units.*.gia_ban_quy_doi' => 'present|numeric|min:0',
             'bien_the.*.units.*.gia_ban_si' => 'nullable|numeric|min:0',
             'bien_the.*.units.*.ma_vach' => [
                 'nullable',
                 'string',
             ],
             'bien_the.*.units.*.hinh_anh' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+
+            // Thuộc tính mới: thuoc_tinh do user gõ tạo mới
+            'new_attributes' => 'sometimes|array',
+            'new_attributes.*.group_name' => 'required|string|max:255',
+            'new_attributes.*.label' => 'required|string|max:255',
+            'new_attributes.*.parent_id' => 'nullable|integer|exists:thuoc_tinh_san_pham,id',
         ];
     }
 
@@ -80,6 +110,13 @@ class UpdateSanPhamRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
+            file_put_contents(
+                storage_path('logs/debug_update.txt'),
+                "[" . now()->toDateTimeString() . "] VALIDATION_ERRORS\n" . json_encode([
+                    'errors' => $validator->errors()->toArray(),
+                ], JSON_UNESCAPED_UNICODE) . "\n\n",
+                FILE_APPEND
+            );
             $variants = $this->input('bien_the', []);
 
             // Check variant barcodes uniqueness in DB (ignore current variant id)

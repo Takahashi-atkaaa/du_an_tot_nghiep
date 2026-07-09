@@ -36,8 +36,26 @@
                 conversionUnits: []
             });
 
+            // availableAttributes: tất cả thuộc tính cha từ DB để gợi ý trong dropdown
+            // VD: [{ id: 5, name: 'Màu sắc', values: [{id:1, label:'Đỏ'},{id:2, label:'Xanh'}] }]
+            const availableAttributes = ref(DATA.availableAttributes || []);
+
+            // availableUnits: tất cả đơn vị tính từ DB để gợi ý trong dropdown
+            const availableUnits = ref(DATA.availableUnits || []);
+
+            // allUnitOptions: availableUnits + giá trị hiện tại của baseUnit nếu không có trong list
+            // Đảm bảo selected value luôn là option hợp lệ dù không có trong DB
+            const allUnitOptions = computed(() => {
+                const base = availableUnits.value;
+                const current = unitConfig.baseUnit.trim();
+                if (current && !base.find(u => u.name === current)) {
+                    return [...base, { id: '__custom__', name: current }];
+                }
+                return base;
+            });
+
             const attributesConfig = reactive({
-                groups: [] // [{ id, name, values: [{id, label}] }]
+                groups: [] // [{ id, name, values: [{id, label, _isNew}], valueInput, _dropdownOpen, _highlightedIdx }]
             });
 
             const sectionOpen = reactive({
@@ -50,7 +68,12 @@
             // ------- STATE: lỗi validation từ server & trạng thái submit -------
             const errors = ref({});      // { fieldName: [msg1, msg2, ...] }
             const generalError = ref(''); // lỗi không gắn với field cụ thể
-            const submitting = ref(false); // đang gửi request để disable nút Lưu
+            const submitting = ref(false);
+            const submitHadError = ref(false); // true sau khi Lưu thất bại (để giữ nút disabled)
+            const formLoaded = ref(false); // true khi Vue đã khởi tạo xong (initFromProduct hoặc regenerateGrid)
+
+            // hasImage: true khi user da chon file (co trong basicInfo.image)
+            const hasImage = computed(() => basicInfo.image !== null);
 
             function clearErrors() {
                 errors.value = {};
@@ -84,9 +107,12 @@
                         name: g.name || '',
                         values: (g.values || []).map(v => ({
                             id: v.id ?? (g.id + '_' + (v.label || v)),
-                            label: v.label ?? v
+                            label: v.label ?? v,
+                            _isNew: !!v._isNew // true = user gõ tay, chưa có trong DB
                         })),
-                        valueInput: ''
+                        valueInput: '',
+                        _dropdownOpen: false,
+                        _highlightedIdx: -1
                     }));
 
                     // Build lookup from attribute value id -> group name and label
@@ -107,11 +133,10 @@
                             }
                         });
 
-                        const rowUnitName = (bt.units && bt.units.length > 0)
-                            ? bt.units[0].ten_don_vi || ''
-                            : (prod.unitConfig?.baseUnit || '');
+                        // ten_bien_the lưu tên đơn vị gốc của variant (không phải unit đầu tiên trong don_vi_quy_doi)
+                        const rowUnitName = bt.ten_bien_the || prod.unitConfig?.baseUnit || '';
 
-                        const unitKey = rowUnitName === unitConfig.baseUnit
+                        const unitKey = rowUnitName === prod.unitConfig?.baseUnit
                             ? 'base'
                             : ('cv_' + (bt.units && bt.units.length > 0 ? (bt.units[0].id || uid()) : uid()));
 
@@ -122,8 +147,8 @@
                             attrValueIds: attrValueIds,
                             unitKey: unitKey,
                             unitName: rowUnitName,
-                            tyLe: bt.units && bt.units.length > 0 ? (bt.units[0].ty_le_quy_doi ?? bt.ty_le ?? 1) : 1,
-                            isBase: bt.units && bt.units.length > 0 ? !!bt.units[0].la_don_vi_mac_dinh : true,
+                            tyLe: 1, // variant row luôn là đơn vị gốc, tyLe = 1
+                            isBase: rowUnitName === prod.unitConfig?.baseUnit,
                             tenBienThe: bt.ten_bien_the ?? '',
                             maHang: bt.ma_hang ?? '',
                             maVach: bt.ma_vach ?? '',
@@ -132,6 +157,16 @@
                             dinhMucToiThieu: bt.dinh_muc_toi_thieu ?? 0,
                             soLuong: bt.so_luong_ton ?? 0,
                             touched: {},
+                            // conversionUnits: đơn vị quy đổi gốc từ DB (dùng cho payload)
+                            conversionUnits: (bt.units || []).map(u => ({
+                                id: u.id,
+                                ten_don_vi: u.ten_don_vi,
+                                ty_le_quy_doi: u.ty_le_quy_doi,
+                                gia_von_quy_doi: u.gia_von_quy_doi,
+                                gia_ban_quy_doi: u.gia_ban_quy_doi,
+                                ma_hang: u.ma_hang,
+                                ma_vach: u.ma_vach
+                            })),
                             savedUnits: (bt.units || []).map(u => ({
                                 id: u.id,
                                 ten_don_vi: u.ten_don_vi,
@@ -143,6 +178,7 @@
                             }))
                         };
                     });
+                    _initDone = true; // Guard: init complete, watchers may now regenerate grid
                 } catch (e) {
                     console.error('initFromProduct failed', e);
                 }
@@ -183,6 +219,7 @@
 
             // Grid sinh ra từ watcher
             const gridData = ref([]);   // [{ key, attrLabels:{name->valueLabel}, attrValueIds:[id,...], unitName, tyLe, maHang, maVach, giaVon, giaBan, soLuong }]
+            let _initDone = false; // guard: prevent regenerateGrid before initFromProduct runs (watchers fire on mount before init)
             const attrValueIdByLabel = ref({}); // label -> id (lookup nhanh)
 
             // ------- COMPUTED: danh sách đơn vị thực tế (base + conversions hợp lệ) -------
@@ -218,11 +255,11 @@
                         id: g.id,
                         name: g.name.trim(),
                         values: g.values.map(v => {
-                            // Đảm bảo mỗi value có id ổn định
+                            // Giữ nguyên cấu trúc: id (số hoặc null), label, _isNew
                             if (typeof v === 'string') {
-                                return { id: g.id + '_' + v, label: v };
+                                return { id: g.id + '_' + v, label: v, _isNew: true };
                             }
-                            return v;
+                            return { id: v.id, label: v.label, _isNew: !!v._isNew };
                         })
                     }));
             });
@@ -234,7 +271,13 @@
                     const result = [];
                     acc.forEach(prefix => {
                         g.values.forEach(v => {
-                            result.push({ ...prefix, [g.name]: v.label, __ids: (prefix.__ids || []).concat([v.id]) });
+                            result.push({
+                                ...prefix,
+                                [g.name]: v.label,
+                                [`__id_${g.name}`]: v.id,
+                                [`__isNew_${g.name}`]: !!v._isNew,
+                                __ids: (prefix.__ids || []).concat([v.id]).filter(Boolean)
+                            });
                         });
                     });
                     return result;
@@ -242,11 +285,14 @@
             }
 
             // ------- BUILD KEY: định danh bền vững cho mỗi row -------
+            // attrCombo: { name: label, __id_name: id|null, __isNew_name: bool, __ids: [...] }
+            // key = `u:{unitKey}::a:{__isNew_Màu Sắc}=false|__id_Màu Sắc=1|__isNew_Size=false|__id_Size=2`
             function buildRowKey(attrCombo, unit) {
                 const attrPart = Object.keys(attrCombo)
+                    .filter(k => k.startsWith('__'))
                     .filter(k => k !== '__ids')
                     .sort()
-                    .map(k => `${k}=${attrCombo[k]}`)
+                    .map(k => `${k.replace(/^__/, '')}=${attrCombo[k]}`)
                     .join('|');
                 return `u:${unit.key}::a:${attrPart}`;
             }
@@ -291,12 +337,21 @@
                             tyLe: u.tyLe,
                             isBase: u.isBase,
                             // Field người dùng nhập - GIỮ NGUYÊN từ row cũ nếu có
+                            // conversionUnits: tất cả đơn vị quy đổi (ty_le > 1) từ unitConfig
+                            // Payload sẽ dùng mảng này để gửi đúng units cho từng variant
+                            conversionUnits: (unitConfig.conversionUnits || []),
+                            existingId: old?.existingId ?? null,
                             tenBienThe: tenBienThe,
                             maHang: old?.maHang ?? (basicInfo.code.trim() ? `${basicInfo.code.trim()}-${u.name}` : ''),
                             maVach: old?.maVach ?? '',
                             giaVon: old?.giaVon ?? ((parseFloat(basicInfo.defaultCost) || 0) * ((parseFloat(u.tyLe) || 1) / baseRatio)),
                             giaBan: old?.giaBan ?? (u.price || parseFloat(basicInfo.defaultPrice) || 0),
-                            dinhMucToiThieu: old?.dinhMucToiThieu ?? (parseInt(basicInfo.defaultMinStock) || 0)
+                            dinhMucToiThieu: old?.dinhMucToiThieu ?? (parseInt(basicInfo.defaultMinStock) || 0),
+                            // Quan trọng: giữ lại savedUnits + conversionUnits từ row cũ
+                            // savedUnits: units gốc từ initFromProduct (dùng cho payload)
+                            // conversionUnits: units từ unitConfig (dùng cho UI)
+                            savedUnits: old?.savedUnits ? [...old.savedUnits] : (old?.conversionUnits ? [...old.conversionUnits] : []),
+                            conversionUnits: old?.conversionUnits ? [...old.conversionUnits] : (unitConfig.conversionUnits || [])
                         });
                     });
                 });
@@ -307,6 +362,7 @@
             // ------- WATCH: lắng nghe thay đổi -------
             let watchTimer = null;
             function debouncedRegen() {
+                if (!_initDone) return; // Guard: skip if initFromProduct hasn't run yet
                 clearTimeout(watchTimer);
                 watchTimer = setTimeout(regenerateGrid, 50);
             }
@@ -334,7 +390,7 @@
                 if (!ratio) return;
                 gridData.value.forEach(row => {
                     if (row.unitKey !== unitKey) return;
-                    if (row.touched && row.touched.giaBan) return; // user đã sửa -> không ghi đè
+                    if (row.touched?.giaBan) return; // user đã sửa -> không ghi đè
                     row.giaBan = parseFloat(newPrice) || 0;
                 });
             }
@@ -365,24 +421,101 @@
             }, { deep: true });
 
             function addAttrGroup() {
-                attributesConfig.groups.push({ id: uid(), name: '', values: [], valueInput: '' });
+                attributesConfig.groups.push({
+                    id: uid(), name: '', values: [],
+                    valueInput: '', _dropdownOpen: false, _highlightedIdx: -1
+                });
             }
             function removeAttrGroup(idx) {
                 attributesConfig.groups.splice(idx, 1);
             }
+
+            // Lấy danh sách gợi ý cho dropdown: values từ availableAttributes cha có cùng name
+            function getDropdownValues(group) {
+                const matched = availableAttributes.value.find(a => a.name === group.name);
+                if (!matched) return [];
+                return matched.values || [];
+            }
+
+            // Lọc dropdown: không show giá trị đã được chọn rồi
+            function getFilteredDropdown(group) {
+                const all = getDropdownValues(group);
+                const selectedLabels = new Set(group.values.map(v => v.label));
+                return all.filter(v => !selectedLabels.has(v.label));
+            }
+
+            // Toggle dropdown
+            function toggleDropdown(group) {
+                group._dropdownOpen = !group._dropdownOpen;
+                if (group._dropdownOpen) group._highlightedIdx = -1;
+            }
+            function closeDropdown(group) {
+                group._dropdownOpen = false;
+                group._highlightedIdx = -1;
+            }
+
+            // Chọn từ dropdown → thêm vào tags với id từ DB
+            function selectFromDropdown(group, item) {
+                if (!group.values.find(v => v.id === item.id)) {
+                    group.values.push({ id: item.id, label: item.label, _isNew: false });
+                }
+                group.valueInput = '';
+                closeDropdown(group);
+            }
+
+            // Gõ text mới + Enter/Tab/',' → thêm tag mới (chưa có trong DB → id=null)
             function addAttrValue(group) {
                 const v = (group.valueInput || '').trim();
                 if (!v) return;
-                if (!group.values.includes(v)) group.values.push(v);
+                // Tránh trùng label đã có
+                if (group.values.find(x => x.label === v)) {
+                    group.valueInput = '';
+                    return;
+                }
+                // id=null đánh dấu là item mới tạo bởi user (chưa có trong DB)
+                group.values.push({ id: null, label: v, _isNew: true });
                 group.valueInput = '';
+                closeDropdown(group);
             }
+
             function removeAttrValue(group, vidx) {
                 group.values.splice(vidx, 1);
             }
+
+            // Keyboard navigation trên input: mở dropdown khi gõ, duyệt với arrow keys
             function onAttrValueKey(group, e) {
+                const filtered = getFilteredDropdown(group);
+
+                if (group._dropdownOpen && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+                    e.preventDefault();
+                    if (e.key === 'ArrowDown') {
+                        group._highlightedIdx = Math.min(group._highlightedIdx + 1, filtered.length - 1);
+                    } else {
+                        group._highlightedIdx = Math.max(group._highlightedIdx - 1, -1);
+                    }
+                    return;
+                }
+                if (group._dropdownOpen && e.key === 'Enter' && group._highlightedIdx >= 0) {
+                    e.preventDefault();
+                    selectFromDropdown(group, filtered[group._highlightedIdx]);
+                    return;
+                }
                 if (e.key === 'Enter' || e.key === ',') {
                     e.preventDefault();
                     addAttrValue(group);
+                }
+                if (e.key === 'Escape') {
+                    closeDropdown(group);
+                }
+            }
+
+            // Click outside để đóng dropdown
+            function setupDropdownOutsideClick(group, el) {
+                if (!el._dropdownBinded) {
+                    el._dropdownBinded = true;
+                    document.addEventListener('click', (e) => {
+                        if (!el.contains(e.target)) closeDropdown(group);
+                    });
                 }
             }
 
@@ -415,21 +548,6 @@
                 return u ? (parseFloat(u.tyLe) || 1) : 1;
             }
 
-// Cascade: khi user nhập giaVon/giaBan ở BẤT KỲ dòng nào,
-            // các dòng cùng attrCombo nhưng khác đơn vị sẽ tự fill theo tỷ lệ.
-            // Quy tắc: row đã touched sẽ KHÔNG bị ghi đè (giữ giá trị user đã nhập).
-            function setUnitTouched(row, field) {
-                row.touched = row.touched || {};
-                row.touched[field] = true;
-            }
-
-            // Tính tỷ lệ đơn vị so với base.
-            // ty_le(lon)=1, ty_le(thùng)=24 => 1 thùng = 24 lon.
-            function ratioToBase(unitKey) {
-                const u = effectiveUnits.value.find(x => x.key === unitKey);
-                return u ? (parseFloat(u.tyLe) || 1) : 1;
-            }
-
             function onGridInput(row, field, e) {
                 const v = e.target.value;
                 if (field === 'giaVon' || field === 'giaBan' || field === 'soLuong' || field === 'dinhMucToiThieu') {
@@ -457,7 +575,7 @@
                         Object.keys(sourceRow.attrLabels).every(k => other.attrLabels[k] === sourceRow.attrLabels[k]);
                     if (!sameAttrs) return;
                     // Row chưa touched mới bị cascade
-                    if (other.touched && other.touched[field]) return;
+                    if (other.touched?.[field]) return;
 
                     const otherRatio = ratioToBase(other.unitKey);
                     other[field] = Math.round((newValue * otherRatio) / sourceRatio);
@@ -493,24 +611,53 @@
                 const hasAttr = effectiveAttrGroups.value.length > 0;
                 const loai_bien_the = hasAttr ? 'thuoc_tinh' : 'don_vi';
 
+                    // Thu thập thuộc tính MỚI (user gõ tay, chưa có trong DB)
+                // Để backend tạo vào DB trước khi gán cho biến thể
+                const newAttributes = [];
+                effectiveAttrGroups.value.forEach(g => {
+                    g.values.forEach(v => {
+                        if (v._isNew && v.id === null) {
+                            newAttributes.push({ groupName: g.name, label: v.label });
+                        }
+                    });
+                });
+
+                // Map group name -> thuoc_tinh_cha_id (lấy từ availableAttributes)
+                const groupNameToParentId = {};
+                (DATA.availableAttributes || []).forEach(a => {
+                    groupNameToParentId[a.name] = a.id;
+                });
+
+                // attrLabels: map group name -> label value (dùng để resolve giá trị mới ở backend)
+                const attrLabels = {};
+                effectiveAttrGroups.value.forEach(g => {
+                    attrLabels[g.name] = g.values.map(v => v.label);
+                });
+
                 const bienThe = gridData.value.map((row, i) => {
                     const idField = row.existingId ? { id: row.existingId } : {};
-                    const unitsPayload = effectiveUnits.value.map(u => {
-                        const isThisUnit = u.key === row.unitKey;
-                        const savedUnit = (row.savedUnits || []).find(su => String(su.ten_don_vi) === String(u.name)) || {};
-                        return {
-                            id: savedUnit.id,
-                            ten_don_vi: u.name,
-                            ty_le_quy_doi: u.tyLe,
-                            gia_von_quy_doi: isThisUnit ? (parseFloat(row.giaVon) || 0) : (parseFloat(savedUnit.gia_von_quy_doi) || 0),
-                            gia_ban_quy_doi: isThisUnit ? (parseFloat(row.giaBan) || 0) : (parseFloat(savedUnit.gia_ban_quy_doi) || parseFloat(u.price) || 0),
-                            ma_hang: isThisUnit ? (row.maHang || '') : (savedUnit.ma_hang || ''),
-                            ma_vach: isThisUnit ? (row.maVach || '') : (savedUnit.ma_vach || '')
-                        };
-                    });
+
+                    // Dùng savedUnits (reference gốc từ initFromProduct, không bị debouncedRegen overwrite)
+                    // Lọc ra các đơn vị QUY ĐỔI (ty_le > 1) thuộc dòng này
+                    const unitsPayload = (row.savedUnits || [])
+                        .filter(u => (parseInt(u.ty_le_quy_doi) || 1) > 1)
+                        .map(u => {
+                            return {
+                                id: u.id,
+                                ten_don_vi: u.ten_don_vi,
+                                ty_le_quy_doi: u.ty_le_quy_doi,
+                                gia_von_quy_doi: parseFloat(u.gia_von_quy_doi) || 0,
+                                gia_ban_quy_doi: parseFloat(u.gia_ban_quy_doi) || 0,
+                                ma_hang: u.ma_hang || '',
+                                ma_vach: u.ma_vach || ''
+                            };
+                        });
+
+                    // ten_bien_the = đơn vị cơ bản của dòng (VD: "Lon", "Kg")
+                    const tenBienThe = row.unitName;
 
                     return Object.assign({}, idField, {
-                        ten_bien_the: row.tenBienThe,
+                        ten_bien_the: tenBienThe,
                         ma_hang: row.maHang,
                         ma_vach: row.maVach,
                         gia_von: parseFloat(row.giaVon) || 0,
@@ -522,18 +669,25 @@
                     });
                 });
 
-                return {
+                const result = {
                     ten_san_pham: basicInfo.ten_san_pham.trim(),
                     id_danh_muc: parseInt(basicInfo.id_danh_muc) || null,
                     thuong_hieu: basicInfo.brand.trim(),
                     mo_ta: basicInfo.mo_ta.trim(),
                     trang_thai: basicInfo.trang_thai ? 1 : 0,
                     loai_bien_the: loai_bien_the,
-                    bien_the: bienThe
+                    bien_the: bienThe,
+                    // Thuộc tính mới: backend tạo vào DB rồi resolve vào thuoc_tinh_ids
+                    new_attributes: newAttributes.map(a => ({
+                        group_name: a.groupName,
+                        parent_id: groupNameToParentId[a.groupName] || null,
+                        label: a.label
+                    }))
                 };
+                console.log('[buildPayload] Payload:', result);
+                return result;
             }
 
-            // ------- SUBMIT (AJAX JSON) -------
             function getCsrfToken() {
                 const meta = document.querySelector('meta[name="csrf-token"]');
                 if (meta && meta.content) return meta.content;
@@ -541,7 +695,8 @@
                 return '';
             }
 
-            function handleSubmit() {
+            async function handleSubmit() {
+                submitHadError.value = false;
                 const errs = validate();
                 clearErrors();
                 submitting.value = true;
@@ -552,12 +707,14 @@
                 }
 
                 const payload = buildPayload();
+                console.log("Payload gửi đi:", payload);
+
                 const csrf = getCsrfToken();
                 const form = document.getElementById('productForm');
                 const actionUrl = form ? form.getAttribute('action') : '/admin/san-pham';
 
-                // Nếu có file ảnh, dùng FormData (multipart) để upload file; nếu không, gửi JSON thuần
-                const hasImage = !!basicInfo.image;
+                // Nếu có file ảnh, dùng FormData (multipart) để upload file; nếu không, gửi FormData thường
+                // LƯU Ý: KHÔNG set Content-Type header khi dùng FormData — browser tự set boundary
                 let body;
                 let headers = {
                     'X-CSRF-TOKEN': csrf,
@@ -565,7 +722,7 @@
                     'Accept': 'application/json'
                 };
 
-                if (hasImage) {
+                if (hasImage.value) {
                     const fd = new FormData();
                     // Scalar fields
                     ['ten_san_pham', 'id_danh_muc', 'thuong_hieu', 'mo_ta', 'trang_thai', 'loai_bien_the'].forEach(k => {
@@ -592,55 +749,95 @@
                     fd.append('hinh_anh', basicInfo.image);
                     body = fd;
                 } else {
-                    headers['Content-Type'] = 'application/json';
-                    body = JSON.stringify(payload);
+                    // Dùng FormData thay vì JSON thuần — Laravel chỉ parse $request->all() với
+                    // Content-Type form-urlencoded/multipart. JSON body sẽ cho $request->all() = []
+                    const fd = new FormData();
+                    if (DATA.editMode) fd.append('_method', 'PUT');
+                    ['ten_san_pham', 'id_danh_muc', 'thuong_hieu', 'mo_ta', 'trang_thai', 'loai_bien_the'].forEach(k => {
+                        if (payload[k] !== undefined && payload[k] !== null) {
+                            fd.append(k, payload[k]);
+                        }
+                    });
+                    (payload.bien_the || []).forEach((bt, i) => {
+                        Object.keys(bt).forEach(k => {
+                            if (k === 'units') return;
+                            if (bt[k] !== undefined && bt[k] !== null) {
+                                fd.append(`bien_the[${i}][${k}]`, bt[k]);
+                            }
+                        });
+                        (bt.units || []).forEach((u, j) => {
+                            Object.keys(u).forEach(uk => {
+                                if (u[uk] !== undefined && u[uk] !== null) {
+                                    fd.append(`bien_the[${i}][units][${j}][${uk}]`, u[uk]);
+                                }
+                            });
+                        });
+                    });
+                    body = fd;
                 }
 
-                const method = DATA.editMode ? 'PUT' : 'POST';
-                if (hasImage && DATA.editMode) {
-                    body.append('_method', 'PUT');
+                // DEBUG: dump all FormData entries
+                console.log('[DEBUG handleSubmit] FormData entries:');
+                for (const [key, value] of body.entries()) {
+                    console.log('  ', key, '=', typeof value === 'object' ? value.name || value + '' : value);
                 }
+                const unitsPresent = Array.from(body.entries()).filter(([k]) => k.includes('units'));
+                console.log('[DEBUG handleSubmit] units in FormData:', unitsPresent.length, unitsPresent.length === 0 ? '<-- NO UNITS! (will cause 422)' : '');
+                console.log('[DEBUG handleSubmit] hasImage.value:', hasImage.value);
+                console.log('[DEBUG handleSubmit] DATA.editMode:', DATA.editMode);
+                console.log('[DEBUG handleSubmit] actionUrl:', actionUrl);
 
-                fetch(actionUrl, {
-                    method: method,
-                    headers: headers,
-                    body: body,
-                    credentials: 'same-origin'
-                })
-                .then(async res => {
+                const method = 'POST'; // Luôn POST; Laravel sẽ đọc _method=PUT từ FormData
+
+                try {
+                    const res = await fetch(actionUrl, {
+                        method: method,
+                        headers: headers,
+                        body: body,
+                        credentials: 'same-origin'
+                    });
+
                     const ct = res.headers.get('content-type') || '';
                     const data = ct.includes('application/json') ? await res.json() : await res.text();
+
                     if (res.ok) {
                         const redirectUrl = (data && data.redirect) ? data.redirect : '/admin/san-pham';
                         window.location.href = redirectUrl;
                         return;
                     }
+
                     // 422: lỗi validation từ Laravel
                     if (res.status === 422 && data && data.errors) {
                         const localized = localizeErrors(data.errors);
                         errors.value = localized;
-                        // Gom tất cả lỗi thành 1 thông báo chung cho tiện
                         const summary = [];
                         Object.keys(localized).forEach(field => {
                             localized[field].forEach(m => summary.push('• ' + m));
                         });
                         generalError.value = 'Không thể lưu sản phẩm:\n' + summary.join('\n');
-                        // Cuộn modal về đầu để user thấy lỗi
+                        submitHadError.value = true;
                         try {
-                            const body = document.getElementById('addProductModalBody');
-                            if (body) body.scrollTop = 0;
+                            const modalBody = document.getElementById('editProductModalBody') || document.getElementById('addProductModalBody');
+                            if (modalBody) modalBody.scrollTop = 0;
                         } catch (_) {}
                         return;
                     }
-                    // Lỗi khác (500, 403, ...)
-                    generalError.value = (data && data.message ? data.message : ('HTTP ' + res.status));
-                })
-                .catch(err => {
-                    generalError.value = 'Lỗi mạng: ' + (err && err.message ? err.message : String(err));
-                })
-                .finally(() => {
+
+                    // Các lỗi khác: 500, 419, ...
+                    const msg = (data && (data.message || data.error || data))
+                        ? (typeof data === 'object' ? JSON.stringify(data) : data)
+                        : ('HTTP ' + res.status);
+                    generalError.value = msg;
+                    submitHadError.value = true;
+                    alert('Lỗi khi lưu sản phẩm: ' + msg);
+                } catch (err) {
+                    const msg = (err && err.message ? err.message : String(err));
+                    generalError.value = 'Lỗi mạng: ' + msg;
+                    submitHadError.value = true;
+                    alert('Lỗi kết nối: ' + msg);
+                } finally {
                     submitting.value = false;
-                });
+                }
             }
 
             // Cập nhật DOM hiển thị lỗi + spinner (vì button Lưu và alert box nằm ngoài Vue template)
@@ -670,8 +867,11 @@
                         } else {
                             spinner.classList.add('d-none');
                             icon.classList.remove('d-none');
-                            btn.disabled = false;
-                            btn.classList.remove('disabled');
+                            // Chỉ bật nút khi form đã load xong VÀ không có lỗi submit trước đó
+                            if (formLoaded.value && !submitHadError.value) {
+                                btn.disabled = false;
+                                btn.classList.remove('disabled');
+                            }
                         }
                     }
                 } catch (e) {
@@ -684,8 +884,14 @@
                 if (isEditMode && DATA.productData) {
                     initFromProduct(DATA.productData);
                 } else {
+                    _initDone = true;
                     regenerateGrid();
                 }
+                formLoaded.value = true;
+
+                // Bat nut Lưu sau khi Vue da khoi tao xong
+                const btn = document.getElementById('btnLuuSanPham');
+                if (btn) { btn.disabled = false; btn.classList.remove('disabled'); }
 
                 window.__vueProductExposed = {
                     handleSubmit: handleSubmit,
@@ -710,8 +916,13 @@
                 gridData, effectiveAttrGroups,
                 errors, generalError, submitting, clearErrors,
                 danhMucs: DATA.danhMucs,
+                availableAttributes,
+                availableUnits,
+                allUnitOptions,
                 addConversion, removeConversion, onConversionRateInput,
-                addAttrGroup, removeAttrGroup, addAttrValue, removeAttrValue, onAttrValueKey,
+                addAttrGroup, removeAttrGroup, addAttrValue, removeAttrValue,
+                onAttrValueKey, toggleDropdown, closeDropdown,
+                getDropdownValues, getFilteredDropdown, selectFromDropdown,
                 onImageSelect, clearImage, onGridInput, fillDefaultsToGrid,
                 handleSubmit, validate, buildPayload
             };
@@ -842,9 +1053,21 @@
                     <div v-show="sectionOpen.units" class="px-4 pb-4">
                         <div class="grid grid-cols-12 gap-2 items-end mb-3">
                             <div class="col-span-6">
-                                <label class="block text-xs font-medium text-slate-600 mb-1">Tên đơn vị cơ bản <span class="text-red-500">*</span></label>
-                                <input v-model="unitConfig.baseUnit" type="text" placeholder="VD: Lon"
-                                    class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <label class="block text-xs font-medium text-slate-600 mb-1">Đơn vị cơ bản <span class="text-red-500">*</span></label>
+                                <div class="relative">
+                                    <select v-model="unitConfig.baseUnit"
+                                        class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white appearance-none cursor-pointer">
+                                        <option value="">— Chọn đơn vị —</option>
+                                        <option v-for="u in allUnitOptions" :key="u.id" :value="u.name">{{ u.name }}</option>
+                                    </select>
+                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                                        <svg class="w-4 h-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                                    </div>
+                                </div>
+                                <p v-if="unitConfig.baseUnit && !availableUnits.find(u => u.name === unitConfig.baseUnit)"
+                                    class="mt-1 text-[11px] text-indigo-600 italic">
+                                    Đơn vị "<b class="font-medium not-italic">{{ unitConfig.baseUnit }}</b>" sẽ được tạo mới khi lưu.
+                                </p>
                             </div>
                             <div class="col-span-6">
                                 <label class="block text-xs font-medium text-slate-600 mb-1">Giá bán (đơn vị cơ bản)</label>
@@ -919,28 +1142,94 @@
                             <p class="text-[11px] text-slate-400 mt-1">VD: Màu sắc, Size, Chất liệu...</p>
                         </div>
 
+                        <!-- ====== NHÓM THUỘC TÍNH ====== -->
                         <div v-for="(g, gi) in attributesConfig.groups" :key="g.id" class="mb-3 p-3 rounded-md border border-slate-200 bg-slate-50/50">
-                            <div class="flex items-center justify-between mb-2">
-                                <input v-model="g.name" type="text" placeholder="Tên thuộc tính (VD: Màu sắc)"
-                                    class="flex-1 rounded border border-slate-300 px-2 py-1.5 text-sm font-medium focus:ring-2 focus:ring-amber-500 outline-none">
-                                <button type="button" @click="removeAttrGroup(gi)" class="ml-2 text-slate-400 hover:text-red-500" title="Xóa nhóm">
+
+                            <!-- Row 1: Chọn nhóm + Xóa -->
+                            <div class="flex items-center gap-2 mb-2">
+                                <!-- Select chọn nhóm từ availableAttributes -->
+                                <select v-model="g.name"
+                                    class="flex-1 rounded border border-slate-300 px-2 py-1.5 text-sm font-medium focus:ring-2 focus:ring-amber-500 outline-none bg-white">
+                                    <option value="">— Chọn nhóm thuộc tính —</option>
+                                    <option v-for="attr in availableAttributes" :key="attr.id" :value="attr.name">
+                                        {{ attr.name }}
+                                    </option>
+                                </select>
+                                <!-- Nút xóa nhóm -->
+                                <button type="button" @click="removeAttrGroup(gi)" class="text-slate-400 hover:text-red-500 shrink-0" title="Xóa nhóm">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
                                 </button>
                             </div>
-                            <div class="flex flex-wrap gap-1.5 mb-2 min-h-[28px]">
-                                <span v-for="(v, vi) in g.values" :key="v + vi"
-                                    class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-100 text-amber-800 text-xs">
-                                    {{ v }}
-                                    <button type="button" @click="removeAttrValue(g, vi)" class="hover:text-red-500">
+
+                            <!-- Row 2: Chips gợi ý từ DB (chỉ hiển thị khi đã chọn nhóm) -->
+                            <div v-if="g.name && getDropdownValues(g).length > 0" class="mb-2">
+                                <p class="text-[10px] text-slate-400 mb-1 font-medium uppercase tracking-wide">Gợi ý</p>
+                                <div class="flex flex-wrap gap-1">
+                                    <button type="button"
+                                        v-for="item in getDropdownValues(g)"
+                                        :key="item.id"
+                                        @click="selectFromDropdown(g, item)"
+                                        class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border border-dashed border-slate-300 text-slate-600 hover:border-amber-400 hover:text-amber-700 hover:bg-amber-50 transition-colors">
+                                        <span class="text-slate-400 text-[10px]">+</span> {{ item.label }}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Row 3: Tags đã chọn -->
+                            <div v-if="g.values.length > 0" class="flex flex-wrap gap-1.5 mb-2 min-h-[28px]">
+                                <span v-for="(v, vi) in g.values" :key="vi"
+                                    class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs"
+                                    :class="v._isNew ? 'bg-orange-100 text-orange-800 border border-orange-300' : 'bg-amber-100 text-amber-800'">
+                                    {{ v.label }}
+                                    <button type="button" @click="removeAttrValue(g, vi)" class="hover:text-red-500 leading-none">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
                                     </button>
                                 </span>
                             </div>
-                            <input v-model="g.valueInput" type="text" placeholder="Nhập giá trị, Enter để thêm (VD: Đỏ)"
-                                @keydown="onAttrValueKey(g, $event)"
-                                class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none">
+
+                            <!-- Row 4: Input tạo giá trị mới -->
+                            <div class="relative">
+                                <input
+                                    v-model="g.valueInput"
+                                    type="text"
+                                    placeholder="Gõ giá trị mới, nhấn Enter để tạo..."
+                                    @keydown.enter.prevent="addAttrValue(g)"
+                                    @keydown.comma.prevent="addAttrValue(g)"
+                                    @focus="toggleDropdown(g)"
+                                    @blur="setTimeout(() => closeDropdown(g), 200)"
+                                    class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
+                                    :disabled="!g.name">
+
+                                <!-- Dropdown gợi ý lọc theo text đã gõ -->
+                                <div v-if="g._dropdownOpen && getFilteredDropdown(g).length > 0"
+                                    class="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg max-h-44 overflow-y-auto">
+                                    <button type="button"
+                                        v-for="(item, idx) in getFilteredDropdown(g)" :key="item.id"
+                                        class="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 transition-colors"
+                                        :class="idx === g._highlightedIdx ? 'bg-amber-50' : ''"
+                                        @click="selectFromDropdown(g, item)"
+                                        @mouseenter="g._highlightedIdx = idx">
+                                        {{ item.label }}
+                                    </button>
+                                </div>
+
+                                <!-- Gợi ý tạo mới khi không khớp dropdown -->
+                                <div v-if="g._dropdownOpen && g.valueInput.trim() && !g.values.find(v => v.label === g.valueInput.trim())"
+                                    class="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg">
+                                    <div class="px-3 py-2 text-xs text-slate-500 italic border-t border-slate-100">
+                                        Nhấn <b class="text-amber-700 not-italic font-medium">Enter</b> để tạo mới:
+                                        <b class="text-orange-600 not-italic font-medium">"{{ g.valueInput.trim() }}"</b>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Gợi ý: nhóm chưa chọn -->
+                            <p v-if="!g.name" class="text-[10px] text-slate-400 mt-1.5 mb-0">
+                                Chọn nhóm thuộc tính bên trên để hiển thị giá trị gợi ý
+                            </p>
                         </div>
 
+                        <!-- Nút Thêm nhóm -->
                         <button type="button" @click="addAttrGroup"
                             class="w-full px-3 py-2 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-dashed border-amber-300 rounded-md flex items-center justify-center gap-1">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1025,18 +1314,20 @@
 
     // Mount & bind submit handler lên form cha
     let vueInstance = null;
+    window.__vueAppInstance = null;
 
     function doMount() {
         const root = document.getElementById('createProductApp') || document.getElementById('editProductApp');
-        if (!root) return;
+        if (!root) { console.warn('[Vue] Root element not found'); return; }
         if (vueInstance) {
             vueInstance.unmount();
             vueInstance = null;
         }
         vueInstance = app.mount(root);
+        window.__vueAppInstance = vueInstance;
     }
 
-        function mount() {
+    function mount() {
         doMount();
 
         // Gắn click cho nút Lưu ngay khi load (trước cả khi modal mở)
@@ -1080,22 +1371,26 @@
 
     function onBtnLuuClick(e) {
         if (e) e.preventDefault();
-        // 1. window.handleSubmit (expose trong onMounted ngay sau khi định nghĩa)
+        console.log('[DEBUG onBtnLuuClick] window.handleSubmit:', typeof window.handleSubmit);
+        console.log('[DEBUG onBtnLuuClick] __vueProductExposed:', window.__vueProductExposed);
         if (typeof window.handleSubmit === 'function') {
             window.handleSubmit();
             return;
         }
-        // 2. window.__vueProductExposed.handleSubmit
         if (window.__vueProductExposed && typeof window.__vueProductExposed.handleSubmit === 'function') {
             window.__vueProductExposed.handleSubmit();
             return;
         }
-        // 3. vueInstance (Vue 3 expose trực tiếp trên instance)
         if (vueInstance && typeof vueInstance.handleSubmit === 'function') {
             vueInstance.handleSubmit();
             return;
         }
+        if (window.__vueAppInstance && typeof window.__vueAppInstance.handleSubmit === 'function') {
+            window.__vueAppInstance.handleSubmit();
+            return;
+        }
         console.error('[Luu] Khong tim thay handleSubmit');
+        console.debug('vueInstance:', vueInstance, 'window.handleSubmit:', typeof window.handleSubmit, '__vueProductExposed:', window.__vueProductExposed);
     }
 
     if (document.readyState === 'loading') {

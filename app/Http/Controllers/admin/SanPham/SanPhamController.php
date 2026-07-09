@@ -10,6 +10,7 @@ use App\Models\DanhMucSanPham;
 use App\Models\Product;
 use App\Models\BienTheSanPham;
 use App\Models\DonViQuyDoi;
+use App\Models\DonViSanPham;
 use App\Models\ThuocTinhSanPham;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,110 +30,65 @@ class SanPhamController extends Controller
         $thuocTinhChas = ThuocTinhSanPham::whereNull('thuoc_tinh_cha_id')
             ->where('trang_thai', true)
             ->orderBy('ten_thuoc_tinh')
+            ->with(['thuocTinhCons' => fn($q) => $q->where('trang_thai', true)->orderBy('ten_thuoc_tinh')])
             ->get();
 
-        // Lấy variants kèm thông tin cha, phẳng hóa để hiển thị
-        $query = BienTheSanPham::with(['product.danhMuc', 'units'])
-            ->whereHas('product', fn($q) => $q->whereNull('deleted_at'))
+        $sanPhams = Product::with(['danhMuc', 'variants.units'])
+            ->whereNull('deleted_at')
             ->when($keyword, fn($q) => $q
-                ->whereHas('product', fn($inner) => $inner
-                    ->whereRaw('LOWER(ten_san_pham) LIKE ?', ["%".mb_strtolower($keyword)."%"]))
-                ->orWhereRaw('LOWER(ten_bien_the) LIKE ?', ["%".mb_strtolower($keyword)."%"])
-                ->orWhereRaw('LOWER(ma_vach) LIKE ?', ["%".mb_strtolower($keyword)."%"])
-                ->orWhereRaw('LOWER(ma_hang) LIKE ?', ["%".mb_strtolower($keyword)."%"]))
-            ->when($danhMucId, fn($q) => $q->whereHas('product', fn($inner) => $inner->where('id_danh_muc', $danhMucId)))
+                ->where(fn($inner) => $inner
+                    ->whereRaw('LOWER(ten_san_pham) LIKE ?', ["%".mb_strtolower($keyword)."%"])
+                    ->orWhereHas('variants', fn($v) => $v
+                        ->whereRaw('LOWER(ma_vach) LIKE ?', ["%".mb_strtolower($keyword)."%"])
+                        ->orWhereRaw('LOWER(ma_hang) LIKE ?', ["%".mb_strtolower($keyword)."%"])
+                        ->orWhereRaw('LOWER(ten_bien_the) LIKE ?', ["%".mb_strtolower($keyword)."%"])
+                    )
+                )
+            )
+            ->when($danhMucId, fn($q) => $q->where('id_danh_muc', $danhMucId))
             ->when(!is_null($trangThai), fn($q) => $q->where('trang_thai', $trangThai))
-            ->orderBy('product_id')
-            ->orderBy('ten_bien_the');
+            ->orderBy('id')
+            ->paginate(10)
+            ->withQueryString();
 
-        $paginated = $query->paginate(10)->withQueryString();
-        $variants = $paginated->getCollection();
-
-        // Flat list với units
-        $flatItems = $this->buildFlatList($variants);
+        $donViSanPhams = DonViSanPham::where('trang_thai', true)->orderBy('ten_don_vi')->get();
 
         return view('admin_xem_truoc.san-pham.index', [
-            'variants' => $paginated,
-            'flatItems' => $flatItems,
+            'sanPhams' => $sanPhams,
             'danhMucs' => $danhMucs,
             'thuocTinhChas' => $thuocTinhChas,
+            'donViSanPhams' => $donViSanPhams,
             'keyword' => $keyword,
             'danhMucId' => $danhMucId,
             'trangThai' => $request->input('trang_thai'),
         ]);
     }
 
-    protected function buildFlatList($variants)
-    {
-        $flat = [];
-        foreach ($variants as $variant) {
-            $thuocTinhs = $variant->thuocTinhs();
-            $thuocTinhLabels = $thuocTinhs->pluck('ten_thuoc_tinh')->toArray();
-
-            // Row chính cho variant (không có unit)
-            $flat[] = [
-                'type' => 'variant',
-                'id' => $variant->id,
-                'product_id' => $variant->product_id,
-                'ten_san_pham' => $variant->product->ten_san_pham ?? '',
-                'danh_muc' => $variant->product->danhMuc->ten_danh_muc ?? '',
-                'ten_hien_thi' => $variant->ten_bien_the
-                    ? ($variant->product->ten_san_pham . ' - ' . $variant->ten_bien_the)
-                    : $variant->product->ten_san_pham,
-                'thuoc_tinh_labels' => $thuocTinhLabels,
-                'ma_hang' => $variant->ma_hang,
-                'ma_vach' => $variant->ma_vach,
-                'gia_von' => $variant->gia_von,
-                'gia_ban' => $variant->gia_ban,
-                'so_luong_ton' => $variant->so_luong_ton,
-                'trang_thai' => $variant->trang_thai,
-                'hinh_anh' => $variant->hinh_anh,
-                'units' => [],
-            ];
-
-            // Mỗi unit là 1 dòng riêng
-            foreach ($variant->units as $unit) {
-                $flat[] = [
-                    'type' => 'unit',
-                    'id' => $unit->id,
-                    'variant_id' => $variant->id,
-                    'product_id' => $variant->product_id,
-                    'ten_san_pham' => $variant->product->ten_san_pham ?? '',
-                    'danh_muc' => '',
-                    'ten_hien_thi' => ($variant->ten_bien_the
-                        ? ($variant->product->ten_san_pham . ' - ' . $variant->ten_bien_the)
-                        : $variant->product->ten_san_pham) . ' - ' . $unit->ten_don_vi,
-                    'thuoc_tinh_labels' => $thuocTinhLabels,
-                    'ma_hang' => $unit->ma_hang,
-                    'ma_vach' => $unit->ma_vach,
-                    'gia_von' => $unit->gia_von_quy_doi,
-                    'gia_ban' => $unit->gia_ban_quy_doi,
-                    'ty_le_quy_doi' => $unit->ty_le_quy_doi,
-                    'so_luong_ton' => $variant->so_luong_ton,
-                    'trang_thai' => $variant->trang_thai,
-                    'hinh_anh' => $unit->hinh_anh ?: $variant->hinh_anh,
-                ];
-            }
-        }
-        return $flat;
-    }
-
     public function store(StoreSanPhamRequest $request): RedirectResponse
     {
-        $data = $request->validated();
+        \Log::info('Data store:', $request->all());
 
-        $imagePath = null;
-        if ($request->hasFile('hinh_anh')) {
-            $imagePath = $this->uploadImage($request->file('hinh_anh'));
-        }
+        try {
+            $data = $request->validated();
 
-        // Validate ma_vach khong trung
-        $barcodes = array_filter(array_column($data['bien_the'] ?? [], 'ma_vach'));
-        if (!empty($barcodes) && BienTheSanPham::whereIn('ma_vach', $barcodes)->exists()) {
-            return redirect()->back()->withInput()->withErrors(['bien_the' => 'Một hoặc nhiều mã vạch biến thể đã tồn tại.']);
-        }
+            $imagePath = null;
+            if ($request->hasFile('hinh_anh')) {
+                $imagePath = $this->uploadImage($request->file('hinh_anh'));
+            }
 
-        return DB::transaction(function () use ($data, $request, $imagePath) {
+            // Validate ma_vach khong trung
+            $barcodes = array_filter(array_column($data['bien_the'] ?? [], 'ma_vach'));
+            if (!empty($barcodes) && BienTheSanPham::whereIn('ma_vach', $barcodes)->exists()) {
+                return redirect()->back()->withInput()->withErrors(['bien_the' => 'Một hoặc nhiều mã vạch biến thể đã tồn tại.']);
+            }
+
+            // Xử lý thuộc tính MỚI: tạo vào DB trước, trả về map {label => id}
+            $newAttrMap = $this->processNewAttributes($data['new_attributes'] ?? []);
+            $data['bien_the'] = $this->resolveThuocTinhIdsWithNew($data['bien_the'] ?? [], $newAttrMap);
+
+            // return bên trong DB::transaction() sẽ throw, thoát closure và return từ store luôn.
+            // Nếu closure throw exception → Laravel tự động rollBack + propagate exception ra ngoài catch.
+            return DB::transaction(function () use ($data, $request, $imagePath) {
             // 1. Tạo Product (thông tin chung)
             $product = Product::create([
                 'id_danh_muc' => $data['id_danh_muc'],
@@ -143,6 +99,16 @@ class SanPhamController extends Controller
             ]);
 
             $bienThe = $data['bien_the'] ?? [];
+
+            // Đảm bảo tất cả đơn vị tính từ form đều tồn tại trong DB (tạo mới nếu chưa có)
+            $unitNames = collect($bienThe)
+                ->pluck('ten_bien_the')
+                ->filter()
+                ->unique()
+                ->values();
+            foreach ($unitNames as $name) {
+                $this->ensureDonViSanPham($name);
+            }
 
             if (empty($bienThe)) {
                 // 2a. Không có biến thể → tạo 1 variant mặc định
@@ -203,8 +169,13 @@ class SanPhamController extends Controller
                     ]);
 
                     // 3. Tạo units cho variant
+                    // Chỉ lưu đơn vị có tỷ lệ > 1 (đơn vị quy đổi) vào bảng don_vi_quy_doi.
+                    // Đơn vị cơ bản (ty_le = 1) đã được lưu vào bien_the_san_pham rồi → bỏ qua.
                     if (!empty($variant['units'])) {
                         foreach ($variant['units'] as $unit) {
+                            if ((int)($unit['ty_le_quy_doi'] ?? 1) <= 1) {
+                                continue; // Bỏ qua đơn vị cơ bản
+                            }
                             DonViQuyDoi::create([
                                 'variant_id' => $createdVariant->id,
                                 'ten_don_vi' => $unit['ten_don_vi'],
@@ -223,29 +194,58 @@ class SanPhamController extends Controller
             }
 
             return redirect()->back()->with('success', 'Đã thêm sản phẩm mới.');
-        });
+            });
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Lỗi store sản phẩm: ' . $e->getMessage());
+            return redirect()->back()->withInput()->withErrors(['general' => 'Lỗi: ' . $e->getMessage()]);
+        }
     }
 
     public function edit($id): View
     {
         $product = Product::with(['variants.units', 'variants'])->findOrFail($id);
         $danhMucs = DanhMucSanPham::orderBy('ten_danh_muc')->get();
-        $thuocTinhs = ThuocTinhSanPham::whereNull('thuoc_tinh_cha_id')
+        $thuocTinhChas = ThuocTinhSanPham::whereNull('thuoc_tinh_cha_id')
             ->where('trang_thai', true)
             ->orderBy('ten_thuoc_tinh')
+            ->with(['thuocTinhCons' => fn($q) => $q->where('trang_thai', true)->orderBy('ten_thuoc_tinh')])
             ->get();
+
+        $donViSanPhams = DonViSanPham::where('trang_thai', true)->orderBy('ten_don_vi')->get();
 
         return view('admin_xem_truoc.san-pham.sua', [
             'product' => $product,
             'danhMucs' => $danhMucs,
-            'thuocTinhs' => $thuocTinhs,
+            'thuocTinhChas' => $thuocTinhChas,
+            'donViSanPhams' => $donViSanPhams,
         ]);
     }
 
     public function update(UpdateSanPhamRequest $request, int $id): RedirectResponse
     {
+        file_put_contents(
+            storage_path('logs/debug_update.txt'),
+            "[" . now()->toDateTimeString() . "] CONTROLLER HIT\nall=" . json_encode($request->all()) . "\n\n",
+            FILE_APPEND
+        );
+
         $product = Product::with('variants.units')->findOrFail($id);
         $data = $request->validated();
+
+        // Xử lý thuộc tính MỚI: tạo vào DB trước, trả về map {label => id}
+        $newAttrMap = $this->processNewAttributes($data['new_attributes'] ?? []);
+        $data['bien_the'] = $this->resolveThuocTinhIdsWithNew($data['bien_the'] ?? [], $newAttrMap);
+
+        // Đảm bảo tất cả đơn vị tính từ form đều tồn tại trong DB (tạo mới nếu chưa có)
+        $unitNames = collect($data['bien_the'] ?? [])
+            ->pluck('ten_bien_the')
+            ->filter()
+            ->unique()
+            ->values();
+        foreach ($unitNames as $name) {
+            $this->ensureDonViSanPham($name);
+        }
 
         // 1. Upload anh bien the (ngoai transaction de tranh rollback file)
         $variantImages = [];
@@ -619,12 +619,175 @@ class SanPhamController extends Controller
     protected function generateUniqueMaVach(): string
     {
         do {
-            $code = 'BV' . strtoupper(Str::random(8));
+            $code = 'MV' . strtoupper(Str::random(8));
         } while (
             BienTheSanPham::where('ma_vach', $code)->exists()
             || DonViQuyDoi::where('ma_vach', $code)->exists()
         );
         return $code;
+    }
+
+    /**
+     * Tạo đơn vị tính mới vào DB nếu chưa tồn tại.
+     * Được gọi khi người dùng gõ đơn vị không có trong danh sách.
+     */
+    protected function ensureDonViSanPham(string $tenDonVi): \App\Models\DonViSanPham
+    {
+        return DonViSanPham::firstOrCreate(
+            ['ten_don_vi' => $tenDonVi],
+            ['trang_thai' => true, 'so_luong_san_pham_trong_don_vi' => 1]
+        );
+    }
+
+    /**
+     * Xử lý thuộc tính MỚI: tạo vào DB rồi trả về map label => id.
+     * Input: [['group_name' => 'Màu sắc', 'parent_id' => 5, 'label' => 'Xanh Mint'], ...]
+     * Output: ['Màu sắc|Xanh Mint' => 42, ...]
+     */
+    protected function processNewAttributes(array $newAttributes): array
+    {
+        $map = [];
+        foreach ($newAttributes as $item) {
+            $groupName = trim($item['group_name'] ?? '');
+            $label = trim($item['label'] ?? '');
+            if ($groupName === '' || $label === '') continue;
+
+            $key = $groupName . '|' . $label;
+            if (isset($map[$key])) continue;
+
+            $created = ThuocTinhSanPham::firstOrCreate(
+                [
+                    'ten_thuoc_tinh' => $label,
+                    'thuoc_tinh_cha_id' => $item['parent_id'] ?? null,
+                ],
+                ['trang_thai' => true]
+            );
+            $map[$key] = $created->id;
+        }
+        return $map;
+    }
+
+    /**
+     * Resolve thuoc_tinh_ids trong bien_the: chuyển id=null thành id thực từ newAttrMap.
+     *
+     * Flow:
+     * 1. Với mỗi variant, duyệt tất cả giá trị thuộc tính trong DB cùng nhóm cha
+     * 2. Tìm id của giá trị có label khớp → dùng id đó
+     * 3. Nếu không tìm thấy, dùng newAttrMap (đã tạo ở processNewAttributes)
+     *
+     * @param  array  $bienThe   Mảng variants
+     * @param  array  $newAttrMap  Map ['group|label' => id]
+     * @return array  Mảng variants đã được resolve thuoc_tinh_ids
+     */
+    protected function resolveThuocTinhIdsWithNew(array $bienThe, array $newAttrMap): array
+    {
+        foreach ($bienThe as &$variant) {
+            $rawIds = $variant['thuoc_tinh_ids'] ?? null;
+            if (blank($rawIds)) continue;
+
+            $idStrings = is_array($rawIds) ? $rawIds : explode(',', $rawIds);
+            $resolved = [];
+
+            foreach ($idStrings as $idStr) {
+                $idStr = trim($idStr);
+                if ($idStr === '' || $idStr === 'null') continue;
+
+                if (is_numeric($idStr)) {
+                    $resolved[] = (int) $idStr;
+                }
+            }
+
+            $variant['thuoc_tinh_ids'] = !empty($resolved) ? implode(',', $resolved) : null;
+        }
+        unset($variant);
+
+        return $bienThe;
+    }
+
+    /**
+     * Đồng bộ đơn vị quy đổi cho một variant (update).
+     * Chỉ lưu đơn vị có tỷ lệ > 1. Đơn vị cơ bản (ty_le = 1) KHÔNG được lưu vào bảng don_vi_quy_doi.
+     */
+    protected function syncUnits(int $variantId, array $units, ?string $image = null): void
+    {
+        // Neu khong co image upload, lay tu variant hien tai
+        $variantImage = $image;
+        if ($variantImage === null) {
+            $variant = BienTheSanPham::find($variantId);
+            if ($variant) {
+                $variantImage = $variant->hinh_anh;
+            }
+        }
+
+        if (empty($units)) {
+            // Xóa hết units cũ
+            $oldUnits = DonViQuyDoi::where('variant_id', $variantId)->get();
+            foreach ($oldUnits as $u) {
+                if ($u->hinh_anh && !str_starts_with($u->hinh_anh, 'http')) {
+                    $this->deleteImageIfUnused($u->hinh_anh);
+                }
+                $u->delete();
+            }
+            return;
+        }
+
+        $incomingIds = [];
+        $existingIds = DonViQuyDoi::where('variant_id', $variantId)->pluck('id')->toArray();
+
+        foreach ($units as $unit) {
+            // Bỏ qua đơn vị cơ bản (tỷ lệ = 1) — nó đã nằm trong bien_the_san_pham rồi
+            if ((int)($unit['ty_le_quy_doi'] ?? 1) <= 1) {
+                continue;
+            }
+
+            $unitId = $unit['id'] ?? null;
+
+            if ($unitId && in_array($unitId, $existingIds)) {
+                // Cập nhật đơn vị hiện có
+                $existingUnit = DonViQuyDoi::find($unitId);
+                if ($existingUnit) {
+                    $existingUnit->update([
+                        'ten_don_vi' => $unit['ten_don_vi'],
+                        'ty_le_quy_doi' => (int)($unit['ty_le_quy_doi'] ?? 1),
+                        'ma_hang' => $unit['ma_hang'] ?? null,
+                        'ma_vach' => $unit['ma_vach'] ?? null,
+                        'gia_von_quy_doi' => $unit['gia_von_quy_doi'] ?? 0,
+                        'gia_ban_quy_doi' => $unit['gia_ban_quy_doi'] ?? 0,
+                        'gia_ban_si' => $unit['gia_ban_si'] ?? null,
+                        'hinh_anh' => $image !== null ? $image : $existingUnit->hinh_anh,
+                        'la_don_vi_mac_dinh' => false,
+                    ]);
+                    $incomingIds[] = $unitId;
+                }
+            } else {
+                // Tạo mới — thừa hưởng ảnh từ variant
+                $newUnit = DonViQuyDoi::create([
+                    'variant_id' => $variantId,
+                    'ten_don_vi' => $unit['ten_don_vi'],
+                    'ty_le_quy_doi' => (int)($unit['ty_le_quy_doi'] ?? 1),
+                    'ma_hang' => $unit['ma_hang'] ?? $this->generateUniqueMaHang(),
+                    'ma_vach' => $unit['ma_vach'] ?? null,
+                    'gia_von_quy_doi' => $unit['gia_von_quy_doi'] ?? 0,
+                    'gia_ban_quy_doi' => $unit['gia_ban_quy_doi'] ?? 0,
+                    'gia_ban_si' => $unit['gia_ban_si'] ?? null,
+                    'hinh_anh' => $variantImage,
+                    'la_don_vi_mac_dinh' => false,
+                ]);
+                $incomingIds[] = $newUnit->id;
+            }
+        }
+
+        // Xóa các đơn vị cũ không còn trong payload
+        $toDelete = array_diff($existingIds, $incomingIds);
+        if (!empty($toDelete)) {
+            $oldUnits = DonViQuyDoi::where('variant_id', $variantId)->whereIn('id', $toDelete)->get();
+            foreach ($oldUnits as $u) {
+                if ($u->hinh_anh && !str_starts_with($u->hinh_anh, 'http')) {
+                    $this->deleteImageIfUnused($u->hinh_anh);
+                }
+                $u->delete();
+            }
+        }
     }
 
 }

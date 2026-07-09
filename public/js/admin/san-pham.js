@@ -157,6 +157,9 @@ function toggleSection(headerEl) {
     var drawerBody = document.getElementById('drawerBody');
     var drawerEditBtn = document.getElementById('drawerEditBtn');
 
+    var _drawerController = null;
+    var _drawerRequestId = 0;
+
     window.toggleVariants = function(productId) {
         var btn = document.getElementById('expandBtn' + productId);
         var rows = document.querySelectorAll('[id^="variantRow' + productId + '_"]');
@@ -182,14 +185,19 @@ function toggleSection(headerEl) {
     var productTableBody = document.getElementById('productTableBody');
     if (productTableBody) {
         productTableBody.addEventListener('click', function(e) {
-            var row = e.target.closest('.variant-row, .unit-row, tr[data-id]');
+            var row = e.target.closest('.product-parent-row, .variant-child-row, .unit-child-row, tr[data-id]');
             if (!row) return;
-            var id = row.dataset.id || row.dataset.productId;
-            if (id) window.openProductDrawer(id);
+            var productId = row.dataset.productId || row.dataset.id;
+            var targetId = row.dataset.targetId || productId;
+            var rowType = row.dataset.rowType || 'goc';
+            if (productId) window.openProductDrawer(productId, targetId, rowType);
         });
     }
 
-    window.openProductDrawer = async function(id) {
+    window.openProductDrawer = async function(productId, targetId, rowType) {
+        if (targetId === undefined) { targetId = productId; rowType = 'goc'; }
+        console.log('[Drawer] openProductDrawer called', { productId, targetId, rowType });
+
         var modal = new bootstrap.Offcanvas(drawer);
         drawerBody.innerHTML = '<div class="d-flex justify-content-center align-items-center" style="min-height:300px;">' +
             '<div class="text-center">' +
@@ -197,19 +205,30 @@ function toggleSection(headerEl) {
                 '<p class="text-muted mb-0">Dang tai...</p>' +
             '</div>' +
         '</div>';
-        if (drawerEditBtn) drawerEditBtn.href = '/admin/san-pham/' + id + '/edit';
-        window.currentDrawerProductId = id;
+        if (drawerEditBtn) drawerEditBtn.href = '/admin/san-pham/' + productId + '/edit';
+        window.currentDrawerProductId = productId;
         modal.show();
 
+        // Abort any in-flight request before starting a new one
+        if (_drawerController) _drawerController.abort();
+        _drawerController = new AbortController();
+        var myRequestId = ++_drawerRequestId;
+
         try {
-            var res = await fetch('/admin/api/san-pham/' + id);
+            var apiUrl = '/admin/api/san-pham/' + productId;
+            if (targetId && String(targetId) !== String(productId)) {
+                apiUrl += '?variant_id=' + targetId;
+            }
+            var res = await fetch(apiUrl, { signal: _drawerController.signal });
             var json = await res.json();
+            if (myRequestId !== _drawerRequestId) return;
             if (!json.success) {
                 drawerBody.innerHTML = '<div class="p-4 text-center text-danger">' + (json.message || 'Khong tim thay san pham.') + '</div>';
                 return;
             }
-            renderDrawerContent(json.data);
+            renderDrawerContent(json.data, targetId, rowType);
         } catch(e) {
+            if (e.name === 'AbortError') return;
             drawerBody.innerHTML = '<div class="p-4 text-center text-danger">Loi tai du lieu: ' + e.message + '</div>';
         }
     };
@@ -246,25 +265,52 @@ function toggleSection(headerEl) {
         return map[loai?.toLowerCase()] || '<span class="badge bg-secondary">' + (loai || '-') + '</span>';
     }
 
-    function renderDrawerContent(data) {
+    function renderDrawerContent(data, targetId, rowType) {
         var sp = data.product || {};
+        var allVariants = data.allVariants || [];
         var variant = data.variant || {};
         var units = data.units || [];
         var theKho = data.theKho || [];
         var loHang = data.loHang || [];
 
-        var trangThaiVariant = !variant.trang_thai
+        // === Tìm đúng variant để hiển thị trên Header ===
+        // - Click dòng cha (targetId == productId, rowType=goc): dùng variant mặc định từ API
+        // - Click dòng con (targetId = variant.id, rowType=goc): tìm trong allVariants
+        var displayVariant = variant;
+
+        if (targetId && String(targetId) !== String(sp.id)) {
+            var found = allVariants.find(function(v) { return String(v.id) === String(targetId); });
+            if (found) displayVariant = found;
+        }
+
+        // Lấy units đúng của variant đang hiển thị (allVariants đã eager load units)
+        var displayUnits = displayVariant && displayVariant.units
+            ? displayVariant.units
+            : units;
+
+        // Tìm đơn vị tương ứng với variant đang hiển thị
+        var displayUnit = null;
+        if (displayVariant && displayVariant.don_vi_id) {
+            displayUnit = displayUnits.find(function(u) { return String(u.id) === String(displayVariant.don_vi_id); });
+        }
+        var tenDonViHienThi = displayUnit ? displayUnit.ten_don_vi : (units.length > 0 ? (units[0].ten_don_vi || '-') : '-');
+        var maVachHienThi = displayUnit ? (displayUnit.ma_vach || '-') : (displayVariant.ma_vach || '-');
+        var giaBanHienThi = displayUnit ? displayUnit.gia_ban_quy_doi : displayVariant.gia_ban;
+        var giaVonHienThi = displayUnit ? displayUnit.gia_von_quy_doi : displayVariant.gia_von;
+        var tonKhoHienThi = displayUnit ? displayUnit.so_luong_ton : displayVariant.so_luong_ton;
+
+        var trangThaiVariant = !displayVariant.trang_thai
             ? '<span class="badge bg-danger">Ngung ban</span>'
-            : ((variant.so_luong_ton ?? 0) <= 0
+            : ((tonKhoHienThi ?? 0) <= 0
                 ? '<span class="badge bg-secondary">Het hang</span>'
-                : ((variant.dinh_muc_toi_thieu && (variant.so_luong_ton ?? 0) <= variant.dinh_muc_toi_thieu)
+                : ((displayVariant.dinh_muc_toi_thieu && (tonKhoHienThi ?? 0) <= displayVariant.dinh_muc_toi_thieu)
                     ? '<span class="badge bg-warning text-dark">Sap het hang</span>'
                     : '<span class="badge bg-success">Con hang</span>'));
 
         var thuocTinhLabels = '';
-        if (variant.thuoc_tinh_ids && Array.isArray(variant.thuoc_tinh_ids)) {
+        if (displayVariant.thuoc_tinh_ids && Array.isArray(displayVariant.thuoc_tinh_ids)) {
             var thuocTinhChas = window.thuocTinhChasData || [];
-            variant.thuoc_tinh_ids.forEach(function(ttId) {
+            displayVariant.thuoc_tinh_ids.forEach(function(ttId) {
                 var found = thuocTinhChas.find(function(t) { return String(t.id) === String(ttId); });
                 if (found) {
                     thuocTinhLabels += '<span class="badge bg-info text-dark me-1">' + found.ten_thuoc_tinh + '</span>';
@@ -272,18 +318,18 @@ function toggleSection(headerEl) {
             });
         }
 
-        var variantHinhAnh = variant.hinh_anh
-            ? '<img src="/' + variant.hinh_anh + '" style="width:32px;height:32px;object-fit:cover;border-radius:4px;">'
+        var variantHinhAnh = displayVariant.hinh_anh
+            ? '<img src="/' + displayVariant.hinh_anh + '" style="width:32px;height:32px;object-fit:cover;border-radius:4px;">'
             : '<div style="width:32px;height:32px;border-radius:4px;background:#eee;display:flex;align-items:center;justify-content:center;"><i class="fas fa-image text-muted" style="font-size:0.6rem;"></i></div>';
 
-        var mainHinhAnh = variant.hinh_anh
-            ? '<img src="/' + variant.hinh_anh + '" class="img-fluid rounded" alt="' + (sp.ten_san_pham || '') + '" style="max-height:220px; object-fit:contain; background:#f8f9fa;">'
+        var mainHinhAnh = displayVariant.hinh_anh
+            ? '<img src="/' + displayVariant.hinh_anh + '" class="img-fluid rounded" alt="' + (sp.ten_san_pham || '') + '" style="max-height:220px; object-fit:contain; background:#f8f9fa;">'
             : '<div class="text-center text-muted py-5 bg-light rounded"><i class="fas fa-image fa-3x"></i><p class="mt-2 mb-0">Khong co anh</p></div>';
 
         var unitsHtml = '';
         if (units.length > 0) {
             unitsHtml = '<div class="mb-3">' +
-                '<h6 class="fw-bold mb-2"><i class="fas fa-balance-scale me-1"></i>Don vi quy doi <span class="fw-normal text-muted small">(' + units.length + ')</span></h6>' +
+                '<h6 class="fw-bold mb-2"><i class="fas fa-balance-scale me-1"></i>Don vi quy doi <span class="fw-normal text-muted small">(' + displayUnits.length + ')</span></h6>' +
                 '<table class="table table-sm table-bordered mb-0" style="font-size:0.82rem;">' +
                     '<thead class="table-light">' +
                         '<tr>' +
@@ -296,7 +342,7 @@ function toggleSection(headerEl) {
                         '</tr>' +
                     '</thead>' +
                     '<tbody>';
-            units.forEach(function(unit) {
+            displayUnits.forEach(function(unit) {
                 unitsHtml += '<tr>' +
                     '<td class="small">' + (unit.ten_don_vi || '-') + '</td>' +
                     '<td class="text-center small">' + (unit.ty_le_quy_doi || '-') + '</td>' +
@@ -374,22 +420,23 @@ function toggleSection(headerEl) {
                     '<div class="d-flex justify-content-between align-items-start">' +
                         '<div>' +
                             '<h5 class="fw-bold mb-1">' + (sp.ten_san_pham || '-') + '</h5>' +
-                            '<p class="text-muted small mb-1">#' + (variant.ma_hang || variant.ma_vach || variant.id || sp.id || '-') + '</p>' +
+                            '<p class="text-muted small mb-1">#' + (displayVariant.ma_hang || displayVariant.ma_vach || displayVariant.id || sp.id || '-') + '</p>' +
                             trangThaiVariant +
                         '</div>' +
                         '<div class="text-end">' +
-                            '<p class="fw-bold text-primary mb-0" style="font-size:1.4rem;">' + formatMoney(variant.gia_ban) + ' d</p>' +
-                            '<p class="text-muted small mb-0">Gia von: ' + formatMoney(variant.gia_von) + ' d</p>' +
+                            '<p class="fw-bold text-primary mb-0" style="font-size:1.4rem;">' + formatMoney(giaBanHienThi) + ' d</p>' +
+                            '<p class="text-muted small mb-0">Gia von: ' + formatMoney(giaVonHienThi) + ' d</p>' +
                         '</div>' +
                     '</div>' +
                     '<hr>' +
                     '<div class="row g-2 small">' +
                         '<div class="col-6"><strong>Danh muc:</strong> ' + (sp.danh_muc?.ten_danh_muc || '-') + '</div>' +
                         '<div class="col-6"><strong>Thuong hieu:</strong> ' + (sp.thuong_hieu || '-') + '</div>' +
-                        '<div class="col-6"><strong>Ten bien the:</strong> ' + (variant.ten_bien_the || '-') + '</div>' +
-                        '<div class="col-6"><strong>Ma vach:</strong> ' + (variant.ma_vach || '-') + '</div>' +
-                        '<div class="col-6"><strong>Ton kho:</strong> ' + (variant.so_luong_ton ?? 0) + '</div>' +
-                        '<div class="col-6"><strong>Dinh muc:</strong> ' + (variant.dinh_muc_toi_thieu ?? 0) + '</div>' +
+                        '<div class="col-6"><strong>Ten bien the:</strong> ' + (displayVariant.ten_bien_the || '-') + '</div>' +
+                        '<div class="col-6"><strong>Don vi:</strong> ' + tenDonViHienThi + '</div>' +
+                        '<div class="col-6"><strong>Ma vach:</strong> ' + maVachHienThi + '</div>' +
+                        '<div class="col-6"><strong>Ton kho:</strong> ' + (tonKhoHienThi ?? 0) + '</div>' +
+                        '<div class="col-6"><strong>Dinh muc:</strong> ' + (displayVariant.dinh_muc_toi_thieu ?? 0) + '</div>' +
                     '</div>' +
                     (thuocTinhLabels ? '<div class="mt-2">' + thuocTinhLabels + '</div>' : '') +
                 '</div>' +

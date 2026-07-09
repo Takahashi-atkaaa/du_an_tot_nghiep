@@ -55,7 +55,7 @@ class BienTheSanPham extends BaseModel
             ->where('so_luong_ton', '>', 0);
     }
 
-    public function thuocTinhs()
+    public function getThuocTinhsAttribute()
     {
         if (empty($this->thuoc_tinh_ids)) {
             return collect();

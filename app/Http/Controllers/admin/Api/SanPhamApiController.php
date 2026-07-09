@@ -36,55 +36,89 @@ class SanPhamApiController extends Controller
 
         $items = $query->limit(50)->get();
 
-        // Flat list
+        // Flat list theo kien truc POS chuan:
+        // - Variant co units > 0: hien thi don vi co ban (bien_the) + TAT CA don vi quy doi (don_vi_quy_doi)
+        // - Variant co units == 0: hien thi variant binh thuong
+        // - MOI row deu co 'product_id' de click chi tiet dung san_pham
         $dataArray = [];
         foreach ($items as $variant) {
             $thuocTinhs = $variant->thuocTinhs();
             $tonKho = $variant->chiTietLoHangTon->sum('so_luong_ton');
+            $units = $variant->units;
+            $product = $variant->product;
 
-            $baseRow = [
-                'id' => $variant->id,
-                'product_id' => $variant->product_id,
-                'type' => 'variant',
-                'ten_san_pham' => $variant->product->ten_san_pham ?? '',
-                'ten_bien_the' => $variant->ten_bien_the,
-                'ten_hien_thi' => $variant->ten_hien_thi,
-                'danh_muc' => $variant->product->danhMuc->ten_danh_muc ?? '',
-                'ma_hang' => $variant->ma_hang,
-                'ma_vach' => $variant->ma_vach,
-                'gia_von' => $variant->gia_von,
-                'gia_ban' => $variant->gia_ban,
-                'so_luong_ton' => $variant->so_luong_ton,
-                'chi_tiet_lo_hang_ton' => $tonKho,
-                'thuoc_tinh_labels' => $thuocTinhs->pluck('ten_thuoc_tinh')->toArray(),
-                'thuoc_tinh_ids' => $variant->thuoc_tinh_ids,
-                'hinh_anh' => $variant->hinh_anh,
-                'trang_thai' => $variant->trang_thai,
-                'units' => [],
-            ];
-            $dataArray[] = $baseRow;
+            $tenSanPham = $product->ten_san_pham ?? '';
+            $tenBienThe = $variant->ten_bien_the ?? '';
+            $tenHienThiGoc = $tenBienThe ? ($tenSanPham . ' - ' . $tenBienThe) : $tenSanPham;
 
-            // Mỗi unit là 1 dòng riêng
-            foreach ($variant->units as $unit) {
+            if ($units->count() > 0) {
+                // 1. Don vi co ban: bien_the chinh la don vi co ban
                 $dataArray[] = [
-                    'id' => $unit->id,
+                    'id' => $variant->id,
                     'variant_id' => $variant->id,
                     'product_id' => $variant->product_id,
                     'type' => 'unit',
-                    'ten_san_pham' => $variant->product->ten_san_pham ?? '',
+                    'ten_san_pham' => $tenSanPham,
                     'ten_bien_the' => $variant->ten_bien_the,
-                    'ten_hien_thi' => $variant->ten_hien_thi . ' - ' . $unit->ten_don_vi,
-                    'danh_muc' => '',
-                    'ma_hang' => $unit->ma_hang,
-                    'ma_vach' => $unit->ma_vach,
-                    'gia_von' => $unit->gia_von_quy_doi,
-                    'gia_ban' => $unit->gia_ban_quy_doi,
-                    'gia_ban_si' => $unit->gia_ban_si,
-                    'ty_le_quy_doi' => $unit->ty_le_quy_doi,
+                    'ten_hien_thi' => $tenSanPham . ' - ' . ($variant->ten_bien_the ?: 'Đơn vị tiêu chuẩn'),
+                    'danh_muc' => $product->danhMuc->ten_danh_muc ?? '',
+                    'ma_hang' => $variant->ma_hang,
+                    'ma_vach' => $variant->ma_vach,
+                    'gia_von' => $variant->gia_von,
+                    'gia_ban' => $variant->gia_ban,
                     'so_luong_ton' => $variant->so_luong_ton,
+                    'ton_kho_hien_thi' => $variant->so_luong_ton,
                     'chi_tiet_lo_hang_ton' => $tonKho,
                     'thuoc_tinh_labels' => $thuocTinhs->pluck('ten_thuoc_tinh')->toArray(),
-                    'hinh_anh' => $unit->hinh_anh ?: $variant->hinh_anh,
+                    'hinh_anh' => $variant->hinh_anh,
+                    'trang_thai' => $variant->trang_thai,
+                ];
+
+                // 2. Don vi quy doi: tung dong trong don_vi_quy_doi
+                foreach ($units as $unit) {
+                    $dataArray[] = [
+                        'id' => $unit->id,
+                        'variant_id' => $variant->id,
+                        'product_id' => $variant->product_id,
+                        'type' => 'unit',
+                        'ten_san_pham' => $tenSanPham,
+                        'ten_bien_the' => $unit->ten_don_vi,
+                        'ten_hien_thi' => $tenSanPham . ' - ' . $unit->ten_don_vi,
+                        'danh_muc' => '',
+                        'ma_hang' => $unit->ma_hang,
+                        'ma_vach' => $unit->ma_vach,
+                        'gia_von' => $unit->gia_von_quy_doi,
+                        'gia_ban' => $unit->gia_ban_quy_doi,
+                        'gia_ban_si' => $unit->gia_ban_si,
+                        'ty_le_quy_doi' => $unit->ty_le_quy_doi,
+                        'so_luong_ton' => $variant->so_luong_ton,
+                        'ton_kho_hien_thi' => (int)floor($variant->so_luong_ton / $unit->ty_le_quy_doi),
+                        'chi_tiet_lo_hang_ton' => $tonKho,
+                        'thuoc_tinh_labels' => $thuocTinhs->pluck('ten_thuoc_tinh')->toArray(),
+                        'hinh_anh' => $unit->hinh_anh ?: $variant->hinh_anh,
+                        'trang_thai' => $variant->trang_thai,
+                    ];
+                }
+            } else {
+                // Khong co don vi quy doi -> hien thi variant binh thuong
+                $dataArray[] = [
+                    'id' => $variant->id,
+                    'product_id' => $variant->product_id,
+                    'type' => 'bien_the',
+                    'ten_san_pham' => $tenSanPham,
+                    'ten_bien_the' => $tenBienThe,
+                    'ten_hien_thi' => $tenHienThiGoc,
+                    'danh_muc' => $product->danhMuc->ten_danh_muc ?? '',
+                    'ma_hang' => $variant->ma_hang,
+                    'ma_vach' => $variant->ma_vach,
+                    'gia_von' => $variant->gia_von,
+                    'gia_ban' => $variant->gia_ban,
+                    'so_luong_ton' => $variant->so_luong_ton,
+                    'ton_kho_hien_thi' => $variant->so_luong_ton,
+                    'chi_tiet_lo_hang_ton' => $tonKho,
+                    'thuoc_tinh_labels' => $thuocTinhs->pluck('ten_thuoc_tinh')->toArray(),
+                    'thuoc_tinh_ids' => $variant->thuoc_tinh_ids,
+                    'hinh_anh' => $variant->hinh_anh,
                     'trang_thai' => $variant->trang_thai,
                 ];
             }
@@ -99,15 +133,42 @@ class SanPhamApiController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $variant = BienTheSanPham::with(['product.danhMuc', 'product', 'units'])->find($id);
+        $requestedVariantId = request()->query('variant_id');
+        \Log::info('[SanPhamApi show] id=' . $id . ' variant_id=' . ($requestedVariantId ?? 'null'));
 
+        $product = Product::with([
+            'variants' => fn($q) => $q->with('units')->orderBy('id'),
+            'danhMuc',
+        ])->find($id);
+
+        $variant = null;
+
+        // Ưu tiên variant_id từ query (click dòng con → hiển thị variant cụ thể)
+        if ($requestedVariantId && $product) {
+            $variant = $product->variants->first(fn($v) => (string)$v->id === (string)$requestedVariantId);
+        }
+
+        // Fallback: click dòng cha → lấy variant đầu tiên
+        if (!$variant && $product && $product->variants->isNotEmpty()) {
+            $variant = $product->variants->first();
+        }
+
+        // Fallback cuối: $id chính là variant ID
         if (!$variant) {
-            return response()->json(['success' => false, 'message' => 'Biến thể không tồn tại.'], 404);
+            $variant = BienTheSanPham::with([
+                'product.danhMuc',
+                'product.variants.units',
+                'units',
+            ])->find($id);
+        }
+
+        if (!$variant || !$variant->product) {
+            return response()->json(['success' => false, 'message' => 'San pham khong ton tai.'], 404);
         }
 
         $theKho = DB::table('phieu')
             ->join('chi_tiet_phieu', 'phieu.id', '=', 'chi_tiet_phieu.id_phieu')
-            ->where('chi_tiet_phieu.variant_id', $id)
+            ->where('chi_tiet_phieu.variant_id', $variant->id)
             ->select(
                 DB::raw("CONCAT('PN-', phieu.id) as maPhieu"),
                 'phieu.created_at as thoiGian',
@@ -124,7 +185,7 @@ class SanPhamApiController extends Controller
 
         $loHang = DB::table('chi_tiet_lo_hang as ct')
             ->join('lo_hang as lh', 'lh.id', '=', 'ct.id_lo_hang')
-            ->where('ct.variant_id', $id)
+            ->where('ct.variant_id', $variant->id)
             ->where('ct.so_luong_ton', '>', 0)
             ->orderBy('ct.han_su_dung', 'asc')
             ->select(
@@ -137,11 +198,17 @@ class SanPhamApiController extends Controller
             )
             ->get();
 
+        // Ensure product always has danhMuc loaded
+        if (!$variant->product->relationLoaded('danhMuc')) {
+            $variant->product->load('danhMuc');
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
                 'product' => $variant->product->toArray(),
                 'variant' => $variant->toArray(),
+                'allVariants' => $variant->product->variants->toArray(),
                 'units' => $variant->units->toArray(),
                 'theKho' => $theKho,
                 'loHang' => $loHang,
@@ -154,7 +221,7 @@ class SanPhamApiController extends Controller
         $variant = BienTheSanPham::find($id);
 
         if (!$variant) {
-            return response()->json(['success' => false, 'message' => 'Biến thể không tồn tại.'], 404);
+            return response()->json(['success' => false, 'message' => 'Bien the khong ton tai.'], 404);
         }
 
         foreach ($variant->units as $unit) {
@@ -172,7 +239,7 @@ class SanPhamApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Đã xóa biến thể.',
+            'message' => 'Da xoa bien the.',
         ]);
     }
 
@@ -181,7 +248,7 @@ class SanPhamApiController extends Controller
         $product = Product::find($productId);
 
         if (!$product) {
-            return response()->json(['success' => false, 'message' => 'Sản phẩm không tồn tại.'], 404);
+            return response()->json(['success' => false, 'message' => 'San pham khong ton tai.'], 404);
         }
 
         $variants = $product->variants;
@@ -201,7 +268,7 @@ class SanPhamApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Đã xóa ' . $variants->count() . ' biến thể.',
+            'message' => 'Da xoa ' . $variants->count() . ' bien the.',
         ]);
     }
 

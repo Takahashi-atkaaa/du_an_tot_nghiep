@@ -113,11 +113,11 @@
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span class="text-muted small">Tong: <strong id="totalProducts">{{ $variants->total() }}</strong> dong</span>
+                <span class="text-muted small">Tong: <strong id="totalProducts">{{ $sanPhams->total() }}</strong> san pham</span>
             </div>
         </div>
 
-        @if($variants->count() > 0)
+        @if($sanPhams->count() > 0)
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead>
@@ -126,91 +126,195 @@
                         <th style="width:60px;">Anh</th>
                         <th>Ten san pham</th>
                         <th>Danh muc</th>
-                        <th>Loai</th>
-                        <th style="width:130px;">Gia ban</th>
+                        <th style="width:100px;">Don vi tinh</th>
+                        <th style="width:110px;">Gia ban</th>
                         <th style="width:80px;">Ton kho</th>
                         <th style="width:100px;">Trang thai</th>
                     </tr>
                 </thead>
                 <tbody id="productTableBody">
-                    @foreach($flatItems as $item)
+                    @foreach($sanPhams as $sp)
                         @php
-                            $isUnit = ($item['type'] ?? '') === 'unit';
-                            $trangThai = $item['trang_thai'] ?? true;
-                            $tonKho = $item['so_luong_ton'] ?? 0;
-                            $dinhMuc = $item['dinh_muc_toi_thieu'] ?? 0;
+                            $rows = $sp->flattenedRows;
+                            $hasMoreThanOneRow = $rows->count() > 1;
+                            $firstRow = $rows->first();
                         @endphp
-                        <tr class="{{ $isUnit ? 'unit-row' : 'variant-row' }}"
-                            style="cursor:pointer; {{ $isUnit ? 'background:#fafafa;' : '' }}"
-                            data-id="{{ $item['id'] }}"
-                            data-type="{{ $item['type'] ?? 'variant' }}"
-                            data-product-id="{{ $item['product_id'] }}"
-                            onclick="window.openProductDrawer && window.openProductDrawer('{{ $item['id'] }}')">
+
+                        @if($rows->isNotEmpty())
+                        {{-- DONG CHINH (dòng đầu tiên) --}}
+                        <tr class="product-parent-row {{ !$firstRow->trang_thai ? 'table-secondary opacity-50' : '' }}"
+                            style="cursor:pointer;"
+                            data-id="{{ $firstRow->variant->id ?? $sp->id }}"
+                            data-product-id="{{ $sp->id }}"
+                            data-target-id="{{ $sp->id }}"
+                            data-row-type="goc">
+
+                            {{-- Toggle expand --}}
                             <td onclick="event.stopPropagation();">
-                                <input type="checkbox" class="form-check-input product-checkbox" value="{{ $item['id'] }}">
+                                <div class="d-flex align-items-center gap-1">
+                                    @if($hasMoreThanOneRow)
+                                        <button class="btn btn-sm btn-light p-0 border-0 expand-btn"
+                                                id="expandBtn{{ $sp->id }}"
+                                                onclick="event.stopPropagation(); window.toggleVariants && window.toggleVariants({{ $sp->id }})"
+                                                title="Mo/rong">
+                                            <i class="fas fa-chevron-down" style="font-size:0.7rem; transition:transform 0.2s;"></i>
+                                        </button>
+                                    @endif
+                                    <input type="checkbox" class="form-check-input product-checkbox"
+                                           value="{{ $firstRow->variant->id ?? $sp->id }}"
+                                           data-product-id="{{ $sp->id }}"
+                                           data-type="{{ $firstRow->loai_dong }}"
+                                           onclick="event.stopPropagation();">
+                                </div>
                             </td>
+
+                            {{-- Hinh anh --}}
                             <td>
-                                @if(!empty($item['hinh_anh']))
-                                    <img src="{{ asset($item['hinh_anh']) }}" alt="{{ $item['ten_san_pham'] }}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
+                                @if(!empty($firstRow->hinh_anh))
+                                    <img src="{{ asset($firstRow->hinh_anh) }}" alt="{{ $sp->ten_san_pham }}"
+                                         style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
+                                @elseif(!empty($sp->hinh_anh))
+                                    <img src="{{ asset($sp->hinh_anh) }}" alt="{{ $sp->ten_san_pham }}"
+                                         style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
                                 @else
                                     <div style="width:48px;height:48px;border-radius:6px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;">
                                         <i class="fas fa-image text-muted"></i>
                                     </div>
                                 @endif
                             </td>
+
+                            {{-- Ten san pham + so dong --}}
                             <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    @if($isUnit)
-                                        <i class="fas fa-arrow-turn-down-right text-muted" style="font-size:0.6rem;"></i>
+                                <div>
+                                    <span class="fw-semibold" style="font-size:0.9rem;">{{ $sp->ten_san_pham }}</span>
+                                    @if(!empty($sp->thuong_hieu))
+                                        <div class="small text-muted">{{ $sp->thuong_hieu }}</div>
                                     @endif
-                                    <div>
-                                        <span class="fw-semibold" style="font-size:0.88rem;">{{ $item['ten_san_pham'] }}</span>
-                                        @if(!empty($item['ten_bien_the']))
-                                            <div class="small text-muted">{{ $item['ten_bien_the'] }}</div>
-                                        @endif
-                                        @if(!empty($item['thuoc_tinh_labels']))
-                                            <div class="d-flex gap-1 mt-1">
-                                                @foreach($item['thuoc_tinh_labels'] as $label)
-                                                    <span class="badge bg-light text-dark border" style="font-size:0.65rem;">{{ $label }}</span>
-                                                @endforeach
-                                            </div>
-                                        @endif
-                                        @if(!empty($item['ma_vach']))
-                                            <div class="small text-muted">#{{ $item['ma_vach'] }}</div>
-                                        @endif
-                                    </div>
+                                    @if($hasMoreThanOneRow)
+                                        <div class="mt-1">
+                                            <span class="badge bg-light text-dark border" style="font-size:0.68rem;">
+                                                <i class="fas fa-layer-group me-1"></i>{{ $rows->count() }} don vi
+                                            </span>
+                                        </div>
+                                    @endif
                                 </div>
                             </td>
+
+                            {{-- Danh muc --}}
                             <td>
-                                <span class="text-muted small">{{ $item['danh_muc'] ?: '-' }}</span>
+                                <span class="text-muted small">{{ $sp->danhMuc?->ten_danh_muc ?? '-' }}</span>
                             </td>
+
+                            {{-- Don vi tinh (dòng đầu = gốc) --}}
                             <td>
-                                @if($isUnit)
-                                    <span class="badge bg-info" style="font-size:0.7rem;">Don vi QD</span>
-                                @else
-                                    <span class="badge bg-secondary" style="font-size:0.7rem;">Bien the</span>
-                                @endif
+                                <span class="text-muted small">{{ $firstRow->ten_don_vi }}</span>
                             </td>
+
+                            {{-- Gia ban (dòng đầu) --}}
                             <td>
                                 <span class="fw-bold text-primary" style="font-size:0.88rem;">
-                                    {{ number_format((float)($item['gia_ban'] ?? 0), 0, ',', '.') }} d
+                                    {{ number_format((float)$firstRow->gia_ban, 0, ',', '.') }} d
                                 </span>
                             </td>
+
+                            {{-- Ton kho (dòng đầu) --}}
                             <td>
-                                <span class="{{ $tonKho <= $dinhMuc ? 'text-warning' : 'text-muted' }} small">{{ $tonKho }}</span>
+                                <span class="{{ $firstRow->so_luong_ton <= 0 ? 'text-danger' : ($firstRow->so_luong_ton <= 10 ? 'text-warning' : 'text-muted') }} small">
+                                    {{ $firstRow->so_luong_ton }}
+                                </span>
                             </td>
+
+                            {{-- Trang thai (dòng đầu) --}}
                             <td>
-                                @if(!$trangThai)
+                                @if(!$firstRow->trang_thai)
                                     <span class="badge bg-danger">Ngung ban</span>
-                                @elseif($tonKho <= 0)
+                                @elseif($firstRow->so_luong_ton <= 0)
                                     <span class="badge bg-secondary">Het hang</span>
-                                @elseif($tonKho <= $dinhMuc)
+                                @elseif($firstRow->so_luong_ton <= 10)
                                     <span class="badge bg-warning text-dark">Sap het</span>
                                 @else
                                     <span class="badge bg-success">Con hang</span>
                                 @endif
                             </td>
                         </tr>
+                        @endif
+
+                        @if($rows->count() > 1)
+                        {{-- CAC DONG CON (cac don vi con lai) --}}
+                        @foreach($rows->slice(1) as $rowIndex => $row)
+                            <tr id="variantRow{{ $sp->id }}_{{ $rowIndex }}"
+                                class="variant-child-row"
+                                style="display:none; background:#fafafa; cursor:pointer;"
+                                data-id="{{ $row->unit->id ?? $row->variant->id }}"
+                                data-target-id="{{ $row->unit->id ?? $row->variant->id }}"
+                                data-type="{{ $row->loai_dong }}"
+                                data-row-type="{{ $row->loai_dong }}"
+                                data-product-id="{{ $sp->id }}">
+                                <td></td>
+                                <td>
+                                    @if(!empty($row->hinh_anh))
+                                        <img src="{{ asset($row->hinh_anh) }}" alt=""
+                                             style="width:40px;height:40px;object-fit:cover;border-radius:4px;">
+                                    @else
+                                        <div style="width:40px;height:40px;border-radius:4px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;">
+                                            <i class="fas fa-cube text-muted" style="font-size:0.8rem;"></i>
+                                        </div>
+                                    @endif
+                                </td>
+                                <td style="padding-left: 2.5rem !important;">
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-arrow-turn-down-right text-muted" style="font-size:0.55rem;"></i>
+                                            <span class="fw-semibold" style="font-size:0.85rem;">
+                                                {{ $row->ten_don_vi }}
+                                            </span>
+                                            @if($row->loai_dong === 'quy_doi')
+                                                <span class="badge bg-info" style="font-size:0.6rem;">
+                                                    x{{ $row->ty_le }} {{ $firstRow->ten_don_vi }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                        @if(!empty($row->ma_vach))
+                                            <div class="small text-muted" style="padding-left: 1.1rem;">#{{ $row->ma_vach }}</div>
+                                        @endif
+                                    </div>
+                                </td>
+                                <td><span class="text-muted small">—</span></td>
+
+                                {{-- Don vi tinh --}}
+                                <td>
+                                    <span class="text-muted small">{{ $row->ten_don_vi }}</span>
+                                </td>
+
+                                {{-- Gia ban --}}
+                                <td>
+                                    <span class="fw-bold text-primary" style="font-size:0.85rem;">
+                                        {{ number_format((float)$row->gia_ban, 0, ',', '.') }} d
+                                    </span>
+                                </td>
+
+                                {{-- Ton kho --}}
+                                <td>
+                                    <span class="{{ $row->so_luong_ton <= 0 ? 'text-danger' : ($row->so_luong_ton <= 3 ? 'text-warning' : 'text-muted') }} small">
+                                        {{ $row->so_luong_ton }}
+                                    </span>
+                                </td>
+
+                                {{-- Trang thai --}}
+                                <td>
+                                    @if(!$row->trang_thai)
+                                        <span class="badge bg-danger">Ngung</span>
+                                    @elseif($row->so_luong_ton <= 0)
+                                        <span class="badge bg-secondary">Het</span>
+                                    @elseif($row->so_luong_ton <= 3)
+                                        <span class="badge bg-warning text-dark">Sap het</span>
+                                    @else
+                                        <span class="badge bg-success">Con hang</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                        @endif
                     @endforeach
                 </tbody>
             </table>
@@ -225,9 +329,9 @@
     <div class="card-footer bg-white">
         <div class="d-flex justify-content-between align-items-center">
             <span class="text-muted">
-                Hien thi {{ $variants->firstItem() ?? 0 }} - {{ $variants->lastItem() ?? 0 }} tren {{ $variants->total() }} dong
+                Hien thi {{ $sanPhams->firstItem() ?? 0 }} - {{ $sanPhams->lastItem() ?? 0 }} tren {{ $sanPhams->total() }} san pham
             </span>
-            <nav>{{ $variants->links('pagination::bootstrap-5') }}</nav>
+            <nav>{{ $sanPhams->links('pagination::bootstrap-5') }}</nav>
         </div>
     </div>
 </div>
@@ -289,15 +393,33 @@
 <script src="https://unpkg.com/html5-qrcode@2.3.7/minified/html5-qrcode.min.js"></script>
 <script src="https://unpkg.com/vue@3.4.27/dist/vue.global.prod.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
+@php
+    $attrsPayload = $thuocTinhChas->map(function ($g) {
+        return [
+            'id' => $g->id,
+            'name' => $g->ten_thuoc_tinh,
+            'values' => $g->thuocTinhCons->map(function ($v) {
+                return ['id' => $v->id, 'label' => $v->ten_thuoc_tinh];
+            })->values()->all(),
+        ];
+    })->values()->all();
+$unitsPayload = $donViSanPhams->map(fn($u) => [
+    'id'   => $u->id,
+    'name' => $u->ten_don_vi,
+    'qty'  => $u->so_luong_san_pham_trong_don_vi,
+])->values()->all();
+@endphp
 <script>
     // Bridge data từ Blade sang Vue 3
     window.__CREATE_PRODUCT_DATA__ = {
         danhMucs: @json($danhMucs->map(fn($d) => ['id' => $d->id, 'ten' => $d->ten_danh_muc])),
-        csrfToken: document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
+        csrfToken: document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}',
+        availableAttributes: @json($attrsPayload),
+        availableUnits: @json($unitsPayload)
     };
 </script>
 <script src="{{ asset('js/admin/san-pham-create-vue.js') }}"></script>
-<script src="{{ asset('js/admin/san-pham.js') }}"></script>
+<script src="{{ asset('js/admin/san-pham.js') }}?v={{ time() }}"></script>
 @endsection
 
 <!-- ===================== IMPORT MODAL ===================== -->
