@@ -380,7 +380,7 @@ Route::post('/admin/hoa-don/{id}/tra-hang', [HoaDonController::class, 'xuLyTraHa
 
 
 // Routes nhân viên (Preview)
-Route::middleware([VaiTroBanHang::class])->prefix('nhan-vien')->group(function () {
+Route::middleware([VaiTroBanHang::class, 'vai_tro:Nhân viên,Trưởng ca'])->prefix('nhan-vien')->group(function () {
     Route::get('/', [NhanVienController::class, 'index'])->name('nhan-vien.dashboard');
     Route::get('/ban-hang', [NhanVienController::class, 'banHang'])->name('nhan-vien.ban-hang');
     Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don');
