@@ -64,9 +64,67 @@ class NhanVienController extends Controller
     return view('nhan_vien_view.hoa-don.index', compact('hoaDons', 'caLamViecs'));
 }
 
-    public function sanPham()
+    public function sanPham(Request $request)
     {
-        return view('nhan_vien_view.san-pham.index');
+        $tuKhoa = trim((string) $request->query('tu_khoa', ''));
+
+        $sanPhams = SanPham::query()
+            ->with([
+                'danhMuc',
+                'bienTheSanPhams' => function ($query) {
+                    $query->where('trang_thai', true)
+                        ->orderBy('id')
+                        ->with([
+                            'units' => function ($unitQuery) {
+                                $unitQuery->orderByDesc('la_don_vi_mac_dinh')
+                                    ->orderBy('id');
+                            },
+                        ]);
+                },
+            ])
+            ->where('trang_thai', true)
+            ->when($tuKhoa !== '', function ($query) use ($tuKhoa) {
+                $keyword = mb_strtolower($tuKhoa, 'UTF-8');
+
+                $query->where(function ($subQuery) use ($keyword) {
+                    $subQuery->whereRaw('LOWER(ten_san_pham) LIKE ?', ["%{$keyword}%"])
+                        ->orWhereRaw("LOWER(COALESCE(thuong_hieu, '')) LIKE ?", ["%{$keyword}%"]);
+                });
+            })
+            ->orderBy('ten_san_pham')
+            ->paginate(10)
+            ->withQueryString();
+
+        $sanPhams->getCollection()->transform(function (SanPham $sanPham) {
+            $bienThes = $sanPham->bienTheSanPhams ?? collect();
+            $bienTheDauTien = $bienThes->first();
+            $tatCaDonVi = $bienThes->flatMap(fn ($bienThe) => $bienThe->units);
+            $donViMacDinh = $tatCaDonVi->firstWhere('la_don_vi_mac_dinh', true);
+            $donViDauTien = $donViMacDinh ?? $tatCaDonVi->first();
+            $tongTonKho = (int) $bienThes->sum('so_luong_ton');
+
+            $sanPham->setAttribute(
+                'hinh_anh_hien_thi',
+                $donViDauTien?->hinh_anh ?: $bienTheDauTien?->hinh_anh
+            );
+            $sanPham->setAttribute(
+                'don_vi_tinh_hien_thi',
+                $donViDauTien?->ten_don_vi ?: $bienTheDauTien?->ten_bien_the
+            );
+            $sanPham->setAttribute(
+                'gia_ban_hien_thi',
+                $donViDauTien?->gia_ban_quy_doi ?? $bienTheDauTien?->gia_ban
+            );
+            $sanPham->setAttribute('tong_ton_kho_hien_thi', $tongTonKho);
+            $sanPham->setAttribute('trang_thai_kho_hien_thi', $tongTonKho > 0 ? 'Còn hàng' : 'Hết hàng');
+
+            return $sanPham;
+        });
+
+        return view('nhan_vien_view.san-pham.index', [
+            'sanPhams' => $sanPhams,
+            'tuKhoa' => $tuKhoa,
+        ]);
     }
     public function lichLamViec(Request $request): View
     {
