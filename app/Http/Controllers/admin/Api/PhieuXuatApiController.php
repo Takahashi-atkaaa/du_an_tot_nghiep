@@ -150,10 +150,6 @@ class PhieuXuatApiController extends Controller
                         'han_su_dung' => $ctLo->han_su_dung,
                         'so_luong_con_lai' => $soLuongTonSauKhiXuat,
                     ]);
-
-                    // Trừ tồn kho variant gốc
-                    BienTheSanPham::where('id', $ct['variant_id'])
-                        ->decrement('so_luong_ton', $soLuongCanXuat);
                 }
 
                 return $phieuXuat->load('phieu', 'chiTietPhieu.variant', 'chiTietPhieu.chiTietLoHang');
@@ -220,17 +216,6 @@ class PhieuXuatApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Phiếu xuất không tồn tại.'], 404);
         }
 
-        $chiTiets = ChiTietPhieu::where('id_phieu', $phieuXuat->id_phieu)->get();
-        foreach ($chiTiets as $ct) {
-            // Hoàn tăng tồn kho variant
-            if ($ct->variant_id) {
-                BienTheSanPham::where('id', $ct->variant_id)
-                    ->increment('so_luong_ton', $ct->so_luong);
-                ChiTietLoHang::where('id', $ct->id_chi_tiet_lo_hang)
-                    ->increment('so_luong_ton', $ct->so_luong);
-            }
-        }
-
         DB::transaction(function () use ($phieuXuat) {
             ChiTietPhieu::where('id_phieu', $phieuXuat->id_phieu)->delete();
             $phieuXuat->phieu->delete();
@@ -239,7 +224,7 @@ class PhieuXuatApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Đã xóa phiếu xuất và hoàn tăng tồn kho.',
+            'message' => 'Đã xóa phiếu xuất.',
         ]);
     }
 }

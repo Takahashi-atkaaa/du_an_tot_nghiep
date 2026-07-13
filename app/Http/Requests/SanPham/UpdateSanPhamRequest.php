@@ -56,7 +56,7 @@ class UpdateSanPhamRequest extends FormRequest
 
             // Biến thể
             'bien_the' => 'sometimes|array',
-            'bien_the.*.id' => 'nullable|integer|exists:bien_the_san_pham,id',
+            'bien_the.*.id' => 'nullable|integer',
             'bien_the.*.ten_bien_the' => 'nullable|string|max:255',
             'bien_the.*.thuoc_tinh_ids' => 'nullable|string',
             'bien_the.*.gia_von' => 'nullable|numeric|min:0',

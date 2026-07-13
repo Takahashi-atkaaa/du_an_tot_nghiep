@@ -21,8 +21,6 @@ class DatabaseSeeder extends Seeder
             NhaCungCapSeeder::class,
             SanPhamSeeder::class,
             KhoHangSeeder::class,
-            BanHangSeeder::class,
-            KhoHangFefoSeeder::class,
         ]);
     }
 }

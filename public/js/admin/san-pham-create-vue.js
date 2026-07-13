@@ -348,9 +348,9 @@
                             giaBan: old?.giaBan ?? (u.price || parseFloat(basicInfo.defaultPrice) || 0),
                             dinhMucToiThieu: old?.dinhMucToiThieu ?? (parseInt(basicInfo.defaultMinStock) || 0),
                             // Quan trọng: giữ lại savedUnits + conversionUnits từ row cũ
-                            // savedUnits: units gốc từ initFromProduct (dùng cho payload)
+                            // savedUnits: units gốc từ initFromProduct (dùng cho payload) hoặc conversionUnits hiện tại
                             // conversionUnits: units từ unitConfig (dùng cho UI)
-                            savedUnits: old?.savedUnits ? [...old.savedUnits] : (old?.conversionUnits ? [...old.conversionUnits] : []),
+                            savedUnits: old?.savedUnits ? [...old.savedUnits] : (old?.conversionUnits ? [...old.conversionUnits] : (unitConfig.conversionUnits || [])),
                             conversionUnits: old?.conversionUnits ? [...old.conversionUnits] : (unitConfig.conversionUnits || [])
                         });
                     });
@@ -1351,6 +1351,33 @@
     }
 
     function onModalShown() {
+        // Hard-reset ALL reactive state để ngăn state leak giữa các lần mở modal
+        _initDone = false;
+        gridData.value = [];
+        lastUnitPriceMap.clear();
+        if (watchTimer) clearTimeout(watchTimer);
+
+        basicInfo.code = '';
+        basicInfo.ten_san_pham = '';
+        basicInfo.id_danh_muc = '';
+        basicInfo.brand = '';
+        basicInfo.mo_ta = '';
+        basicInfo.trang_thai = true;
+        basicInfo.defaultPrice = 0;
+        basicInfo.defaultCost = 0;
+        basicInfo.defaultMinStock = 0;
+        basicInfo.image = null;
+        basicInfo.imagePreview = '';
+
+        unitConfig.baseUnit = '';
+        unitConfig.basePrice = 0;
+        unitConfig.conversionUnits = [];
+
+        attributesConfig.groups = [];
+        errors.value = {};
+        generalError.value = '';
+        submitHadError.value = false;
+
         // Remount Vue vào root để reset state
         doMount();
         // Gắn click cho nút Lưu sau khi remount
