@@ -16,6 +16,8 @@ return new class extends Migration
 
             // Tên biến thể (Lon, Chai, Thùng...)
             $table->string('ten_bien_the');
+            //giá của biến thể
+            $table->unsignedInteger('gia_bien_the')->default(0);
 
             // Trạng thái
             $table->boolean('trang_thai')->default(true);

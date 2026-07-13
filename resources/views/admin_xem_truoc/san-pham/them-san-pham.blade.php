@@ -115,9 +115,6 @@
 
 </div>
 
-    <button class="btn btn-success">
-        Thêm sản phẩm
-    </button>
 
 
 
@@ -149,6 +146,7 @@
                 <tr>
                     <th>Tên biến thể</th>
                     <th>Hệ số quy đổi</th>
+                    <th>Giá biến thể</th>
                     <th>Trạng thái</th>
                     <th width="120">Thao tác</th>
                 </tr>
@@ -195,6 +193,22 @@
 
                             </td>
 
+                            <td>
+
+                                <input
+                                    type="number"
+                                    class="form-control @error("bien_the.$i.gia_bien_the") is-invalid @enderror"
+                                    name="bien_the[{{ $i }}][gia_bien_the]"
+                                    value="{{ $bienThe['gia_bien_the'] ?? 0 }}"
+                                    min="0">
+
+                                @error("bien_the.$i.gia_bien_the")
+                                    <div class="invalid-feedback">
+                                        {{ $message }}
+                                    </div>
+                                @enderror
+
+                            </td>
                             <td>
 
                                 <select
@@ -279,6 +293,17 @@ document.getElementById('themBienThe').onclick = function(){
                     value="1"
                     min="1"
                     name="bien_the[${index}][he_so_quy_doi]">
+
+            </td>
+
+            <td>
+
+                <input
+                    type="number"
+                    class="form-control"
+                    value="0"
+                    min="0"
+                    name="bien_the[${index}][gia_bien_the]">
 
             </td>
 

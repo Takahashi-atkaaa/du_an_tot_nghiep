@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\admin\SanPham;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\SanPham\StoreSanPhamRequest;
 use App\Http\Requests\SanPham\UpdateSanPhamRequest;
 use App\Http\Requests\SanPham\ImportSanPhamRequest;
+use App\Http\Requests\SanPham\ThemSanPhamRequest;
 use App\Models\DanhMucSanPham;
 use App\Models\Product;
 use App\Models\BienTheSanPham;
@@ -35,8 +35,9 @@ class SanPhamController extends Controller
 }
 
 
-public function store(StoreSanPhamRequest $request)
+public function store(ThemSanPhamRequest $request)
 {
+
     DB::beginTransaction();
 
     try {
@@ -83,9 +84,10 @@ public function store(StoreSanPhamRequest $request)
 
         BienTheSanPham::create([
             'id_san_pham' => $sanPham->id,
-            'ten_bien_the' => $bienThe['ten_bien_the'],
-            'he_so_quy_doi' => $bienThe['he_so_quy_doi'],
-            'trang_thai' => $bienThe['trang_thai'],
+            'ten_bien_the'  => $bienThe['ten_bien_the'],
+            'gia_bien_the' => $bienThe['gia_bien_the'] ?? 0,
+            'he_so_quy_doi' => $bienThe['he_so_quy_doi'] ?? 1,
+            'trang_thai' => $bienThe['trang_thai'] ?? 1,
         ]);
     }
 
@@ -94,6 +96,7 @@ public function store(StoreSanPhamRequest $request)
     BienTheSanPham::create([
         'id_san_pham' => $sanPham->id,
         'ten_bien_the' => 'Default',
+        'gia_bien_the' => 0,
         'he_so_quy_doi' => 1,
         'trang_thai' => 1,
     ]);
@@ -116,140 +119,140 @@ public function store(StoreSanPhamRequest $request)
 }
 
 
-public function edit($id)
-{
-    $sanPham = SanPham::with('bienTheSanPhams')
-                    ->findOrFail($id);
+// public function edit($id)
+// {
+//     $sanPham = SanPham::with('bienTheSanPhams')
+//                     ->findOrFail($id);
 
-    $danhMucs = DanhMucSanPham::where(
-        'trang_thai',
-        1
-    )->get();
+//     $danhMucs = DanhMucSanPham::where(
+//         'trang_thai',
+//         1
+//     )->get();
 
-    return view(
-        'admin_xem_truoc.san-pham.sua-san-pham',
-        compact(
-            'sanPham',
-            'danhMucs'
-        )
-    );
-}
-
-
+//     return view(
+//         'admin_xem_truoc.san-pham.sua-san-pham',
+//         compact(
+//             'sanPham',
+//             'danhMucs'
+//         )
+//     );
+// }
 
 
 
-public function update(
-    StoreSanPhamRequest $request,
-    $id
-)
-{
 
-    DB::beginTransaction();
 
-    try{
+// public function update(
+//     StoreSanPhamRequest $request,
+//     $id
+// )
+// {
 
-        $sanPham = SanPham::findOrFail($id);
+//     DB::beginTransaction();
 
-        $tenAnh = $sanPham->hinh_anh;
+//     try{
 
-        if($request->hasFile('hinh_anh')){
+//         $sanPham = SanPham::findOrFail($id);
 
-            $tenAnh=time().'.'.$request->hinh_anh->extension();
+//         $tenAnh = $sanPham->hinh_anh;
 
-            $request->hinh_anh->move(
-                public_path('uploads/san_pham'),
-                $tenAnh
-            );
+//         if($request->hasFile('hinh_anh')){
 
-        }
+//             $tenAnh=time().'.'.$request->hinh_anh->extension();
 
-        $sanPham->update([
+//             $request->hinh_anh->move(
+//                 public_path('uploads/san_pham'),
+//                 $tenAnh
+//             );
 
-            'id_danh_muc'=>$request->id_danh_muc,
+//         }
 
-            'ten_san_pham'=>$request->ten_san_pham,
+//         $sanPham->update([
 
-            'gia_ban'=>$request->gia_ban,
+//             'id_danh_muc'=>$request->id_danh_muc,
 
-            'dinh_muc_toi_thieu'=>$request->dinh_muc_toi_thieu,
+//             'ten_san_pham'=>$request->ten_san_pham,
 
-            'mo_ta'=>$request->mo_ta,
+//             'gia_ban'=>$request->gia_ban,
 
-            'hinh_anh'=>$tenAnh,
+//             'dinh_muc_toi_thieu'=>$request->dinh_muc_toi_thieu,
 
-        ]);
+//             'mo_ta'=>$request->mo_ta,
 
-        //Xóa biến thể cũ
+//             'hinh_anh'=>$tenAnh,
 
-        BienTheSanPham::where(
-            'id_san_pham',
-            $sanPham->id
-        )->delete();
+//         ]);
 
-        //Nếu không có biến thể
+//         //Xóa biến thể cũ
 
-        if(empty($request->bien_the)){
+//         BienTheSanPham::where(
+//             'id_san_pham',
+//             $sanPham->id
+//         )->delete();
 
-            BienTheSanPham::create([
+//         //Nếu không có biến thể
 
-                'id_san_pham'=>$sanPham->id,
+//         if(empty($request->bien_the)){
 
-                'ten_bien_the'=>'Default',
+//             BienTheSanPham::create([
 
-                'he_so_quy_doi'=>1,
+//                 'id_san_pham'=>$sanPham->id,
 
-                'trang_thai'=>1
+//                 'ten_bien_the'=>'Default',
 
-            ]);
+//                 'he_so_quy_doi'=>1,
 
-        }else{
+//                 'trang_thai'=>1
 
-            foreach($request->bien_the as $bienThe){
+//             ]);
 
-                if(empty($bienThe['ten_bien_the'])){
+//         }else{
 
-                    continue;
+//             foreach($request->bien_the as $bienThe){
 
-                }
+//                 if(empty($bienThe['ten_bien_the'])){
 
-                BienTheSanPham::create([
+//                     continue;
 
-                    'id_san_pham'=>$sanPham->id,
+//                 }
 
-                    'ten_bien_the'=>$bienThe['ten_bien_the'],
+//                 BienTheSanPham::create([
 
-                    'he_so_quy_doi'=>$bienThe['he_so_quy_doi'],
+//                     'id_san_pham'=>$sanPham->id,
 
-                    'trang_thai'=>$bienThe['trang_thai']
+//                     'ten_bien_the'=>$bienThe['ten_bien_the'],
 
-                ]);
+//                     'he_so_quy_doi'=>$bienThe['he_so_quy_doi'],
 
-            }
+//                     'trang_thai'=>$bienThe['trang_thai']
 
-        }
+//                 ]);
 
-        DB::commit();
+//             }
 
-        return redirect()
-                ->route('san-pham.index')
-                ->with(
-                    'success',
-                    'Cập nhật thành công.'
-                );
+//         }
 
-    }catch(\Exception $e){
+//         DB::commit();
 
-        DB::rollBack();
+//         return redirect()
+//                 ->route('san-pham.index')
+//                 ->with(
+//                     'success',
+//                     'Cập nhật thành công.'
+//                 );
 
-        return back()
-            ->withInput()
-            ->with(
-                'error',
-                $e->getMessage()
-            );
+//     }catch(\Exception $e){
 
-    }
+//         DB::rollBack();
 
-}
+//         return back()
+//             ->withInput()
+//             ->with(
+//                 'error',
+//                 $e->getMessage()
+//             );
+
+//     }
+
+// }
 }

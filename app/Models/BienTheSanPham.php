@@ -12,12 +12,12 @@ class BienTheSanPham extends Model
     protected $table = 'bien_the_san_pham';
 
     protected $fillable = [
-        'ten_bien_the',
-        'trang_thai',
-        'id_san_pham',
-        'he_so_quy_doi',
-    ];
-
+    'id_san_pham',
+    'ten_bien_the',
+    'he_so_quy_doi',
+    'gia_bien_the',
+    'trang_thai',
+];
     public function sanPham()
     {
         return $this->belongsTo(SanPham::class, 'id_san_pham');
