@@ -45,7 +45,7 @@ class CanhBaoController extends Controller
 
     public function chiTiet(int $id): View
     {
-        $canhBao = CanhBao::with('nguoiDungThucHien', 'auditLog.nguoiDung')
+        $canhBao = CanhBao::with('nguoiDungThucHien')
             ->findOrFail($id);
 
         if (! $canhBao->da_doc) {

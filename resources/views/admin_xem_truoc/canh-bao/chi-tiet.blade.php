@@ -66,44 +66,4 @@
     </div>
 </div>
 
-@if ($canhBao->auditLog)
-    <div class="card border-0 shadow-sm mb-3">
-        <div class="card-header bg-white">
-            <h5 class="mb-0"><i class="fas fa-history me-2"></i>Chi tiết audit log #{{ $canhBao->auditLog->id }}</h5>
-        </div>
-        <div class="card-body">
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <small class="text-muted d-block">Bảng bị tác động</small>
-                    <code>{{ $canhBao->auditLog->bang_bi_tac_dong ?: '—' }}</code>
-                </div>
-                <div class="col-md-4">
-                    <small class="text-muted d-block">ID bản ghi</small>
-                    <code>{{ $canhBao->auditLog->id_ban_ghi ?: '—' }}</code>
-                </div>
-                <div class="col-md-4">
-                    <small class="text-muted d-block">IP</small>
-                    <code>{{ $canhBao->auditLog->ip_address ?: '—' }}</code>
-                </div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-12">
-                    <small class="text-muted d-block">User agent</small>
-                    <small>{{ $canhBao->auditLog->user_agent ?: '—' }}</small>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6">
-                    <small class="text-muted d-block mb-1">Dữ liệu cũ</small>
-                    <pre class="bg-light p-2 rounded small mb-0" style="max-height: 240px; overflow: auto;">{{ $canhBao->auditLog->du_lieu_cu ? json_encode($canhBao->auditLog->du_lieu_cu, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) : '—' }}</pre>
-                </div>
-                <div class="col-md-6">
-                    <small class="text-muted d-block mb-1">Dữ liệu mới</small>
-                    <pre class="bg-light p-2 rounded small mb-0" style="max-height: 240px; overflow: auto;">{{ $canhBao->auditLog->du_lieu_moi ? json_encode($canhBao->auditLog->du_lieu_moi, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) : '—' }}</pre>
-                </div>
-            </div>
-        </div>
-    </div>
-@endif
-
 @endsection
