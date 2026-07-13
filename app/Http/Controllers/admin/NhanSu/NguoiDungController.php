@@ -7,6 +7,7 @@ use App\Models\NguoiDung;
 use App\Models\Quyen;
 use App\Http\Requests\NhanSu\CapNhatNhanVienRequest;
 use App\Http\Requests\NhanSu\ThemNhanVienRequest;
+use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -16,6 +17,8 @@ use App\Models\VaiTro;
 
 class NguoiDungController extends Controller
 {
+    public function __construct(private AuditLogger $audit) {}
+
     public function index(Request $request): View
 {
     $keyword = $request->input('keyword');
@@ -103,6 +106,19 @@ class NguoiDungController extends Controller
         'trang_thai' => $request->boolean('trang_thai'),
     ]);
 
+    $this->audit->ghi(
+        'tao_nguoi_dung',
+        'Tạo người dùng: ' . $validated['ho_ten'] . ' (' . $validated['email'] . ')',
+        [
+            'bang' => 'nguoi_dung',
+            'muc_do' => 'info',
+            'tao_canh_bao' => true,
+            'tieu_de_cb' => 'Thêm người dùng mới',
+            'noi_dung_cb' => $validated['ho_ten'] . ' - ' . $validated['email'],
+            'url_lien_ket' => '/nguoi-dung',
+        ]
+    );
+
     return redirect('/nguoi-dung')
         ->with('success', 'Đã thêm người dùng mới.');
 }
@@ -178,6 +194,25 @@ class NguoiDungController extends Controller
 
     $nguoiDung->update($data);
 
+    $vaiTroCu = $nguoiDung->getOriginal('id_vai_tro');
+    $vaiTroMoi = $nguoiDung->id_vai_tro;
+    $doiVaiTro = $vaiTroCu !== null
+        && (int) $vaiTroCu !== (int) $vaiTroMoi;
+
+    $this->audit->ghi(
+        'cap_nhat_nguoi_dung',
+        'Cập nhật người dùng: ' . $nguoiDung->ho_ten,
+        [
+            'bang' => 'nguoi_dung',
+            'id_ban_ghi' => $nguoiDung->id,
+            'muc_do' => $doiVaiTro ? 'warning' : 'info',
+            'tao_canh_bao' => true,
+            'tieu_de_cb' => $doiVaiTro ? 'Thay đổi vai trò người dùng' : 'Cập nhật người dùng',
+            'noi_dung_cb' => $nguoiDung->ho_ten . ' (' . $nguoiDung->email . ')',
+            'url_lien_ket' => '/nguoi-dung',
+        ]
+    );
+
     return redirect('/nguoi-dung')
         ->with('success', 'Đã cập nhật người dùng.');
 }
@@ -185,6 +220,20 @@ class NguoiDungController extends Controller
     public function destroy(NguoiDung $nguoiDung){ //xóa mềm đổi trạng thái thành 3 đã nghỉ việc
         $nguoiDung->trang_thai = 3;
         $nguoiDung->save();
+
+        $this->audit->ghi(
+            'xoa_nguoi_dung',
+            'Xóa (nghỉ việc) người dùng: ' . $nguoiDung->ho_ten,
+            [
+                'bang' => 'nguoi_dung',
+                'id_ban_ghi' => $nguoiDung->id,
+                'muc_do' => 'danger',
+                'tao_canh_bao' => true,
+                'tieu_de_cb' => 'Xóa người dùng',
+                'noi_dung_cb' => $nguoiDung->ho_ten . ' đã bị đánh dấu nghỉ việc',
+                'url_lien_ket' => '/nguoi-dung',
+            ]
+        );
 
         return redirect('/nguoi-dung')
             ->with('success', 'Đã xóa nhân viên.');

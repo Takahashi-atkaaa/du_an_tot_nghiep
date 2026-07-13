@@ -1,11 +1,9 @@
 <?php
-
 namespace App\Http\Controllers\Admin;
-
 use App\Http\Controllers\Controller;
+use App\Models\CanhBao;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-
 class DashboardController extends Controller
 {
     public function index()
@@ -15,12 +13,10 @@ class DashboardController extends Controller
         | DOANH THU HÔM NAY
         |--------------------------------------------------------------------------
         */
-
         $doanhThuNgay = DB::table('hoa_don')
             ->whereDate('created_at', Carbon::today())
             ->where('trang_thai', 'Hoàn thành')
             ->sum('tong_tien_hang');
-
 
 
         /*
@@ -191,11 +187,19 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        
+        //Hoat dong dang nhan (cho panel KiotViet)
+        $soHoatDongDangNhan = CanhBao::where('da_doc', false)->count();
 
-
-
-
+        $hoatDongGanDay = CanhBao::with('nguoiDungThucHien')
+            ->orderByDesc('created_at')
+            ->limit(15)
+            ->get()
+            ->map(function ($cb) {
+                $cb->thoi_gian_tuongdoi = $cb->created_at
+                    ? $cb->created_at->diffForHumans(['parts' => 1, 'short' => true])
+                    : '';
+                return $cb;
+            });
 
         return view(
             'admin_xem_truoc.dashboard',
@@ -218,10 +222,10 @@ class DashboardController extends Controller
                 'tongSanPhamTonKho',
 
                 'khachHangThanThiet',
-
                 'sanPhamBanCham',
-
-                'donHangGanDay'
+                'donHangGanDay',
+                'soHoatDongDangNhan',
+                'hoatDongGanDay'
 
             )
         );

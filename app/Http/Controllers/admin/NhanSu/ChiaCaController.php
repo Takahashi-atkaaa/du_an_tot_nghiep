@@ -7,6 +7,7 @@ use App\Models\CaLamViec;
 use App\Models\ChiaCaLamViec;
 use App\Models\NguoiDung;
 use App\Http\Requests\NhanSu\PhanCongCaLamViecRequest;
+use App\Services\AuditLogger;
 use Carbon\Carbon;
 use DOMDocument;
 use DOMXPath;
@@ -20,6 +21,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ChiaCaController extends Controller
 {
+    public function __construct(private AuditLogger $audit) {}
+
     public function index(Request $request): View
     {
         $keyword = trim((string) $request->query('keyword', ''));
@@ -264,6 +267,15 @@ class ChiaCaController extends Controller
             }
         });
 
+        $this->audit->ghi(
+            'tao_lich_lam_viec',
+            'Nhập lịch làm việc tuần ' . ($parsed['week_start'] ?? '') . ' (' . count($parsed['rows']) . ' ca)',
+            [
+                'bang' => 'chia_ca_lam_viec',
+                'muc_do' => 'info',
+            ]
+        );
+
         return redirect()
             ->route('chia-ca-lam-viec.index', ['week_start' => $parsed['week_start']])
             ->with('success', 'Đã nhập lịch làm việc chính thức thành công.')
@@ -289,6 +301,16 @@ class ChiaCaController extends Controller
     {
         $chiaCaLamViec->update($request->validated());
 
+        $this->audit->ghi(
+            'cap_nhat_lich_lam_viec',
+            'Cập nhật lịch phân ca #' . $chiaCaLamViec->id,
+            [
+                'bang' => 'chia_ca_lam_viec',
+                'id_ban_ghi' => $chiaCaLamViec->id,
+                'muc_do' => 'info',
+            ]
+        );
+
         $selectedWeekDate = $request->input('week_start')
             ? Carbon::parse($request->input('week_start'))->toDateString()
             : Carbon::parse($chiaCaLamViec->ngay)->toDateString();
@@ -301,6 +323,16 @@ class ChiaCaController extends Controller
     public function destroy(ChiaCaLamViec $chiaCaLamViec): RedirectResponse
     {
         $chiaCaLamViec->delete();
+
+        $this->audit->ghi(
+            'xoa_lich_lam_viec',
+            'Xóa lịch phân ca #' . $chiaCaLamViec->id,
+            [
+                'bang' => 'chia_ca_lam_viec',
+                'id_ban_ghi' => $chiaCaLamViec->id,
+                'muc_do' => 'warning',
+            ]
+        );
 
         return redirect()
             ->route('chia-ca-lam-viec.index')

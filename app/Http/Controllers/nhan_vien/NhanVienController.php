@@ -8,6 +8,7 @@ use App\Models\ChiaCaLamViec;
 use App\Models\NguoiDung;
 use App\Models\SanPham;
 use App\Models\DanhMucSanPham;
+use App\Services\AuditLogger;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -18,6 +19,8 @@ use App\Models\KhachHang;
 
 class NhanVienController extends Controller
 {
+    public function __construct(private AuditLogger $audit) {}
+
     public function index()
     {
         return view('nhan_vien_view.dashboard');
@@ -263,6 +266,16 @@ class NhanVienController extends Controller
         $user = $request->user();
         $user->mat_khau = $request->mat_khau_moi;
         $user->save();
+
+        $this->audit->ghi(
+            'doi_mat_khau',
+            'Người dùng "' . $user->ho_ten . '" đã đổi mật khẩu',
+            [
+                'bang' => 'nguoi_dung',
+                'id_ban_ghi' => $user->id,
+                'muc_do' => 'info',
+            ]
+        );
 
         return back()->with('success', 'Đổi mật khẩu thành công');
     }
@@ -554,6 +567,20 @@ public function thanhToan(Request $request)
             'updated_at' => now(),
         ]);
 
+        $this->audit->ghi(
+            'tao_hoa_don',
+            'Thanh toán hóa đơn #' . $hoaDonId . ' - Tổng: ' . number_format($tongTienHang) . 'đ',
+            [
+                'bang' => 'hoa_don',
+                'id_ban_ghi' => $hoaDonId,
+                'tao_canh_bao' => true,
+                'tieu_de_cb' => $tongTienHang >= 1000000 ? 'Hóa đơn giá trị lớn' : 'Bán hàng - Hóa đơn mới',
+                'noi_dung_cb' => 'Hóa đơn #' . $hoaDonId . ' trị giá ' . number_format($tongTienHang) . 'đ'
+                    . ' - NV: ' . (auth()->user()?->ho_ten ?? 'N/A'),
+                'url_lien_ket' => '/hoa-don/' . $hoaDonId,
+            ]
+        );
+
         if ($khachHang) {
             $diemMoi = $khachHang->diem_tich_luy - $diemSuDung + $diemThuDuoc;
 
@@ -690,6 +717,20 @@ if ($hoaDon->id_khach_hang && $hoaDon->diem_thu_duoc > 0) {
                 'trang_thai' => 'Đã hủy',
                 'updated_at' => now(),
             ]);
+
+        $this->audit->ghi(
+            'huy_hoa_don',
+            'Hủy hóa đơn #' . $id . ' - Giá trị: ' . number_format($hoaDon->tong_tien_hang) . 'đ',
+            [
+                'bang' => 'hoa_don',
+                'id_ban_ghi' => (int) $id,
+                'tao_canh_bao' => true,
+                'tieu_de_cb' => 'Hủy hóa đơn',
+                'noi_dung_cb' => 'Hóa đơn #' . $id . ' đã bị hủy (giá trị ' . number_format($hoaDon->tong_tien_hang) . 'đ)'
+                    . ' - NV: ' . (auth()->user()?->ho_ten ?? 'N/A'),
+                'url_lien_ket' => '/hoa-don/' . $id,
+            ]
+        );
 
         return back()->with('success', 'Đã hủy hóa đơn và hoàn lại tồn kho.');
     });

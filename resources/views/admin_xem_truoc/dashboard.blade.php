@@ -661,6 +661,62 @@
 
 </div>
 
+{{-- Panel Hoạt động đáng nhận (kiểu KiotViet) --}}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h6 class="text-muted mb-1">Hoạt động đáng nhận</h6>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fs-2 fw-bold text-primary">{{ $soHoatDongDangNhan ?? 0 }}</span>
+                            <i class="fas fa-bell text-primary fs-4"></i>
+                        </div>
+                        <small class="text-muted">Hoạt động chưa xem</small>
+                    </div>
+                    <a href="{{ route('admin.canh-bao') }}" class="btn btn-sm btn-outline-primary">
+                        Xem tất cả
+                    </a>
+                </div>
+                <hr>
+                <h6 class="fw-bold mb-3">
+                    <i class="fas fa-list-ul me-2"></i>Hoạt động gần đây
+                </h6>
+                <div class="activity-list" style="max-height: 420px; overflow-y: auto;">
+                    @forelse ($hoatDongGanDay ?? [] as $hd)
+                        <div class="d-flex gap-3 py-2 border-bottom">
+                            <div class="activity-icon flex-shrink-0">
+                                <span class="badge bg-info rounded-circle p-2">
+                                    <i class="fas fa-info"></i>
+                                </span>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold">
+                                    <a href="{{ $hd->url_lien_ket ?: route('admin.canh-bao.chi-tiet', $hd->id) }}" class="text-decoration-none text-dark">
+                                        {{ $hd->tieu_de }}
+                                    </a>
+                                </div>
+                                <small class="text-muted d-block">{{ $hd->noi_dung }}</small>
+                                <small class="text-muted">
+                                    <i class="far fa-clock"></i> {{ $hd->thoi_gian_tuongdoi }}
+                                    @if ($hd->nguoiDungThucHien)
+                                        - {{ $hd->nguoiDungThucHien->ho_ten }}
+                                    @endif
+                                </small>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center text-muted py-4">
+                            Chưa có hoạt động nào.
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

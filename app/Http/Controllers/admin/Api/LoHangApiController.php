@@ -8,12 +8,15 @@ use App\Models\ChiTietLoHang;
 use App\Models\NhaCungCap;
 use App\Models\Phieu;
 use App\Models\BienTheSanPham;
+use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class LoHangApiController extends Controller
 {
+    public function __construct(private AuditLogger $audit) {}
+
     public function index(Request $request): JsonResponse
     {
         $q = $request->query('q');
@@ -119,6 +122,19 @@ class LoHangApiController extends Controller
             return $lo->load('chiTietLoHang.variant', 'nhaCungCap');
         });
 
+        $this->audit->ghi(
+            'tao_lo_hang',
+            'Tạo lô hàng #' . $loHang->id . ' (' . count($data['chi_tiet']) . ' biến thể)',
+            [
+                'bang' => 'lo_hang',
+                'id_ban_ghi' => $loHang->id,
+                'tao_canh_bao' => true,
+                'tieu_de_cb' => 'Tạo lô hàng mới',
+                'noi_dung_cb' => 'Lô hàng #' . $loHang->id . ' (' . count($data['chi_tiet']) . ' biến thể) - NV: ' . (auth()->user()?->ho_ten ?? 'N/A'),
+                'url_lien_ket' => '/lo-hang',
+            ]
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Tạo lô hàng thành công.',
@@ -141,6 +157,19 @@ class LoHangApiController extends Controller
         ]);
 
         $loHang->update($data);
+
+        $this->audit->ghi(
+            'cap_nhat_lo_hang',
+            'Cập nhật lô hàng #' . $loHang->id,
+            [
+                'bang' => 'lo_hang',
+                'id_ban_ghi' => $loHang->id,
+                'tao_canh_bao' => true,
+                'tieu_de_cb' => 'Cập nhật lô hàng',
+                'noi_dung_cb' => 'Lô hàng #' . $loHang->id . ' - NV: ' . (auth()->user()?->ho_ten ?? 'N/A'),
+                'url_lien_ket' => '/lo-hang',
+            ]
+        );
 
         return response()->json([
             'success' => true,
@@ -168,6 +197,19 @@ class LoHangApiController extends Controller
             $loHang->chiTietLoHang()->delete();
             $loHang->delete();
         });
+
+        $this->audit->ghi(
+            'xoa_lo_hang',
+            'Xóa lô hàng #' . $loHang->id,
+            [
+                'bang' => 'lo_hang',
+                'id_ban_ghi' => $loHang->id,
+                'tao_canh_bao' => true,
+                'tieu_de_cb' => 'Xóa lô hàng',
+                'noi_dung_cb' => 'Lô hàng #' . $loHang->id . ' đã bị xóa - NV: ' . (auth()->user()?->ho_ten ?? 'N/A'),
+                'url_lien_ket' => '/lo-hang',
+            ]
+        );
 
         return response()->json([
             'success' => true,

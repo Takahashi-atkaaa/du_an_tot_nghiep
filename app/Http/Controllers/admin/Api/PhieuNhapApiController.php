@@ -9,12 +9,15 @@ use App\Models\LoHang;
 use App\Models\ChiTietLoHang;
 use App\Models\ChiTietPhieu;
 use App\Models\BienTheSanPham;
+use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class PhieuNhapApiController extends Controller
 {
+    public function __construct(private AuditLogger $audit) {}
+
     public function index(Request $request): JsonResponse
     {
         $q = $request->query('q');
@@ -224,6 +227,19 @@ class PhieuNhapApiController extends Controller
             return $phieuNhap->load('phieu', 'chiTietPhieu.variant', 'chiTietPhieu.chiTietLoHang');
         });
 
+        $this->audit->ghi(
+            'tao_phieu_nhap',
+            'Tạo phiếu nhập #' . $result->id . ' (' . count($data['chi_tiet']) . ' sản phẩm)',
+            [
+                'bang' => 'phieu_nhap',
+                'id_ban_ghi' => $result->id,
+                'tao_canh_bao' => true,
+                'tieu_de_cb' => 'Tạo phiếu nhập kho',
+                'noi_dung_cb' => 'Phiếu nhập #' . $result->id . ' (' . count($data['chi_tiet']) . ' sản phẩm) - NV: ' . (auth()->user()?->ho_ten ?? 'N/A'),
+                'url_lien_ket' => '/phieu-nhap',
+            ]
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Tạo phiếu nhập thành công.',
@@ -253,6 +269,19 @@ class PhieuNhapApiController extends Controller
             'ghi_chu' => $data['ghi_chu'] ?? null,
         ]);
 
+        $this->audit->ghi(
+            'cap_nhat_phieu_nhap',
+            'Cập nhật phiếu nhập #' . $phieuNhap->id,
+            [
+                'bang' => 'phieu_nhap',
+                'id_ban_ghi' => $phieuNhap->id,
+                'tao_canh_bao' => true,
+                'tieu_de_cb' => 'Cập nhật phiếu nhập',
+                'noi_dung_cb' => 'Phiếu nhập #' . $phieuNhap->id . ' - NV: ' . (auth()->user()?->ho_ten ?? 'N/A'),
+                'url_lien_ket' => '/phieu-nhap',
+            ]
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Cập nhật phiếu nhập thành công.',
@@ -272,6 +301,19 @@ class PhieuNhapApiController extends Controller
             $phieuNhap->phieu->delete();
             $phieuNhap->delete();
         });
+
+        $this->audit->ghi(
+            'xoa_phieu_nhap',
+            'Xóa phiếu nhập #' . $phieuNhap->id,
+            [
+                'bang' => 'phieu_nhap',
+                'id_ban_ghi' => $phieuNhap->id,
+                'tao_canh_bao' => true,
+                'tieu_de_cb' => 'Xóa phiếu nhập',
+                'noi_dung_cb' => 'Phiếu nhập #' . $phieuNhap->id . ' đã bị xóa - NV: ' . (auth()->user()?->ho_ten ?? 'N/A'),
+                'url_lien_ket' => '/phieu-nhap',
+            ]
+        );
 
         return response()->json([
             'success' => true,

@@ -12,6 +12,7 @@ use App\Models\BienTheSanPham;
 use App\Models\DonViQuyDoi;
 use App\Models\DonViSanPham;
 use App\Models\ThuocTinhSanPham;
+use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,8 @@ use Illuminate\View\View;
 
 class SanPhamController extends Controller
 {
+    public function __construct(private AuditLogger $audit) {}
+
     public function index(Request $request): View
     {
         $keyword = $request->input('keyword');
@@ -195,6 +198,18 @@ class SanPhamController extends Controller
 
             return redirect()->back()->with('success', 'Đã thêm sản phẩm mới.');
             });
+
+            $this->audit->ghi(
+                'tao_san_pham',
+                'Tạo sản phẩm: ' . $data['ten_san_pham'],
+                [
+                    'bang' => 'san_pham',
+                    'id_ban_ghi' => $product->id,
+                    'muc_do' => 'info',
+                ]
+            );
+
+            return redirect()->back()->with('success', 'Đã thêm sản phẩm mới.');
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Lỗi store sản phẩm: ' . $e->getMessage());
@@ -232,6 +247,9 @@ class SanPhamController extends Controller
 
         $product = Product::with('variants.units')->findOrFail($id);
         $data = $request->validated();
+
+        // Lưu giá cũ của variants để so sánh
+        $giaCuCacVariant = $product->variants->pluck('gia_ban', 'id')->toArray();
 
         // Xử lý thuộc tính MỚI: tạo vào DB trước, trả về map {label => id}
         $newAttrMap = $this->processNewAttributes($data['new_attributes'] ?? []);
@@ -369,6 +387,42 @@ class SanPhamController extends Controller
             $this->deleteImageIfUnused($product->getOriginal('hinh_anh'));
         }
 
+        // Kiem tra thay doi gia > 20%
+        $bienDongGiaLon = [];
+        foreach ($data['bien_the'] ?? [] as $variant) {
+            $vid = $variant['id'] ?? null;
+            if (!$vid || !isset($giaCuCacVariant[$vid])) {
+                continue;
+            }
+            $giaCu = (float) $giaCuCacVariant[$vid];
+            $giaMoi = (float) ($variant['gia_ban'] ?? 0);
+            if ($giaCu > 0 && abs(($giaMoi - $giaCu) / $giaCu) > 0.20) {
+                $bienDongGiaLon[] = [
+                    'variant_id' => $vid,
+                    'gia_cu' => $giaCu,
+                    'gia_moi' => $giaMoi,
+                    'phan_tram' => round((($giaMoi - $giaCu) / $giaCu) * 100, 1),
+                ];
+            }
+        }
+
+        $mucDo = !empty($bienDongGiaLon) ? 'danger' : 'info';
+        $this->audit->ghi(
+            'cap_nhat_san_pham',
+            'Cập nhật sản phẩm: ' . $product->ten_san_pham . (!empty($bienDongGiaLon)
+                ? ' (giá biến động lớn: ' . count($bienDongGiaLon) . ' biến thể)'
+                : ''),
+            [
+                'bang' => 'san_pham',
+                'id_ban_ghi' => $product->id,
+                'muc_do' => $mucDo,
+                'tao_canh_bao' => !empty($bienDongGiaLon),
+                'tieu_de_cb' => 'Thay đổi giá sản phẩm',
+                'noi_dung_cb' => $product->ten_san_pham . ' - biến động giá ' . count($bienDongGiaLon) . ' biến thể (>20%)',
+                'url_lien_ket' => '/san-pham/' . $product->id . '/sua',
+            ]
+        );
+
         return redirect()->route('san-pham.index')->with('success', 'Đã cập nhật sản phẩm.');
     }
 
@@ -390,6 +444,20 @@ class SanPhamController extends Controller
         }
 
         $product->delete();
+
+        $this->audit->ghi(
+            'xoa_san_pham',
+            'Xóa sản phẩm: ' . $product->ten_san_pham,
+            [
+                'bang' => 'san_pham',
+                'id_ban_ghi' => $product->id,
+                'muc_do' => 'danger',
+                'tao_canh_bao' => true,
+                'tieu_de_cb' => 'Xóa sản phẩm',
+                'noi_dung_cb' => 'Sản phẩm ' . $product->ten_san_pham . ' đã bị xóa',
+                'url_lien_ket' => '/san-pham',
+            ]
+        );
 
         return redirect()->route('san-pham.index')->with('success', 'Đã xóa sản phẩm.');
     }

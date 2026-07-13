@@ -9,12 +9,15 @@ use App\Models\ChiTietLoHang;
 use App\Models\ChiTietPhieu;
 use App\Models\BienTheSanPham;
 use App\Models\DonViQuyDoi;
+use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class PhieuXuatApiController extends Controller
 {
+    public function __construct(private AuditLogger $audit) {}
+
     public function index(Request $request): JsonResponse
     {
         $q = $request->query('q');
@@ -163,6 +166,19 @@ class PhieuXuatApiController extends Controller
             ], 422);
         }
 
+        $this->audit->ghi(
+            'tao_phieu_xuat',
+            'Tạo phiếu xuất #' . $result->id . ' (' . $loaiPhieuLabel . ')',
+            [
+                'bang' => 'phieu_xuat',
+                'id_ban_ghi' => $result->id,
+                'tao_canh_bao' => true,
+                'tieu_de_cb' => 'Tạo phiếu xuất kho',
+                'noi_dung_cb' => 'Phiếu xuất #' . $result->id . ' loại ' . $loaiPhieuLabel . ' - NV: ' . (auth()->user()?->ho_ten ?? 'N/A'),
+                'url_lien_ket' => '/phieu-xuat',
+            ]
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Tạo phiếu xuất thành công.',
@@ -202,6 +218,19 @@ class PhieuXuatApiController extends Controller
             'ghi_chu' => $data['ghi_chu'] ?? null,
         ]);
 
+        $this->audit->ghi(
+            'cap_nhat_phieu_xuat',
+            'Cập nhật phiếu xuất #' . $phieuXuat->id,
+            [
+                'bang' => 'phieu_xuat',
+                'id_ban_ghi' => $phieuXuat->id,
+                'tao_canh_bao' => true,
+                'tieu_de_cb' => 'Cập nhật phiếu xuất',
+                'noi_dung_cb' => 'Phiếu xuất #' . $phieuXuat->id . ' - NV: ' . (auth()->user()?->ho_ten ?? 'N/A'),
+                'url_lien_ket' => '/phieu-xuat',
+            ]
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Cập nhật phiếu xuất thành công.',
@@ -221,6 +250,19 @@ class PhieuXuatApiController extends Controller
             $phieuXuat->phieu->delete();
             $phieuXuat->delete();
         });
+
+        $this->audit->ghi(
+            'xoa_phieu_xuat',
+            'Xóa phiếu xuất #' . $phieuXuat->id,
+            [
+                'bang' => 'phieu_xuat',
+                'id_ban_ghi' => $phieuXuat->id,
+                'tao_canh_bao' => true,
+                'tieu_de_cb' => 'Xóa phiếu xuất',
+                'noi_dung_cb' => 'Phiếu xuất #' . $phieuXuat->id . ' đã bị xóa - NV: ' . (auth()->user()?->ho_ten ?? 'N/A'),
+                'url_lien_ket' => '/phieu-xuat',
+            ]
+        );
 
         return response()->json([
             'success' => true,

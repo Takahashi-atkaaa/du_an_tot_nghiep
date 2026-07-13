@@ -5,10 +5,12 @@ namespace App\Http\Controllers\admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\KhuyenMai;
+use App\Services\AuditLogger;
 use Carbon\Carbon;
 
 class KhuyenMaiController extends Controller
 {
+    public function __construct(private AuditLogger $audit) {}
     // Danh sách khuyến mãi
     public function index(Request $request)
     {
@@ -91,6 +93,17 @@ class KhuyenMaiController extends Controller
         ]);
 
         KhuyenMai::create($data);
+        $km = KhuyenMai::latest('id')->first();
+
+        $this->audit->ghi(
+            'tao_khuyen_mai',
+            'Tạo khuyến mãi: ' . $data['ten_chuong_trinh'],
+            [
+                'bang' => 'khuyen_mai',
+                'id_ban_ghi' => $km?->id,
+                'muc_do' => 'info',
+            ]
+        );
 
         return redirect()->back()
             ->with('success', 'Tạo chương trình khuyến mãi thành công');
@@ -105,6 +118,20 @@ class KhuyenMaiController extends Controller
         $promo->save();
 
         $promo->delete();
+
+        $this->audit->ghi(
+            'xoa_khuyen_mai',
+            'Xóa khuyến mãi: ' . $promo->ten_chuong_trinh,
+            [
+                'bang' => 'khuyen_mai',
+                'id_ban_ghi' => $promo->id,
+                'muc_do' => 'warning',
+                'tao_canh_bao' => true,
+                'tieu_de_cb' => 'Xóa khuyến mãi',
+                'noi_dung_cb' => 'Khuyến mãi "' . $promo->ten_chuong_trinh . '" đã bị xóa',
+                'url_lien_ket' => '/khuyen-mai',
+            ]
+        );
 
         return redirect()->back()
             ->with('success', 'Xóa chương trình khuyến mãi thành công');
@@ -137,6 +164,16 @@ class KhuyenMaiController extends Controller
         ]);
 
         $promo->update($data);
+
+        $this->audit->ghi(
+            'cap_nhat_khuyen_mai',
+            'Cập nhật khuyến mãi: ' . $promo->ten_chuong_trinh,
+            [
+                'bang' => 'khuyen_mai',
+                'id_ban_ghi' => $promo->id,
+                'muc_do' => 'info',
+            ]
+        );
 
         return redirect()
             ->route('khuyen-mai.edit', $promo->id)

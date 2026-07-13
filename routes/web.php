@@ -230,6 +230,18 @@ Route::get('/admin/cai-dat', function () {
 Route::post('/admin/hoa-don/{id}/tra-hang', [HoaDonController::class, 'xuLyTraHang'])
     ->name('admin.hoa-don.xu-ly-tra-hang');
 
+// Canh bao hoat dong dang nhan
+Route::get('/admin/canh-bao', [\App\Http\Controllers\admin\CanhBaoController::class, 'index'])
+    ->name('admin.canh-bao');
+Route::get('/admin/canh-bao/{id}', [\App\Http\Controllers\admin\CanhBaoController::class, 'chiTiet'])
+    ->name('admin.canh-bao.chi-tiet')
+    ->whereNumber('id');
+Route::post('/admin/canh-bao/{id}/da-doc', [\App\Http\Controllers\admin\CanhBaoController::class, 'danhDauDaDoc'])
+    ->name('admin.canh-bao.da-doc')
+    ->whereNumber('id');
+Route::post('/admin/canh-bao/doc-tat-ca', [\App\Http\Controllers\admin\CanhBaoController::class, 'danhDauTatCaDaDoc'])
+    ->name('admin.canh-bao.doc-tat-ca');
+
 
     // Trang kho hang
     Route::get('/admin/kho-hang', function () {
