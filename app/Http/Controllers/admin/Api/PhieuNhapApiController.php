@@ -79,7 +79,10 @@ class PhieuNhapApiController extends Controller
             'id_lo_hang' => 'required_if:tao_lo_moi,0|nullable|integer|exists:lo_hang,id',
             'chi_tiet' => 'required|array|min:1',
             'chi_tiet.*.variant_id' => 'required|integer|exists:bien_the_san_pham,id',
+            'chi_tiet.*.don_vi_id' => 'nullable|string|max:50',
+            'chi_tiet.*.ty_le_quy_doi' => 'nullable|integer|min:1',
             'chi_tiet.*.so_luong_nhap' => 'required|integer|min:1',
+            'chi_tiet.*.so_luong_thuc' => 'nullable|integer|min:0',
             'chi_tiet.*.gia_nhap' => 'required|numeric|min:0',
             'chi_tiet.*.han_su_dung' => 'required|date',
         ], [
@@ -124,12 +127,24 @@ class PhieuNhapApiController extends Controller
                 ]);
 
                 foreach ($data['chi_tiet'] as $ct) {
+                    // Tính số lượng thực (đã quy đổi về đơn vị cơ bản nếu user nhập theo đơn vị quy đổi)
+                    $tyLeQuyDoi = (int)($ct['ty_le_quy_doi'] ?? 1);
+                    $slNhap = (int)$ct['so_luong_nhap'];
+                    $slThuc = $tyLeQuyDoi > 1
+                        ? (int)($ct['so_luong_thuc'] ?? ($slNhap * $tyLeQuyDoi))
+                        : $slNhap;
+
+                    // Tính ghi chú cho chi_tiet_phieu (lưu thông tin đơn vị nhập)
+                    $donViNhap = $tyLeQuyDoi > 1
+                        ? "Nhập {$slNhap} đơn vị quy đổi × {$tyLeQuyDoi}"
+                        : null;
+
                     $chiTietLoHang = ChiTietLoHang::create([
                         'id_lo_hang' => $loHang->id,
                         'id_san_pham' => $variantMap[$ct['variant_id']] ?? null,
                         'variant_id' => $ct['variant_id'],
-                        'so_luong_nhap' => $ct['so_luong_nhap'],
-                        'so_luong_ton' => $ct['so_luong_nhap'],
+                        'so_luong_nhap' => $slThuc,
+                        'so_luong_ton' => $slThuc,
                         'gia_nhap' => $ct['gia_nhap'],
                         'han_su_dung' => $ct['han_su_dung'],
                     ]);
@@ -140,15 +155,12 @@ class PhieuNhapApiController extends Controller
                         'variant_id' => $ct['variant_id'],
                         'id_lo_hang' => $loHang->id,
                         'id_chi_tiet_lo_hang' => $chiTietLoHang->id,
-                        'so_luong' => $ct['so_luong_nhap'],
+                        'so_luong' => $slThuc,
                         'gia_nhap' => $ct['gia_nhap'],
                         'han_su_dung' => $ct['han_su_dung'],
-                        'so_luong_con_lai' => $ct['so_luong_nhap'],
+                        'so_luong_con_lai' => $slThuc,
+                        'ghi_chu' => $donViNhap,
                     ]);
-
-                    // Cộng tồn kho variant gốc
-                    BienTheSanPham::where('id', $ct['variant_id'])
-                        ->increment('so_luong_ton', $ct['so_luong_nhap']);
                 }
             } else {
                 $idLoHang = $data['id_lo_hang'];
@@ -158,6 +170,16 @@ class PhieuNhapApiController extends Controller
                     ->toArray();
 
                 foreach ($data['chi_tiet'] as $ct) {
+                    $tyLeQuyDoi = (int)($ct['ty_le_quy_doi'] ?? 1);
+                    $slNhap = (int)$ct['so_luong_nhap'];
+                    $slThuc = $tyLeQuyDoi > 1
+                        ? (int)($ct['so_luong_thuc'] ?? ($slNhap * $tyLeQuyDoi))
+                        : $slNhap;
+
+                    $donViNhap = $tyLeQuyDoi > 1
+                        ? "Nhập {$slNhap} đơn vị quy đổi × {$tyLeQuyDoi}"
+                        : null;
+
                     $chiTietLoHang = ChiTietLoHang::where('id_lo_hang', $idLoHang)
                         ->where('variant_id', $ct['variant_id'])
                         ->whereDate('han_su_dung', $ct['han_su_dung'])
@@ -167,8 +189,8 @@ class PhieuNhapApiController extends Controller
                         'id_lo_hang' => $idLoHang,
                         'id_san_pham' => $variantMap[$ct['variant_id']] ?? null,
                         'variant_id' => $ct['variant_id'],
-                        'so_luong_nhap' => $ct['so_luong_nhap'],
-                        'so_luong_ton' => $ct['so_luong_nhap'],
+                        'so_luong_nhap' => $slThuc,
+                        'so_luong_ton' => $slThuc,
                         'gia_nhap' => $ct['gia_nhap'],
                         'han_su_dung' => $ct['han_su_dung'],
                     ]);
@@ -179,16 +201,24 @@ class PhieuNhapApiController extends Controller
                         'variant_id' => $ct['variant_id'],
                         'id_lo_hang' => $idLoHang,
                         'id_chi_tiet_lo_hang' => $chiTietLoHang?->id,
-                        'so_luong' => $ct['so_luong_nhap'],
+                        'so_luong' => $slThuc,
                         'gia_nhap' => $ct['gia_nhap'],
                         'han_su_dung' => $ct['han_su_dung'],
-                        'so_luong_con_lai' => $ct['so_luong_nhap'],
+                        'so_luong_con_lai' => $slThuc,
+                        'ghi_chu' => $donViNhap,
                     ]);
-
-                    // Cộng tồn kho variant gốc
-                    BienTheSanPham::where('id', $ct['variant_id'])
-                        ->increment('so_luong_ton', $ct['so_luong_nhap']);
                 }
+            }
+
+            // Cộng tồn kho cho bien_the_san_pham.so_luong_ton theo số lượng THỰC (đã quy đổi)
+            foreach ($data['chi_tiet'] as $ct) {
+                $tyLeQuyDoi = (int)($ct['ty_le_quy_doi'] ?? 1);
+                $slNhap = (int)$ct['so_luong_nhap'];
+                $slThuc = $tyLeQuyDoi > 1
+                    ? (int)($ct['so_luong_thuc'] ?? ($slNhap * $tyLeQuyDoi))
+                    : $slNhap;
+                BienTheSanPham::where('id', $ct['variant_id'])
+                    ->increment('so_luong_ton', $slThuc);
             }
 
             return $phieuNhap->load('phieu', 'chiTietPhieu.variant', 'chiTietPhieu.chiTietLoHang');
@@ -235,15 +265,6 @@ class PhieuNhapApiController extends Controller
         $phieuNhap = PhieuNhap::with('phieu')->find($id);
         if (!$phieuNhap) {
             return response()->json(['success' => false, 'message' => 'Phiếu nhập không tồn tại.'], 404);
-        }
-
-        $chiTiets = ChiTietPhieu::where('id_phieu', $phieuNhap->id_phieu)->get();
-        foreach ($chiTiets as $ct) {
-            // Trừ tồn kho variant
-            if ($ct->variant_id) {
-                BienTheSanPham::where('id', $ct->variant_id)
-                    ->decrement('so_luong_ton', $ct->so_luong);
-            }
         }
 
         DB::transaction(function () use ($phieuNhap) {

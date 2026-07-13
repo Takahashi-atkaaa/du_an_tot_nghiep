@@ -7,6 +7,21 @@ let pnIdx = 0, pxIdx = 0, loIdx = 0;
 let tkPage = 1, lhPage = 1, pnPage = 1, pxPage = 1;
 let selectedPnProducts = new Set();
 
+// Helpers for HTML escaping (tránh lỗi quote khi tên có dấu nháy)
+function escapeHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+function escapeAttr(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 // ─── INIT ───────────────────────────────────────────────
 $(function () {
     console.log('[KHO-HANG] Init start');
@@ -116,29 +131,22 @@ function loadStats() {
 }
 
 function loadDanhMucNhap() {
-    if ($('#pn-sp-danh-muc option').length > 1) return;
-    $.get('/admin/api/san-pham', { q: '' }, res => {
+    $.get('/admin/api/san-pham', { q: '', danh_muc: '' }, res => {
         if (!res.danh_muc_list) return;
-        const opts = res.danh_muc_list.map(d =>
-            `<option value="${d.id}">${d.ten_danh_muc}</option>`
-        ).join('');
-        $('#pn-sp-danh-muc').append(opts);
+        $('#pn-sp-danh-muc').html('<option value="">Tat ca danh muc</option>' +
+            res.danh_muc_list.map(dm => `<option value="${dm.id}">${dm.ten_danh_muc}</option>`).join(''));
     });
 }
 
-let nccPage = 1;
-
 function loadNhaCungCap(page = 1, q = '') {
-    nccPage = page;
-    const searchQ = q !== '' ? q : ($('#ncc-search').val() || '');
     $('#ncc-tbody').html('<tr><td colspan="7" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-1"></i> Dang tai...</td></tr>');
-    $.get('/admin/api/nha-cung-cap', { page, q: searchQ }, res => {
+    $.get('/admin/api/nha-cung-cap', { page, q }, res => {
         if (!res.success) {
             $('#ncc-tbody').html('<tr><td colspan="7" class="text-center text-danger py-4">Loi tai du lieu.</td></tr>');
             return;
         }
         const items = res.data.data;
-        if (items.length === 0) {
+        if (!items.length) {
             $('#ncc-tbody').html('<tr><td colspan="7" class="text-center text-muted py-4">Chua co nha cung cap nao.</td></tr>');
         } else {
             const rows = items.map(ncc => `
@@ -146,7 +154,7 @@ function loadNhaCungCap(page = 1, q = '') {
                     <td>${ncc.id}</td>
                     <td>${ncc.ten_nha_cung_cap}</td>
                     <td>${ncc.email || '<span class="text-muted">--</span>'}</td>
-                    <td>${ncc.so_dien_thoai}</td>
+                    <td>${ncc.so_dien_thoai || ''}</td>
                     <td>${ncc.nguoi_dai_dien || '<span class="text-muted">--</span>'}</td>
                     <td>${ncc.created_at ? ncc.created_at.split(' ')[0] : '--'}</td>
                     <td>
@@ -156,12 +164,11 @@ function loadNhaCungCap(page = 1, q = '') {
                 </tr>`).join('');
             $('#ncc-tbody').html(rows);
         }
-        const total = res.data.total || 0;
-        $('#ncc-thong-tin').text(`Hien thi ${res.data.data.length} / ${total} nha cung cap`);
+        $('#ncc-thong-tin').text(`Hien thi ${res.data.data.length} / ${res.data.total} nha cung cap`);
         renderNccPagination(page, res.data.last_page || 1);
     }).fail(function(xhr, status, error) {
         console.error('[KHO-HANG] loadNhaCungCap FAIL:', status, error, xhr.responseText);
-        $('#ncc-tbody').html('<tr><td colspan="7" class="text-center text-danger py-4">Loi ket noi server: ' + error + '</td></tr>');
+        $('#ncc-tbody').html('<tr><td colspan="7" class="text-center text-danger py-4">Loi: ' + error + '</td></tr>');
     });
 }
 
@@ -193,15 +200,7 @@ function loadNccDropdown() {
 
 // ─── PRODUCT SEARCH (PN Modal) ─────────────────────────────────────
 
-function loadDanhMucNhap() {
-    $.get('/admin/api/san-pham', { q: '', danh_muc: '' }, res => {
-        if (!res.danh_muc_list) return;
-        $('#pn-sp-danh-muc').html('<option value="">Tat ca danh muc</option>' +
-            res.danh_muc_list.map(dm => `<option value="${dm.id}">${dm.ten_danh_muc}</option>`).join(''));
-    });
-}
-
-let pnSearchTimer;
+let pnSearchTimer = 0;
 $('#pn-sp-search').on('input', function () {
     clearTimeout(pnSearchTimer);
     pnSearchTimer = setTimeout(() => {
@@ -224,38 +223,44 @@ function searchProductsNhap(q, danhMuc) {
         return;
     }
     $('#pn-sp-results').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-muted fs-4"></i></div>');
-    $.get('/admin/api/san-pham', { q: q || '', danh_muc: danhMuc || '', include_variants: 1 }, res => {
+    $.get('/admin/api/san-pham', { q: q || '', danh_muc: danhMuc || '' }, res => {
         if (!res.success || !res.data.length) {
             $('#pn-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-box-open fs-4 mb-2 d-block text-secondary"></i>Khong tim thay san pham nao.</div>');
             return;
         }
-        const rows = res.data.flatMap(sp => {
+        // res.data: mang nested theo product, moi product co bien_the[]
+        const rows = res.data.map(sp => {
             const variants = sp.bien_the || [];
-            const hasVariants = variants.length > 0;
-            const totalTon = sp.chi_tiet_lo_hang_ton_sum_so_luong_ton || 0;
+            const hasVariants = variants.length > 1;
+            // Tong ton = tong ton cua tat ca bien the
+            const totalTon = variants.reduce((sum, bt) => sum + (bt.chi_tiet_lo_hang_ton || 0), 0);
             const tonClass = totalTon === 0 ? 'text-danger' : totalTon < 10 ? 'text-warning' : 'text-success';
             const img = sp.hinh_anh
                 ? `<img src="/${sp.hinh_anh}" width="38" height="38" class="rounded" style="object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                    <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width:38px;height:38px;display:none"><i class="fas fa-box text-secondary"></i></div>`
                 : `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="width:38px;height:38px"><i class="fas fa-box text-secondary"></i></div>`;
             const danhMucName = sp.danh_muc?.ten_danh_muc || '';
-            const isParentSelected = selectedPnProducts.has(sp.id);
+            // ID cua parent row = product_id (de expand/collapse), nhung btn-chon gui variant_id = first variant
+            const parentVariantId = variants[0]?.id;
+            const isParentSelected = selectedPnProducts.has(parentVariantId);
             const expandBtn = hasVariants ? `<button class="btn btn-sm btn-light border btn-toggle-variants" data-parent="${sp.id}" title="Mo rong bien the"><i class="fas fa-chevron-down"></i></button>` : '';
             const parentBtnClass = isParentSelected ? 'btn-secondary' : 'btn-primary';
             const parentBtnIcon = isParentSelected ? 'fa-check' : 'fa-plus';
             const parentBtnText = isParentSelected ? 'Da chon' : 'Chon';
             const parentDisabled = isParentSelected ? 'disabled' : '';
             const variantRows = variants.map(bt => {
-                const btTon = bt.chi_tiet_lo_hang_ton_sum_so_luong_ton || 0;
+                const btTon = bt.chi_tiet_lo_hang_ton || 0;
                 const btTonClass = btTon === 0 ? 'text-danger' : btTon < 10 ? 'text-warning' : 'text-success';
                 const isBtSelected = selectedPnProducts.has(bt.id);
                 const btBtnClass = isBtSelected ? 'btn-secondary' : 'btn-success';
                 const btBtnIcon = isBtSelected ? 'fa-check' : 'fa-plus';
                 const btBtnText = isBtSelected ? 'Da chon' : 'Chon';
                 const btDisabled = isBtSelected ? 'disabled' : '';
-                const attrs = (bt.thuoc_tinhs || []).map(tt =>
-                    `<span class="badge variant-chip" style="background:#e9ecef;color:#495057;border:1px solid #dee2e6">${tt.ten_thuoc_tinh}</span>`
+                const attrs = (bt.thuoc_tinh_labels || []).map(tt =>
+                    `<span class="badge variant-chip" style="background:#e9ecef;color:#495057;border:1px solid #dee2e6">${tt}</span>`
                 ).join(' ');
+                // Gắn units vào data-units (JSON) để click "Chọn" có thể build dropdown đơn vị
+                const unitsJson = JSON.stringify(bt.units || []).replace(/'/g, '&#39;');
                 return `<tr class="variant-sub-row" data-parent="${sp.id}" style="display:none">
                     <td class="text-center align-middle"><div class="vr" style="width:2px;height:30px;opacity:0.4"></div></td>
                     <td class="align-middle ps-1">
@@ -265,7 +270,14 @@ function searchProductsNhap(q, danhMuc) {
                     <td class="text-end align-middle small">${Number(bt.gia_ban || 0).toLocaleString()} d</td>
                     <td class="text-center align-middle"><span class="fw-semibold ${btTonClass}">${btTon.toLocaleString()}</span></td>
                     <td class="text-center align-middle">
-                        <button class="btn btn-sm ${btBtnClass} btn-chon-sp-nhap" data-id="${bt.id}" data-ten="${sp.ten_san_pham} ${attrs.replace(/<[^>]+>/g,'').trim()}" data-gia="${bt.gia_ban || 0}" data-variant="1" ${btDisabled}>
+                        <button class="btn btn-sm ${btBtnClass} btn-chon-sp-nhap"
+                            data-id="${bt.id}"
+                            data-ten="${sp.ten_san_pham}${attrs ? ' - ' + bt.ten_bien_the : ''}"
+                            data-gia="${bt.gia_ban || 0}"
+                            data-variant="1"
+                            data-base-name="${escapeAttr(bt.ten_bien_the || '')}"
+                            data-units='${unitsJson}'
+                            ${btDisabled}>
                             <i class="fas ${btBtnIcon}"></i> ${btBtnText}
                         </button>
                     </td>
@@ -279,12 +291,18 @@ function searchProductsNhap(q, danhMuc) {
                         <div class="small text-muted">${danhMucName}</div>
                         ${hasVariants ? `<div class="mt-1"><span class="badge bg-secondary" style="font-size:0.68rem">${variants.length} bien the</span></div>` : ''}
                     </td>
-                    <td class="align-middle"><code class="small">${sp.ma_vach || '--'}</code></td>
-                    <td class="text-end align-middle small">${Number(sp.gia_ban || 0).toLocaleString()} d</td>
+                    <td class="align-middle"><code class="small">${variants[0]?.ma_vach || '--'}</code></td>
+                    <td class="text-end align-middle small">${Number(variants[0]?.gia_ban || 0).toLocaleString()} d</td>
                     <td class="text-center align-middle"><span class="fw-semibold ${tonClass}">${totalTon.toLocaleString()}</span></td>
                     <td class="text-center align-middle">
                         ${expandBtn}
-                        <button class="btn btn-sm ${parentBtnClass} btn-chon-sp-nhap" data-id="${sp.id}" data-ten="${sp.ten_san_pham}" data-gia="${sp.gia_ban || 0}" ${parentDisabled}>
+                        <button class="btn btn-sm ${parentBtnClass} btn-chon-sp-nhap"
+                            data-id="${parentVariantId}"
+                            data-ten="${sp.ten_san_pham}"
+                            data-gia="${variants[0]?.gia_ban || 0}"
+                            data-base-name="${escapeAttr(variants[0]?.ten_bien_the || '')}"
+                            data-units='${JSON.stringify(variants[0]?.units || []).replace(/'/g, '&#39;')}'
+                            ${parentDisabled}>
                             <i class="fas ${parentBtnIcon}"></i> ${parentBtnText}
                         </button>
                     </td>
@@ -326,19 +344,66 @@ $(document).on('click', '.btn-chon-sp-nhap', function () {
     selectedPnProducts.add(id);
     const ten = $(this).data('ten');
     const gia = $(this).data('gia');
+    // Lấy thêm danh sách đơn vị quy đổi (nếu có) từ nút bấm
+    const units = $(this).data('units') || [];
+    const variantBaseName = $(this).data('base-name') || '';
     const idx = pnIdx++;
     $('#pn-empty-row').remove();
+
+    // Build option đơn vị: đơn vị cơ bản (ty_le=1) + đơn vị quy đổi
+    const baseOpt = `<option value="__base__" data-tyle="1" data-ten="${escapeAttr(variantBaseName)}" selected>${escapeHtml(variantBaseName || 'Cơ bản')}</option>`;
+    const unitOpts = units.map(u => `<option value="${u.id}" data-tyle="${u.ty_le_quy_doi || 1}" data-ten="${escapeAttr(u.ten_don_vi)}">${escapeHtml(u.ten_don_vi)} (x${u.ty_le_quy_doi || 1})</option>`).join('');
+    const donViSelect = `<select class="form-select form-select-sm pn-don-vi-select" name="chi_tiet[${idx}][don_vi_id]" data-idx="${idx}">${baseOpt}${unitOpts}</select>`;
+
+    // Ghi chú nhỏ hiển thị quy đổi khi user chọn đơn vị
+    const quyDoiHint = units.length
+        ? `<small class="text-muted pn-quy-doi-hint d-block mt-1">Chọn "Cơ bản" nếu nhập theo đơn vị cơ bản.</small>`
+        : '';
+
     $('#pn-ds-sp').append(`<tr data-sp-id="${id}">
         <td>
             <div class="fw-semibold small">${ten}</div>
             <input type="hidden" name="chi_tiet[${idx}][variant_id]" value="${id}">
+            <input type="hidden" name="chi_tiet[${idx}][ty_le_quy_doi]" value="1" class="pn-ty-le-hidden">
+            ${units.length ? `<div class="mt-1 d-flex align-items-center gap-1">${donViSelect}${quyDoiHint}</div>` : ''}
         </td>
-        <td><input type="number" class="form-control form-control-sm" name="chi_tiet[${idx}][so_luong_nhap]" value="1" min="1"></td>
+        <td>
+            <input type="number" class="form-control form-control-sm pn-sl-input" name="chi_tiet[${idx}][so_luong_nhap]" value="1" min="1" data-idx="${idx}">
+            ${units.length ? `<small class="text-muted pn-sl-display d-block mt-1" data-idx="${idx}">= 1 đơn vị cơ bản</small>` : ''}
+        </td>
         <td><input type="number" class="form-control form-control-sm" name="chi_tiet[${idx}][gia_nhap]" value="${gia}" min="0" step="100"></td>
         <td><input type="date" class="form-control form-control-sm" name="chi_tiet[${idx}][han_su_dung]" value=""></td>
         <td><button type="button" class="btn btn-sm btn-outline-danger btn-remove-pn-row" data-id="${id}"><i class="fas fa-times"></i></button></td>
     </tr>`);
-    $(this).prop('disabled', true).removeClass('btn-primary btn-success').addClass('btn-secondary').html('<i class="fas fa-check"></i> Da chon');
+    $(this).prop('disabled', true).removeClass('btn-primary btn-success').addClass('btn-secondary').html('<i class="fas fa-check"></i> Đã chọn');
+});
+
+// Tính số lượng quy đổi realtime khi user đổi đơn vị hoặc số lượng
+$(document).on('input change', '.pn-sl-input, .pn-don-vi-select', function () {
+    const $row = $(this).closest('tr');
+    const $slInput = $row.find('.pn-sl-input');
+    const $donViSelect = $row.find('.pn-don-vi-select');
+    const $tyLeHidden = $row.find('.pn-ty-le-hidden');
+    const $display = $row.find('.pn-sl-display');
+
+    const sl = parseFloat($slInput.val()) || 0;
+    let tyLe = 1;
+    let tenDonVi = '';
+    if ($donViSelect.length) {
+        const opt = $donViSelect.find('option:selected');
+        tyLe = parseInt(opt.data('tyle')) || 1;
+        tenDonVi = opt.data('ten') || opt.text();
+    }
+    $tyLeHidden.val(tyLe);
+
+    if ($display.length) {
+        if (tyLe === 1) {
+            $display.text(`= ${sl} ${tenDonVi || 'đơn vị cơ bản'}`);
+        } else {
+            const tong = sl * tyLe;
+            $display.html(`= <strong class="text-primary">${tong}</strong> ${tenDonVi ? 'chai/đơn vị cơ bản (1 ' + tenDonVi + ' = ' + tyLe + ' đơn vị cơ bản)' : 'đơn vị cơ bản'}`);
+        }
+    }
 });
 
 $(document).on('click', '.btn-remove-pn-row', function () {
@@ -777,8 +842,11 @@ $(document).on('click', '.btn-xem-pn', function () {
         const rows = (pn.chi_tiet_phieu || []).map(ct => {
             const lo = ct.lo_hang || {};
             const spName = ct.variant?.product?.ten_san_pham || ct.variant?.ten_bien_the || ct.id_san_pham || ct.variant_id || '';
+            const ghiChuCt = ct.ghi_chu
+                ? `<small class="text-info d-block">${ct.ghi_chu}</small>`
+                : '';
             return `<tr>
-                <td>${spName}</td>
+                <td>${spName}${ghiChuCt}</td>
                 <td class="text-center">${(ct.so_luong || 0).toLocaleString()}</td>
                 <td class="text-center">${Number(ct.gia_nhap || 0).toLocaleString()} d</td>
                 <td class="text-center">${(ct.han_su_dung || '').split('T')[0]}</td>
@@ -893,11 +961,10 @@ $(document).on('click', '.btn-xoa-ncc', function () {
 
 // ─── DYNAMIC ROWS ────────────────────────────────────────
 function spDisplayText(sp) {
-    if (sp.san_pham_cha_id) {
-        const attrs = (sp.thuoc_tinhs || []).map(tt => tt.ten_thuoc_tinh).join(' / ');
-        return `--- ${sp.ten_san_pham}${attrs ? ' (' + attrs + ')' : ''} (${sp.ma_vach || sp.id})`;
-    }
-    return `${sp.ten_san_pham} (${sp.ma_vach || sp.id})`;
+    const attrs = (sp.ten_bien_the && sp.ten_bien_the !== sp.ten_san_pham)
+        ? ` - ${sp.ten_bien_the}`
+        : '';
+    return `${sp.ten_san_pham}${attrs} (${sp.ma_vach || sp.id})`;
 }
 
 function spOptions(existingId) {
@@ -1074,6 +1141,18 @@ function buildChiTiet(tableId, prefix) {
         });
         if (Object.keys(row).length) rows.push(row);
     });
+    // Prefix-specific: tính so_luong_thuc = so_luong_nhap * ty_le_quy_doi cho phiếu nhập
+    if (prefix === 'pn') {
+        rows.forEach(r => {
+            const tyLe = parseInt(r.ty_le_quy_doi) || 1;
+            const slNhap = parseInt(r.so_luong_nhap) || 0;
+            if (tyLe > 1) {
+                r.so_luong_thuc = slNhap * tyLe;
+            } else {
+                r.so_luong_thuc = slNhap;
+            }
+        });
+    }
     return rows;
 }
 
@@ -1208,14 +1287,23 @@ function hienBao(type, message) {
 // ─── LOAD ALL PRODUCTS ────────────────────────────────────
 function loadSanPhamAll() {
     console.log('[KHO-HANG] loadSanPhamAll called');
-    $.get('/admin/api/san-pham', { q: '', include_variants: 1 }, res => {
+    $.get('/admin/api/san-pham', { q: '' }, res => {
         console.log('[KHO-HANG] loadSanPhamAll response:', res);
         if (!res.data) { sanPhamAll = []; return; }
         sanPhamAll = [];
-        // New API returns flat list with type: 'variant' or 'unit'
-        // Keep both types in the list for dropdowns
-        res.data.forEach(sp => {
-            sanPhamAll.push(sp);
+        // New API returns nested by product with bien_the[] inside.
+        // Flatten to one option per bien_the for dropdown selects.
+        res.data.forEach(product => {
+            (product.bien_the || []).forEach(bt => {
+                sanPhamAll.push({
+                    id: bt.id,
+                    product_id: product.product_id,
+                    ten_san_pham: product.ten_san_pham,
+                    ten_bien_the: bt.ten_bien_the,
+                    ma_vach: bt.ma_vach,
+                    chi_tiet_lo_hang_ton_sum_so_luong_ton: bt.chi_tiet_lo_hang_ton || 0,
+                });
+            });
         });
     }).fail(function(xhr, status, error) {
         console.error('[KHO-HANG] loadSanPhamAll FAIL:', status, error, xhr.responseText);

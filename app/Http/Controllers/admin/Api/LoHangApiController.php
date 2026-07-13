@@ -114,10 +114,6 @@ class LoHangApiController extends Controller
                     'gia_nhap' => $ct['gia_nhap'],
                     'han_su_dung' => $ct['han_su_dung'],
                 ]);
-
-                // Cộng tồn kho variant
-                BienTheSanPham::where('id', $ct['variant_id'])
-                    ->increment('so_luong_ton', $ct['so_luong_nhap']);
             }
 
             return $lo->load('chiTietLoHang.variant', 'nhaCungCap');
@@ -191,13 +187,7 @@ class LoHangApiController extends Controller
         $query = ChiTietLoHang::with('loHang.nhaCungCap', 'variant');
 
         if ($variantId) {
-            $variant = BienTheSanPham::find($variantId);
-            $query->where(function ($q) use ($variantId, $variant) {
-                $q->where('variant_id', $variantId);
-                if ($variant && $variant->product_id) {
-                    $q->orWhere('id_san_pham', $variant->product_id);
-                }
-            });
+            $query->where('variant_id', $variantId);
         } else {
             $query->where('id_san_pham', $sanPhamId);
         }
