@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\nhan_vien;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DoiMatKhauRequest;
 use App\Models\ChiaCaLamViec;
 use App\Models\NguoiDung;
 use App\Models\SanPham;
@@ -249,7 +250,21 @@ class NhanVienController extends Controller
 
     public function hoSo()
     {
-        return view('nhan_vien_view.ho-so');
+        $nguoiDung = auth()->user();
+        $nguoiDung->load('vaiTro');
+
+        return view('nhan_vien_view.ho-so', [
+            'nguoiDung' => $nguoiDung,
+        ]);
+    }
+
+    public function doiMatKhau(DoiMatKhauRequest $request)
+    {
+        $user = $request->user();
+        $user->mat_khau = $request->mat_khau_moi;
+        $user->save();
+
+        return back()->with('success', 'Đổi mật khẩu thành công');
     }
 
     private function resolvePreviewEmployee(Request $request): NguoiDung
