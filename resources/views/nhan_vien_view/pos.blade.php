@@ -2126,7 +2126,7 @@ function tinhTienGiam(subtotal) {
         .trim()
         .toLowerCase();
 
-    const minOrder = Number(selectedPromotion.don_hang_toi_thieu || 0);
+    const minOrder = Number(selectedPromotion.don_hang_toi_thieu || 0) * 1000;
     const minQty = Number(selectedPromotion.so_luong_sp_toi_thieu || 0);
     const totalQty = cart.reduce((s, i) => s + Number(i.qty || 0), 0);
 
