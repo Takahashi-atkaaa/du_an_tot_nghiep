@@ -10,6 +10,7 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -22,7 +23,9 @@
             --sidebar-active: #0f3460;
         }
         body {
-            font-family: 'Roboto', sans-serif;
+            font-family: 'Nunito', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
             background-color: #f5f6fa;
         }
         .sidebar {
@@ -251,7 +254,7 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('admin/ban-hang') }}" class="nav-link {{ request()->is('admin/ban-hang*') ? 'active' : '' }}">
+                <a href="{{ url('/nhan-vien/ban-hang') }}" class="nav-link">
                     <i class="fas fa-cash-register"></i>
                     <span>Bán hàng</span>
                 </a>
@@ -426,9 +429,9 @@
                
             </div>
             <div class="user-info">
-                <div class="notify">
+                <div class="notify" style="cursor:pointer" onclick="document.getElementById('tab-canh-bao').click();">
                     <i class="fas fa-bell fs-5 text-secondary"></i>
-                    <span class="badge">3</span>
+                    <span class="badge" id="topbar-notify-badge" style="display:none">0</span>
                 </div>
                 <div class="dropdown">
                     <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown">
@@ -480,6 +483,8 @@
         </div>
     </main>
 
+    <!-- jQuery (required by kho-hang page) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Font Awesome JS -->

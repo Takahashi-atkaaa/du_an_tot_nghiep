@@ -9,131 +9,216 @@ class SanPhamSeeder extends Seeder
 {
     public function run(): void
     {
+        // ==========================================================
+        // BUOC 1: XOA DU LIEU CU (tu bang con nhat den cha nhat)
+        // ==========================================================
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+
+        DB::table('chi_tiet_phieu')->truncate();
+        DB::table('chi_tiet_lo_hang')->truncate();
+        DB::table('lo_hang')->truncate();
+        DB::table('phieu_xuat')->truncate();
+        DB::table('phieu_nhap')->truncate();
+        DB::table('phieu')->truncate();
+        DB::table('don_vi_quy_doi')->truncate();
+        DB::table('bien_the_san_pham')->truncate();
+        DB::table('san_pham')->truncate();
+        DB::table('thuoc_tinh_san_pham')->truncate();
+        DB::table('danh_muc_san_pham')->truncate();
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
         $now = now();
 
-        $danhMucs = [
-            'Thực phẩm' => ['mau_sac' => '#198754', 'icon' => 'bi bi-bag-fill'],
-            'Đồ uống' => ['mau_sac' => '#0d6efd', 'icon' => 'bi bi-cup-straw'],
-            'Bánh kẹo' => ['mau_sac' => '#dc3545', 'icon' => 'bi bi-cupcake'],
-            'Mì gói' => ['mau_sac' => '#fd7e14', 'icon' => 'bi bi-basket3-fill'],
-        ];
-
-        $danhMucIds = [];
-        foreach ($danhMucs as $ten => $meta) {
-            DB::table('danh_muc_san_pham')->updateOrInsert(
-                ['ten_danh_muc' => $ten],
-                [
-                    'mau_sac' => $meta['mau_sac'],
-                    'icon' => $meta['icon'],
-                    'trang_thai' => true,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]
-            );
-            $danhMucIds[$ten] = DB::table('danh_muc_san_pham')
-                ->where('ten_danh_muc', $ten)
-                ->value('id');
+        // ==========================================================
+        // BUOC 2: TAO DANH MUC
+        // ==========================================================
+        $danhMucs = [];
+        foreach (['Đồ uống', 'Thời trang', 'Thực phẩm'] as $idx => $ten) {
+            $mauSac = ['#0d6efd', '#d63384', '#198754'][$idx];
+            $icon   = ['bi-cup-straw', 'bi-bag-heart', 'bi-basket3-fill'][$idx];
+            $id = DB::table('danh_muc_san_pham')->insertGetId([
+                'ten_danh_muc' => $ten,
+                'mau_sac'      => $mauSac,
+                'icon'         => $icon,
+                'trang_thai'   => true,
+                'created_at'   => $now,
+                'updated_at'   => $now,
+            ]);
+            $danhMucs[$ten] = $id;
         }
 
-        $donVis = [
-            'Cái' => 1,
-            'Gói' => 1,
-            'Chai' => 1,
-            'Hộp' => 1,
-        ];
-
-        $donViIds = [];
-        foreach ($donVis as $ten => $soLuong) {
-            DB::table('don_vi_san_pham')->updateOrInsert(
-                ['ten_don_vi' => $ten],
-                [
-                    'so_luong_san_pham_trong_don_vi' => $soLuong,
-                    'trang_thai' => true,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]
-            );
-            $donViIds[$ten] = DB::table('don_vi_san_pham')
-                ->where('ten_don_vi', $ten)
-                ->value('id');
+        // ==========================================================
+        // BUOC 3: TAO THUOC TINH CHA + CON
+        // ==========================================================
+        // Cha: Kích thước
+        $ktId = DB::table('thuoc_tinh_san_pham')->insertGetId([
+            'ten_thuoc_tinh'   => 'Kích thước',
+            'trang_thai'       => true,
+            'thuoc_tinh_cha_id'=> null,
+            'created_at'       => $now,
+            'updated_at'       => $now,
+        ]);
+        $sizeIds = [];
+        foreach (['M', 'L', 'XL'] as $size) {
+            $sizeIds[$size] = DB::table('thuoc_tinh_san_pham')->insertGetId([
+                'ten_thuoc_tinh'   => $size,
+                'trang_thai'       => true,
+                'thuoc_tinh_cha_id'=> $ktId,
+                'created_at'       => $now,
+                'updated_at'       => $now,
+            ]);
         }
 
-        $products = [
-            [
-                'ten_san_pham' => 'Sữa tươi Vinamilk 180ml',
-                'ma_vach' => '8934567890123',
-                'id_danh_muc' => $danhMucIds['Thực phẩm'],
-                'id_don_vi' => $donViIds['Chai'],
-                'thuong_hieu' => 'Vinamilk',
-                'hinh_anh' => 'https://via.placeholder.com/150',
-                'gia_ban' => 8500.00,
-                'so_luong_ton_kho' => 250,
-                'mo_ta' => 'Sữa tươi tiệt trùng Vinamilk 180ml.',
-                'dinh_muc_toi_thieu' => 20,
-                'trang_thai' => true,
-            ],
-            [
-                'ten_san_pham' => 'Bánh Oreo 133g',
-                'ma_vach' => '8934567890124',
-                'id_danh_muc' => $danhMucIds['Bánh kẹo'],
-                'id_don_vi' => $donViIds['Gói'],
-                'thuong_hieu' => 'Oreo',
-                'hinh_anh' => 'https://via.placeholder.com/150',
-                'gia_ban' => 22000.00,
-                'so_luong_ton_kho' => 180,
-                'mo_ta' => 'Bánh quy sô cô la Oreo 133g.',
-                'dinh_muc_toi_thieu' => 15,
-                'trang_thai' => true,
-            ],
-            [
-                'ten_san_pham' => 'Mì Hảo Tấm gói',
-                'ma_vach' => '8934567890125',
-                'id_danh_muc' => $danhMucIds['Mì gói'],
-                'id_don_vi' => $donViIds['Gói'],
-                'thuong_hieu' => 'Hảo Tấm',
-                'hinh_anh' => 'https://via.placeholder.com/150',
-                'gia_ban' => 7000.00,
-                'so_luong_ton_kho' => 45,
-                'mo_ta' => 'Mì ăn liền Hảo Tấm hương vị truyền thống.',
-                'dinh_muc_toi_thieu' => 30,
-                'trang_thai' => true,
-            ],
-            [
-                'ten_san_pham' => 'Nước ngọt Coca Cola 330ml',
-                'ma_vach' => '8934567890126',
-                'id_danh_muc' => $danhMucIds['Đồ uống'],
-                'id_don_vi' => $donViIds['Chai'],
-                'thuong_hieu' => 'Coca Cola',
-                'hinh_anh' => 'https://via.placeholder.com/150',
-                'gia_ban' => 12000.00,
-                'so_luong_ton_kho' => 0,
-                'mo_ta' => 'Nước ngọt Coca Cola lon 330ml.',
-                'dinh_muc_toi_thieu' => 10,
-                'trang_thai' => false,
-            ],
-            [
-                'ten_san_pham' => 'Cà phê G7 3in1',
-                'ma_vach' => '8934567890127',
-                'id_danh_muc' => $danhMucIds['Đồ uống'],
-                'id_don_vi' => $donViIds['Gói'],
-                'thuong_hieu' => 'G7',
-                'hinh_anh' => 'https://via.placeholder.com/150',
-                'gia_ban' => 35000.00,
-                'so_luong_ton_kho' => 120,
-                'mo_ta' => 'Cà phê hòa tan G7 3in1 tiện lợi.',
-                'dinh_muc_toi_thieu' => 30,
-                'trang_thai' => true,
-            ],
-        ];
-
-        foreach ($products as $product) {
-            DB::table('san_pham')->updateOrInsert(
-                ['ma_vach' => $product['ma_vach']],
-                array_merge($product, [
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ])
-            );
+        // Cha: Màu sắc
+        $msId = DB::table('thuoc_tinh_san_pham')->insertGetId([
+            'ten_thuoc_tinh'   => 'Màu sắc',
+            'trang_thai'       => true,
+            'thuoc_tinh_cha_id'=> null,
+            'created_at'       => $now,
+            'updated_at'       => $now,
+        ]);
+        $mauIds = [];
+        foreach (['Đen', 'Trắng'] as $mau) {
+            $mauIds[$mau] = DB::table('thuoc_tinh_san_pham')->insertGetId([
+                'ten_thuoc_tinh'   => $mau,
+                'trang_thai'       => true,
+                'thuoc_tinh_cha_id'=> $msId,
+                'created_at'       => $now,
+                'updated_at'       => $now,
+            ]);
         }
+
+        // ==========================================================
+        // BUOC 4: TAO SAN PHAM + BIEN THE + DON VI QUY DOI
+        // ==========================================================
+
+        // ---- 4a. Bia Heineken (Đồ uống) - Co don vi quy doi ----
+        $spHeinekenId = DB::table('san_pham')->insertGetId([
+            'id_danh_muc'  => $danhMucs['Đồ uống'],
+            'ten_san_pham' => 'Bia Heineken',
+            'thuong_hieu'  => 'Heineken',
+            'mo_ta'        => 'Bia Heineken nhập khẩu Hà Lan, lon 330ml.',
+            'trang_thai'   => true,
+            'created_at'   => $now,
+            'updated_at'   => $now,
+        ]);
+
+        // Bien the goc: Lon
+        $vtLonId = DB::table('bien_the_san_pham')->insertGetId([
+            'product_id'         => $spHeinekenId,
+            'ten_bien_the'       => 'Lon',         // KHONG NULL
+            'ma_hang'            => 'HEI-000001',
+            'ma_vach'            => '8934801000010',
+            'gia_von'            => 10000,
+            'gia_ban'            => 15000,
+            'so_luong_ton'       => 0,             // seeder kho se cap nhat
+            'dinh_muc_toi_thieu' => 10,
+            'thuoc_tinh_ids'     => null,
+            'trang_thai'         => true,
+            'created_at'         => $now,
+            'updated_at'         => $now,
+        ]);
+
+        // Don vi quy doi: Thung (24 lon)
+        DB::table('don_vi_quy_doi')->insert([
+            'variant_id'          => $vtLonId,
+            'ten_don_vi'          => 'Thùng',
+            'ty_le_quy_doi'       => 24,
+            'ma_hang'             => 'HEI-THU001',
+            'ma_vach'             => '8934801000027',
+            'gia_von_quy_doi'     => 240000,
+            'gia_ban_quy_doi'     => 350000,
+            'gia_ban_si'          => 320000,
+            'la_don_vi_mac_dinh'  => false,
+            'created_at'          => $now,
+            'updated_at'          => $now,
+        ]);
+
+        // ---- 4b. Ao thun co tron (Thoi trang) - Nhieu bien the ----
+        $spAoId = DB::table('san_pham')->insertGetId([
+            'id_danh_muc'  => $danhMucs['Thời trang'],
+            'ten_san_pham' => 'Áo thun cổ tròn',
+            'thuong_hieu'  => 'SmartMart',
+            'mo_ta'        => 'Áo thun nam cổ tròn chất cotton co giãn, nhiều màu.',
+            'trang_thai'   => true,
+            'created_at'   => $now,
+            'updated_at'   => $now,
+        ]);
+
+        $variantMap = [];
+        foreach ([
+            ['size' => 'M',    'mau' => 'Đen',   'gia' => 120000],
+            ['size' => 'L',    'mau' => 'Trắng', 'gia' => 120000],
+        ] as $idx => $cfg) {
+            $tenBt = $cfg['size'] . ' - ' . $cfg['mau'];
+            $thuocTinhIds = [$sizeIds[$cfg['size']], $mauIds[$cfg['mau']]];
+            $vtId = DB::table('bien_the_san_pham')->insertGetId([
+                'product_id'         => $spAoId,
+                'ten_bien_the'       => $tenBt,     // KHONG NULL
+                'ma_hang'            => 'ATO-' . str_pad($idx + 1, 3, '0', STR_PAD_LEFT),
+                'ma_vach'            => '89349000' . str_pad($spAoId, 3, '0', STR_PAD_LEFT) . str_pad($idx + 1, 3, '0', STR_PAD_LEFT),
+                'gia_von'            => (int)($cfg['gia'] * 0.6),
+                'gia_ban'            => $cfg['gia'],
+                'so_luong_ton'       => 0,          // seeder kho se cap nhat
+                'dinh_muc_toi_thieu' => 5,
+                'thuoc_tinh_ids'     => json_encode($thuocTinhIds),
+                'trang_thai'         => true,
+                'created_at'         => $now,
+                'updated_at'         => $now,
+            ]);
+            $variantMap[$tenBt] = $vtId;
+        }
+
+        // ---- 4c. Nuoc ep tao (Thuc pham) - Chi co bien the goc ----
+        $spNuocEpId = DB::table('san_pham')->insertGetId([
+            'id_danh_muc'  => $danhMucs['Thực phẩm'],
+            'ten_san_pham' => 'Nước ép táo',
+            'thuong_hieu'  => 'FreshJuice',
+            'mo_ta'        => 'Nước ép táo 100% tự nhiên, không đường, chai 1L.',
+            'trang_thai'   => true,
+            'created_at'   => $now,
+            'updated_at'   => $now,
+        ]);
+
+        $vtChaiId = DB::table('bien_the_san_pham')->insertGetId([
+            'product_id'         => $spNuocEpId,
+            'ten_bien_the'       => 'Chai',
+            'ma_hang'            => 'NJT-CHAI01',
+            'ma_vach'            => '8935100000018',
+            'gia_von'            => 18000,
+            'gia_ban'            => 28000,
+            'so_luong_ton'       => 0,
+            'dinh_muc_toi_thieu' => 15,
+            'thuoc_tinh_ids'     => null,
+            'trang_thai'         => true,
+            'created_at'         => $now,
+            'updated_at'         => $now,
+        ]);
+
+        DB::table('don_vi_quy_doi')->insert([
+            'variant_id'          => $vtChaiId,
+            'ten_don_vi'          => 'Thùng',
+            'ty_le_quy_doi'       => 12,
+            'ma_hang'             => 'NJT-THU001',
+            'ma_vach'             => '8935100000025',
+            'gia_von_quy_doi'     => 216000,
+            'gia_ban_quy_doi'     => 320000,
+            'gia_ban_si'          => 295000,
+            'la_don_vi_mac_dinh'  => false,
+            'created_at'          => $now,
+            'updated_at'          => $now,
+        ]);
+
+        // ==========================================================
+        // BUOC 5: BAO CAO
+        // ==========================================================
+        $this->command->info('=== SanPhamSeeder hoan thanh ===');
+        $this->command->info('Danh muc : ' . count($danhMucs));
+        $this->command->info('Thuoc tinh cha: 2 (Kich thuoc, Mau sac)');
+        $this->command->info('Thuoc tinh con: ' . count($sizeIds) . ' sizes + ' . count($mauIds) . ' colors');
+        $this->command->info('San pham: 3 (Bia Heineken, Ao thun co tron, Nuoc ep tao)');
+        $this->command->info('Bien the: ' . DB::table('bien_the_san_pham')->count());
+        $this->command->info('Don vi quy doi: ' . DB::table('don_vi_quy_doi')->count());
     }
 }

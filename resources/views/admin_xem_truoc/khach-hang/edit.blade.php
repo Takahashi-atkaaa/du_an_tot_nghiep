@@ -77,11 +77,11 @@
                             <label class="form-label fw-semibold">Tổng chi tiêu</label>
                             <input type="text" class="form-control" value="{{ number_format($khachHang->tong_chi_tieu ?? 0, 0, ',', '.') }} đ" readonly>
                         </div>
-                        <div class="col-md-4">
+                        {{-- <div class="col-md-4">
                             <label class="form-label fw-semibold">Công nợ <span class="text-danger">*</span></label>
                             <input type="number" step="0.01" min="0" name="cong_no" value="{{ old('cong_no', $khachHang->cong_no) }}" class="form-control @error('cong_no') is-invalid @enderror">
                             @error('cong_no')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div>
+                        </div> --}}
                         <div class="col-12">
                             <label class="form-label fw-semibold">Ghi chú</label>
                             <textarea name="phi_chu" rows="4" class="form-control @error('phi_chu') is-invalid @enderror">{{ old('phi_chu', $khachHang->phi_chu) }}</textarea>
@@ -95,7 +95,7 @@
                         <div class="mb-2"><span class="text-muted">Mã khách hàng:</span> <strong>KH{{ str_pad((string) $khachHang->id, 4, '0', STR_PAD_LEFT) }}</strong></div>
                         <div class="mb-2"><span class="text-muted">Điểm tích lũy hiện tại:</span> <strong>{{ number_format($khachHang->diem_tich_luy ?? 0) }}</strong></div>
                         <div class="mb-2"><span class="text-muted">Tổng chi tiêu:</span> <strong>{{ number_format($khachHang->tong_chi_tieu ?? 0, 0, ',', '.') }} đ</strong></div>
-                        <div class="mb-0"><span class="text-muted">Công nợ hiện tại:</span> <strong class="text-danger">{{ number_format($khachHang->cong_no ?? 0, 0, ',', '.') }} đ</strong></div>
+                        {{-- <div class="mb-0"><span class="text-muted">Công nợ hiện tại:</span> <strong class="text-danger">{{ number_format($khachHang->cong_no ?? 0, 0, ',', '.') }} đ</strong></div> --}}
                     </div>
                 </div>
             </div>

@@ -1,0 +1,257 @@
+/* ======= Modal Full Height ======= */
+#addProductModal {
+    max-width: none !important;
+}
+#addProductModal .modal-fullheight {
+    height: calc(100vh - 3rem) !important;
+    max-height: calc(100vh - 3rem) !important;
+    width: min(1120px, calc(100vw - 260px - 2rem)) !important;
+    max-width: min(1120px, calc(100vw - 260px - 2rem)) !important;
+    margin: 1.5rem auto;
+}
+#addProductModal .modal-fullheight .modal-content {
+    height: 100% !important;
+    max-height: 100% !important;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+#addProductModal .modal-fullheight .modal-body {
+    overflow-x: auto;
+    overflow-y: auto;
+    flex: 1;
+    padding: 1.25rem 1.5rem;
+    min-width: 0;
+    max-height: 100% !important;
+}
+#addProductModal .modal-fullheight .modal-header {
+    flex-shrink: 0;
+    padding: 1rem 1.5rem;
+}
+#addProductModal .modal-fullheight .modal-footer {
+    flex-shrink: 0;
+    padding: 0.75rem 1.5rem;
+}
+
+    /* ======= Card headings ======= */
+    #addProductModal .card-header h6 {
+        font-size: 0.88rem;
+        letter-spacing: 0.02em;
+    }
+
+    /* ======= Section Card (KiotViet-style collapsible) ======= */
+    #addProductModal .section-card {
+        border: 1px solid #e0e4e8;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        overflow: hidden;
+        background: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    #addProductModal .section-header {
+        background: #f8f9fa;
+        padding: 10px 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        user-select: none;
+        font-weight: 600;
+        font-size: 0.84rem;
+        color: #212529;
+        border-bottom: 1px solid #e9ecef;
+    }
+    #addProductModal .section-header:hover { background: #e9ecef; }
+    #addProductModal .section-header > span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    #addProductModal .section-header > span i {
+        opacity: 0.75;
+    }
+    #addProductModal .section-body { display: none; padding: 14px; overflow: hidden; }
+    #addProductModal .section-body.open { display: block; }
+    #addProductModal .section-arrow {
+        font-size: 0.68rem;
+        color: #6c757d;
+        transition: transform 0.2s ease;
+    }
+    #addProductModal .section-header.open .section-arrow { transform: rotate(180deg); }
+
+    /* ======= Form fields ======= */
+    #addProductModal .form-label {
+        font-size: 0.8rem;
+        margin-bottom: 0.2rem;
+        color: #495057;
+    }
+    #addProductModal .form-control,
+    #addProductModal .form-select {
+        font-size: 0.85rem;
+    }
+    #addProductModal .input-group-text {
+        font-size: 0.82rem;
+    }
+
+    /* ======= Table ======= */
+    #addProductModal table {
+        font-size: 0.82rem;
+    }
+    #addProductModal table th {
+        font-size: 0.78rem;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+    #addProductModal table td {
+        vertical-align: middle;
+        padding: 0.4rem 0.5rem;
+    }
+    #addProductModal table tbody tr:hover {
+        background-color: #f8faff;
+    }
+
+    /* ======= Table scroll wrap (sticky header + horizontal scroll) ======= */
+    #addProductModal .table-scroll-wrap {
+        overflow-x: auto;
+        overflow-y: auto;
+        height: 240px;
+        width: 100%;
+    }
+    #addProductModal .table-scroll-wrap table {
+        table-layout: fixed;
+        min-width: 900px;
+        width: 100%;
+    }
+    #addProductModal .table-scroll-wrap table td input,
+    #addProductModal .table-scroll-wrap table td select {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+    #addProductModal .table-scroll-wrap table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    #addProductModal .bang-hcl-table-wrap {
+        height: 300px;
+        overflow-x: auto;
+    }
+    #addProductModal .bang-hcl-table-wrap table {
+        table-layout: fixed;
+        width: 600px;
+    }
+
+    /* ======= Tong hop wrap ======= */
+    #addProductModal .tong-hop-wrap {
+        overflow-x: auto;
+    }
+
+    /* ======= Attrib chip ======= */
+    #addProductModal .attr-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 15px;
+        border: 1px solid #dee2e6;
+        background: #f8f9fa;
+        font-size: 0.8rem;
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.15s;
+    }
+    #addProductModal .attr-chip:hover { border-color: #0d6efd; background: #e7f1ff; }
+    #addProductModal .attr-chip.selected { background: #0d6efd; color: white; border-color: #0d6efd; }
+    #addProductModal .attr-chip .chip-check {
+        width: 14px; height: 14px;
+        border: 1.5px solid #adb5bd;
+        border-radius: 3px;
+        display: flex; align-items: center; justify-content: center;
+        background: white;
+        transition: all 0.15s;
+        flex-shrink: 0;
+    }
+    #addProductModal .attr-chip.selected .chip-check {
+        background: white; border-color: white;
+    }
+    #addProductModal .attr-chip.selected .chip-check::after {
+        content: '\2713'; font-size: 9px; color: #0d6efd; font-weight: bold;
+    }
+    #addProductModal .don-vi-chip {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        border: 1px solid #dee2e6;
+        background: white;
+        font-size: 0.78rem;
+        cursor: pointer;
+        margin: 2px;
+    }
+    #addProductModal .don-vi-chip:hover { border-color: #0d6efd; }
+    #addProductModal .don-vi-chip.active { background: #0d6efd; color: white; border-color: #0d6efd; }
+    #addProductModal .product-row:hover > td { background-color: #f0f7ff !important; }
+    #addProductModal .unit-table tr:hover > td { background-color: #f8f9fa; }
+    #addProductModal .hcl-preview-row:hover > td { background-color: #f0f7ff !important; }
+
+    /* ======= Variant Card (new 3-table structure) ======= */
+    #addProductModal .variant-card {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        overflow: hidden;
+        background: #fff;
+    }
+    #addProductModal .variant-card-header {
+        background: #f8f9fa;
+        padding: 10px 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #e9ecef;
+    }
+    #addProductModal .variant-card-header:hover { background: #e9ecef; }
+    #addProductModal .variant-card-body {
+        padding: 12px 14px;
+    }
+    #addProductModal .variant-card-title {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #212529;
+    }
+    #addProductModal .variant-card .unit-row {
+        background: #fafafa;
+        border-radius: 6px;
+        padding: 8px 10px;
+        margin-bottom: 6px;
+        border: 1px solid #e9ecef;
+    }
+    #addProductModal .variant-card .unit-row:hover { background: #f0f7ff; }
+    #addProductModal .variant-card .unit-row .unit-row-idx {
+        font-size: 0.7rem;
+        color: #adb5bd;
+        min-width: 20px;
+    }
+    #addProductModal .variant-card .unit-remove-btn {
+        font-size: 0.7rem;
+        padding: 2px 6px;
+    }
+    #addProductModal .variant-card .variant-delete-btn {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+    }
+    #addProductModal .unit-row .col-2 { min-width: 120px; }
+    #addProductModal .unit-row .col-1 { min-width: 80px; }
+
+    /* ======= Bien the list in modal ======= */
+    #bienTheList .variant-card { box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+
+    /* ======= Status badges ======= */
+    .badge.bien-the-badge { font-size: 0.7rem; }
+    .badge.unit-badge { font-size: 0.65rem; }
+
+    /* ======= Row types in table ======= */
+    .variant-row { background: #fff; }
+    .unit-row { background: #fafafa; }
+

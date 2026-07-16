@@ -9,157 +9,200 @@ class KhoHangSeeder extends Seeder
 {
     public function run(): void
     {
-        // Danh muc san pham
-        DB::table('danh_muc_san_pham')->insert([
-            [
-                'ten_danh_muc' => 'Điện tử',
-                'trang_thai' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'ten_danh_muc' => 'Thực phẩm',
-                'trang_thai' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
+        // Lay nguoi dung va nha cung cap
+        $userId = DB::table('nguoi_dung')->value('id');
+        if (!$userId) {
+            $this->command->warn('Khong co nguoi dung. Bo qua KhoHangSeeder.');
+            return;
+        }
 
-        $danhMucIds = DB::table('danh_muc_san_pham')->pluck('id')->toArray();
+        $nccIds = DB::table('nha_cung_cap')->pluck('id')->toArray();
+        if (empty($nccIds)) {
+            $this->command->warn('Khong co nha cung cap. Bo qua KhoHangSeeder.');
+            return;
+        }
 
-        // Thuoc tinh san pham (cha + con)
-        $mauSacId = DB::table('thuoc_tinh_san_pham')->insertGetId([
-            'ten_thuoc_tinh' => 'Màu sắc',
-            'trang_thai' => true,
-            'thuoc_tinh_cha_id' => null,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-        $sizeId = DB::table('thuoc_tinh_san_pham')->insertGetId([
-            'ten_thuoc_tinh' => 'Kích thước',
-            'trang_thai' => true,
-            'thuoc_tinh_cha_id' => null,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-        DB::table('thuoc_tinh_san_pham')->insert([
-            ['ten_thuoc_tinh' => 'Đen', 'trang_thai' => true, 'thuoc_tinh_cha_id' => $mauSacId, 'created_at' => now(), 'updated_at' => now()],
-            ['ten_thuoc_tinh' => 'Trắng', 'trang_thai' => true, 'thuoc_tinh_cha_id' => $mauSacId, 'created_at' => now(), 'updated_at' => now()],
-            ['ten_thuoc_tinh' => 'Xanh', 'trang_thai' => true, 'thuoc_tinh_cha_id' => $mauSacId, 'created_at' => now(), 'updated_at' => now()],
-            ['ten_thuoc_tinh' => 'M', 'trang_thai' => true, 'thuoc_tinh_cha_id' => $sizeId, 'created_at' => now(), 'updated_at' => now()],
-            ['ten_thuoc_tinh' => 'L', 'trang_thai' => true, 'thuoc_tinh_cha_id' => $sizeId, 'created_at' => now(), 'updated_at' => now()],
-            ['ten_thuoc_tinh' => 'XL', 'trang_thai' => true, 'thuoc_tinh_cha_id' => $sizeId, 'created_at' => now(), 'updated_at' => now()],
-        ]);
+        // Xoa du lieu kho cu (chi tiet lo -> lo -> phieu)
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        DB::table('chi_tiet_phieu')->truncate();
+        DB::table('chi_tiet_lo_hang')->truncate();
+        DB::table('lo_hang')->truncate();
+        DB::table('phieu_xuat')->truncate();
+        DB::table('phieu_nhap')->truncate();
+        DB::table('phieu')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
-        // Don vi san pham
-        DB::table('don_vi_san_pham')->insert([
-            [
-                'ten_don_vi' => 'Cái',
-                'so_luong_san_pham_trong_don_vi' => 1,
-                'trang_thai' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'ten_don_vi' => 'Thùng',
-                'so_luong_san_pham_trong_don_vi' => 24,
-                'trang_thai' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'ten_don_vi' => 'Kilogram',
-                'so_luong_san_pham_trong_don_vi' => 1,
-                'trang_thai' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
+        $now = now();
+        $nccIdx = 0;
 
-        $donViIds = DB::table('don_vi_san_pham')->pluck('id')->toArray();
+        // So luong nhap cho tung bien the (chia deu vao 2 lo)
+        $soLuongMoiLo = [80, 120];
 
-        // San pham
-        DB::table('san_pham')->insert([
-            [
-                'id_danh_muc' => $danhMucIds[0] ?? null,
-                'ten_san_pham' => 'Điện thoại thông minh A',
-                'ma_vach' => 'DT001',
-                'hinh_anh' => null,
-                'thuong_hieu' => 'SmartMart',
-                'gia_ban' => 6990000,
-                'so_luong_ton_kho' => 50,
-                'mo_ta' => 'Điện thoại thông minh cao cấp',
-                'id_don_vi' => $donViIds[0] ?? null,
-                'dinh_muc_toi_thieu' => 10,
-                'trang_thai' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'id_danh_muc' => $danhMucIds[1] ?? null,
-                'ten_san_pham' => 'Gạo ST25 5kg',
-                'ma_vach' => 'GAO001',
-                'hinh_anh' => null,
-                'thuong_hieu' => 'SmartMart Organic',
-                'gia_ban' => 120000,
-                'so_luong_ton_kho' => 200,
-                'mo_ta' => 'Gạo ST25 hữu cơ',
-                'id_don_vi' => $donViIds[1] ?? null,
-                'dinh_muc_toi_thieu' => 50,
-                'trang_thai' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
+        // ======= Lay toan bo bien the tu DB (sau SanPhamSeeder) =======
+        $variants = DB::table('bien_the_san_pham')
+            ->whereNull('deleted_at')
+            ->orderBy('id')
+            ->get();
 
-        $sanPhamIds = DB::table('san_pham')->pluck('id')->toArray();
-        $nguoiDungs = DB::table('nguoi_dung')->pluck('id')->toArray();
-        $nhaCungCaps = DB::table('nha_cung_cap')->pluck('id')->toArray();
+        if ($variants->isEmpty()) {
+            $this->command->warn('Khong co bien the. Bo qua KhoHangSeeder.');
+            return;
+        }
 
-        if (count($nguoiDungs) && count($sanPhamIds)) {
-            // Phieu nhap kho
-            DB::table('phieu')->insert([
-                [
-                    'id_nguoi_dung' => $nguoiDungs[2] ?? $nguoiDungs[0],
-                    'id_nha_cung_cap' => $nhaCungCaps[0] ?? null,
-                    'id_hoa_don' => null,
-                    'loai_phieu' => 'Nhập hàng',
-                    'ghi_chu' => 'Nhập hàng đầu tuần',
-                    'created_at' => now()->subDays(5),
-                    'updated_at' => now()->subDays(5),
-                ],
+        $tongLo = 0;
+        $tongCtl = 0;
+        $tongPhieu = 0;
+        $tongCtPhieu = 0;
+
+        foreach ($variants as $variant) {
+            $nccId = $nccIds[$nccIdx % count($nccIds)];
+            $nccIdx++;
+
+            // Moi variant co 2 lo: Lo gan (HSD 20-30 ngay) va Lo xa (HSD 3-6 thang)
+            $ngayNhapLo1 = $now->copy()->subDays(rand(30, 60))->toDateString();
+            $ngayNhapLo2 = $now->copy()->subDays(rand(5, 20))->toDateString();
+            $hsdLo1 = $now->copy()->addDays(rand(20, 30))->toDateString();
+            $hsdLo2 = $now->copy()->addDays(rand(90, 180))->toDateString();
+
+            // ---------- LO 1: HSD gan ----------
+            $idPhieu1 = DB::table('phieu')->insertGetId([
+                'loai_phieu'        => 'Nhập hàng',
+                'loai_phieu_enum'   => 'nhap_mua_hang',
+                'id_nguoi_dung'    => $userId,
+                'id_nha_cung_cap'  => $nccId,
+                'ghi_chu'          => "Nhap kho san pham (Lo HSD gan)",
+                'created_at'        => $ngayNhapLo1 . ' 08:00:00',
+                'updated_at'        => $ngayNhapLo1 . ' 08:00:00',
             ]);
 
-            $phieuIds = DB::table('phieu')->pluck('id')->toArray();
+            DB::table('phieu_nhap')->insert([
+                'id_phieu'      => $idPhieu1,
+                'loai_nhap'    => 'mua_hang',
+                'ghi_chu'      => "Nhap lo HSD gan - {$hsdLo1}",
+                'created_at'    => $ngayNhapLo1 . ' 08:00:00',
+                'updated_at'    => $ngayNhapLo1 . ' 08:00:00',
+            ]);
 
-            if (count($phieuIds) && count($sanPhamIds)) {
-                DB::table('chi_tiet_phieu')->insert([
-                    [
-                        'id_phieu' => $phieuIds[0],
-                        'id_san_pham' => $sanPhamIds[0] ?? null,
-                        'so_luong' => 20,
-                        'gia_nhap' => 5000000,
-                        'ma_lo' => 'LOT001',
-                        'han_su_dung' => now()->addMonths(12)->toDateString(),
-                        'so_luong_con_lai' => 20,
-                        'ghi_chu' => null,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ],
-                    [
-                        'id_phieu' => $phieuIds[0],
-                        'id_san_pham' => $sanPhamIds[1] ?? null,
-                        'so_luong' => 100,
-                        'gia_nhap' => 85000,
-                        'ma_lo' => 'LOT002',
-                        'han_su_dung' => now()->addMonths(6)->toDateString(),
-                        'so_luong_con_lai' => 100,
-                        'ghi_chu' => null,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ],
-                ]);
-            }
+            $maLo1 = 'LO-' . str_pad((string)$idPhieu1, 5, '0', STR_PAD_LEFT);
+            $idLo1 = DB::table('lo_hang')->insertGetId([
+                'id_phieu'            => $idPhieu1,
+                'id_nha_cung_cap'    => $nccId,
+                'ma_lo'              => $maLo1,
+                'ngay_nhap'          => $ngayNhapLo1,
+                'ghi_chu'            => "Lo HSD gan - {$hsdLo1}",
+                'created_at'          => $ngayNhapLo1 . ' 08:00:00',
+                'updated_at'          => $ngayNhapLo1 . ' 08:00:00',
+            ]);
+
+            // Chi tiet lo 1 - VARIANT_ID BAT BUOC (khong NULL)
+            $slLo1 = $soLuongMoiLo[0];
+            $idCtLo1 = DB::table('chi_tiet_lo_hang')->insertGetId([
+                'id_lo_hang'    => $idLo1,
+                'id_san_pham'  => $variant->product_id,
+                'variant_id'    => $variant->id,    // DUNG VARIANT - TUYET DOI KHONG NULL
+                'so_luong_nhap' => $slLo1,
+                'so_luong_ton'  => $slLo1,
+                'gia_nhap'      => $variant->gia_von,
+                'han_su_dung'   => $hsdLo1,
+                'created_at'    => $ngayNhapLo1 . ' 08:00:00',
+                'updated_at'    => $ngayNhapLo1 . ' 08:00:00',
+            ]);
+
+            // Chi tiet phieu 1
+            DB::table('chi_tiet_phieu')->insert([
+                'id_phieu'              => $idPhieu1,
+                'id_san_pham'          => $variant->product_id,
+                'variant_id'           => $variant->id,
+                'id_lo_hang'           => $idLo1,
+                'id_chi_tiet_lo_hang'  => $idCtLo1,
+                'so_luong'             => $slLo1,
+                'gia_nhap'             => $variant->gia_von,
+                'ma_lo'                => $maLo1,
+                'han_su_dung'          => $hsdLo1,
+                'so_luong_con_lai'     => $slLo1,
+                'ghi_chu'              => "Nhap lo HSD gan variant #{$variant->id}",
+                'created_at'           => $ngayNhapLo1 . ' 08:00:00',
+                'updated_at'           => $ngayNhapLo1 . ' 08:00:00',
+            ]);
+
+            // ---------- LO 2: HSD xa ----------
+            $idPhieu2 = DB::table('phieu')->insertGetId([
+                'loai_phieu'        => 'Nhập hàng',
+                'loai_phieu_enum'   => 'nhap_mua_hang',
+                'id_nguoi_dung'    => $userId,
+                'id_nha_cung_cap'  => $nccId,
+                'ghi_chu'          => "Nhap kho san pham (Lo HSD xa)",
+                'created_at'        => $ngayNhapLo2 . ' 09:00:00',
+                'updated_at'        => $ngayNhapLo2 . ' 09:00:00',
+            ]);
+
+            DB::table('phieu_nhap')->insert([
+                'id_phieu'      => $idPhieu2,
+                'loai_nhap'    => 'mua_hang',
+                'ghi_chu'      => "Nhap lo HSD xa - {$hsdLo2}",
+                'created_at'    => $ngayNhapLo2 . ' 09:00:00',
+                'updated_at'    => $ngayNhapLo2 . ' 09:00:00',
+            ]);
+
+            $maLo2 = 'LO-' . str_pad((string)$idPhieu2, 5, '0', STR_PAD_LEFT);
+            $idLo2 = DB::table('lo_hang')->insertGetId([
+                'id_phieu'            => $idPhieu2,
+                'id_nha_cung_cap'    => $nccId,
+                'ma_lo'              => $maLo2,
+                'ngay_nhap'          => $ngayNhapLo2,
+                'ghi_chu'            => "Lo HSD xa - {$hsdLo2}",
+                'created_at'          => $ngayNhapLo2 . ' 09:00:00',
+                'updated_at'          => $ngayNhapLo2 . ' 09:00:00',
+            ]);
+
+            // Chi tiet lo 2 - VARIANT_ID BAT BUOC
+            $slLo2 = $soLuongMoiLo[1];
+            $idCtLo2 = DB::table('chi_tiet_lo_hang')->insertGetId([
+                'id_lo_hang'    => $idLo2,
+                'id_san_pham'  => $variant->product_id,
+                'variant_id'    => $variant->id,    // DUNG VARIANT - TUYET DOI KHONG NULL
+                'so_luong_nhap' => $slLo2,
+                'so_luong_ton'  => $slLo2,
+                'gia_nhap'      => $variant->gia_von,
+                'han_su_dung'   => $hsdLo2,
+                'created_at'    => $ngayNhapLo2 . ' 09:00:00',
+                'updated_at'    => $ngayNhapLo2 . ' 09:00:00',
+            ]);
+
+            // Chi tiet phieu 2
+            DB::table('chi_tiet_phieu')->insert([
+                'id_phieu'              => $idPhieu2,
+                'id_san_pham'          => $variant->product_id,
+                'variant_id'           => $variant->id,
+                'id_lo_hang'           => $idLo2,
+                'id_chi_tiet_lo_hang'  => $idCtLo2,
+                'so_luong'             => $slLo2,
+                'gia_nhap'             => $variant->gia_von,
+                'ma_lo'                => $maLo2,
+                'han_su_dung'          => $hsdLo2,
+                'so_luong_con_lai'     => $slLo2,
+                'ghi_chu'              => "Nhap lo HSD xa variant #{$variant->id}",
+                'created_at'           => $ngayNhapLo2 . ' 09:00:00',
+                'updated_at'           => $ngayNhapLo2 . ' 09:00:00',
+            ]);
+
+            // ---------- CAP NHAT so_luong_ton CUA BIEN THE ----------
+            DB::table('bien_the_san_pham')
+                ->where('id', $variant->id)
+                ->update(['so_luong_ton' => $slLo1 + $slLo2]);
+
+            $tongLo      += 2;
+            $tongCtl     += 2;
+            $tongPhieu   += 2;
+            $tongCtPhieu += 2;
         }
+
+        $this->command->info('=== KhoHangSeeder hoan thanh ===');
+        $this->command->info("Bien the da nhap: {$variants->count()}");
+        $this->command->info("Lo hang: {$tongLo}");
+        $this->command->info("Chi tiet lo hang: {$tongCtl}");
+        $this->command->info("Phieu nhap: {$tongPhieu}");
+        $this->command->info("Chi tiet phieu: {$tongCtPhieu}");
+        $this->command->info("Tong ton kho: " . DB::table('bien_the_san_pham')->sum('so_luong_ton'));
     }
 }

@@ -19,9 +19,8 @@ class DatabaseSeeder extends Seeder
             DiemDanhSeeder::class,
             KhachHangSeeder::class,
             NhaCungCapSeeder::class,
-            KhoHangSeeder::class,
             SanPhamSeeder::class,
-            BanHangSeeder::class,
+            KhoHangSeeder::class,
         ]);
     }
 }

@@ -111,6 +111,74 @@ class QuyenSeeder extends Seeder
                 'ma_quyen' => 'phan_quyen',
                 'ten_quyen' => 'Phân quyền người dùng'
             ],
+            [
+                'ma_quyen' => 'phan_quyen_nguoi_dung',
+                'ten_quyen' => 'Phân quyền người dùng'
+            ],
+            [
+                'ma_quyen' => 'cap_nhat_phan_quyen',
+                'ten_quyen' => 'Cập nhật phân quyền'
+            ],
+
+            // Khách hàng
+            [
+                'ma_quyen' => 'xem_khach_hang',
+                'ten_quyen' => 'Xem khách hàng'
+            ],
+            [
+                'ma_quyen' => 'them_khach_hang',
+                'ten_quyen' => 'Thêm khách hàng'
+            ],
+            [
+                'ma_quyen' => 'sua_khach_hang',
+                'ten_quyen' => 'Sửa khách hàng'
+            ],
+            [
+                'ma_quyen' => 'xoa_khach_hang',
+                'ten_quyen' => 'Xóa khách hàng'
+            ],
+
+            // Khuyến mãi
+            [
+                'ma_quyen' => 'xem_khuyen_mai',
+                'ten_quyen' => 'Xem khuyến mãi'
+            ],
+            [
+                'ma_quyen' => 'them_khuyen_mai',
+                'ten_quyen' => 'Thêm khuyến mãi'
+            ],
+            [
+                'ma_quyen' => 'sua_khuyen_mai',
+                'ten_quyen' => 'Sửa khuyến mãi'
+            ],
+            [
+                'ma_quyen' => 'xoa_khuyen_mai',
+                'ten_quyen' => 'Xóa khuyến mãi'
+            ],
+
+            // Chia ca làm việc
+            [
+                'ma_quyen' => 'xem_chia_ca_lam_viec',
+                'ten_quyen' => 'Xem chia ca làm việc'
+            ],
+            [
+                'ma_quyen' => 'them_chia_ca_lam_viec',
+                'ten_quyen' => 'Thêm chia ca làm việc'
+            ],
+            [
+                'ma_quyen' => 'sua_chia_ca_lam_viec',
+                'ten_quyen' => 'Sửa chia ca làm việc'
+            ],
+            [
+                'ma_quyen' => 'xoa_chia_ca_lam_viec',
+                'ten_quyen' => 'Xóa chia ca làm việc'
+            ],
+
+            // Lịch sử giao dịch nhà cung cấp
+            [
+                'ma_quyen' => 'xem_lich_su_giao_dich',
+                'ten_quyen' => 'Xem lịch sử giao dịch'
+            ],
 
             // Thiết lập lương
             [
@@ -156,6 +224,10 @@ class QuyenSeeder extends Seeder
             [
                 'ma_quyen' => 'sua_phieu_luong',
                 'ten_quyen' => 'Sửa phiếu lương'
+            ],
+            [
+                'ma_quyen' => 'ca_lam',
+                'ten_quyen' => 'quản lý ca làm'
             ],
 
         ];

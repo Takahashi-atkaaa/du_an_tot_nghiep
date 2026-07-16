@@ -16,13 +16,10 @@ class KTVaiTro
 
         $user = auth()->user();
 
-        if ($user->id_vai_tro === 3 && $request->is('admin/*')) {
-            return redirect('/nhan-vien/');
-        }
-
         if ($user->id_vai_tro === 1) {
             return $next($request);
         }
+
 
         if (!$permission) {
             return $next($request);

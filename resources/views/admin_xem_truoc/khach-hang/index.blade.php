@@ -92,7 +92,7 @@
             </div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6">
+    {{-- <div class="col-xl-3 col-md-6">
         <div class="card card-stat red h-100 soft-panel">
             <div class="card-body d-flex align-items-center">
                 <div class="icon me-3"><i class="fas fa-sack-dollar"></i></div>
@@ -102,7 +102,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> --}}
 </div>
 
 <div class="card soft-panel mb-4">

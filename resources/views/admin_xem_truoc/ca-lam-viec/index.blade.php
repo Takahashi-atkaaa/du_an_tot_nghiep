@@ -54,13 +54,19 @@
                                 <a href="{{ route('ca-lam-viec.edit', $caLamViec) }}" class="btn btn-sm btn-outline-primary btn-action" title="Sửa">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <form action="{{ route('ca-lam-viec.destroy', $caLamViec) }}" method="POST" class="d-inline" onsubmit="return confirm('Hủy ca làm việc này?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger btn-action" title="Hủy">
+                                @if(($caLamViec->chia_ca_lam_viecs_count ?? 0) > 0)
+                                    <button type="button" class="btn btn-sm btn-outline-secondary btn-action" title="Ca đang có nhân viên, không thể xóa" disabled>
                                         <i class="fas fa-trash"></i>
                                     </button>
-                                </form>
+                                @else
+                                    <form action="{{ route('ca-lam-viec.destroy', $caLamViec) }}" method="POST" class="d-inline" onsubmit="return confirm('Hủy ca làm việc này?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-outline-danger btn-action" title="Hủy">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @empty
