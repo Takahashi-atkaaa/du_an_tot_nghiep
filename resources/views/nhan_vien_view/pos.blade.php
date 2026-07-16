@@ -2119,6 +2119,7 @@ async function loadPromotions() {
     });
 }
 function tinhTienGiam(subtotal) {
+    const cart = getCurrentCart();
     if (!selectedPromotion) return 0;
 
     const type = String(selectedPromotion.loai_giam_gia || '')
@@ -2148,19 +2149,25 @@ function tinhTienGiam(subtotal) {
     }
 
     // Giảm phần trăm
-    if (type === 'phan_tram') {
-        let discount = subtotal * Number(selectedPromotion.gia_tri_giam || 0) / 100;
+    if (type === 'phan_tram' || type === 'percent') {
 
-        if (selectedPromotion.giam_toi_da !== null && selectedPromotion.giam_toi_da !== '') {
-            discount = Math.min(discount, Number(selectedPromotion.giam_toi_da));
-        }
+    let discount =
+        subtotal * Number(selectedPromotion.gia_tri_giam || 0) / 100;
 
-        return Math.min(discount, subtotal);
+    if (selectedPromotion.giam_toi_da) {
+        discount = Math.min(
+            discount,
+            Number(selectedPromotion.giam_toi_da)
+        );
     }
 
-    // Giảm tiền trực tiếp
-    const discount = Number(selectedPromotion.gia_tri_giam || 0);
     return Math.min(discount, subtotal);
+}
+
+    // Giảm tiền trực tiếp
+    // Giảm tiền trực tiếp
+const discount = Number(selectedPromotion.gia_tri_giam || 0) * 1000;
+return Math.min(discount, subtotal);
 }
 function applyPromotion() {
     const id = document.getElementById('promotionSelect').value;
