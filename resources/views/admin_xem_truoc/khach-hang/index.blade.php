@@ -57,12 +57,14 @@
 @if(session('success'))
     <div class="alert alert-success soft-panel border-0">{{ session('success') }}</div>
 @endif
-
 <div class="row g-4 mb-4">
-    <div class="col-xl-3 col-md-6">
+    <!-- Tổng khách hàng -->
+    <div class="col-lg-4 col-md-6">
         <div class="card card-stat blue h-100 soft-panel">
             <div class="card-body d-flex align-items-center">
-                <div class="icon me-3"><i class="fas fa-users"></i></div>
+                <div class="icon me-3">
+                    <i class="fas fa-users"></i>
+                </div>
                 <div>
                     <h6 class="text-muted mb-1">Tổng khách hàng</h6>
                     <h3 class="mb-0">{{ number_format($tongKhachHang) }}</h3>
@@ -70,10 +72,14 @@
             </div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6">
+
+    <!-- Đang hoạt động -->
+    <div class="col-lg-4 col-md-6">
         <div class="card card-stat green h-100 soft-panel">
             <div class="card-body d-flex align-items-center">
-                <div class="icon me-3"><i class="fas fa-circle-check"></i></div>
+                <div class="icon me-3">
+                    <i class="fas fa-circle-check"></i>
+                </div>
                 <div>
                     <h6 class="text-muted mb-1">Đang hoạt động</h6>
                     <h3 class="mb-0">{{ number_format($dangHoatDong) }}</h3>
@@ -81,10 +87,14 @@
             </div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6">
+
+    <!-- Tổng điểm tích lũy -->
+    <div class="col-lg-4 col-md-6">
         <div class="card card-stat orange h-100 soft-panel">
             <div class="card-body d-flex align-items-center">
-                <div class="icon me-3"><i class="fas fa-coins"></i></div>
+                <div class="icon me-3">
+                    <i class="fas fa-coins"></i>
+                </div>
                 <div>
                     <h6 class="text-muted mb-1">Tổng điểm tích lũy</h6>
                     <h3 class="mb-0">{{ number_format($tongDiemTichLuy) }}</h3>
@@ -92,17 +102,6 @@
             </div>
         </div>
     </div>
-    {{-- <div class="col-xl-3 col-md-6">
-        <div class="card card-stat red h-100 soft-panel">
-            <div class="card-body d-flex align-items-center">
-                <div class="icon me-3"><i class="fas fa-sack-dollar"></i></div>
-                <div>
-                    <h6 class="text-muted mb-1">Tổng công nợ</h6>
-                    <h3 class="mb-0 text-danger">{{ number_format($tongCongNo, 0, ',', '.') }} đ</h3>
-                </div>
-            </div>
-        </div>
-    </div> --}}
 </div>
 
 <div class="card soft-panel mb-4">

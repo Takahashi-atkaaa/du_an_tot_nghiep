@@ -73,41 +73,35 @@
     </div>
 
     <div class="col-lg-8">
-        <div class="row g-4 mb-4">
-            <div class="col-md-4">
-                <div class="card card-stat blue soft-panel h-100">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="icon me-3"><i class="fas fa-gem"></i></div>
-                        <div>
-                            <h6 class="text-muted mb-1">Điểm tích lũy hiện tại</h6>
-                            <h3 class="mb-0">{{ number_format($khachHang->diem_tich_luy ?? 0) }}</h3>
-                        </div>
-                    </div>
+      <div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card card-stat blue soft-panel h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon me-3">
+                    <i class="fas fa-gem"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted mb-1">Điểm tích lũy hiện tại</h6>
+                    <h3 class="mb-0">{{ number_format($khachHang->diem_tich_luy ?? 0) }}</h3>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card card-stat green soft-panel h-100">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="icon me-3"><i class="fas fa-wallet"></i></div>
-                        <div>
-                            <h6 class="text-muted mb-1">Tổng chi tiêu</h6>
-                            <h3 class="mb-0">{{ number_format($khachHang->tong_chi_tieu ?? 0, 0, ',', '.') }} đ</h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {{-- <div class="col-md-4">
-                <div class="card card-stat red soft-panel h-100">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="icon me-3"><i class="fas fa-sack-dollar"></i></div>
-                        <div>
-                            <h6 class="text-muted mb-1">Công nợ</h6>
-                            <h3 class="mb-0">{{ number_format($khachHang->cong_no ?? 0, 0, ',', '.') }} đ</h3>
-                        </div>
-                    </div>
-                </div>
-            </div> --}}
         </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card card-stat green soft-panel h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon me-3">
+                    <i class="fas fa-wallet"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted mb-1">Tổng chi tiêu</h6>
+                    <h3 class="mb-0">{{ number_format($khachHang->tong_chi_tieu ?? 0, 0, ',', '.') }} đ</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
         <div class="card soft-panel mb-4">
             <div class="card-header bg-white py-3">
