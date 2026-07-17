@@ -1,15 +1,15 @@
 ﻿@extends('admin_xem_truoc.layouts.admin')
 
-@section('title', 'Quan ly San pham - SmartMart')
+@section('title', 'Quản lý Sản phẩm - SmartMart')
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h4 class="fw-bold mb-1">Quan ly San pham</h4>
+        <h4 class="fw-bold mb-1">Quản lý Sản phẩm</h4>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ url('admin/dashboard') }}">Admin</a></li>
-                <li class="breadcrumb-item active">San pham</li>
+                <li class="breadcrumb-item active">Sản phẩm</li>
             </ol>
         </nav>
     </div>
@@ -21,13 +21,13 @@
             <i class="fas fa-file-export me-2"></i>Export
         </button>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
-            <i class="fas fa-plus me-2"></i>Them san pham
+            <i class="fas fa-plus me-2"></i>Thêm sản phẩm
         </button>
         <button class="btn btn-outline-secondary" id="startQrScanBtn">
-            <i class="fas fa-barcode me-2"></i>Quet ma vach
+            <i class="fas fa-barcode me-2"></i>Quét mã vạch
         </button>
         <a href="{{ url('admin/san-pham/trash') }}" class="btn btn-outline-danger">
-            <i class="fas fa-trash me-2"></i>Thung rac
+            <i class="fas fa-trash me-2"></i>Thùng rác
         </a>
     </div>
 </div>
@@ -46,12 +46,12 @@
                 <div class="col-md-4">
                     <div class="input-group">
                         <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" id="searchKeywordInput" class="form-control" name="keyword" value="{{ $keyword ?? '' }}" placeholder="Tim kiem san pham...">
+                        <input type="text" id="searchKeywordInput" class="form-control" name="keyword" value="{{ $keyword ?? '' }}" placeholder="Tìm kiếm sản phẩm...">
                     </div>
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="danh_muc">
-                        <option value="">Tat ca danh muc</option>
+                        <option value="">Tất cả danh mục</option>
                         @foreach($danhMucs as $danhMuc)
                             <option value="{{ $danhMuc->id }}" {{ (string)$danhMuc->id === (string)($danhMucId ?? '') ? 'selected' : '' }}>{{ $danhMuc->ten_danh_muc }}</option>
                         @endforeach
@@ -59,14 +59,14 @@
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="trang_thai">
-                        <option value="">Tat ca trang thai</option>
-                        <option value="1" {{ $trangThai === '1' || $trangThai === 1 ? 'selected' : '' }}>Dang ban</option>
-                        <option value="0" {{ $trangThai === '0' || $trangThai === 0 ? 'selected' : '' }}>Ngung ban</option>
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="1" {{ $trangThai === '1' || $trangThai === 1 ? 'selected' : '' }}>Đang bán</option>
+                        <option value="0" {{ $trangThai === '0' || $trangThai === 0 ? 'selected' : '' }}>Ngừng bán</option>
                     </select>
                 </div>
                 <div class="col-md-2">
                     <button type="submit" class="btn btn-outline-secondary w-100">
-                        <i class="fas fa-filter me-2"></i>Loc
+                        <i class="fas fa-filter me-2"></i>Lọc
                     </button>
                 </div>
             </div>
@@ -78,13 +78,13 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Quet ma vach</h5>
+                <h5 class="modal-title">Quét mã vạch</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div id="qrScanner" style="width:100%; min-height:400px;"></div>
                 <div class="mt-3 text-center">
-                    <button type="button" class="btn btn-secondary" id="stopQrScanBtn">Dung quet</button>
+                    <button type="button" class="btn btn-secondary" id="stopQrScanBtn">Dừng quét</button>
                 </div>
             </div>
         </div>
@@ -103,17 +103,17 @@
             <div class="d-flex align-items-center gap-3">
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" id="selectAllCheckbox">
-                    <label class="form-check-label text-muted" for="selectAllCheckbox">Chon tat ca</label>
+                    <label class="form-check-label text-muted" for="selectAllCheckbox">Chọn tất cả</label>
                 </div>
                 <div id="bulkActionButtons" class="d-none">
-                    <span class="text-muted me-2" id="selectedCount">0 da chon</span>
-                    <button type="button" class="btn btn-sm btn-success" onclick="submitBulkAction('activate')"><i class="fas fa-check me-1"></i>Bat</button>
-                    <button type="button" class="btn btn-sm btn-warning" onclick="submitBulkAction('deactivate')"><i class="fas fa-ban me-1"></i>Tat</button>
-                    <button type="button" class="btn btn-sm btn-danger" onclick="submitBulkAction('delete')"><i class="fas fa-trash me-1"></i>Xoa</button>
+                    <span class="text-muted me-2" id="selectedCount">0 đã chọn</span>
+                    <button type="button" class="btn btn-sm btn-success" onclick="submitBulkAction('activate')"><i class="fas fa-check me-1"></i>Bật</button>
+                    <button type="button" class="btn btn-sm btn-warning" onclick="submitBulkAction('deactivate')"><i class="fas fa-ban me-1"></i>Tắt</button>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="submitBulkAction('delete')"><i class="fas fa-trash me-1"></i>Xóa</button>
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span class="text-muted small">Tong: <strong id="totalProducts">{{ $sanPhams->total() }}</strong> san pham</span>
+                <span class="text-muted small">Tổng: <strong id="totalProducts">{{ $sanPhams->total() }}</strong> sản phẩm</span>
             </div>
         </div>
 
@@ -123,13 +123,13 @@
                 <thead>
                     <tr>
                         <th style="width:40px;"></th>
-                        <th style="width:60px;">Anh</th>
-                        <th>Ten san pham</th>
-                        <th>Danh muc</th>
-                        <th style="width:100px;">Don vi tinh</th>
-                        <th style="width:110px;">Gia ban</th>
-                        <th style="width:80px;">Ton kho</th>
-                        <th style="width:100px;">Trang thai</th>
+                        <th style="width:60px;">Ảnh</th>
+                        <th>Tên sản phẩm</th>
+                        <th>Danh mục</th>
+                        <th style="width:100px;">Đơn vị tính</th>
+                        <th style="width:110px;">Giá bán</th>
+                        <th style="width:80px;">Tồn kho</th>
+                        <th style="width:100px;">Trạng thái</th>
                     </tr>
                 </thead>
                 <tbody id="productTableBody">
@@ -141,7 +141,7 @@
                         @endphp
 
                         @if($rows->isNotEmpty())
-                        {{-- DONG CHINH (dòng đầu tiên) --}}
+                        {{-- DÒNG CHÍNH (dòng đầu tiên) --}}
                         <tr class="product-parent-row {{ !$firstRow->trang_thai ? 'table-secondary opacity-50' : '' }}"
                             style="cursor:pointer;"
                             data-id="{{ $firstRow->variant->id ?? $sp->id }}"
@@ -156,7 +156,7 @@
                                         <button class="btn btn-sm btn-light p-0 border-0 expand-btn"
                                                 id="expandBtn{{ $sp->id }}"
                                                 onclick="event.stopPropagation(); window.toggleVariants && window.toggleVariants({{ $sp->id }})"
-                                                title="Mo/rong">
+                                                title="Mở rộng">
                                             <i class="fas fa-chevron-down" style="font-size:0.7rem; transition:transform 0.2s;"></i>
                                         </button>
                                     @endif
@@ -168,7 +168,7 @@
                                 </div>
                             </td>
 
-                            {{-- Hinh anh --}}
+                            {{-- Hình ảnh --}}
                             <td>
                                 @if(!empty($firstRow->hinh_anh))
                                     <img src="{{ asset($firstRow->hinh_anh) }}" alt="{{ $sp->ten_san_pham }}"
@@ -183,7 +183,7 @@
                                 @endif
                             </td>
 
-                            {{-- Ten san pham + so dong --}}
+                            {{-- Tên sản phẩm + số dòng --}}
                             <td>
                                 <div>
                                     <span class="fw-semibold" style="font-size:0.9rem;">{{ $sp->ten_san_pham }}</span>
@@ -193,54 +193,54 @@
                                     @if($hasMoreThanOneRow)
                                         <div class="mt-1">
                                             <span class="badge bg-light text-dark border" style="font-size:0.68rem;">
-                                                <i class="fas fa-layer-group me-1"></i>{{ $rows->count() }} don vi
+                                                <i class="fas fa-layer-group me-1"></i>{{ $rows->count() }} đơn vị
                                             </span>
                                         </div>
                                     @endif
                                 </div>
                             </td>
 
-                            {{-- Danh muc --}}
+                            {{-- Danh mục --}}
                             <td>
                                 <span class="text-muted small">{{ $sp->danhMuc?->ten_danh_muc ?? '-' }}</span>
                             </td>
 
-                            {{-- Don vi tinh (dòng đầu = gốc) --}}
+                            {{-- Đơn vị tính (dòng đầu = gốc) --}}
                             <td>
                                 <span class="text-muted small">{{ $firstRow->ten_don_vi }}</span>
                             </td>
 
-                            {{-- Gia ban (dòng đầu) --}}
+                            {{-- Giá bán (dòng đầu) --}}
                             <td>
                                 <span class="fw-bold text-primary" style="font-size:0.88rem;">
                                     {{ number_format((float)$firstRow->gia_ban, 0, ',', '.') }} d
                                 </span>
                             </td>
 
-                            {{-- Ton kho (dòng đầu) --}}
+                            {{-- Tồn kho (dòng đầu) --}}
                             <td>
                                 <span class="{{ $firstRow->so_luong_ton <= 0 ? 'text-danger' : ($firstRow->so_luong_ton <= 10 ? 'text-warning' : 'text-muted') }} small">
                                     {{ $firstRow->so_luong_ton }}
                                 </span>
                             </td>
 
-                            {{-- Trang thai (dòng đầu) --}}
+                            {{-- Trạng thái (dòng đầu) --}}
                             <td>
                                 @if(!$firstRow->trang_thai)
-                                    <span class="badge bg-danger">Ngung ban</span>
+                                    <span class="badge bg-danger">Ngừng bán</span>
                                 @elseif($firstRow->so_luong_ton <= 0)
-                                    <span class="badge bg-secondary">Het hang</span>
+                                    <span class="badge bg-secondary">Hết hàng</span>
                                 @elseif($firstRow->so_luong_ton <= 10)
-                                    <span class="badge bg-warning text-dark">Sap het</span>
+                                    <span class="badge bg-warning text-dark">Sắp hết</span>
                                 @else
-                                    <span class="badge bg-success">Con hang</span>
+                                    <span class="badge bg-success">Còn hàng</span>
                                 @endif
                             </td>
                         </tr>
                         @endif
 
                         @if($rows->count() > 1)
-                        {{-- CAC DONG CON (cac don vi con lai) --}}
+                        {{-- CÁC DÒNG CON (các đơn vị còn lại) --}}
                         @foreach($rows->slice(1) as $rowIndex => $row)
                             <tr id="variantRow{{ $sp->id }}_{{ $rowIndex }}"
                                 class="variant-child-row"
@@ -281,35 +281,35 @@
                                 </td>
                                 <td><span class="text-muted small">—</span></td>
 
-                                {{-- Don vi tinh --}}
+                                {{-- Đơn vị tính --}}
                                 <td>
                                     <span class="text-muted small">{{ $row->ten_don_vi }}</span>
                                 </td>
 
-                                {{-- Gia ban --}}
+                                {{-- Giá bán --}}
                                 <td>
                                     <span class="fw-bold text-primary" style="font-size:0.85rem;">
                                         {{ number_format((float)$row->gia_ban, 0, ',', '.') }} d
                                     </span>
                                 </td>
 
-                                {{-- Ton kho --}}
+                                {{-- Tồn kho --}}
                                 <td>
                                     <span class="{{ $row->so_luong_ton <= 0 ? 'text-danger' : ($row->so_luong_ton <= 3 ? 'text-warning' : 'text-muted') }} small">
                                         {{ $row->so_luong_ton }}
                                     </span>
                                 </td>
 
-                                {{-- Trang thai --}}
+                                {{-- Trạng thái --}}
                                 <td>
                                     @if(!$row->trang_thai)
-                                        <span class="badge bg-danger">Ngung</span>
+                                        <span class="badge bg-danger">Ngừng</span>
                                     @elseif($row->so_luong_ton <= 0)
-                                        <span class="badge bg-secondary">Het</span>
+                                        <span class="badge bg-secondary">Hết</span>
                                     @elseif($row->so_luong_ton <= 3)
-                                        <span class="badge bg-warning text-dark">Sap het</span>
+                                        <span class="badge bg-warning text-dark">Sắp hết</span>
                                     @else
-                                        <span class="badge bg-success">Con hang</span>
+                                        <span class="badge bg-success">Còn hàng</span>
                                     @endif
                                 </td>
                             </tr>
@@ -322,14 +322,14 @@
         @else
         <div class="text-center text-muted py-5">
             <i class="fas fa-box-open fa-3x mb-3"></i>
-            <p class="mb-0">Hien chua co san pham nao.</p>
+            <p class="mb-0">Hiện chưa có sản phẩm nào.</p>
         </div>
         @endif
     </div>
     <div class="card-footer bg-white">
         <div class="d-flex justify-content-between align-items-center">
             <span class="text-muted">
-                Hien thi {{ $sanPhams->firstItem() ?? 0 }} - {{ $sanPhams->lastItem() ?? 0 }} tren {{ $sanPhams->total() }} san pham
+                Hiển thị {{ $sanPhams->firstItem() ?? 0 }} - {{ $sanPhams->lastItem() ?? 0 }} trên {{ $sanPhams->total() }} sản phẩm
             </span>
             <nav>{{ $sanPhams->links('pagination::bootstrap-5') }}</nav>
         </div>
@@ -338,10 +338,10 @@
 
 <div class="offcanvas offcanvas-end" tabindex="-1" id="productDetailDrawer" style="width:680px;">
     <div class="offcanvas-header border-bottom">
-        <h5 class="offcanvas-title fw-bold"><i class="fas fa-box-open me-2 text-primary"></i>Chi tiet san pham</h5>
+        <h5 class="offcanvas-title fw-bold"><i class="fas fa-box-open me-2 text-primary"></i>Chi tiết sản phẩm</h5>
         <div class="d-flex gap-2">
-            <a href="#" id="drawerEditBtn" class="btn btn-sm btn-primary"><i class="fas fa-edit me-1"></i>Sua</a>
-            <button type="button" class="btn btn-sm btn-danger" id="drawerDeleteBtn" onclick="confirmDeleteFromDrawer()"><i class="fas fa-trash me-1"></i>Xoa</button>
+            <a href="#" id="drawerEditBtn" class="btn btn-sm btn-primary"><i class="fas fa-edit me-1"></i>Sửa</a>
+            <button type="button" class="btn btn-sm btn-danger" id="drawerDeleteBtn" onclick="confirmDeleteFromDrawer()"><i class="fas fa-trash me-1"></i>Xóa</button>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
     </div>
@@ -349,7 +349,7 @@
         <div class="d-flex justify-content-center align-items-center" style="min-height:300px;">
             <div class="text-center">
                 <div class="spinner-border text-primary mb-3" role="status"></div>
-                <p class="text-muted mb-0">Dang tai...</p>
+                <p class="text-muted mb-0">Đang tải...</p>
             </div>
         </div>
     </div>
@@ -360,7 +360,7 @@
         <div class="modal-content">
             <div class="modal-header" style="background:linear-gradient(135deg,#0d6efd 0%,#0b5ed7 100%);color:white;">
                 <div>
-                    <h5 class="modal-title fw-bold mb-0"><i class="fas fa-box-open me-2"></i>THEM SAN PHAM</h5>
+                    <h5 class="modal-title fw-bold mb-0"><i class="fas fa-box-open me-2"></i>THÊM SẢN PHẨM</h5>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -373,12 +373,12 @@
                 <div class="modal-footer bg-light flex-column align-items-stretch">
                     <div id="formErrorBox" class="alert alert-danger py-2 px-3 mb-2 small d-none" role="alert" style="white-space:pre-line;"></div>
                     <div class="d-flex justify-content-between w-100 align-items-center">
-                        <span class="text-muted small"><i class="fas fa-info-circle me-1"></i> Dien day du thong tin truoc khi luu</span>
+                        <span class="text-muted small"><i class="fas fa-info-circle me-1"></i> Điền đầy đủ thông tin trước khi lưu</span>
                         <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Huy bo</button>
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
                             <button type="button" class="btn btn-success px-4" id="btnLuuSanPham">
                                 <span class="spinner-border spinner-border-sm me-1 d-none" id="btnLuuSpinner" role="status"></span>
-                                <i class="fas fa-save me-1" id="btnLuuIcon"></i>Luu san pham
+                                <i class="fas fa-save me-1" id="btnLuuIcon"></i>Lưu sản phẩm
                             </button>
                         </div>
                     </div>
@@ -429,9 +429,9 @@ $unitsPayload = $donViSanPhams->map(fn($u) => [
             <div class="modal-header" style="background:linear-gradient(135deg,#198754 0%,#157347 100%);color:white;">
                 <div>
                     <h5 class="modal-title fw-bold mb-0" id="importProductModalLabel">
-                        <i class="fas fa-file-import me-2"></i>Nhap du lieu san pham
+                        <i class="fas fa-file-import me-2"></i>Nhập dữ liệu sản phẩm
                     </h5>
-                    <small class="text-white-50">Tu file CSV (.csv)</small>
+                    <small class="text-white-50">Từ file CSV (.csv)</small>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -441,23 +441,23 @@ $unitsPayload = $donViSanPhams->map(fn($u) => [
                 <div class="modal-body">
                     <div class="text-center mb-4">
                         <i class="fas fa-file-csv fa-4x text-success mb-3"></i>
-                        <h5>Chon file CSV de import</h5>
-                        <p class="text-muted small mb-2">File phai co dinh dang <strong>.csv</strong> (UTF-8).</p>
+                        <h5>Chọn file CSV để import</h5>
+                        <p class="text-muted small mb-2">File phải có định dạng <strong>.csv</strong> (UTF-8).</p>
                         <a href="{{ url('admin/san-pham/export-template') }}" class="btn btn-outline-success btn-sm">
-                            <i class="fas fa-download me-1"></i>Tai mau import
+                            <i class="fas fa-download me-1"></i>Tải mẫu import
                         </a>
                     </div>
 
                     <div class="mb-3">
-                        <label for="importFileInput" class="form-label fw-semibold">Chon file CSV</label>
+                        <label for="importFileInput" class="form-label fw-semibold">Chọn file CSV</label>
                         <input type="file" class="form-control" id="importFileInput" name="excel_file" accept=".csv,text/csv">
-                        <div class="form-text">Dung luong toi da: 5MB</div>
+                        <div class="form-text">Dung lượng tối đa: 5MB</div>
                     </div>
 
                     <!-- Preview section -->
                     <div id="importPreviewSection" class="d-none">
                         <hr>
-                        <h6 class="mb-2"><i class="fas fa-eye me-1"></i>Xem truoc du lieu (5 dong dau tien)</h6>
+                        <h6 class="mb-2"><i class="fas fa-eye me-1"></i>Xem trước dữ liệu (5 dòng đầu tiên)</h6>
                         <div class="table-responsive border rounded">
                             <table class="table table-sm table-bordered table-hover mb-0" id="importPreviewTable">
                                 <thead class="table-light"></thead>
@@ -467,9 +467,9 @@ $unitsPayload = $donViSanPhams->map(fn($u) => [
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Huy bo</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
                     <button type="submit" class="btn btn-success" id="btnImportSubmit">
-                        <i class="fas fa-upload me-1"></i>Import san pham
+                        <i class="fas fa-upload me-1"></i>Import sản phẩm
                     </button>
                 </div>
             </form>

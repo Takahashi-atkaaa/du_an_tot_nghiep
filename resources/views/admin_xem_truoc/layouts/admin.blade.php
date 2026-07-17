@@ -238,6 +238,7 @@
             transform:rotate(-90deg);
         }
     </style>
+    @stack('styles')
     @yield('styles')
 </head>
 <body>
@@ -281,6 +282,12 @@
                 <a href="{{ url('admin/kho-hang') }}" class="nav-link {{ request()->is('admin/kho-hang*') ? 'active' : '' }}">
                     <i class="fas fa-warehouse"></i>
                     <span>Kho hàng</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('kiem-kho.history') }}" class="nav-link {{ request()->is('admin/kho-hang/kiem-kho*') ? 'active' : '' }}">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span>Kiểm kho</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -491,7 +498,26 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
     <!-- SheetJS for Excel import preview -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
+    <!-- Axios (HTTP client for admin pages) -->
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js"></script>
+    <!-- Toastr (notifications) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js"></script>
+    <!-- SweetAlert2 (confirmation dialogs) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.1/dist/sweetalert2.all.min.js"></script>
+
+    <script>
+        // Cấu hình toastr mặc định
+        if (typeof toastr !== 'undefined') {
+            toastr.options = {
+                closeButton: true,
+                progressBar: true,
+                positionClass: 'toast-top-right',
+                timeOut: 3500,
+                extendedTimeOut: 1500,
+            };
+        }
+    </script>
     <script>
         // Sidebar toggle for mobile
         document.getElementById('sidebar-toggle')?.addEventListener('click', function() {
@@ -511,6 +537,7 @@
             }
         }, 4000);
     </script>
+    @yield('modals')
     @yield('scripts')
     @yield('page_scripts')
 </body>
