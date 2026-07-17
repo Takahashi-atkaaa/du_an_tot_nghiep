@@ -1,15 +1,15 @@
 @extends('admin_xem_truoc.layouts.admin')
 
-@section('title', 'Sua San pham - SmartMart')
+@section('title', 'Sửa Sản phẩm - SmartMart')
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h4 class="fw-bold mb-1">Sua San pham</h4>
+        <h4 class="fw-bold mb-1">Sửa Sản phẩm</h4>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ url('admin/dashboard') }}">Admin</a></li>
-                <li class="breadcrumb-item"><a href="{{ url('admin/san-pham') }}">San pham</a></li>
+                <li class="breadcrumb-item"><a href="{{ url('admin/san-pham') }}">Sản phẩm</a></li>
                 <li class="breadcrumb-item active">{{ $product->ten_san_pham }}</li>
             </ol>
         </nav>
@@ -29,10 +29,10 @@
         <div class="modal-content" style="max-height:calc(100vh - 4rem);display:flex;flex-direction:column;">
             <div class="modal-header" style="background:linear-gradient(135deg,#0d6efd 0%,#0b5ed7 100%);color:white;flex-shrink:0;padding:1rem 1.5rem;">
                 <div>
-                    <h5 class="modal-title fw-bold mb-0"><i class="fas fa-edit me-2"></i>SUA SAN PHAM</h5>
-                    <small class="text-white-50">Cap nhat thong tin san pham va cac bien the</small>
+                    <h5 class="modal-title fw-bold mb-0"><i class="fas fa-edit me-2"></i>SỬA SẢN PHẨM</h5>
+                    <small class="text-white-50">Cập nhật thông tin sản phẩm và các biến thể</small>
                 </div>
-                <a href="{{ url('admin/san-pham') }}" class="btn btn-sm btn-light"><i class="fas fa-arrow-left me-1"></i>Quay lai</a>
+                <a href="{{ url('admin/san-pham') }}" class="btn btn-sm btn-light"><i class="fas fa-arrow-left me-1"></i>Quay lại</a>
             </div>
             <form action="{{ url('admin/san-pham/' . $product->id) }}" method="POST" enctype="multipart/form-data" id="productForm">
                 @csrf
@@ -42,12 +42,12 @@
                 </div>
                 <div class="modal-footer bg-light" style="flex-shrink:0;padding:0.75rem 1.5rem;">
                     <div class="d-flex justify-content-between w-100 align-items-center">
-                        <span class="text-muted small"><i class="fas fa-info-circle me-1"></i> Kiem tra lai thong tin truoc khi luu</span>
+                        <span class="text-muted small"><i class="fas fa-info-circle me-1"></i> Kiểm tra lại thông tin trước khi lưu</span>
                         <div class="d-flex gap-2">
-                            <a href="{{ url('admin/san-pham') }}" class="btn btn-outline-secondary">Huy bo</a>
+                            <a href="{{ url('admin/san-pham') }}" class="btn btn-outline-secondary">Hủy bỏ</a>
                             <button type="button" class="btn btn-success px-4" id="btnLuuSanPham" disabled>
                                 <span class="spinner-border spinner-border-sm me-1 d-none" id="btnLuuSpinner" role="status"></span>
-                                <i class="fas fa-save me-1" id="btnLuuIcon"></i>Luu thay doi
+                                <i class="fas fa-save me-1" id="btnLuuIcon"></i>Lưu thay đổi
                             </button>
                         </div>
                     </div>

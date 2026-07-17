@@ -70,4 +70,23 @@ class BienTheSanPham extends BaseModel
         }
         return $this->product->ten_san_pham ?? '';
     }
+
+    public function getThuocTinhLabelsAttribute(): array
+    {
+        if (empty($this->thuoc_tinh_ids)) {
+            return [];
+        }
+        $labels = [];
+        $attrs = ThuocTinhSanPham::whereIn('id', $this->thuoc_tinh_ids)->get()->keyBy('id');
+        foreach ($this->thuoc_tinh_ids as $id) {
+            if (isset($attrs[$id])) {
+                $attr = $attrs[$id];
+                if ($attr->thuoc_tinh_cha_id && isset($attrs[$attr->thuoc_tinh_cha_id])) {
+                    $labels[] = $attrs[$attr->thuoc_tinh_cha_id]->ten_thuoc_tinh;
+                }
+                $labels[] = $attr->ten_thuoc_tinh;
+            }
+        }
+        return $labels;
+    }
 }
