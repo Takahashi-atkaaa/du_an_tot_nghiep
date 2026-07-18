@@ -56,6 +56,7 @@
                         <th>Ngày tạo</th>
                         <th>Khách hàng</th>
                         <th>Nhân viên</th>
+                         <th>Ca làm việc</th>
                         <th>Tổng tiền</th>
                         <th>Điểm nhận</th>
                         <th>Thanh toán</th>
@@ -74,7 +75,23 @@
                             <td>{{ $hoaDon->ten_khach_hang ?? 'Khách lẻ' }}</td>
 
                             <td>{{ $hoaDon->ten_nhan_vien ?? 'Nhân viên' }}</td>
+             <td>
+    @if($hoaDon->ten_ca)
+        <span class="badge bg-success">
+            {{ $hoaDon->ten_ca }}
+        </span>
 
+        <div class="small text-muted mt-1">
+            {{ \Carbon\Carbon::parse($hoaDon->gio_bat_dau)->format('H:i') }}
+            -
+            {{ \Carbon\Carbon::parse($hoaDon->gio_ket_thuc)->format('H:i') }}
+        </div>
+    @else
+        <span class="text-muted">
+            Chưa có ca
+        </span>
+    @endif
+</td>
                             <td>
                                 <strong>
                                     {{ number_format($hoaDon->khach_can_tra, 0, ',', '.') }}đ
