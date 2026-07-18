@@ -1173,10 +1173,6 @@ body {
                     <i class="fas fa-university"></i>
                     Chuyển khoản
                 </button>
-                <button class="pay-btn" data-method="card" onclick="selectPayment('card')">
-                    <i class="fas fa-credit-card"></i>
-                    Quẹt thẻ
-                </button>
             </div>
 
             <button class="btn-checkout" onclick="processPayment()">

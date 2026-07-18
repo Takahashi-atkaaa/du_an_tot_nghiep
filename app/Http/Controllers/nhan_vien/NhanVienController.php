@@ -518,7 +518,6 @@ public function thanhToan(Request $request)
         $phuongThucMap = [
             'cash' => 'Tiền mặt',
             'transfer' => 'Chuyển khoản',
-            'card' => 'Quẹt thẻ',
             'tien_mat' => 'Tiền mặt',
             'chuyen_khoan' => 'Chuyển khoản',
         ];
