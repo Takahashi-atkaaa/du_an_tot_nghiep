@@ -986,7 +986,7 @@ body {
                 <span>Quản trị</span>
             </a>
         @else
-            <a href="{{ url('/') }}" class="nav-btn" title="Dashboard">
+            <a href="{{ url('/dashboard') }}" class="nav-btn" title="Dashboard">
                 <i class="bi bi-arrow-left-circle"></i>
                 <span>Home</span>
             </a>

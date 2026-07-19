@@ -59,7 +59,7 @@ class AuthController extends Controller
         }
     
         if ($idVaiTro === 4) {
-            return redirect('/');
+            return redirect('/dashboard');
         }
 
 
