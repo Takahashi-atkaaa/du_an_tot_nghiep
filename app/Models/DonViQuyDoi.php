@@ -22,6 +22,7 @@ class DonViQuyDoi extends BaseModel
         'gia_ban_si',
         'hinh_anh',
         'la_don_vi_mac_dinh',
+        'ty_le_quy_doi',
     ];
 
     protected $casts = [
