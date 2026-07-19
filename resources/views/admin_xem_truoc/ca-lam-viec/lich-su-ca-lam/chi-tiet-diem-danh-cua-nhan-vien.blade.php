@@ -99,14 +99,10 @@
         </select>
     </div>
 
-    <div class="d-flex justify-content-between">
-        <a href="{{url()->previous()}}" class="btn btn-secondary">
-            Quay lại
-        </a>
-
+    <div class="d-flex justify-content-end">
         <button type="submit" class="btn btn-primary">
-           Cập nhật
-       </button>
+            Cập nhật
+        </button>
     </div>
     
 </form>

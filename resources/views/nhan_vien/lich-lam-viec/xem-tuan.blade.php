@@ -1,4 +1,4 @@
-@extends('nhan_vien_view.layouts.nhan_vien')
+@extends('nhan_vien.layouts.nhan_vien')
 
 @section('title', 'Lịch làm việc theo tuần - SmartMart')
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\nhan_vien;
+namespace App\Http\Controllers\ban_hang;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\KhachHang\CapNhatSoDienThoaiRequest;
@@ -28,7 +28,7 @@ class KhachHangController extends Controller
     $khachHangs = $khachHangs->paginate(10);
 
     return view(
-        'nhan_vien_view.khach-hang.index',
+        'ban_hang.khach-hang.index',
         compact('khachHangs', 'keyword')
     );
 }
@@ -38,7 +38,7 @@ class KhachHangController extends Controller
      */
     public function create()
     {
-        return view('nhan_vien_view.khach-hang.create');
+        return view('ban_hang.khach-hang.create');
     }
 
     /**
@@ -68,7 +68,7 @@ class KhachHangController extends Controller
     public function show(KhachHang $khachHang)
     {
         return view(
-            'nhan_vien_view.khach-hang.show',
+            'ban_hang.khach-hang.show',
             compact('khachHang')
         );
     }
@@ -97,7 +97,7 @@ public function themNhanh(NhanvienThemKhachHangRequest $request)
     public function editPhone(KhachHang $khachHang)
     {
         return view(
-            'nhan_vien_view.khach-hang.edit-phone',
+            'ban_hang.khach-hang.edit-phone',
             compact('khachHang')
         );
     }

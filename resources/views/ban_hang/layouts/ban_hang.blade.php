@@ -179,60 +179,55 @@
             <small class="text-light opacity-75">Nhân viên</small>
         </div>
         <ul class="nav flex-column mt-3">
+
             <li class="nav-item">
-                <a href="{{ url('/admin/dashboard') }}" class="nav-link {{ request()->is('nhan-vien/hoa-don*') ? 'active' : '' }}">
-                    <i class="fas fa-file-invoice"></i>
-                    <span>Trang quản trị</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="{{ url('nhan-vien/') }}" class="nav-link {{ request()->is('nhan-vien') || request()->is('nhan-vien/') ? 'active' : '' }}">
+                <a href="{{ url('/') }}" class="nav-link {{ request()->is('nhan-vien') || request()->is('nhan-vien/') ? 'active' : '' }}">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
+            
+            @if (auth()->user()->id_vai_tro == 1 || auth()->user()->id_vai_tro == 2)
+                <li class="nav-item">
+                    <a href="{{ url('/admin/dashboard') }}" class="nav-link {{ request()->is('nhan-vien/hoa-don*') ? 'active' : '' }}">
+                        <i class="fas fa-file-invoice"></i>
+                        <span>Trang quản trị</span>
+                    </a>
+                </li>
+            @else
+                <li class="nav-item">
+                    <a href="{{ url('/trang-chu') }}" class="nav-link {{ request()->is('nhan-vien/hoa-don*') ? 'active' : '' }}">
+                        <i class="fas fa-file-invoice"></i>
+                        <span>Trang cá nhân</span>
+                    </a>
+                </li>
+            @endif
+            
             <li class="nav-item">
-                <a href="{{ url('nhan-vien/ban-hang') }}" class="nav-link {{ request()->is('nhan-vien/ban-hang') ? 'active' : '' }}">
+                <a href="{{ url('/ban-hang') }}" class="nav-link {{ request()->is('/ban-hang') ? 'active' : '' }}">
                     <i class="fas fa-cash-register"></i>
                     <span>Bán hàng</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('nhan-vien/hoa-don') }}" class="nav-link {{ request()->is('nhan-vien/hoa-don*') ? 'active' : '' }}">
+                <a href="{{ url('/hoa-don') }}" class="nav-link {{ request()->is('/hoa-don*') ? 'active' : '' }}">
                     <i class="fas fa-file-invoice"></i>
                     <span>Hóa đơn</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('nhan-vien/san-pham') }}" class="nav-link {{ request()->is('nhan-vien/san-pham*') ? 'active' : '' }}">
+                <a href="{{ url('/san-pham') }}" class="nav-link {{ request()->is('/san-pham*') ? 'active' : '' }}">
                     <i class="fas fa-box"></i>
                     <span>Sản phẩm</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('nhan-vien/khach-hang') }}" class="nav-link {{ request()->is('nhan-vien/khach-hang*') ? 'active' : '' }}">
+                <a href="{{ url('/khach-hang') }}" class="nav-link {{ request()->is('/khach-hang*') ? 'active' : '' }}">
                     <i class="fas fa-users"></i>
                     <span>Khách hàng</span>
                 </a>
             </li>
-            <li class="nav-item">
-                <a href="{{ url('nhan-vien/lich-lam-viec/tuan') }}" class="nav-link {{ request()->is('nhan-vien/lich-lam-viec*') ? 'active' : '' }}">
-                    <i class="fas fa-calendar-alt"></i>
-                    <span>Lịch làm việc</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="{{ url('nhan-vien/cham-cong') }}" class="nav-link {{ request()->is('nhan-vien/cham-cong') ? 'active' : '' }}">
-                    <i class="fas fa-clock"></i>
-                    <span>Chấm công</span>
-                </a>
-            </li>
-            <li class="nav-item mt-3">
-                <a href="{{ url('nhan-vien/ho-so') }}" class="nav-link {{ request()->is('nhan-vien/ho-so') ? 'active' : '' }}">
-                    <i class="fas fa-user"></i>
-                    <span>Hồ sơ cá nhân</span>
-                </a>
-            </li>
+
         </ul>
     </nav>
 
