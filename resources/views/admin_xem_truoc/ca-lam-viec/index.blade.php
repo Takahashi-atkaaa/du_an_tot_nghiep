@@ -1,6 +1,6 @@
 @extends('admin_xem_truoc.layouts.admin')
 
-@section('title', 'Quan ly ca lam viec - SmartMart')
+@section('title', 'Quản lý ca làm việc - SmartMart')
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">

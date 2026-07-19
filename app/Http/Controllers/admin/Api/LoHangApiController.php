@@ -51,7 +51,7 @@ class LoHangApiController extends Controller
     {
         $loHang = LoHang::with([
             'nhaCungCap',
-            'chiTietLoHang.variant',
+            'chiTietLoHang.variant.product',
             'phieu',
         ])->find($id);
 
@@ -59,9 +59,16 @@ class LoHangApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Lô hàng không tồn tại.'], 404);
         }
 
+        $data = $loHang->toArray();
+        foreach ($data['chi_tiet_lo_hang'] as &$ct) {
+            if (!empty($ct['variant'])) {
+                $ct['thuoc_tinh_labels'] = $ct['variant']['thuoc_tinh_labels'] ?? [];
+            }
+        }
+
         return response()->json([
             'success' => true,
-            'data' => $loHang->toArray(),
+            'data' => $data,
         ]);
     }
 
@@ -330,6 +337,7 @@ class LoHangApiController extends Controller
                     'id' => $variant->id,
                     'product_id' => $variant->product_id,
                     'ten_bien_the' => $variant->ten_bien_the,
+                    'thuoc_tinh_labels' => $variant->thuoc_tinh_labels ?? [],
                     'ma_vach' => $variant->ma_vach,
                     'so_luong_ton' => $variant->so_luong_ton,
                     'tong_ton' => $tongTon,

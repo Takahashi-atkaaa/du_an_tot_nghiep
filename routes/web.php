@@ -15,6 +15,8 @@ use App\Http\Controllers\Admin\Api\LoHangApiController;
 use App\Http\Controllers\Admin\Api\NhaCungCapApiController;
 use App\Http\Controllers\Admin\Api\PhieuNhapApiController;
 use App\Http\Controllers\Admin\Api\PhieuXuatApiController;
+use App\Http\Controllers\Admin\Api\KiemKhoApiController;
+use App\Http\Controllers\Admin\KiemKho\KiemKhoController;
 use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
 use App\Http\Controllers\admin\Api\ThuocTinhApiController;
 use App\Http\Controllers\admin\Api\SanPhamApiController;
@@ -94,7 +96,13 @@ Route::get('/admin/cai-dat', function () {
     Route::delete('/admin/api/nha-cung-cap/{id}', [NhaCungCapApiController::class, 'destroy']);
     Route::get('/admin/api/nha-cung-cap/dropdown', [NhaCungCapApiController::class, 'dropdown']);
 
-    // Phiếu nhập
+    // Phiếu nhập - Import/Export Excel (đặt TRƯỚC route có {id} để tránh bị nhầm)
+    Route::get('/admin/api/phieu-nhap/download-template', [PhieuNhapApiController::class, 'downloadTemplate']);
+    Route::post('/admin/api/phieu-nhap/import', [PhieuNhapApiController::class, 'importExcel']);
+    Route::get('/admin/api/phieu-nhap/export', [PhieuNhapApiController::class, 'exportDanhSach']);
+    Route::get('/admin/api/phieu-nhap/{id}/export', [PhieuNhapApiController::class, 'exportChiTiet']);
+
+    // Phiếu nhập - CRUD
     Route::get('/admin/api/phieu-nhap', [PhieuNhapApiController::class, 'index']);
     Route::get('/admin/api/phieu-nhap/lo-hang', [PhieuNhapApiController::class, 'danhSachLoHang']);
     Route::get('/admin/api/phieu-nhap/{id}', [PhieuNhapApiController::class, 'show']);
@@ -102,12 +110,35 @@ Route::get('/admin/cai-dat', function () {
     Route::put('/admin/api/phieu-nhap/{id}', [PhieuNhapApiController::class, 'update']);
     Route::delete('/admin/api/phieu-nhap/{id}', [PhieuNhapApiController::class, 'destroy']);
 
-    // Phiếu xuất
+    // Phiếu xuất - Import/Export Excel (đặt TRƯỚC route có {id} để tránh bị nhầm)
+    Route::get('/admin/api/phieu-xuat/download-template', [PhieuXuatApiController::class, 'downloadTemplate']);
+    Route::post('/admin/api/phieu-xuat/import', [PhieuXuatApiController::class, 'importExcel']);
+    Route::get('/admin/api/phieu-xuat/export', [PhieuXuatApiController::class, 'exportDanhSach']);
+    Route::get('/admin/api/phieu-xuat/{id}/export', [PhieuXuatApiController::class, 'exportChiTiet']);
+
+    // Phiếu xuất - CRUD
     Route::get('/admin/api/phieu-xuat', [PhieuXuatApiController::class, 'index']);
     Route::get('/admin/api/phieu-xuat/{id}', [PhieuXuatApiController::class, 'show']);
     Route::post('/admin/api/phieu-xuat', [PhieuXuatApiController::class, 'store']);
     Route::put('/admin/api/phieu-xuat/{id}', [PhieuXuatApiController::class, 'update']);
     Route::delete('/admin/api/phieu-xuat/{id}', [PhieuXuatApiController::class, 'destroy']);
+
+    // ===== KIỂM KHO =====
+    // Routes phải đặt TRƯỚC route có {id} để tránh bị match nhầm.
+    Route::prefix('/admin/api/kiem-kho')->name('admin.api.kiem-kho.')->group(function () {
+        Route::get('/search', [KiemKhoApiController::class, 'searchItems']);
+        Route::get('/draft', [KiemKhoApiController::class, 'getDraft']);
+        Route::post('/draft', [KiemKhoApiController::class, 'storeDraft']);
+        Route::get('/history', [KiemKhoApiController::class, 'history']);
+        Route::post('/{id}/balance', [KiemKhoApiController::class, 'balanceInventory'])->whereNumber('id');
+        Route::post('/{id}/cancel', [KiemKhoApiController::class, 'cancel'])->whereNumber('id');
+        Route::get('/{id}', [KiemKhoApiController::class, 'show'])->whereNumber('id');
+    });
+
+    // View (Blade)
+    Route::get('/admin/kho-hang/kiem-kho', [KiemKhoController::class, 'index'])->name('kiem-kho.create');
+    Route::get('/admin/kho-hang/kiem-kho/lich-su', [KiemKhoController::class, 'history'])->name('kiem-kho.history');
+    Route::get('/admin/kho-hang/kiem-kho/{id}', [KiemKhoController::class, 'show'])->whereNumber('id')->name('kiem-kho.show');
 
     Route::middleware([KTVaiTro::class])->group(function () {
         // API - phải đặt TRƯỚC san-pham/{id} để tránh bị match nhầm (KHÔNG bị chặn bởi KTVaiTro)
@@ -389,9 +420,6 @@ Route::get('/admin/cai-dat', function () {
         Route::post('/diem-danh/ket-thuc-ca', [NhanVienDiemDanhController::class, 'ketThucCa'])->name('nhan-vien.diem-danh.ket-thuc-ca');
         Route::post('/ho-so/doi-mat-khau', [NhanVienNhanVienController::class, 'doiMatKhau'])->name('nhan-vien.ho-so.doi-mat-khau');
     });
-
-
-
 
 
 
