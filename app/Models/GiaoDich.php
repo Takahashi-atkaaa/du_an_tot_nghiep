@@ -13,6 +13,14 @@ class GiaoDich extends Model
 
     protected $table = 'giao_dich';
 
+    public const PHUONG_THUC_TIEN_MAT = 'tien_mat';
+    public const PHUONG_THUC_VNPAY = 'vnpay';
+
+    public const TRANG_THAI_CHO_XAC_NHAN = 'cho_xac_nhan';
+    public const TRANG_THAI_THANH_CONG = 'thanh_cong';
+    public const TRANG_THAI_THAT_BAI = 'that_bai';
+    public const TRANG_THAI_HOAN_TIEN = 'hoan_tien';
+
     protected $fillable = [
         'id_hoa_don',
         'phuong_thuc',
@@ -30,6 +38,7 @@ class GiaoDich extends Model
     protected $casts = [
         'so_tien' => 'decimal:2',
         'ngay_gio_thanh_toan' => 'datetime',
+        'du_lieu_phan_hoi' => 'array',
     ];
 
     public function hoaDon(): BelongsTo

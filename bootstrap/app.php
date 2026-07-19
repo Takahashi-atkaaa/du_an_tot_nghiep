@@ -22,7 +22,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth.admin' => AuthAdmin::class,   // Middleware kiem tra dang nhap
             'vai_tro'    => KiemTraVaiTro::class, // Middleware kiem tra vai tro
-            'permission' => KTVaiTro::class,    // middleware kiểm tra quyền của người dùng khi được admin cấp cho 
+            'permission' => KTVaiTro::class,    // middleware kiểm tra quyền của người dùng khi được admin cấp cho
+        ]);
+
+        // VNPay server-to-server gọi /vnpay/ipn và /vnpay/return mà không có CSRF token
+        $middleware->validateCsrfTokens(except: [
+            'vnpay/ipn',
+            'vnpay/return',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

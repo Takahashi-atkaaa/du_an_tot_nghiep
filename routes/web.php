@@ -30,6 +30,7 @@ use App\Http\Controllers\admin\NhanSu\DiemDanhController;
 
 use App\Http\Controllers\nhan_vien\KhachHangController as NhanVienKhachHangController;
 use App\Http\Controllers\nhan_vien\DiemDanhController as NhanVienDiemDanhController;
+use App\Http\Controllers\VnpayController;
 
 use App\Http\Middleware\AuthAdmin;
 use App\Http\Middleware\KiemTraVaiTro;
@@ -392,18 +393,24 @@ Route::middleware([VaiTroBanHang::class, 'vai_tro:Nhân viên,Trưởng ca,Admin
   ->name('nhan-vien.ban-hang.danh-muc');
   Route::post('/ban-hang/thanh-toan', [NhanVienController::class, 'thanhToan'])
   ->name('nhan-vien.ban-hang.thanh-toan');
-     Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])
-      ->name('nhan-vien.hoa-don');
-  Route::get('/hoa-don/{id}', [NhanVienController::class, 'chiTietHoaDon'])
-  ->name('nhan-vien.hoa-don.chi-tiet');
-  Route::get('/hoa-don/{id}/in', [NhanVienController::class, 'inHoaDon'])
-  ->name('nhan-vien.hoa-don.in');
+  Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])
+   ->name('nhan-vien.hoa-don');
+ Route::get('/hoa-don/{id}', [NhanVienController::class, 'chiTietHoaDon'])
+ ->name('nhan-vien.hoa-don.chi-tiet');
+ Route::get('/hoa-don/{id}/in', [NhanVienController::class, 'inHoaDon'])
+ ->name('nhan-vien.hoa-don.in');
 //   Route::post('/hoa-don/{id}/huy', [NhanVienController::class, 'huyHoaDon'])
 //   ->name('nhan-vien.hoa-don.huy');
-  Route::get('/ban-hang/khach-hang', [NhanVienController::class, 'layKhachHang'])
-  ->name('nhan-vien.ban-hang.khach-hang');
-  Route::get('/ban-hang/khuyen-mai', [NhanVienController::class, 'layKhuyenMai'])
-    ->name('nhan-vien.ban-hang.khuyen-mai');
+ Route::get('/ban-hang/khach-hang', [NhanVienController::class, 'layKhachHang'])
+ ->name('nhan-vien.ban-hang.khach-hang');
+ Route::get('/ban-hang/khuyen-mai', [NhanVienController::class, 'layKhuyenMai'])
+   ->name('nhan-vien.ban-hang.khuyen-mai');
+
+ // VNPay POS flow: tạo giao dịch + polling trạng thái
+ Route::post('/ban-hang/vnpay/create', [VnpayController::class, 'createPayment'])
+     ->name('nhan-vien.ban-hang.vnpay.create');
+ Route::get('/ban-hang/vnpay/check-status/{hoaDonId}', [VnpayController::class, 'checkStatus'])
+     ->name('nhan-vien.ban-hang.vnpay.check-status');
   
     Route::get('/khach-hang', [NhanVienKhachHangController::class, 'index'])->name('nhan-vien.khach-hang.index');
     Route::get('/khach-hang/create', [NhanVienKhachHangController::class, 'create'])->name('nhan-vien.khach-hang.create');
@@ -422,3 +429,7 @@ Route::middleware([VaiTroBanHang::class, 'vai_tro:Nhân viên,Trưởng ca,Admin
     Route::get('/ho-so', [NhanVienController::class, 'hoSo'])->name('nhan-vien.ho-so');
     Route::post('/ho-so/doi-mat-khau', [NhanVienController::class, 'doiMatKhau'])->name('nhan-vien.ho-so.doi-mat-khau');
 });
+
+// ==== VNPay callbacks (public, VNPay server gọi) ====
+Route::get('/vnpay/return', [VnpayController::class, 'return'])->name('vnpay.return');
+Route::post('/vnpay/ipn', [VnpayController::class, 'ipn'])->name('vnpay.ipn');
