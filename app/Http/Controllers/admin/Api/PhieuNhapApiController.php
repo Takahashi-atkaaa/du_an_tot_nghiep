@@ -90,7 +90,7 @@ class PhieuNhapApiController extends Controller
             'chi_tiet' => 'required|array|min:1',
             'chi_tiet.*.variant_id' => 'required|integer|exists:bien_the_san_pham,id',
             'chi_tiet.*.don_vi_id' => 'nullable|string|max:50',
-            'chi_tiet.*.ty_le_quy_doi' => 'nullable|integer|min:1',
+            'chi_tiet.*.so_luong_san_pham_trong_don_vi' => 'nullable|integer|min:1',
             'chi_tiet.*.so_luong_nhap' => 'required|integer|min:1',
             'chi_tiet.*.so_luong_thuc' => 'nullable|integer|min:0',
             'chi_tiet.*.gia_nhap' => 'required|numeric|min:0',
@@ -138,15 +138,15 @@ class PhieuNhapApiController extends Controller
 
                 foreach ($data['chi_tiet'] as $ct) {
                     // Tính số lượng thực (đã quy đổi về đơn vị cơ bản nếu user nhập theo đơn vị quy đổi)
-                    $tyLeQuyDoi = (int)($ct['ty_le_quy_doi'] ?? 1);
+                    $soLuongTrongDonVi = (int)($ct['so_luong_san_pham_trong_don_vi'] ?? 1);
                     $slNhap = (int)$ct['so_luong_nhap'];
-                    $slThuc = $tyLeQuyDoi > 1
-                        ? (int)($ct['so_luong_thuc'] ?? ($slNhap * $tyLeQuyDoi))
+                    $slThuc = $soLuongTrongDonVi > 1
+                        ? (int)($ct['so_luong_thuc'] ?? ($slNhap * $soLuongTrongDonVi))
                         : $slNhap;
 
                     // Tính ghi chú cho chi_tiet_phieu (lưu thông tin đơn vị nhập)
-                    $donViNhap = $tyLeQuyDoi > 1
-                        ? "Nhập {$slNhap} đơn vị quy đổi × {$tyLeQuyDoi}"
+                    $donViNhap = $soLuongTrongDonVi > 1
+                        ? "Nhập {$slNhap} đơn vị quy đổi × {$soLuongTrongDonVi}"
                         : null;
 
                     $chiTietLoHang = ChiTietLoHang::create([
@@ -180,14 +180,14 @@ class PhieuNhapApiController extends Controller
                     ->toArray();
 
                 foreach ($data['chi_tiet'] as $ct) {
-                    $tyLeQuyDoi = (int)($ct['ty_le_quy_doi'] ?? 1);
+                    $soLuongTrongDonVi = (int)($ct['so_luong_san_pham_trong_don_vi'] ?? 1);
                     $slNhap = (int)$ct['so_luong_nhap'];
-                    $slThuc = $tyLeQuyDoi > 1
-                        ? (int)($ct['so_luong_thuc'] ?? ($slNhap * $tyLeQuyDoi))
+                    $slThuc = $soLuongTrongDonVi > 1
+                        ? (int)($ct['so_luong_thuc'] ?? ($slNhap * $soLuongTrongDonVi))
                         : $slNhap;
 
-                    $donViNhap = $tyLeQuyDoi > 1
-                        ? "Nhập {$slNhap} đơn vị quy đổi × {$tyLeQuyDoi}"
+                    $donViNhap = $soLuongTrongDonVi > 1
+                        ? "Nhập {$slNhap} đơn vị quy đổi × {$soLuongTrongDonVi}"
                         : null;
 
                     $chiTietLoHang = ChiTietLoHang::where('id_lo_hang', $idLoHang)
@@ -222,10 +222,10 @@ class PhieuNhapApiController extends Controller
 
             // Cộng tồn kho cho bien_the_san_pham.so_luong_ton theo số lượng THỰC (đã quy đổi)
             foreach ($data['chi_tiet'] as $ct) {
-                $tyLeQuyDoi = (int)($ct['ty_le_quy_doi'] ?? 1);
+                $soLuongTrongDonVi = (int)($ct['so_luong_san_pham_trong_don_vi'] ?? 1);
                 $slNhap = (int)$ct['so_luong_nhap'];
-                $slThuc = $tyLeQuyDoi > 1
-                    ? (int)($ct['so_luong_thuc'] ?? ($slNhap * $tyLeQuyDoi))
+                $slThuc = $soLuongTrongDonVi > 1
+                    ? (int)($ct['so_luong_thuc'] ?? ($slNhap * $soLuongTrongDonVi))
                     : $slNhap;
                 BienTheSanPham::where('id', $ct['variant_id'])
                     ->increment('so_luong_ton', $slThuc);
@@ -392,7 +392,7 @@ class PhieuNhapApiController extends Controller
                     if (empty($unit->ma_vach)) {
                         continue;
                     }
-                    $tenDonVi = trim(($unit->ten_don_vi ?? '') . ' (x' . ($unit->ty_le_quy_doi ?? 1) . ')');
+                    $tenDonVi = trim(($unit->ten_don_vi ?? '') . ' (x' . ($unit->so_luong_san_pham_trong_don_vi ?? 1) . ')');
                     fputcsv($output, [
                         $unit->ma_vach,
                         $tenSanPham,
@@ -419,7 +419,7 @@ class PhieuNhapApiController extends Controller
             fputcsv($output, ['# - Gia_nhap (BAT BUOC): Gia theo don vi cua Ma_vach (vi du: gia/thung neu Ma_vach la thung).'], ';');
             fputcsv($output, ['# - Han_su_dung: Dinh dang YYYY-MM-DD hoac DD/MM/YYYY. Bo trong = mac dinh 2099-12-31.'], ';');
             fputcsv($output, ['# - Cac dong trung Ma_vach + Han_su_dung se tu dong gop (cong don so luong, tinh lai gia binh quan gia quyen).'], ';');
-            fputcsv($output, ['# - He thong tu quy doi ve don vi co ban khi luu kho (nhan So_luong voi ty_le_quy_doi).'], ';');
+            fputcsv($output, ['# - He thong tu quy doi ve don vi co ban khi luu kho (nhan So_luong voi so_luong_san_pham_trong_don_vi).'], ';');
             fputcsv($output, ['# - Cac dong trong se bi bo qua khi import.'], ';');
             fputcsv($output, ['# - De biet san pham co nhung bien the/ma vach nao, hay vao Quan ly san pham xem truoc khi nhap.'], ';');
 

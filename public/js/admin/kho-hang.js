@@ -479,15 +479,15 @@ function loadTonKho(page = 1) {
                 : '';
             const displayName = `${baseName}${attrs}`;
             return `
-            <tr class="clickable-row ${statusClass}" data-id="${sp.id}" style="cursor:pointer">
-                <td class="text-center"><i class="fas fa-chevron-down text-muted small"></i></td>
+            <tr class="clickable-row ${statusClass}" data-id="${sp.id}" data-variant-id="${sp.id}" style="cursor:pointer">
+                <td class="text-center toggle-expand"><i class="fas fa-chevron-down text-muted small"></i></td>
                 <td><code>${sp.ma_vach || sp.id}</code></td>
                 <td><strong>${displayName}</strong></td>
                 <td class="text-center"><strong>${Number(tongTon).toLocaleString()}</strong></td>
                 <td class="text-center text-muted">${Number(dinhMuc).toLocaleString()}</td>
                 <td class="text-center">${badge}</td>
                 <td class="text-center">
-                    <button class="btn btn-sm btn-outline-primary btn-xem-ton" data-id="${sp.id}"><i class="fas fa-eye"></i></button>
+                    <button class="btn btn-sm btn-outline-primary btn-xem-ton" data-id="${sp.id}" data-variant-id="${sp.id}"><i class="fas fa-eye"></i></button>
                 </td>
             </tr>
             <tr class="fefo-detail-row" id="fefo-detail-${sp.id}" style="display:none">
@@ -744,27 +744,63 @@ function renderAlertGroup(type, title, cls, items, badgeCls) {
 
 // ─── CLICK EVENTS ────────────────────────────────────────
 $(document).on('click', '.fefo-detail-row', e => e.stopPropagation());
-$(document).on('click', '.clickable-row', function () {
-    const id = $(this).data('id');
+// Stop propagation on child elements inside clickable rows
+$(document).on('click', '.clickable-row td > *', e => e.stopPropagation());
+$(document).on('click', '.clickable-row button', e => e.stopPropagation());
+
+$(document).on('click', '.clickable-row', function (e) {
+    // Only respond to direct clicks on the toggle column (td:first-child), not other cells
+    const firstTd = this.querySelector('td:first-child');
+    if (e.target.closest('td') !== firstTd && e.target !== this) {
+        return;
+    }
+    const $row = $(this);
+    const id = $row.data('variant-id') || $row.data('id');
     const detail = $(`#fefo-detail-${id}`);
-    const icon = $(this).find('.fa-chevron-down, .fa-chevron-right');
+    const icon = $row.find('.fa-chevron-down, .fa-chevron-right');
     if (detail.is(':visible')) {
         detail.hide();
         icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
-        $(this).find('td').removeClass('fw-semibold');
+        $row.find('td').removeClass('fw-semibold');
     } else {
         $('.fefo-detail-row').hide();
         $('.fefo-detail-row').prev().find('.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-right');
         detail.show();
         icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
-        $(this).find('td').addClass('fw-semibold');
+        $row.find('td').addClass('fw-semibold');
         $.get('/admin/api/lo-hang/ton-kho?variant_id=' + id, res => {
             if (!res.success) return;
             const chiTiet = res.data.chi_tiet || [];
-            if (!chiTiet.length) {
-                $(`#fefo-detail-content-${id}`).html('<div class="text-muted small">Không có dữ liệu tồn kho.</div>');
+            const variantUnits = res.data.variant_units || [];
+
+            if (!chiTiet.length && !variantUnits.length) {
+                $(`#fefo-detail-content-${id}`).html('<div class="text-muted small">Khong co du lieu ton kho.</div>');
                 return;
             }
+
+            // Tinh tong ton (don vi co ban)
+            const tongTonBase = chiTiet.reduce((sum, ct) => sum + (parseInt(ct.so_luong_ton) || 0), 0);
+
+            // Hien thi tong ton theo tung don vi quy doi
+            let unitStockHtml = '';
+            if (variantUnits.length > 0) {
+                const unitRows = variantUnits.map(u => {
+                    const qty = parseInt(u.so_luong) || 1;
+                    const ton = Math.floor(tongTonBase / qty);
+                    const tenDonVi = u.ten_don_vi_chuan || u.ten_don_vi;
+                    const isEmpty = ton === 0;
+                    return `
+                    <div class="d-flex justify-content-between align-items-center py-1 px-2 ${isEmpty ? 'text-muted' : ''}">
+                        <span>${escapeHtml(tenDonVi)}</span>
+                        <span class="${isEmpty ? 'text-muted' : 'fw-bold text-primary'}">${ton.toLocaleString()}</span>
+                    </div>`;
+                }).join('');
+                unitStockHtml = `
+                    <div class="small fw-bold text-muted text-uppercase mb-1 mt-2">Ton kho theo don vi</div>
+                    <div class="border rounded bg-light mb-2">${unitRows}</div>
+                `;
+            }
+
             const rows = chiTiet.map(ct => {
                 const lo = ct.lo_hang || {};
                 const ncc = lo.nha_cung_cap?.ten_nha_cung_cap || '--';
@@ -778,26 +814,45 @@ $(document).on('click', '.clickable-row', function () {
                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
                     <div class="small">
                         <span class="badge bg-dark me-1">${lo.ma_lo || 'L-' + lo.id}</span>
-                        <span class="me-2">NCC: ${ncc}</span>
-                        <span class="me-2">HSD: <span class="${hsdClass} fw-semibold">${hsd}</span> (${diff > 0 ? diff + ' ngày' : 'Hết HSD'})</span>
+                        <span class="me-2">NCC: ${escapeHtml(ncc)}</span>
+                        <span class="me-2">HSD: <span class="${hsdClass} fw-semibold">${hsd}</span> (${diff > 0 ? diff + ' ngay' : 'Het HSD'})</span>
                     </div>
                     <div class="text-end">
-                        <span class="fw-bold text-primary">${ct.so_luong_ton?.toLocaleString()}</span>
-                        <span class="text-muted small ms-1">/ ${ct.so_luong_nhap?.toLocaleString()}</span>
+                        <span class="fw-bold text-primary">${(parseInt(ct.so_luong_ton) || 0).toLocaleString()}</span>
+                        <span class="text-muted small ms-1">/ ${(parseInt(ct.so_luong_nhap) || 0).toLocaleString()}</span>
                     </div>
                 </div>`;
             }).join('');
-            $(`#fefo-detail-content-${id}`).html(`<div class="small">${rows}</div>`);
+
+            // Header: tong ton don vi co ban
+            const baseUnitLabel = chiTiet.length
+                ? `<div class="d-flex justify-content-between align-items-center py-1 px-2 border-bottom">
+                        <span class="text-muted small">Don vi co ban (Lon)</span>
+                        <span class="fw-bold text-primary">${tongTonBase.toLocaleString()}</span>
+                   </div>`
+                : '';
+
+            $(`#fefo-detail-content-${id}`).html(`
+                <div class="small fw-bold text-muted text-uppercase mb-1">Tong ton kho</div>
+                <div class="border rounded bg-light">${baseUnitLabel}${unitStockHtml}</div>
+                <div class="small fw-bold text-muted text-uppercase mt-3 mb-1">Chi tiet theo lo (FEFO)</div>
+                <div class="small">${rows}</div>
+            `);
         });
     }
 });
 
 $(document).on('click', '.btn-xem-ton', function (e) {
     e.stopPropagation();
-    const id = $(this).data('id');
+    const id = $(this).data('variant-id') || $(this).data('id');
     $('#tab-ton-kho').click();
     setTimeout(() => {
-        $(`.clickable-row[data-id="${id}"]`).click();
+        const $row = $(`.clickable-row[data-variant-id="${id}"], .clickable-row[data-id="${id}"]`).first();
+        if ($row.length) {
+            const firstTd = $row[0].querySelector('td:first-child');
+            const fakeEvent = { target: firstTd, stopPropagation: () => {} };
+            $row.trigger('click', [fakeEvent]);
+        }
     }, 100);
 });
 

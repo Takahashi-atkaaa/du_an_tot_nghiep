@@ -218,6 +218,8 @@ Route::get('/admin/cai-dat', function () {
     Route::post('/admin/san-pham', [SanPhamController::class, 'store'])->middleware('permission:them_san_pham');
     Route::post('/admin/san-pham/bulk-action', [SanPhamController::class, 'bulkAction'])->middleware('permission:sua_san_pham');
     Route::get('/admin/san-pham/trash', [SanPhamController::class, 'trash'])->middleware('permission:xoa_san_pham')->name('san-pham.trash');
+    Route::post('/admin/san-pham/bulk-restore', [SanPhamController::class, 'bulkRestore'])->middleware('permission:xoa_san_pham');
+    Route::delete('/admin/san-pham/bulk-force', [SanPhamController::class, 'bulkForceDelete'])->middleware('permission:xoa_san_pham');
     Route::get('/admin/san-pham/export', [SanPhamController::class, 'export'])->middleware('permission:xem_san_pham');
     Route::get('/admin/san-pham/export-template', [SanPhamController::class, 'exportTemplate'])->middleware('permission:xem_san_pham');
     Route::post('/admin/san-pham/import', [SanPhamController::class, 'import'])->middleware('permission:them_san_pham');

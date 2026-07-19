@@ -3,7 +3,8 @@
 namespace App\Http\Controllers\admin\CaiDat;
 
 use App\Http\Controllers\Controller;
-use App\Models\DonViSanPham;
+use App\Models\DanhMucDonVi;
+use App\Models\DonViQuyDoi;
 use App\Models\ThuocTinhSanPham;
 use Illuminate\Http\Request;
 
@@ -11,7 +12,11 @@ class ThietLapSanPhamController extends Controller
 {
     public function index()
     {
-        $donVis = DonViSanPham::orderBy('id', 'asc')->get();
+        // Lấy đơn vị chung (bảng danh_muc_don_vi)
+        $donVis = DanhMucDonVi::orderBy('ten_don_vi')
+            ->orderBy('so_luong_san_pham_trong_don_vi')
+            ->get();
+
         $thuocTinhChas = ThuocTinhSanPham::whereNull('thuoc_tinh_cha_id')
             ->where('trang_thai', true)
             ->with('thuocTinhCons')
@@ -24,16 +29,41 @@ class ThietLapSanPhamController extends Controller
     public function storeDonVi(Request $request)
     {
         $data = $request->validate([
+            'ten_don_vi' => 'required|string|max:255|unique:danh_muc_don_vi,ten_don_vi,NULL,id,so_luong_san_pham_trong_don_vi,' . ($request->input('so_luong_san_pham_trong_don_vi') ?? 1),
+            'so_luong_san_pham_trong_don_vi' => 'nullable|integer|min:1',
+        ]);
+
+        DanhMucDonVi::create([
+            'ten_don_vi' => $data['ten_don_vi'],
+            'so_luong_san_pham_trong_don_vi' => $data['so_luong_san_pham_trong_don_vi'] ?? 1,
+            'trang_thai' => true,
+        ]);
+
+        return redirect()->back()->with('success', 'Đã thêm đơn vị thành công');
+    }
+
+    public function updateDonVi(Request $request, $id)
+    {
+        $data = $request->validate([
             'ten_don_vi' => 'required|string|max:255',
             'so_luong_san_pham_trong_don_vi' => 'nullable|integer|min:1',
         ]);
 
-        DonViSanPham::create(array_merge($data, [
+        $item = DanhMucDonVi::findOrFail($id);
+        $item->update([
+            'ten_don_vi' => $data['ten_don_vi'],
             'so_luong_san_pham_trong_don_vi' => $data['so_luong_san_pham_trong_don_vi'] ?? 1,
-            'trang_thai' => true,
-        ]));
+        ]);
 
-        return redirect()->back()->with('success', 'Đã thêm đơn vị thành công');
+        return redirect()->back()->with('success', 'Đã cập nhật đơn vị.');
+    }
+
+    public function destroyDonVi($id)
+    {
+        $item = DanhMucDonVi::findOrFail($id);
+        $item->delete();
+
+        return redirect()->back()->with('success', 'Đã xóa đơn vị');
     }
 
     public function storeThuocTinh(Request $request)
@@ -51,30 +81,6 @@ class ThietLapSanPhamController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Đã thêm thuộc tính thành công');
-    }
-
-    public function destroyDonVi($id)
-    {
-        $item = DonViSanPham::findOrFail($id);
-        $item->delete();
-
-        return redirect()->back()->with('success', 'Đã xóa đơn vị');
-    }
-
-    public function updateDonVi(Request $request, $id)
-    {
-        $data = $request->validate([
-            'ten_don_vi' => 'required|string|max:255',
-            'so_luong_san_pham_trong_don_vi' => 'nullable|integer|min:1',
-        ]);
-
-        $item = DonViSanPham::findOrFail($id);
-        $item->update([
-            'ten_don_vi' => $data['ten_don_vi'],
-            'so_luong_san_pham_trong_don_vi' => $data['so_luong_san_pham_trong_don_vi'] ?? 1,
-        ]);
-
-        return redirect()->back()->with('success', 'Đã cập nhật đơn vị.');
     }
 
     public function destroyThuocTinh($id)

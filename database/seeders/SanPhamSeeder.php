@@ -120,9 +120,9 @@ class SanPhamSeeder extends Seeder
             'updated_at'         => $now,
         ]);
 
-        // Don vi quy doi: Thung (24 lon)
+        // Don vi quy doi: Thung (24 lon) - Dung product_id de co the tai su dung cho cac variant khac cung san pham
         DB::table('don_vi_quy_doi')->insert([
-            'variant_id'          => $vtLonId,
+            'product_id'          => $spHeinekenId,
             'ten_don_vi'          => 'Thùng',
             'ty_le_quy_doi'       => 24,
             'ma_hang'             => 'HEI-THU001',
@@ -197,7 +197,7 @@ class SanPhamSeeder extends Seeder
         ]);
 
         DB::table('don_vi_quy_doi')->insert([
-            'variant_id'          => $vtChaiId,
+            'product_id'          => $spNuocEpId,
             'ten_don_vi'          => 'Thùng',
             'ty_le_quy_doi'       => 12,
             'ma_hang'             => 'NJT-THU001',

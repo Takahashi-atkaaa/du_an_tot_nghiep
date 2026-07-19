@@ -188,15 +188,16 @@ function toggleSection(headerEl) {
             var row = e.target.closest('.product-parent-row, .variant-child-row, .unit-child-row, tr[data-id]');
             if (!row) return;
             var productId = row.dataset.productId || row.dataset.id;
-            var targetId = row.dataset.targetId || productId;
+            var targetId = row.dataset.targetId || row.dataset.variantId || productId;
             var rowType = row.dataset.rowType || 'goc';
-            if (productId) window.openProductDrawer(productId, targetId, rowType);
+            var unitId = row.dataset.unitId || '';
+            if (productId) window.openProductDrawer(productId, targetId, rowType, unitId);
         });
     }
 
-    window.openProductDrawer = async function(productId, targetId, rowType) {
+    window.openProductDrawer = async function(productId, targetId, rowType, unitId) {
         if (targetId === undefined) { targetId = productId; rowType = 'goc'; }
-        console.log('[Drawer] openProductDrawer called', { productId, targetId, rowType });
+        console.log('[Drawer] openProductDrawer called', { productId, targetId, rowType, unitId });
 
         var modal = new bootstrap.Offcanvas(drawer);
         drawerBody.innerHTML = '<div class="d-flex justify-content-center align-items-center" style="min-height:300px;">' +
@@ -216,8 +217,15 @@ function toggleSection(headerEl) {
 
         try {
             var apiUrl = '/admin/api/san-pham/' + productId;
+            var queryParts = [];
             if (targetId && String(targetId) !== String(productId)) {
-                apiUrl += '?variant_id=' + targetId;
+                queryParts.push('variant_id=' + encodeURIComponent(targetId));
+            }
+            if (unitId) {
+                queryParts.push('unit_id=' + encodeURIComponent(unitId));
+            }
+            if (queryParts.length) {
+                apiUrl += '?' + queryParts.join('&');
             }
             var res = await fetch(apiUrl, { signal: _drawerController.signal });
             var json = await res.json();
@@ -290,10 +298,40 @@ function toggleSection(headerEl) {
 
         // Tìm đơn vị tương ứng với variant đang hiển thị
         var displayUnit = null;
-        if (displayVariant && displayVariant.don_vi_id) {
+
+        // Ưu tiên 1: selectedUnit từ API (khi click dòng quy đổi/đơn vị)
+        if (data.selectedUnit && data.selectedUnit.id) {
+            displayUnit = data.selectedUnit;
+        }
+
+        // Ưu tiên 2: tìm theo don_vi_id của variant
+        if (!displayUnit && displayVariant && displayVariant.don_vi_id) {
             displayUnit = displayUnits.find(function(u) { return String(u.id) === String(displayVariant.don_vi_id); });
         }
-        var tenDonViHienThi = displayUnit ? displayUnit.ten_don_vi : (units.length > 0 ? (units[0].ten_don_vi || '-') : '-');
+
+        // Xác định hiển thị dựa trên la_don_vi
+        var isLaDonVi = displayVariant && displayVariant.la_don_vi;
+        var tenDonViHienThi;
+        var tenBienTheHienThi;
+
+        if (isLaDonVi) {
+            // Biến thể đơn vị: hiển thị tên đơn vị, không hiển thị biến thể
+            tenDonViHienThi = displayVariant.ten_don_vi || '-';
+            tenBienTheHienThi = '-';
+        } else {
+            // Biến thể thuộc tính: hiển thị biến thể + đơn vị quy đổi
+            tenDonViHienThi = displayUnit ? displayUnit.ten_don_vi : (units.length > 0 ? (units[0].ten_don_vi || '-') : '-');
+            tenBienTheHienThi = displayVariant.ten_bien_the || '-';
+        }
+
+        // Khi click vào dòng quy đổi, hiển thị tên đơn vị quy đổi ưu tiên
+        var selectedUnitBadge = '';
+        if (rowType === 'quy_doi' && displayUnit) {
+            tenDonViHienThi = displayUnit.ten_don_vi;
+            // Đánh dấu đang xem đơn vị quy đổi
+            selectedUnitBadge = '<span class="badge bg-info ms-2" style="font-size:0.65rem;"><i class="fas fa-cube me-1"></i>Đơn vị quy đổi</span>';
+        }
+
         var maVachHienThi = displayUnit ? (displayUnit.ma_vach || '-') : (displayVariant.ma_vach || '-');
         var giaBanHienThi = displayUnit ? displayUnit.gia_ban_quy_doi : displayVariant.gia_ban;
         var giaVonHienThi = displayUnit ? displayUnit.gia_von_quy_doi : displayVariant.gia_von;
@@ -419,7 +457,7 @@ function toggleSection(headerEl) {
                 '<div class="col-8">' +
                     '<div class="d-flex justify-content-between align-items-start">' +
                         '<div>' +
-                            '<h5 class="fw-bold mb-1">' + (sp.ten_san_pham || '-') + '</h5>' +
+                            '<h5 class="fw-bold mb-1">' + (sp.ten_san_pham || '-') + selectedUnitBadge + '</h5>' +
                             '<p class="text-muted small mb-1">#' + (displayVariant.ma_hang || displayVariant.ma_vach || displayVariant.id || sp.id || '-') + '</p>' +
                             trangThaiVariant +
                         '</div>' +
@@ -432,13 +470,13 @@ function toggleSection(headerEl) {
                     '<div class="row g-2 small">' +
                         '<div class="col-6"><strong>Danh mục:</strong> ' + (sp.danh_muc?.ten_danh_muc || '-') + '</div>' +
                         '<div class="col-6"><strong>Thương hiệu:</strong> ' + (sp.thuong_hieu || '-') + '</div>' +
-                        '<div class="col-6"><strong>Tên biến thể:</strong> ' + (displayVariant.ten_bien_the || '-') + '</div>' +
+                        '<div class="col-6"><strong>Biến thể:</strong> ' + tenBienTheHienThi + '</div>' +
                         '<div class="col-6"><strong>Đơn vị:</strong> ' + tenDonViHienThi + '</div>' +
                         '<div class="col-6"><strong>Mã vạch:</strong> ' + maVachHienThi + '</div>' +
                         '<div class="col-6"><strong>Tồn kho:</strong> ' + (tonKhoHienThi ?? 0) + '</div>' +
                         '<div class="col-6"><strong>Định mức:</strong> ' + (displayVariant.dinh_muc_toi_thieu ?? 0) + '</div>' +
                     '</div>' +
-                    (thuocTinhLabels ? '<div class="mt-2">' + thuocTinhLabels + '</div>' : '') +
+                    (isLaDonVi ? '' : (thuocTinhLabels ? '<div class="mt-2">' + thuocTinhLabels + '</div>' : '')) +
                 '</div>' +
             '</div>' +
 

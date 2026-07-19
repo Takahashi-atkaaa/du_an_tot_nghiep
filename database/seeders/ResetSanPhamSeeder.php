@@ -173,6 +173,7 @@ class ResetSanPhamSeeder extends Seeder
                 'thuong_hieu' => 'Heineken',
                 'mo_ta'    => 'Bia Heineken lon 330ml, nhập khẩu Hà Lan.',
                 'loai'     => 'don_vi',
+                'ten_don_vi_co_ban' => 'Lon',  // Tên đơn vị cơ bản
                 'gia'      => 14000,       // gia cua don vi co ban (lon)
                 'dinh_muc' => 15,
                 'units'    => [
@@ -187,6 +188,7 @@ class ResetSanPhamSeeder extends Seeder
                 'thuong_hieu' => 'Vinamilk',
                 'mo_ta'    => 'Sữa tươi tiệt trùng Vinamilk 100% sữa tươi, hộp 1L.',
                 'loai'     => 'don_vi',
+                'ten_don_vi_co_ban' => 'Hộp',  // Tên đơn vị cơ bản
                 'gia'      => 28000,       // gia don vi co ban (hop)
                 'dinh_muc' => 15,
                 'units'    => [
@@ -200,6 +202,7 @@ class ResetSanPhamSeeder extends Seeder
                 'thuong_hieu' => 'ST25',
                 'mo_ta'    => 'Gạo ST25 hữu cơ túi 5kg, gạo ngon nhất thế giới.',
                 'loai'     => 'don_vi',
+                'ten_don_vi_co_ban' => 'Túi',  // Tên đơn vị cơ bản
                 'gia'      => 130000,      // gia don vi co ban (tui)
                 'dinh_muc' => 8,
                 'units'    => [
@@ -287,12 +290,15 @@ class ResetSanPhamSeeder extends Seeder
                 $variantCount++;
 
             } elseif ($p['loai'] === 'don_vi') {
-                // ── LOAI DON_VI: 1 bien_the (la don vi co ban, ten_bien_the = null),
+                // ── LOAI DON_VI: 1 bien_the (la don vi co ban, la_don_vi = true),
                 //    nhieu don_vi_quy_doi (chi ty_le > 1) ──
-                // Bien the = don vi co ban (lon/hop/tui), gia von/ban la gia cua don vi do
+                $tenDonViCoBan = $p['ten_don_vi_co_ban'] ?? null;
+
                 $variantId = DB::table('bien_the_san_pham')->insertGetId([
                     'product_id'        => $productId,
                     'ten_bien_the'     => null,   // don vi co ban khong co ten bien the
+                    'la_don_vi'        => true,   // Đánh dấu đây là biến thể đơn vị
+                    'ten_don_vi'       => $tenDonViCoBan,  // Tên đơn vị cơ bản (Lon, Hộp, Túi...)
                     'ma_hang'          => $maHangPrefix . '-001',
                     'ma_vach'          => '8934' . str_pad((string)$productId, 8, '0', STR_PAD_LEFT),
                     'gia_von'          => $giaVon,
@@ -308,12 +314,13 @@ class ResetSanPhamSeeder extends Seeder
                 $variantCount++;
 
                 // Chi insert don_vi_quy_doi cho cac don vi TY LE > 1
+                // Dung product_id de co the tai su dung cho cac variant khac cung san pham
                 foreach ($p['units'] as $idx => $u) {
                     if ((int)$u['ty_le'] <= 1) {
                         continue; // BO QUA don vi co ban (ty_le = 1)
                     }
                     DB::table('don_vi_quy_doi')->insert([
-                        'variant_id'         => $variantId,
+                        'product_id'         => $productId,
                         'ten_don_vi'         => $u['ten'],
                         'ty_le_quy_doi'      => (int)$u['ty_le'],
                         'ma_hang'           => $maHangPrefix . '-' . str_pad((string)($idx + 2), 3, '0', STR_PAD_LEFT),
