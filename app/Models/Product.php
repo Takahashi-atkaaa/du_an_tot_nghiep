@@ -38,14 +38,49 @@ class Product extends BaseModel
     {
         $rows = collect();
 
-        foreach ($this->variants as $variant) {
-            // Dòng gốc: đơn vị cơ bản lưu trong ten_bien_the của bien_the_san_pham
+        // Load tất cả variants trước
+        $variants = $this->variants()->get();
+
+        // Collect all thuoc_tinh_ids từ tất cả variants để query một lần (tránh N+1)
+        $allAttrIds = [];
+        foreach ($variants as $v) {
+            if (!empty($v->thuoc_tinh_ids)) {
+                $allAttrIds = array_merge($allAttrIds, $v->thuoc_tinh_ids);
+            }
+        }
+        $allAttrIds = array_unique($allAttrIds);
+        $allAttrs = !empty($allAttrIds)
+            ? ThuocTinhSanPham::whereIn('id', $allAttrIds)->get()->keyBy('id')
+            : collect();
+
+        foreach ($variants as $variant) {
+            // Xác định loại biến thể: đơn vị hay thuộc tính
+            $laDonVi = $variant->la_don_vi ?? false;
+            $tenDonViVariant = $laDonVi ? ($variant->ten_don_vi ?? '') : '';
+
+            // Build ten_bien_the_display từ thuoc_tinh_ids (chỉ khi KHÔNG phải biến thể đơn vị)
+            $ten_bien_the_display = '';
+            if (!$laDonVi) {
+                $attrs = [];
+                if (!empty($variant->thuoc_tinh_ids)) {
+                    foreach ($variant->thuoc_tinh_ids as $id) {
+                        if (isset($allAttrs[$id])) {
+                            $attrs[] = $allAttrs[$id]->ten_thuoc_tinh;
+                        }
+                    }
+                }
+                $ten_bien_the_display = implode(' - ', $attrs);
+            }
+
+            // Dòng gốc: đơn vị cơ bản từ bien_the_san_pham
             $rows->push((object)[
                 'loai_dong' => 'goc',
                 'product' => $this,
                 'variant' => $variant,
                 'unit' => null,
-                'ten_don_vi' => $variant->ten_bien_the ?? '',
+                'ten_don_vi' => $tenDonViVariant,
+                'ten_bien_the_display' => $ten_bien_the_display,
+                'la_don_vi' => $laDonVi,
                 'ty_le' => 1,
                 'gia_ban' => $variant->gia_ban ?? 0,
                 'gia_von' => $variant->gia_von ?? 0,
@@ -56,15 +91,17 @@ class Product extends BaseModel
                 'hinh_anh' => $variant->hinh_anh,
             ]);
 
-            // Các dòng quy đổi
+            // Các dòng quy đổi: luôn hiển thị nếu variant có units
             foreach ($variant->units as $unit) {
-                $tyLe = (int)($unit->ty_le_quy_doi ?: 1);
+                $tyLe = (int)($unit->so_luong_san_pham_trong_don_vi ?: 1);
                 $rows->push((object)[
                     'loai_dong' => 'quy_doi',
                     'product' => $this,
                     'variant' => $variant,
                     'unit' => $unit,
                     'ten_don_vi' => $unit->ten_don_vi ?? '',
+                    'ten_bien_the_display' => $ten_bien_the_display,
+                    'la_don_vi' => false,
                     'ty_le' => $tyLe,
                     'gia_ban' => $unit->gia_ban_quy_doi ?? 0,
                     'gia_von' => $unit->gia_von_quy_doi ?? 0,
@@ -106,7 +143,7 @@ class Product extends BaseModel
             if ($baseName !== '' && !isset($units[$baseName])) {
                 $units[$baseName] = [
                     'name' => $baseName,
-                    'ty_le_quy_doi' => 1,
+                    'so_luong_san_pham_trong_don_vi' => 1,
                     'gia_ban_quy_doi' => $v->gia_ban,
                     'gia_von_quy_doi' => $v->gia_von,
                     'ma_vach' => $v->ma_vach,
@@ -119,11 +156,12 @@ class Product extends BaseModel
                 if (!isset($units[$key])) {
                     $units[$key] = [
                         'name' => $key,
-                        'ty_le_quy_doi' => $u->ty_le_quy_doi,
+                        'so_luong_san_pham_trong_don_vi' => $u->so_luong_san_pham_trong_don_vi,
                         'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
                         'gia_von_quy_doi' => $u->gia_von_quy_doi,
                         'ma_vach' => $u->ma_vach,
                         'variant_id' => $v->id,
+                        'don_vi_chuan_id' => $u->don_vi_chuan_id,
                     ];
                 }
             }
@@ -149,15 +187,18 @@ class Product extends BaseModel
             $variantUnits = $v->units->map(fn($u) => [
                 'id' => $u->id,
                 'ten_don_vi' => $u->ten_don_vi,
-                'ty_le_quy_doi' => $u->ty_le_quy_doi,
+                'so_luong_san_pham_trong_don_vi' => $u->so_luong_san_pham_trong_don_vi,
                 'gia_von_quy_doi' => $u->gia_von_quy_doi,
                 'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
                 'ma_vach' => $u->ma_vach,
                 'la_don_vi_mac_dinh' => $u->la_don_vi_mac_dinh,
+                'don_vi_chuan_id' => $u->don_vi_chuan_id,
             ])->all();
             $variantsArr[] = [
                 'id' => $v->id,
                 'ten_bien_the' => $v->ten_bien_the,
+                'la_don_vi' => $v->la_don_vi ?? false,
+                'ten_don_vi' => $v->ten_don_vi ?? '',
                 'ma_hang' => $v->ma_hang,
                 'ma_vach' => $v->ma_vach,
                 'gia_von' => $v->gia_von,

@@ -23,6 +23,18 @@
     <div class="alert alert-danger">{{ session('error') }}</div>
 @endif
 <div id="formErrorBox" class="alert alert-danger d-none mb-3"></div>
+{{-- ============================================================
+YÊU CẦU 2: CẢNH BÁO TRÙNG NHÓM THUỘC TÍNH (FRONTEND)
+============================================================ --}}
+<div id="duplicateAttrGroupWarning" class="alert alert-danger mb-3 d-none" role="alert" style="white-space:pre-line;">
+    <i class="fas fa-exclamation-circle me-1"></i>
+</div>
+{{-- ============================================================
+YÊU CẦU 2: CẢNH BÁO TRÙNG LẶP BIẾN THỂ (FRONTEND)
+============================================================ --}}
+<div id="duplicateVariantWarning" class="alert alert-warning mb-3 d-none" role="alert" style="white-space:pre-line;">
+    <i class="fas fa-exclamation-triangle me-1"></i>
+</div>
 
 <div class="modal fade show d-block" id="editProductModal" tabindex="-1" style="background:rgba(0,0,0,0.5);">
     <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:1100px;margin:2rem auto;">
@@ -38,6 +50,7 @@
                 @csrf
                 <input type="hidden" name="_method" value="PUT">
                 <div class="modal-body p-3" id="editProductModalBody" style="overflow-y:auto;flex:1;padding:1.25rem 1.5rem;">
+                    <div id="variantIdsContainer" class="d-none"></div>
                     <div id="editProductApp" v-cloak></div>
                 </div>
                 <div class="modal-footer bg-light" style="flex-shrink:0;padding:0.75rem 1.5rem;">
@@ -72,9 +85,9 @@
             })->values()->all(),
         ];
     })->values()->all();
-$unitsPayload = $donViSanPhams->map(fn($u) => [
+$unitsPayload = $danhMucDonVis->map(fn($u) => [
     'id'   => $u->id,
-    'name' => $u->ten_don_vi,
+    'name' => $u->ten_hien_thi,
     'qty'  => $u->so_luong_san_pham_trong_don_vi,
 ])->values()->all();
 @endphp

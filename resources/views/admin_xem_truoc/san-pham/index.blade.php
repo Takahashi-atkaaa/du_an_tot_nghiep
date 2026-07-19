@@ -127,6 +127,7 @@
                         <th>Tên sản phẩm</th>
                         <th>Danh mục</th>
                         <th style="width:100px;">Đơn vị tính</th>
+                        <th style="width:130px;">Biến thể</th>
                         <th style="width:110px;">Giá bán</th>
                         <th style="width:80px;">Tồn kho</th>
                         <th style="width:100px;">Trạng thái</th>
@@ -145,6 +146,8 @@
                         <tr class="product-parent-row {{ !$firstRow->trang_thai ? 'table-secondary opacity-50' : '' }}"
                             style="cursor:pointer;"
                             data-id="{{ $firstRow->variant->id ?? $sp->id }}"
+                            data-variant-id="{{ $firstRow->variant->id ?? '' }}"
+                            data-unit-id="{{ $firstRow->unit->id ?? '' }}"
                             data-product-id="{{ $sp->id }}"
                             data-target-id="{{ $sp->id }}"
                             data-row-type="goc">
@@ -207,7 +210,16 @@
 
                             {{-- Đơn vị tính (dòng đầu = gốc) --}}
                             <td>
-                                <span class="text-muted small">{{ $firstRow->ten_don_vi }}</span>
+                                <span class="text-muted small">{{ $firstRow->ten_don_vi ?: '—' }}</span>
+                            </td>
+
+                            {{-- Biến thể (dòng đầu) --}}
+                            <td>
+                                @if(!empty($firstRow->ten_bien_the_display))
+                                    <span class="small">{{ $firstRow->ten_bien_the_display }}</span>
+                                @else
+                                    <span class="text-muted small">—</span>
+                                @endif
                             </td>
 
                             {{-- Giá bán (dòng đầu) --}}
@@ -245,8 +257,10 @@
                             <tr id="variantRow{{ $sp->id }}_{{ $rowIndex }}"
                                 class="variant-child-row"
                                 style="display:none; background:#fafafa; cursor:pointer;"
-                                data-id="{{ $row->unit->id ?? $row->variant->id }}"
-                                data-target-id="{{ $row->unit->id ?? $row->variant->id }}"
+                                data-id="{{ $row->variant->id ?? $sp->id }}"
+                                data-variant-id="{{ $row->variant->id ?? '' }}"
+                                data-unit-id="{{ $row->unit->id ?? '' }}"
+                                data-target-id="{{ $row->variant->id ?? $sp->id }}"
                                 data-type="{{ $row->loai_dong }}"
                                 data-row-type="{{ $row->loai_dong }}"
                                 data-product-id="{{ $sp->id }}">
@@ -284,6 +298,15 @@
                                 {{-- Đơn vị tính --}}
                                 <td>
                                     <span class="text-muted small">{{ $row->ten_don_vi }}</span>
+                                </td>
+
+                                {{-- Biến thể --}}
+                                <td>
+                                    @if(!empty($row->ten_bien_the_display))
+                                        <span class="small">{{ $row->ten_bien_the_display }}</span>
+                                    @else
+                                        <span class="text-muted small">—</span>
+                                    @endif
                                 </td>
 
                                 {{-- Giá bán --}}
@@ -372,6 +395,18 @@
                 </div>
                 <div class="modal-footer bg-light flex-column align-items-stretch">
                     <div id="formErrorBox" class="alert alert-danger py-2 px-3 mb-2 small d-none" role="alert" style="white-space:pre-line;"></div>
+                    {{-- ============================================================
+                    YÊU CẦU 2: CẢNH BÁO TRÙNG NHÓM THUỘC TÍNH (FRONTEND)
+                    ============================================================ --}}
+                    <div id="duplicateAttrGroupWarning" class="alert alert-danger py-2 px-3 mb-2 small d-none" role="alert" style="white-space:pre-line;">
+                        <i class="fas fa-exclamation-circle me-1"></i>
+                    </div>
+                    {{-- ============================================================
+                    YÊU CẦU 2: CẢNH BÁO TRÙNG LẶP BIẾN THỂ (FRONTEND)
+                    ============================================================ --}}
+                    <div id="duplicateVariantWarning" class="alert alert-warning py-2 px-3 mb-2 small d-none" role="alert" style="white-space:pre-line;">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                    </div>
                     <div class="d-flex justify-content-between w-100 align-items-center">
                         <span class="text-muted small"><i class="fas fa-info-circle me-1"></i> Điền đầy đủ thông tin trước khi lưu</span>
                         <div class="d-flex gap-2">
@@ -403,9 +438,9 @@
             })->values()->all(),
         ];
     })->values()->all();
-$unitsPayload = $donViSanPhams->map(fn($u) => [
+$unitsPayload = $donViMacDinhs->map(fn($u) => [
     'id'   => $u->id,
-    'name' => $u->ten_don_vi,
+    'name' => $u->ten_hien_thi, // "Thùng 24"
     'qty'  => $u->so_luong_san_pham_trong_don_vi,
 ])->values()->all();
 @endphp

@@ -155,7 +155,7 @@ class PhieuNhapImport implements ToCollection, WithHeadingRow, WithValidation
                 'variant_id' => $variant->id,
                 'product_id' => $variant->product_id,
                 'so_luong' => $ct['so_luong'],
-                'ty_le_quy_doi' => $variant->ty_le_quy_doi ?? 1,
+                'so_luong_san_pham_trong_don_vi' => $variant->so_luong_san_pham_trong_don_vi ?? 1,
                 'gia_nhap' => $ct['gia_nhap'],
                 'han_su_dung' => $ct['han_su_dung'],
             ];
@@ -191,8 +191,8 @@ class PhieuNhapImport implements ToCollection, WithHeadingRow, WithValidation
             ]);
 
             foreach ($validatedData as $ct) {
-                $soLuongGoc = $ct['so_luong'] * $ct['ty_le_quy_doi'];
-                $giaNhapGoc = $ct['gia_nhap'] / $ct['ty_le_quy_doi'];
+                $soLuongGoc = $ct['so_luong'] * $ct['so_luong_san_pham_trong_don_vi'];
+                $giaNhapGoc = $ct['gia_nhap'] / $ct['so_luong_san_pham_trong_don_vi'];
 
                 // Tìm chi_tiet_lo_hang đã tồn tại
                 $chiTietLoHang = ChiTietLoHang::where('id_lo_hang', $loHang->id)
@@ -261,7 +261,7 @@ class PhieuNhapImport implements ToCollection, WithHeadingRow, WithValidation
         // Bước 1: Tìm trong bảng Biến thể gốc
         $variant = BienTheSanPham::where('ma_vach', $maVach)->first();
         if ($variant) {
-            $variant->ty_le_quy_doi = 1;
+            $variant->so_luong_san_pham_trong_don_vi = 1;
             return $variant;
         }
 
@@ -270,7 +270,7 @@ class PhieuNhapImport implements ToCollection, WithHeadingRow, WithValidation
         if ($donViQuyDoi) {
             $baseVariant = BienTheSanPham::find($donViQuyDoi->variant_id);
             if ($baseVariant) {
-                $baseVariant->ty_le_quy_doi = $donViQuyDoi->ty_le_quy_doi;
+                $baseVariant->so_luong_san_pham_trong_don_vi = $donViQuyDoi->so_luong_san_pham_trong_don_vi;
                 return $baseVariant;
             }
         }

@@ -19,15 +19,6 @@ class UpdateSanPhamRequest extends FormRequest
 
     public function rules(): array
     {
-        file_put_contents(
-            storage_path('logs/debug_update.txt'),
-            "[" . now()->toDateTimeString() . "]\n" . json_encode([
-                'all_input' => $this->all(),
-                'route_id' => $this->route('id'),
-                'method' => $this->method(),
-            ], JSON_UNESCAPED_UNICODE) . "\n\n",
-            FILE_APPEND
-        );
         $productId = (int) $this->route('id');
 
         // Lay ten hien tai cua san pham trong DB
@@ -72,11 +63,15 @@ class UpdateSanPhamRequest extends FormRequest
             'bien_the.*.hinh_anh' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'bien_the.*.trang_thai' => 'sometimes|boolean',
 
+            // Biến thể đơn vị (la_don_vi = true khi sp chỉ có đơn vị)
+            'bien_the.*.la_don_vi' => 'nullable|boolean',
+            'bien_the.*.ten_don_vi' => 'nullable|string|max:255',
+
             // Đơn vị quy đổi
             'bien_the.*.units' => 'sometimes|array',
             'bien_the.*.units.*.id' => 'nullable|integer|exists:don_vi_quy_doi,id',
             'bien_the.*.units.*.ten_don_vi' => 'present|string|max:255',
-            'bien_the.*.units.*.ty_le_quy_doi' => 'present|integer|min:1',
+            'bien_the.*.units.*.so_luong_san_pham_trong_don_vi' => 'present|integer|min:1',
             'bien_the.*.units.*.gia_von_quy_doi' => 'nullable|numeric|min:0',
             'bien_the.*.units.*.gia_ban_quy_doi' => 'present|numeric|min:0',
             'bien_the.*.units.*.gia_ban_si' => 'nullable|numeric|min:0',
@@ -102,7 +97,7 @@ class UpdateSanPhamRequest extends FormRequest
             'id_danh_muc.required' => 'Danh mục sản phẩm không được để trống.',
             'bien_the.*.gia_ban.required' => 'Giá bán biến thể không được để trống.',
             'bien_the.*.units.*.ten_don_vi.required' => 'Tên đơn vị không được để trống.',
-            'bien_the.*.units.*.ty_le_quy_doi.required' => 'Tỷ lệ quy đổi không được để trống.',
+            'bien_the.*.units.*.so_luong_san_pham_trong_don_vi.required' => 'Số lượng sản phẩm trong đơn vị không được để trống.',
             'bien_the.*.units.*.gia_ban_quy_doi.required' => 'Giá bán quy đổi không được để trống.',
         ];
     }
@@ -110,13 +105,6 @@ class UpdateSanPhamRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            file_put_contents(
-                storage_path('logs/debug_update.txt'),
-                "[" . now()->toDateTimeString() . "] VALIDATION_ERRORS\n" . json_encode([
-                    'errors' => $validator->errors()->toArray(),
-                ], JSON_UNESCAPED_UNICODE) . "\n\n",
-                FILE_APPEND
-            );
             $variants = $this->input('bien_the', []);
 
             // Check variant barcodes uniqueness in DB (ignore current variant id)

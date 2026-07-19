@@ -73,7 +73,7 @@ class SanPhamApiController extends Controller
                     'units' => $variant->units->map(fn($u) => [
                         'id' => $u->id,
                         'ten_don_vi' => $u->ten_don_vi,
-                        'ty_le_quy_doi' => $u->ty_le_quy_doi,
+                        'so_luong_san_pham_trong_don_vi' => $u->so_luong_san_pham_trong_don_vi,
                         'gia_von_quy_doi' => $u->gia_von_quy_doi,
                         'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
                         'ma_hang' => $u->ma_hang,
@@ -105,7 +105,8 @@ class SanPhamApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $requestedVariantId = request()->query('variant_id');
-        \Log::info('[SanPhamApi show] id=' . $id . ' variant_id=' . ($requestedVariantId ?? 'null'));
+        $requestedUnitId = request()->query('unit_id');
+        \Log::info('[SanPhamApi show] id=' . $id . ' variant_id=' . ($requestedVariantId ?? 'null') . ' unit_id=' . ($requestedUnitId ?? 'null'));
 
         $product = Product::with([
             'variants' => fn($q) => $q->with('units')->orderBy('id'),
@@ -113,9 +114,22 @@ class SanPhamApiController extends Controller
         ])->find($id);
 
         $variant = null;
+        $selectedUnit = null;
+
+        // Ưu tiên unit_id (đơn vị quy đổi): tìm variant sở hữu unit này
+        if ($requestedUnitId && $product) {
+            foreach ($product->variants as $v) {
+                $foundUnit = $v->units->first(fn($u) => (string)$u->id === (string)$requestedUnitId);
+                if ($foundUnit) {
+                    $variant = $v;
+                    $selectedUnit = $foundUnit;
+                    break;
+                }
+            }
+        }
 
         // Ưu tiên variant_id từ query (click dòng con → hiển thị variant cụ thể)
-        if ($requestedVariantId && $product) {
+        if (!$variant && $requestedVariantId && $product) {
             $variant = $product->variants->first(fn($v) => (string)$v->id === (string)$requestedVariantId);
         }
 
@@ -179,6 +193,7 @@ class SanPhamApiController extends Controller
             'data' => [
                 'product' => $variant->product->toArray(),
                 'variant' => $variant->toArray(),
+                'selectedUnit' => $selectedUnit?->toArray(),
                 'allVariants' => $variant->product->variants->toArray(),
                 'units' => $variant->units->toArray(),
                 'theKho' => $theKho,

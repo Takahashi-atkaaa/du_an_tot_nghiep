@@ -138,8 +138,9 @@ class MigrateProductStructure extends Command
                         foreach ($cacDonViCu as $donViCu) {
                             DonViQuyDoi::create([
                                 'variant_id' => $variant->id,
+                                'product_id' => $product->id,
                                 'ten_don_vi' => $donViCu->ten_don_vi,
-                                'ty_le_quy_doi' => $donViCu->so_luong_quy_doi ?? 1,
+                                'so_luong_san_pham_trong_don_vi' => $donViCu->so_luong_quy_doi ?? 1,
                                 'ma_hang' => 'DU' . $donViCu->id_don_vi . 'V' . $variant->id,
                                 'ma_vach' => $donViCu->ma_vach ?? null,
                                 'gia_von_quy_doi' => $bienTheCu->gia_von ?? 0,
@@ -270,8 +271,9 @@ class MigrateProductStructure extends Command
                     foreach ($cacDonViCu as $donViCu) {
                         DonViQuyDoi::create([
                             'variant_id' => $variant->id,
+                            'product_id' => $product->id,
                             'ten_don_vi' => $donViCu->ten_don_vi,
-                            'ty_le_quy_doi' => $donViCu->so_luong_quy_doi ?? 1,
+                            'so_luong_san_pham_trong_don_vi' => $donViCu->so_luong_quy_doi ?? 1,
                             'ma_hang' => 'DU' . $donViCu->id_don_vi . 'V' . $variant->id,
                             'ma_vach' => $donViCu->ma_vach ?? null,
                             'gia_von_quy_doi' => $sp->gia_von ?? 0,

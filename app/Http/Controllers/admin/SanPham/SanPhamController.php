@@ -6,16 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\SanPham\StoreSanPhamRequest;
 use App\Http\Requests\SanPham\UpdateSanPhamRequest;
 use App\Http\Requests\SanPham\ImportSanPhamRequest;
+use App\Models\DanhMucDonVi;
 use App\Models\DanhMucSanPham;
 use App\Models\Product;
 use App\Models\BienTheSanPham;
 use App\Models\DonViQuyDoi;
-use App\Models\DonViSanPham;
 use App\Models\ThuocTinhSanPham;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class SanPhamController extends Controller
@@ -51,13 +52,25 @@ class SanPhamController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $donViSanPhams = DonViSanPham::where('trang_thai', true)->orderBy('ten_don_vi')->get();
+        // Lấy đơn vị chung (bảng danh_muc_don_vi)
+        $danhMucDonVis = DanhMucDonVi::where('trang_thai', true)
+            ->orderBy('ten_don_vi')
+            ->orderBy('so_luong_san_pham_trong_don_vi')
+            ->get();
+
+        // Payload cho Vue (đơn vị chuẩn - dùng trong form)
+        $unitsPayload = $danhMucDonVis->map(fn($u) => [
+            'id'   => $u->id,
+            'name' => $u->ten_hien_thi,  // "Thùng 24"
+            'qty'  => $u->so_luong_san_pham_trong_don_vi,
+        ])->values()->all();
 
         return view('admin_xem_truoc.san-pham.index', [
             'sanPhams' => $sanPhams,
             'danhMucs' => $danhMucs,
             'thuocTinhChas' => $thuocTinhChas,
-            'donViSanPhams' => $donViSanPhams,
+            'donViMacDinhs' => $danhMucDonVis,
+            'unitsPayload' => $unitsPayload,
             'keyword' => $keyword,
             'danhMucId' => $danhMucId,
             'trangThai' => $request->input('trang_thai'),
@@ -70,6 +83,14 @@ class SanPhamController extends Controller
 
         try {
             $data = $request->validated();
+
+            // ============================================================
+            // YÊU CẦU 1: KIỂM TRA TRÙNG LẶP BIẾN THỂ (BACKEND)
+            // ============================================================
+            // 1a. Kiểm tra trùng lặp TRONG CHÍNH payload gửi lên
+            $this->checkVariantDuplicatesInPayload($data['bien_the'] ?? [], 'create');
+            // 1b. Kiểm tra trùng lặp với các biến thể ĐÃ TỒN TẠI trong DB cho sản phẩm này
+            // (Trường hợp update, cần truyền product_id; trong store thì là sản phẩm mới nên bỏ qua)
 
             $imagePath = null;
             if ($request->hasFile('hinh_anh')) {
@@ -99,16 +120,6 @@ class SanPhamController extends Controller
             ]);
 
             $bienThe = $data['bien_the'] ?? [];
-
-            // Đảm bảo tất cả đơn vị tính từ form đều tồn tại trong DB (tạo mới nếu chưa có)
-            $unitNames = collect($bienThe)
-                ->pluck('ten_bien_the')
-                ->filter()
-                ->unique()
-                ->values();
-            foreach ($unitNames as $name) {
-                $this->ensureDonViSanPham($name);
-            }
 
             if (empty($bienThe)) {
                 // 2a. Không có biến thể → tạo 1 variant mặc định
@@ -154,9 +165,16 @@ class SanPhamController extends Controller
                         $thuocTinhIds = array_filter($ids);
                     }
 
+                    // Xác định loại biến thể: đơn vị hay thuộc tính
+                    $laDonVi = !empty($variant['la_don_vi']);
+                    $tenDonVi = $laDonVi ? ($variant['ten_don_vi'] ?? null) : null;
+                    $tenBienThe = $laDonVi ? null : ($variant['ten_bien_the'] ?? $variant['ten_day_du'] ?? null);
+
                     $createdVariant = BienTheSanPham::create([
                         'product_id' => $product->id,
-                        'ten_bien_the' => $variant['ten_bien_the'] ?? $variant['ten_day_du'] ?? null,
+                        'ten_bien_the' => $tenBienThe,
+                        'la_don_vi' => $laDonVi,
+                        'ten_don_vi' => $tenDonVi,
                         'ma_hang' => $variant['ma_hang'] ?? $this->generateUniqueMaHang(),
                         'ma_vach' => !empty($variant['ma_vach']) ? $variant['ma_vach'] : $this->generateUniqueMaVach(),
                         'gia_von' => $variant['gia_von'] ?? 0,
@@ -173,13 +191,14 @@ class SanPhamController extends Controller
                     // Đơn vị cơ bản (ty_le = 1) đã được lưu vào bien_the_san_pham rồi → bỏ qua.
                     if (!empty($variant['units'])) {
                         foreach ($variant['units'] as $unit) {
-                            if ((int)($unit['ty_le_quy_doi'] ?? 1) <= 1) {
+                            if ((int)($unit['so_luong_san_pham_trong_don_vi'] ?? 1) <= 1) {
                                 continue; // Bỏ qua đơn vị cơ bản
                             }
                             DonViQuyDoi::create([
-                                'variant_id' => $createdVariant->id,
+                                'product_id' => $product->id,
+                                'don_vi_chuan_id' => $unit['don_vi_chuan_id'] ?? null,
                                 'ten_don_vi' => $unit['ten_don_vi'],
-                                'ty_le_quy_doi' => (int)($unit['ty_le_quy_doi'] ?? 1),
+                                'so_luong_san_pham_trong_don_vi' => (int)($unit['so_luong_san_pham_trong_don_vi'] ?? 1),
                                 'ma_hang' => $unit['ma_hang'] ?? $this->generateUniqueMaHang(),
                                 'ma_vach' => $unit['ma_vach'] ?? null,
                                 'gia_von_quy_doi' => $unit['gia_von_quy_doi'] ?? 0,
@@ -204,7 +223,13 @@ class SanPhamController extends Controller
 
     public function edit($id): View
     {
-        $product = Product::with(['variants.units', 'variants'])->findOrFail($id);
+        $product = Product::with('variants')->findOrFail($id);
+
+        // Lấy đơn vị quy đổi theo product_id (tái sử dụng cho tất cả variant)
+        $productUnits = DonViQuyDoi::where('product_id', $id)
+            ->orderBy('so_luong_san_pham_trong_don_vi')
+            ->get();
+
         $danhMucs = DanhMucSanPham::orderBy('ten_danh_muc')->get();
         $thuocTinhChas = ThuocTinhSanPham::whereNull('thuoc_tinh_cha_id')
             ->where('trang_thai', true)
@@ -212,40 +237,44 @@ class SanPhamController extends Controller
             ->with(['thuocTinhCons' => fn($q) => $q->where('trang_thai', true)->orderBy('ten_thuoc_tinh')])
             ->get();
 
-        $donViSanPhams = DonViSanPham::where('trang_thai', true)->orderBy('ten_don_vi')->get();
+        // Lấy đơn vị chung (bảng danh_muc_don_vi)
+        $danhMucDonVis = DanhMucDonVi::where('trang_thai', true)
+            ->orderBy('ten_don_vi')
+            ->orderBy('so_luong_san_pham_trong_don_vi')
+            ->get();
+
+        // Payload cho Vue (đơn vị chuẩn - dùng trong form)
+        $unitsPayload = $danhMucDonVis->map(fn($u) => [
+            'id'   => $u->id,
+            'name' => $u->ten_hien_thi,
+            'qty'  => $u->so_luong_san_pham_trong_don_vi,
+        ])->values()->all();
 
         return view('admin_xem_truoc.san-pham.sua', [
             'product' => $product,
             'danhMucs' => $danhMucs,
             'thuocTinhChas' => $thuocTinhChas,
-            'donViSanPhams' => $donViSanPhams,
+            'danhMucDonVis' => $danhMucDonVis,
+            'productUnits' => $productUnits,
+            'unitsPayload' => $unitsPayload,
         ]);
     }
 
     public function update(UpdateSanPhamRequest $request, int $id): RedirectResponse
     {
-        file_put_contents(
-            storage_path('logs/debug_update.txt'),
-            "[" . now()->toDateTimeString() . "] CONTROLLER HIT\nall=" . json_encode($request->all()) . "\n\n",
-            FILE_APPEND
-        );
-
         $product = Product::with('variants.units')->findOrFail($id);
         $data = $request->validated();
+
+        // ============================================================
+        // YÊU CẦU 1: KIỂM TRA TRÙNG LẶP BIẾN THỂ (BACKEND)
+        // ============================================================
+        // 1a. Kiểm tra trùng lặp TRONG CHÍNH payload gửi lên
+        $this->checkVariantDuplicatesInPayload($data['bien_the'] ?? [], 'update', $product->id);
+        // 1b. Kiểm tra trùng lặp với các biến thể ĐÃ TỒN TẠI trong DB cho product này (loại trừ biến thể hiện tại đang sửa)
 
         // Xử lý thuộc tính MỚI: tạo vào DB trước, trả về map {label => id}
         $newAttrMap = $this->processNewAttributes($data['new_attributes'] ?? []);
         $data['bien_the'] = $this->resolveThuocTinhIdsWithNew($data['bien_the'] ?? [], $newAttrMap);
-
-        // Đảm bảo tất cả đơn vị tính từ form đều tồn tại trong DB (tạo mới nếu chưa có)
-        $unitNames = collect($data['bien_the'] ?? [])
-            ->pluck('ten_bien_the')
-            ->filter()
-            ->unique()
-            ->values();
-        foreach ($unitNames as $name) {
-            $this->ensureDonViSanPham($name);
-        }
 
         // 1. Upload anh bien the (ngoai transaction de tranh rollback file)
         $variantImages = [];
@@ -257,7 +286,25 @@ class SanPhamController extends Controller
             }
         }
 
-        return DB::transaction(function () use ($product, $data, $request, $variantImages) {
+        // Safety check: If bien_the is empty or not sent, preserve existing variants
+        if (empty($data['bien_the']) && $product->variants()->exists()) {
+            // No variants sent means user didn't change variants - preserve them
+            // Just update product info and redirect
+            $product->update([
+                'id_danh_muc' => $data['id_danh_muc'],
+                'ten_san_pham' => $data['ten_san_pham'],
+                'thuong_hieu' => $data['thuong_hieu'] ?? null,
+                'mo_ta' => $data['mo_ta'] ?? null,
+                'trang_thai' => $data['trang_thai'] ?? true,
+            ]);
+            return redirect()->route('san-pham.index')->with('success', 'Đã cập nhật sản phẩm.');
+        }
+
+        $deletedVariantsList = [];
+        $updatedVariantsList = [];
+        $createdVariantsList = [];
+ 
+        return DB::transaction(function () use ($product, $data, $request, $variantImages, &$deletedVariantsList, &$updatedVariantsList, &$createdVariantsList) {
             // 2. Cap nhat thong tin chung
             $product->update([
                 'id_danh_muc' => $data['id_danh_muc'],
@@ -286,8 +333,16 @@ class SanPhamController extends Controller
                         $thuocTinhIds = array_filter($ids);
                     }
 
+                    // Xác định loại biến thể: đơn vị hay thuộc tính
+                    // SAFETY: giữ nguyên la_don_vi theo DB (không cho phép đổi)
+                    $laDonVi = $existingVariant->la_don_vi ? true : false;
+                    $tenDonVi = $laDonVi ? ($variant['ten_don_vi'] ?? $existingVariant->ten_don_vi) : null;
+                    $tenBienThe = $laDonVi ? null : ($variant['ten_bien_the'] ?? $existingVariant->ten_bien_the);
+
                     $existingVariant->update([
-                        'ten_bien_the' => $variant['ten_bien_the'] ?? null,
+                        'ten_bien_the' => $tenBienThe,
+                        'la_don_vi' => $laDonVi,
+                        'ten_don_vi' => $tenDonVi,
                         'ma_vach' => !empty($variant['ma_vach']) ? $variant['ma_vach'] : null,
                         'gia_von' => $variant['gia_von'] ?? 0,
                         'gia_ban' => $variant['gia_ban'] ?? 0,
@@ -296,6 +351,7 @@ class SanPhamController extends Controller
                         'trang_thai' => $variant['trang_thai'] ?? $existingVariant->trang_thai,
                     ]);
 
+                    $updatedVariantsList[] = ['id' => $existingId, 'ten_bien_the' => $tenBienThe];
                     $incomingVariantIds[] = $existingId;
                 } else {
                     // Tao variant moi
@@ -305,9 +361,27 @@ class SanPhamController extends Controller
                         $thuocTinhIds = array_filter($ids);
                     }
 
+                    // Xác định loại biến thể: đơn vị hay thuộc tính
+                    $laDonVi = !empty($variant['la_don_vi']);
+                    $tenDonVi = $laDonVi ? ($variant['ten_don_vi'] ?? null) : null;
+                    $tenBienThe = $laDonVi ? null : ($variant['ten_bien_the'] ?? null);
+
+                    // SAFETY: nếu product có biến thể đang dùng thuộc tính (la_don_vi=0)
+                    // → KHÔNG cho tạo mới biến thể đơn vị (la_don_vi=1) vì sẽ gây nhân đôi dữ liệu
+                    $productHasAttrVariants = $product->variants->where('la_don_vi', false)->isNotEmpty();
+                    if ($laDonVi && $productHasAttrVariants) {
+                        \Log::warning('[Update SanPham] Skip tạo mới biến thể đơn vị vì product đang dùng thuộc tính', [
+                            'product_id' => $product->id,
+                            'payload' => $variant,
+                        ]);
+                        continue;
+                    }
+
                     $newVariant = BienTheSanPham::create([
                         'product_id' => $product->id,
-                        'ten_bien_the' => $variant['ten_bien_the'] ?? null,
+                        'ten_bien_the' => $tenBienThe,
+                        'la_don_vi' => $laDonVi,
+                        'ten_don_vi' => $tenDonVi,
                         'ma_hang' => $this->generateUniqueMaHang(),
                         'ma_vach' => !empty($variant['ma_vach']) ? $variant['ma_vach'] : $this->generateUniqueMaVach(),
                         'gia_von' => $variant['gia_von'] ?? 0,
@@ -318,19 +392,55 @@ class SanPhamController extends Controller
                         'trang_thai' => $variant['trang_thai'] ?? true,
                     ]);
 
+                    $createdVariantsList[] = ['id' => $newVariant->id, 'ten_bien_the' => $tenBienThe, 'thuoc_tinh_ids' => $thuocTinhIds];
                     $incomingVariantIds[] = $newVariant->id;
                 }
 
-                // 4. CRUD units cho variant - truyen anh da xac dinh
+                // 4. CRUD units cho variant - truyen anh da xac dinh + product_id
                 $lastVariantId = $existingId ?? $incomingVariantIds[count($incomingVariantIds) - 1];
-                $this->syncUnits($lastVariantId, $variant['units'] ?? [], $variantImage);
+                $this->syncUnits($lastVariantId, $variant['units'] ?? [], $variantImage, $product->id);
             }
 
             // 5. Xoa variants bi loai bo
             $deletedIds = $request->input('deleted_variant_ids', []);
 
+            $existingIdsInPayload = array_filter(array_map(
+                fn($v) => $v['id'] ?? null,
+                $data['bien_the'] ?? []
+            ));
+
+            // Safety: Nếu payload không có id variant nào (toàn bộ là tạo mới)
+            // + DB đang có variant → KHÔNG xóa variant cũ
+            // + không có deleted_variant_ids → fail-safe, return sớm
+            if (empty($existingIdsInPayload) && empty($deletedIds) && $product->variants->isNotEmpty()) {
+                \Log::warning('[Update SanPham] Safety: payload thiếu id variant, bỏ qua xóa', [
+                    'product_id' => $product->id,
+                    'existing_in_db' => $product->variants->pluck('id')->toArray(),
+                ]);
+                return redirect()->route('san-pham.index')->with('success', 'Đã cập nhật sản phẩm.');
+            }
+
+            // Chỉ xóa các variant DB không có trong incomingVariantIds khi:
+            // 1) Có deleted_variant_ids (user chủ động xóa), HOẶC
+            // 2) Số id hợp lệ trong payload KHỚP SỐ variant DB (an toàn để xóa các variant không có id)
+            // Nếu số id < số variant DB → KHÔNG xóa (fallback theo index trong JS có thể gây nhân đôi)
+            $safeToDelete = empty($deletedIds)
+                ? count($existingIdsInPayload) === $product->variants->count()
+                : true;
+
+            \Log::info('[Update SanPham] id=' . $id, [
+                'incoming_variant_ids' => $incomingVariantIds,
+                'deleted_variant_ids' => $deletedIds,
+                'existing_in_db' => $product->variants->pluck('id')->toArray(),
+                'safe_to_delete' => $safeToDelete,
+                'bien_the_count' => count($data['bien_the'] ?? []),
+            ]);
+
             foreach ($product->variants as $variant) {
-                if (!in_array($variant->id, $incomingVariantIds) || in_array($variant->id, $deletedIds)) {
+                $shouldDelete = in_array($variant->id, $deletedIds)
+                    || ($safeToDelete && !empty($incomingVariantIds) && !in_array($variant->id, $incomingVariantIds));
+                if ($shouldDelete) {
+                    $deletedVariantsList[] = ['id' => $variant->id, 'ten' => $variant->ten_bien_the];
                     $imagesToCheck = [];
                     if ($variant->hinh_anh && !str_starts_with($variant->hinh_anh, 'http')) {
                         $imagesToCheck[] = $variant->hinh_anh;
@@ -363,8 +473,17 @@ class SanPhamController extends Controller
             }
         }); // dong DB::transaction
 
+        \Log::info('[Update SanPham Result] product_id=' . $id, [
+            'deleted_count' => count($deletedVariantsList),
+            'updated_count' => count($updatedVariantsList),
+            'created_count' => count($createdVariantsList),
+            'deleted_variants' => $deletedVariantsList,
+            'updated_variants' => $updatedVariantsList,
+            'created_variants' => $createdVariantsList,
+        ]);
+
         // Don anh cu cua san pham (neu co upload moi - nam ngoai transaction)
-        if ($request->hasFile('hinh_anh') && $product->getOriginal('hinh_anh')
+        if ($request->hasFile('hinh_anh') && $request->file('hinh_anh')->isValid() && $product->getOriginal('hinh_anh')
             && !str_starts_with($product->getOriginal('hinh_anh'), 'http')) {
             $this->deleteImageIfUnused($product->getOriginal('hinh_anh'));
         }
@@ -529,6 +648,73 @@ class SanPhamController extends Controller
         return redirect()->route('san-pham.trash')->with('success', 'Đã xóa vĩnh viễn biến thể.');
     }
 
+    /**
+     * Khôi phục nhiều biến thể đã xóa (Bulk Restore)
+     */
+    public function bulkRestore(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer',
+        ]);
+
+        $ids = $request->input('ids', []);
+        $restoredCount = 0;
+
+        $variants = BienTheSanPham::onlyTrashed()->whereIn('id', $ids)->get();
+
+        foreach ($variants as $variant) {
+            $variant->restore();
+            $restoredCount++;
+        }
+
+        return redirect()->route('san-pham.trash')
+            ->with('success', "Đã khôi phục {$restoredCount} biến thể thành công.");
+    }
+
+    /**
+     * Xóa vĩnh viễn nhiều biến thể (Bulk Force Delete)
+     */
+    public function bulkForceDelete(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer',
+        ]);
+
+        $ids = $request->input('ids', []);
+        $deletedCount = 0;
+
+        $variants = BienTheSanPham::onlyTrashed()->with('units')->whereIn('id', $ids)->get();
+
+        foreach ($variants as $variant) {
+            // Xóa ảnh đơn vị quy đổi
+            foreach ($variant->units as $unit) {
+                if ($unit->hinh_anh && !str_starts_with($unit->hinh_anh, 'http')) {
+                    $fullPath = public_path($unit->hinh_anh);
+                    if (is_file($fullPath)) {
+                        unlink($fullPath);
+                    }
+                }
+                $unit->forceDelete();
+            }
+
+            // Xóa ảnh biến thể
+            if ($variant->hinh_anh && !str_starts_with($variant->hinh_anh, 'http')) {
+                $fullPath = public_path($variant->hinh_anh);
+                if (is_file($fullPath)) {
+                    unlink($fullPath);
+                }
+            }
+
+            $variant->forceDelete();
+            $deletedCount++;
+        }
+
+        return redirect()->route('san-pham.trash')
+            ->with('success', "Đã xóa vĩnh viễn {$deletedCount} biến thể.");
+    }
+
     public function show($id)
     {
         $product = Product::with(['variants.units', 'danhMuc'])->findOrFail($id);
@@ -628,15 +814,119 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Tạo đơn vị tính mới vào DB nếu chưa tồn tại.
-     * Được gọi khi người dùng gõ đơn vị không có trong danh sách.
+     * ============================================================
+     * YÊU CẦU 1: KIỂM TRA TRÙNG LẶP BIẾN THỂ (BACKEND LARAVEL)
+     * ============================================================
+     * Logic:
+     * 1. Trích xuất "chữ ký thuộc tính" (Attribute Signature) từ mỗi biến thể
+     *    - Ghép các ID thuộc tính lại thành chuỗi đã sort (VD: "1,2,3")
+     * 2. Kiểm tra độ trùng lặp trong chính payload gửi lên
+     * 3. Kiểm tra trùng lặp với Database (nếu có productId)
+     *
+     * @param array $variants Mảng biến thể từ request
+     * @param string $mode 'create' | 'update'
+     * @param int|null $productId ID sản phẩm (chỉ dùng trong mode update)
+     * @throws ValidationException Nếu phát hiện trùng lặp
      */
-    protected function ensureDonViSanPham(string $tenDonVi): \App\Models\DonViSanPham
+    protected function checkVariantDuplicatesInPayload(array $variants, string $mode = 'create', ?int $productId = null): void
     {
-        return DonViSanPham::firstOrCreate(
-            ['ten_don_vi' => $tenDonVi],
-            ['trang_thai' => true, 'so_luong_san_pham_trong_don_vi' => 1]
-        );
+        if (empty($variants)) {
+            return;
+        }
+
+        // Bước 1: Trích xuất Attribute Signature từ mỗi biến thể
+        // Signature = chuỗi các thuộc tính đã sort (VD: "1,2,3" cho Size=1, Color=2, Material=3)
+        $signatures = [];
+        $variantIndices = []; // Lưu chỉ số dòng để thông báo lỗi
+
+        foreach ($variants as $idx => $variant) {
+            $rawIds = $variant['thuoc_tinh_ids'] ?? null;
+
+            if (blank($rawIds)) {
+                // Biến thể không có thuộc tính = signature rỗng
+                $signature = '';
+            } else {
+                // Parse và sort các ID để đảm bảo "Size M - Color Đỏ" = "Color Đỏ - Size M"
+                $ids = is_array($rawIds) ? $rawIds : explode(',', $rawIds);
+                $ids = array_map('intval', array_filter(array_map('trim', $ids)));
+                sort($ids, SORT_NUMERIC);
+                $signature = implode(',', $ids);
+            }
+
+            $signatures[] = $signature;
+            $variantIndices[] = $idx + 1; // 1-indexed cho human-readable
+        }
+
+        // Bước 2: Kiểm tra trùng lặp TRONG payload gửi lên
+        $uniqueSignatures = array_unique($signatures);
+
+        if (count($uniqueSignatures) < count($signatures)) {
+            // Có trùng lặp! Tìm các dòng bị trùng
+            $seen = [];
+            $duplicates = [];
+
+            foreach ($signatures as $idx => $sig) {
+                if ($sig === '') {
+                    // Bỏ qua signature rỗng (biến thể không có thuộc tính)
+                    continue;
+                }
+                if (isset($seen[$sig])) {
+                    $duplicates[] = "Dòng {$variantIndices[$idx]}";
+                } else {
+                    $seen[$sig] = true;
+                }
+            }
+
+            if (!empty($duplicates)) {
+                $dupList = implode(', ', $duplicates);
+                throw ValidationException::withMessages([
+                    'variants' => ["Cảnh báo: Có biến thể bị trùng lặp thuộc tính tại {$dupList}. Vui lòng kiểm tra lại!"]
+                ]);
+            }
+        }
+
+        // Bước 3: Kiểm tra trùng lặp với DATABASE (nâng cao)
+        // Chỉ kiểm tra khi có productId (mode update)
+        if ($productId !== null) {
+            foreach ($signatures as $sig) {
+                if ($sig === '') continue; // Bỏ qua biến thể không có thuộc tính
+
+                // Tách signature thành mảng IDs để query
+                $attrIds = explode(',', $sig);
+
+                // Tìm biến thể có cùng bộ thuộc tính trong DB
+                // Cần kiểm tra: số lượng thuộc tính bằng nhau VÀ tất cả ID đều tồn tại
+                $existingVariant = BienTheSanPham::where('product_id', $productId)
+                    ->whereNotNull('thuoc_tinh_ids')
+                    ->get()
+                    ->first(function ($variant) use ($attrIds) {
+                        $dbIds = array_filter(array_map('intval', explode(',', $variant->thuoc_tinh_ids)));
+                        sort($dbIds);
+                        return $dbIds === $attrIds;
+                    });
+
+                if ($existingVariant) {
+                    // Tìm dòng trong payload có signature trùng
+                    $dupVariantIdx = null;
+                    foreach ($variants as $idx => $v) {
+                        $rawIds = $v['thuoc_tinh_ids'] ?? null;
+                        if (!blank($rawIds)) {
+                            $ids = array_map('intval', array_filter(array_map('trim', is_array($rawIds) ? $rawIds : explode(',', $rawIds))));
+                            sort($ids);
+                            if ($ids === $attrIds) {
+                                $dupVariantIdx = $idx + 1;
+                                break;
+                            }
+                        }
+                    }
+
+                    $msg = "Dòng {$dupVariantIdx}: Bộ thuộc tính này đã tồn tại trong sản phẩm (ID: {$existingVariant->id}). Vui lòng chọn bộ thuộc tính khác!";
+                    throw ValidationException::withMessages([
+                        'variants' => [$msg]
+                    ]);
+                }
+            }
+        }
     }
 
     /**
@@ -707,9 +997,19 @@ class SanPhamController extends Controller
     /**
      * Đồng bộ đơn vị quy đổi cho một variant (update).
      * Chỉ lưu đơn vị có tỷ lệ > 1. Đơn vị cơ bản (ty_le = 1) KHÔNG được lưu vào bảng don_vi_quy_doi.
+     * Dùng product_id để có thể tái sử dụng cho tất cả variant cùng sản phẩm.
+     *
+     * Logic xóa an toàn: chỉ xóa các unit thuộc về variant hiện tại (variant_id = $variantId).
+     * KHÔNG xóa các unit được share từ variant khác (variant_id khác).
      */
-    protected function syncUnits(int $variantId, array $units, ?string $image = null): void
+    protected function syncUnits(int $variantId, array $units, ?string $image = null, ?int $productId = null): void
     {
+        // Neu khong co productId, lay tu variant hien tai
+        if ($productId === null) {
+            $variant = BienTheSanPham::find($variantId);
+            $productId = $variant?->product_id;
+        }
+
         // Neu khong co image upload, lay tu variant hien tai
         $variantImage = $image;
         if ($variantImage === null) {
@@ -719,8 +1019,12 @@ class SanPhamController extends Controller
             }
         }
 
+        // Query các unit thuộc VỀ variant hiện tại (không bao gồm unit được share từ variant khác)
+        $existingIds = DonViQuyDoi::where('variant_id', $variantId)
+            ->pluck('id')->toArray();
+
         if (empty($units)) {
-            // Xóa hết units cũ
+            // Xóa các unit thuộc về variant hiện tại (KHÔNG động đến unit được share)
             $oldUnits = DonViQuyDoi::where('variant_id', $variantId)->get();
             foreach ($oldUnits as $u) {
                 if ($u->hinh_anh && !str_starts_with($u->hinh_anh, 'http')) {
@@ -732,11 +1036,10 @@ class SanPhamController extends Controller
         }
 
         $incomingIds = [];
-        $existingIds = DonViQuyDoi::where('variant_id', $variantId)->pluck('id')->toArray();
 
         foreach ($units as $unit) {
             // Bỏ qua đơn vị cơ bản (tỷ lệ = 1) — nó đã nằm trong bien_the_san_pham rồi
-            if ((int)($unit['ty_le_quy_doi'] ?? 1) <= 1) {
+            if ((int)($unit['so_luong_san_pham_trong_don_vi'] ?? 1) <= 1) {
                 continue;
             }
 
@@ -747,8 +1050,9 @@ class SanPhamController extends Controller
                 $existingUnit = DonViQuyDoi::find($unitId);
                 if ($existingUnit) {
                     $existingUnit->update([
+                        'don_vi_chuan_id' => $unit['don_vi_chuan_id'] ?? null,
                         'ten_don_vi' => $unit['ten_don_vi'],
-                        'ty_le_quy_doi' => (int)($unit['ty_le_quy_doi'] ?? 1),
+                        'so_luong_san_pham_trong_don_vi' => (int)($unit['so_luong_san_pham_trong_don_vi'] ?? 1),
                         'ma_hang' => $unit['ma_hang'] ?? null,
                         'ma_vach' => $unit['ma_vach'] ?? null,
                         'gia_von_quy_doi' => $unit['gia_von_quy_doi'] ?? 0,
@@ -763,8 +1067,10 @@ class SanPhamController extends Controller
                 // Tạo mới — thừa hưởng ảnh từ variant
                 $newUnit = DonViQuyDoi::create([
                     'variant_id' => $variantId,
+                    'product_id' => $productId,
+                    'don_vi_chuan_id' => $unit['don_vi_chuan_id'] ?? null,
                     'ten_don_vi' => $unit['ten_don_vi'],
-                    'ty_le_quy_doi' => (int)($unit['ty_le_quy_doi'] ?? 1),
+                    'so_luong_san_pham_trong_don_vi' => (int)($unit['so_luong_san_pham_trong_don_vi'] ?? 1),
                     'ma_hang' => $unit['ma_hang'] ?? $this->generateUniqueMaHang(),
                     'ma_vach' => $unit['ma_vach'] ?? null,
                     'gia_von_quy_doi' => $unit['gia_von_quy_doi'] ?? 0,
@@ -777,7 +1083,8 @@ class SanPhamController extends Controller
             }
         }
 
-        // Xóa các đơn vị cũ không còn trong payload
+        // Xóa các đơn vị cũ KHÔNG còn trong payload VÀ thuộc về variant hiện tại
+        // (KHÔNG xóa các unit được share từ variant khác)
         $toDelete = array_diff($existingIds, $incomingIds);
         if (!empty($toDelete)) {
             $oldUnits = DonViQuyDoi::where('variant_id', $variantId)->whereIn('id', $toDelete)->get();

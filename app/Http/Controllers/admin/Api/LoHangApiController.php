@@ -191,7 +191,7 @@ class LoHangApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Thiếu variant_id hoặc id_san_pham.'], 400);
         }
 
-        $query = ChiTietLoHang::with('loHang.nhaCungCap', 'variant');
+        $query = ChiTietLoHang::with('loHang.nhaCungCap', 'variant.units.donViChuan');
 
         if ($variantId) {
             $query->where('variant_id', $variantId);
@@ -202,11 +202,28 @@ class LoHangApiController extends Controller
         $tonKho = $query->orderBy('han_su_dung', 'asc')->get();
         $tongTon = $tonKho->sum('so_luong_ton');
 
+        // Lay thong tin don vi quy doi cua variant
+        $variantUnits = [];
+        if ($variantId) {
+            $variant = BienTheSanPham::with('units.donViChuan')->find($variantId);
+            if ($variant) {
+                $variantUnits = $variant->units->map(fn($u) => [
+                    'id' => $u->id,
+                    'ten_don_vi' => $u->ten_don_vi,
+                    'so_luong' => $u->so_luong_san_pham_trong_don_vi,
+                    'don_vi_chuan_id' => $u->don_vi_chuan_id,
+                    'ten_don_vi_chuan' => $u->donViChuan?->ten_hien_thi,
+                    'so_luong_chuan' => $u->donViChuan?->so_luong_san_pham_trong_don_vi,
+                ])->values()->all();
+            }
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
                 'tong_ton' => $tongTon,
                 'chi_tiet' => $tonKho->toArray(),
+                'variant_units' => $variantUnits,
             ],
         ]);
     }
