@@ -965,43 +965,43 @@ body {
 
     <!-- Sidebar -->
     <nav class="pos-sidebar">
-        @if (auth()->user()->id_vai_tro == 1)
+        @if (auth()->user()->id_vai_tro == 1 || auth()->user()->id_vai_tro == 2)
             <a href="{{ url('/admin/dashboard') }}" class="nav-btn" title="Dashboard">
                 <i class="bi bi-arrow-left-circle"></i>
                 <span>Quản trị</span>
             </a>
+        @else
+            <a href="{{ url('/') }}" class="nav-btn" title="Dashboard">
+                <i class="bi bi-arrow-left-circle"></i>
+                <span>Home</span>
+            </a>
         @endif
-        
-        <a href="{{ url('nhan-vien/') }}" class="nav-btn" title="Dashboard">
-            <i class="fas fa-home"></i>
-            <span>Home</span>
-        </a>
+
+        @if (auth()->user()->id_vai_tro == 3 || auth()->user()->id_vai_tro == 4)
+            <a href="{{ url('/trang-chu') }}" class="nav-btn" title="trang chủ">
+                <i class="fas fa-user-tie"></i>
+                <span>NV</span>
+            </a>
+        @endif
+
         <div class="nav-divider"></div>
         <button class="nav-btn active" title="Bán hàng" onclick="switchCategory('all')">
             <i class="fas fa-shopping-cart"></i>
             <span>Bán</span>
         </button>
-        <button class="nav-btn" title="Hóa đơn" onclick="window.location='{{ url('nhan-vien/hoa-don') }}'">
+        <button class="nav-btn" title="Hóa đơn" onclick="window.location='{{ url('/hoa-don') }}'">
             <i class="fas fa-file-invoice"></i>
             <span>HD</span>
         </button>
-        <button class="nav-btn" title="Sản phẩm" onclick="window.location='{{ url('nhan-vien/san-pham') }}'">
+        <button class="nav-btn" title="Sản phẩm" onclick="window.location='{{ url('/san-pham') }}'">
             <i class="fas fa-box"></i>
             <span>SP</span>
         </button>
-        <button class="nav-btn" title="Khách hàng" onclick="window.location='{{ url('nhan-vien/khach-hang') }}'">
+        <button class="nav-btn" title="Khách hàng" onclick="window.location='{{ url('/khach-hang') }}'">
             <i class="fas fa-users"></i>
             <span>KH</span>
         </button>
         <div class="nav-divider"></div>
-        <button class="nav-btn" title="Lịch làm việc" onclick="window.location='{{ url('nhan-vien/lich-lam-viec') }}'">
-            <i class="fas fa-calendar"></i>
-            <span>Lịch</span>
-        </button>
-        <button class="nav-btn" title="Hồ sơ" onclick="window.location='{{ url('nhan-vien/ho-so') }}'">
-            <i class="fas fa-user"></i>
-            <span>Hồ sơ</span>
-        </button>
     </nav>
 
     <!-- Product Panel -->

@@ -1,4 +1,4 @@
-@extends('nhan_vien_view.layouts.nhan_vien')
+@extends('ban_hang.layouts.ban_hang')
 
 @section('title', 'Dashboard - Nhân viên')
 

@@ -254,7 +254,7 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('/nhan-vien/ban-hang') }}" class="nav-link">
+                <a href="{{ url('/ban-hang') }}" class="nav-link">
                     <i class="fas fa-cash-register"></i>
                     <span>Bán hàng</span>
                 </a>
@@ -395,6 +395,13 @@
                             <a href="{{ route('nguoi-dung.phan-quyen', ['id_vai_tro' => 2]) }}"
                             class="nav-link {{ request()->is('nguoi-dung/phan-quyen/2') ? 'active' : '' }}">
                                 Trưởng ca
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a href="{{ route('nguoi-dung.phan-quyen', ['id_vai_tro' => 4]) }}"
+                            class="nav-link {{ request()->is('nguoi-dung/phan-quyen/4') ? 'active' : '' }}">
+                                Bán hàng
                             </a>
                         </li>
 

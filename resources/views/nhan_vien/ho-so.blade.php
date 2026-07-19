@@ -1,6 +1,8 @@
-@extends('nhan_vien_view.layouts.nhan_vien')
+@extends('nhan_vien.layouts.nhan_vien')
 
 @section('title', 'Hồ sơ cá nhân')
+
+@section('content')
 
 @php
     $nguoiDung = $nguoiDung ?? auth()->user();

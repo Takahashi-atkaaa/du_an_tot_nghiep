@@ -16,10 +16,14 @@ class KTVaiTro
 
         $user = auth()->user();
 
+        if($user->trang_thai == 2){
+            return redirect('/admin/login')
+                ->with('error', 'Tài khoản của bạn đã bị khóa!'); // Gui thong bao loi
+        }
+
         if ($user->id_vai_tro === 1) {
             return $next($request);
         }
-
 
         if (!$permission) {
             return $next($request);

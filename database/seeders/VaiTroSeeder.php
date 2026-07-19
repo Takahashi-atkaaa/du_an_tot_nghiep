@@ -29,6 +29,11 @@ class VaiTroSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'ten_vai_tro' => 'Bán hàng',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
     }
 }
