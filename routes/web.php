@@ -381,8 +381,8 @@ Route::get('/admin/cai-dat', function () {
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // Routes nhân viên
-        Route::get('/', [NhanVienController::class, 'index'])->name('nhan-vien.dashboard')->middleware('permission:ban_hang');
+        // Routes bán hàng
+        Route::get('/dashboard', [NhanVienController::class, 'index'])->name('nhan-vien.dashboard')->middleware('permission:ban_hang');
         Route::get('/ban-hang', [NhanVienController::class, 'banHang'])->name('nhan-vien.ban-hang')->middleware('permission:ban_hang');
         Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don')->middleware('permission:ban_hang');
         Route::get('/san-pham', [NhanVienController::class, 'sanPham'])->name('nhan-vien.san-pham')->middleware('permission:ban_hang');

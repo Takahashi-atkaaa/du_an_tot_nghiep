@@ -181,12 +181,12 @@
         <ul class="nav flex-column mt-3">
 
             <li class="nav-item">
-                <a href="{{ url('/') }}" class="nav-link {{ request()->is('nhan-vien') || request()->is('nhan-vien/') ? 'active' : '' }}">
+                <a href="{{ url('/dashboard') }}" class="nav-link {{ request()->is('nhan-vien') || request()->is('nhan-vien/') ? 'active' : '' }}">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
-            
+
             @if (auth()->user()->id_vai_tro == 1 || auth()->user()->id_vai_tro == 2)
                 <li class="nav-item">
                     <a href="{{ url('/admin/dashboard') }}" class="nav-link {{ request()->is('nhan-vien/hoa-don*') ? 'active' : '' }}">
