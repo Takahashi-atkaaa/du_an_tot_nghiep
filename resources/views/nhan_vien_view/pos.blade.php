@@ -842,9 +842,24 @@ body {
     <div class="pos-user">
         <div class="user-avatar">NV</div>
         <div class="user-info">
-            <strong>Nhân Viên Test</strong>
-            <small>Nhân viên bán hàng</small>
-        </div>
+    <strong>
+        {{ auth()->user()->ho_ten ?? 'Nhân viên' }}
+    </strong>
+
+    <small>
+        @if(isset($caHienTai))
+            {{ $caHienTai->ten_ca }}
+
+            (
+            {{ \Carbon\Carbon::parse($caHienTai->gio_bat_dau)->format('H:i') }}
+            -
+            {{ \Carbon\Carbon::parse($caHienTai->gio_ket_thuc)->format('H:i') }}
+            )
+        @else
+            Chưa xác định ca
+        @endif
+    </small>
+</div>
         <a href="{{ url('nhan-vien/') }}" class="btn-exit">
             <i class="fas fa-sign-out-alt"></i> Thoát
         </a>

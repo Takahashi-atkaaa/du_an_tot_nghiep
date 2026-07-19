@@ -32,6 +32,25 @@
                 <p><strong>Ngày tạo:</strong> {{ \Carbon\Carbon::parse($hoaDon->created_at)->format('d/m/Y H:i') }}</p>
                 <p><strong>Nhân viên:</strong> {{ $hoaDon->ten_nhan_vien ?? 'Nhân viên' }}</p>
             </div>
+            <div class="mt-2">
+    <strong>Ca làm việc:</strong>
+
+    @if($hoaDon->ten_ca)
+        {{ $hoaDon->ten_ca }}
+
+        <span class="text-muted">
+            (
+            {{ \Carbon\Carbon::parse($hoaDon->gio_bat_dau)->format('H:i') }}
+            -
+            {{ \Carbon\Carbon::parse($hoaDon->gio_ket_thuc)->format('H:i') }}
+            )
+        </span>
+    @else
+        <span class="text-muted">
+            Chưa xác định
+        </span>
+    @endif
+</div>
             <div class="col-md-6">
                <p>
                 <strong>Khách hàng:</strong>

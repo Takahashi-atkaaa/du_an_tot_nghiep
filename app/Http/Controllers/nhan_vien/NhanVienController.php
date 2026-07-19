@@ -23,10 +23,110 @@ class NhanVienController extends Controller
         return view('nhan_vien_view.dashboard');
     }
 
-    public function banHang()
-    {
-        return view('nhan_vien_view.pos');
+    public function banHang(Request $request)
+{
+    $nguoiDung = auth()->user();
+
+    if (!$nguoiDung) {
+        return redirect()
+            ->route('admin.login')
+            ->with('error', 'Vui lòng đăng nhập.');
     }
+
+    /*
+     * Lấy phân ca của hôm nay và hôm qua.
+     *
+     * Phải lấy cả hôm qua để xử lý ca TO1:
+     * 19:00 hôm trước đến 01:00 hôm sau.
+     */
+    $phanCas = DB::table('chia_ca_lam_viec')
+        ->join(
+            'ca_lam_viec',
+            'chia_ca_lam_viec.id_ca_lam_viec',
+            '=',
+            'ca_lam_viec.id'
+        )
+        ->where(
+            'chia_ca_lam_viec.id_nguoi_dung',
+            $nguoiDung->id
+        )
+        ->whereNull('chia_ca_lam_viec.deleted_at')
+        ->whereNull('ca_lam_viec.deleted_at')
+        ->whereIn('chia_ca_lam_viec.ngay', [
+            now()->toDateString(),
+            now()->subDay()->toDateString(),
+        ])
+        ->select(
+            'chia_ca_lam_viec.id as id_chia_ca',
+            'chia_ca_lam_viec.id_ca_lam_viec',
+            'chia_ca_lam_viec.id_nguoi_dung',
+            'chia_ca_lam_viec.ngay',
+            'chia_ca_lam_viec.vai_tro_trong_ca',
+            'ca_lam_viec.ten_ca',
+            'ca_lam_viec.gio_bat_dau',
+            'ca_lam_viec.gio_ket_thuc'
+        )
+        ->get();
+
+    $thoiGianHienTai = now();
+
+    /*
+     * Tìm ca có khoảng thời gian chứa thời điểm hiện tại.
+     */
+    $caHienTai = $phanCas->first(function ($phanCa) use ($thoiGianHienTai) {
+        $batDau = Carbon::parse(
+            $phanCa->ngay . ' ' . $phanCa->gio_bat_dau
+        );
+
+        $ketThuc = Carbon::parse(
+            $phanCa->ngay . ' ' . $phanCa->gio_ket_thuc
+        );
+
+        /*
+         * Nếu giờ kết thúc nhỏ hơn hoặc bằng giờ bắt đầu
+         * thì đây là ca qua đêm.
+         *
+         * Ví dụ TO1: 19:00 đến 01:00.
+         */
+        if ($ketThuc->lessThanOrEqualTo($batDau)) {
+            $ketThuc->addDay();
+        }
+
+        return $thoiGianHienTai->betweenIncluded(
+            $batDau,
+            $ketThuc
+        );
+    });
+
+    if (!$caHienTai) {
+        session()->forget([
+            'id_ca_lam_viec',
+            'id_chia_ca_lam_viec',
+            'ten_ca_lam_viec',
+        ]);
+
+        return redirect()
+            ->route('nhan-vien.cham-cong')
+            ->with(
+                'error',
+                'Bạn chưa được phân ca hoặc hiện không nằm trong giờ làm việc.'
+            );
+    }
+
+    /*
+     * Lưu thông tin ca hiện tại vào session.
+     */
+    session([
+        'id_ca_lam_viec' => $caHienTai->id_ca_lam_viec,
+        'id_chia_ca_lam_viec' => $caHienTai->id_chia_ca,
+        'ten_ca_lam_viec' => $caHienTai->ten_ca,
+    ]);
+
+    return view(
+        'nhan_vien_view.pos',
+        compact('caHienTai')
+    );
+}
 
    public function hoaDon(Request $request)
 {
@@ -35,11 +135,13 @@ class NhanVienController extends Controller
         ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
         ->leftJoin('ca_lam_viec', 'hoa_don.id_ca_lam_viec', '=', 'ca_lam_viec.id')
         ->select(
-            'hoa_don.*',
-            'khach_hang.ten_khach_hang',
-            'nguoi_dung.ho_ten as ten_nhan_vien',
-            'ca_lam_viec.ten_ca'
-        )
+    'hoa_don.*',
+    'khach_hang.ten_khach_hang',
+    'nguoi_dung.ho_ten as ten_nhan_vien',
+    'ca_lam_viec.ten_ca',
+    'ca_lam_viec.gio_bat_dau',
+    'ca_lam_viec.gio_ket_thuc'
+)
         ->orderByDesc('hoa_don.id');
 
     if ($request->filled('q')) {
@@ -402,8 +504,81 @@ public function thanhToan(Request $request)
         'id_khuyen_mai' => 'nullable|integer|exists:khuyen_mai,id',
         'diem_su_dung' => 'nullable|integer|min:0',
     ]);
+    $idCaLamViec = session('id_ca_lam_viec');
+$idChiaCa = session('id_chia_ca_lam_viec');
 
-    return DB::transaction(function () use ($request) {
+if (!$idCaLamViec || !$idChiaCa) {
+    return response()->json([
+        'success' => false,
+        'message' => 'Không xác định được ca làm việc. Vui lòng vào lại trang bán hàng.'
+    ], 422);
+}
+$phanCa = DB::table('chia_ca_lam_viec')
+    ->join(
+        'ca_lam_viec',
+        'chia_ca_lam_viec.id_ca_lam_viec',
+        '=',
+        'ca_lam_viec.id'
+    )
+    ->where('chia_ca_lam_viec.id', $idChiaCa)
+    ->where(
+        'chia_ca_lam_viec.id_nguoi_dung',
+        auth()->id()
+    )
+    ->where(
+        'chia_ca_lam_viec.id_ca_lam_viec',
+        $idCaLamViec
+    )
+    ->whereNull('chia_ca_lam_viec.deleted_at')
+    ->whereNull('ca_lam_viec.deleted_at')
+    ->select(
+        'chia_ca_lam_viec.*',
+        'ca_lam_viec.ten_ca',
+        'ca_lam_viec.gio_bat_dau',
+        'ca_lam_viec.gio_ket_thuc'
+    )
+    ->first();
+
+if (!$phanCa) {
+    session()->forget([
+        'id_ca_lam_viec',
+        'id_chia_ca_lam_viec',
+        'ten_ca_lam_viec',
+    ]);
+
+    return response()->json([
+        'success' => false,
+        'message' => 'Ca làm việc không hợp lệ.'
+    ], 422);
+}
+$batDauCa = Carbon::parse(
+    $phanCa->ngay . ' ' . $phanCa->gio_bat_dau
+);
+
+$ketThucCa = Carbon::parse(
+    $phanCa->ngay . ' ' . $phanCa->gio_ket_thuc
+);
+
+if ($ketThucCa->lessThanOrEqualTo($batDauCa)) {
+    $ketThucCa->addDay();
+}
+
+if (!now()->betweenIncluded($batDauCa, $ketThucCa)) {
+    session()->forget([
+        'id_ca_lam_viec',
+        'id_chia_ca_lam_viec',
+        'ten_ca_lam_viec',
+    ]);
+
+    return response()->json([
+        'success' => false,
+        'message' => 'Ca làm việc đã kết thúc. Không thể tạo hóa đơn.'
+    ], 422);
+}
+
+    return DB::transaction(function () use (
+    $request,
+    $idCaLamViec) {
         $tongTienHang = 0;
         $items = [];
 
@@ -539,7 +714,7 @@ public function thanhToan(Request $request)
         $hoaDonId = DB::table('hoa_don')->insertGetId([
             'id_nguoi_dung' => auth()->user()->id,
             'id_khach_hang' => $request->id_khach_hang,
-            'id_ca_lam_viec' => session('id_ca_lam_viec') ?? null,
+            'id_ca_lam_viec' => $idCaLamViec,
             'id_khuyen_mai' => $request->id_khuyen_mai,
             'tong_tien_hang' => $tongTienHang,
             'tien_giam_gia' => $tienGiamGia,
@@ -617,11 +792,20 @@ public function chiTietHoaDon($id)
     $hoaDon = DB::table('hoa_don')
         ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
         ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
+        ->leftJoin(
+    'ca_lam_viec',
+    'hoa_don.id_ca_lam_viec',
+    '=',
+    'ca_lam_viec.id'
+)
         ->select(
-            'hoa_don.*',
-            'khach_hang.ten_khach_hang',
-            'nguoi_dung.ho_ten as ten_nhan_vien'
-        )
+    'hoa_don.*',
+    'khach_hang.ten_khach_hang',
+    'nguoi_dung.ho_ten as ten_nhan_vien',
+    'ca_lam_viec.ten_ca',
+    'ca_lam_viec.gio_bat_dau',
+    'ca_lam_viec.gio_ket_thuc'
+)
         ->where('hoa_don.id', $id)
         ->first();
 
