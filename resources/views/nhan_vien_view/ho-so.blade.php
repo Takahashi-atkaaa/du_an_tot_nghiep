@@ -2,10 +2,32 @@
 
 @section('title', 'Hồ sơ cá nhân')
 
+@php
+    $nguoiDung = $nguoiDung ?? auth()->user();
+    $nguoiDung->loadMissing('vaiTro');
+    $tenVaiTro = optional($nguoiDung->vaiTro)->ten_vai_tro ?? 'N/A';
+    $vietTat = strtoupper(mb_substr($nguoiDung->ho_ten ?? 'NV', 0, 2));
+    $gioiTinhHienTai = $nguoiDung->gioi_tinh ?? null;
+@endphp
+
 @section('content')
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Hồ sơ cá nhân</h1>
 </div>
+
+@if (session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+@endif
+
+@if ($errors->any())
+    <div class="alert alert-danger">
+        <ul class="mb-0">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
 
 <div class="row">
     {{-- Thông tin cá nhân --}}
@@ -14,82 +36,64 @@
             <div class="card-body text-center py-5">
                 <div class="mb-3">
                     <div style="width:120px;height:120px;margin:0 auto;background:#2e7d32;border-radius:50%;display:flex;align-items:center;justify-content:center;">
-                        <span style="font-size:48px;color:#fff;font-weight:bold;">NV</span>
+                        <span style="font-size:48px;color:#fff;font-weight:bold;">{{ $vietTat }}</span>
                     </div>
                 </div>
-                <h4>Nhân Viên Test</h4>
-                <p class="text-muted mb-1">Nhân viên bán hàng</p>
-                <span class="status-badge status-success">Đang hoạt động</span>
+                <h4>{{ $nguoiDung->ho_ten }}</h4>
+                <p class="text-muted mb-1">{{ $tenVaiTro }}</p>
+                @if ($nguoiDung->trang_thai == 1)
+                    <span class="status-badge status-success">Đang hoạt động</span>
+                @else
+                    <span class="status-badge status-danger">Không hoạt động</span>
+                @endif
                 <hr>
                 <div class="text-start">
-                    <p class="mb-2"><i class="fas fa-calendar me-2 text-success"></i>Ngày vào làm: 01/01/2024</p>
-                    <p class="mb-2"><i class="fas fa-phone me-2 text-success"></i>0901234567</p>
-                    <p class="mb-0"><i class="fas fa-envelope me-2 text-success"></i>nvtest@smartmart.com</p>
+                    <p class="mb-2"><i class="fas fa-phone me-2 text-success"></i>{{ $nguoiDung->sdt }}</p>
+                    <p class="mb-0"><i class="fas fa-envelope me-2 text-success"></i>{{ $nguoiDung->email }}</p>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Form chỉnh sửa --}}
+    {{-- Form đổi mật khẩu --}}
     <div class="col-md-8">
         <div class="card">
             <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="fas fa-user-edit me-2 text-success"></i>Chỉnh sửa thông tin</h5>
+                <h5 class="mb-0"><i class="fas fa-key me-2 text-success"></i>Đổi mật khẩu</h5>
             </div>
             <div class="card-body">
-                <form>
+                <form action="{{ route('nhan-vien.ho-so.doi-mat-khau') }}" method="POST">
+                    @csrf
                     <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Họ và tên</label>
-                            <input type="text" class="form-control" value="Nhân Viên Test">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Ngày sinh</label>
-                            <input type="date" class="form-control" value="1998-05-15">
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Số điện thoại</label>
-                            <input type="tel" class="form-control" value="0901234567">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Email</label>
-                            <input type="email" class="form-control" value="nvtest@smartmart.com">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Địa chỉ</label>
-                        <textarea class="form-control" rows="2">123 Đường Test, Phường 1, Quận 1, TP.HCM</textarea>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Giới tính</label>
-                            <select class="form-select">
-                                <option selected>Nam</option>
-                                <option>Nữ</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Vai trò</label>
-                            <input type="text" class="form-control" value="Nhân viên bán hàng" disabled>
-                            <small class="text-muted">Liên hệ quản lý để thay đổi vai trò</small>
+                        <div class="col-md-12">
+                            <p class="mb-1"><strong>Họ và tên:</strong> {{ $nguoiDung->ho_ten }}</p>
+                            <p class="mb-1"><strong>Số điện thoại:</strong> {{ $nguoiDung->sdt }}</p>
+                            <p class="mb-1"><strong>Email:</strong> {{ $nguoiDung->email }}</p>
+                            <p class="mb-1"><strong>Vai trò:</strong> {{ $tenVaiTro }}</p>
                         </div>
                     </div>
                     <hr>
-                    <h6 class="mb-3">Đổi mật khẩu</h6>
                     <div class="mb-3">
                         <label class="form-label">Mật khẩu hiện tại</label>
-                        <input type="password" class="form-control" placeholder="Nhập mật khẩu hiện tại">
+                        <input type="password" name="mat_khau_cu" class="form-control @error('mat_khau_cu') is-invalid @enderror" placeholder="Nhập mật khẩu hiện tại" required>
+                        @error('mat_khau_cu')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Mật khẩu mới</label>
-                            <input type="password" class="form-control" placeholder="Mật khẩu mới">
+                            <input type="password" name="mat_khau_moi" class="form-control @error('mat_khau_moi') is-invalid @enderror" placeholder="Mật khẩu mới" required minlength="6">
+                            @error('mat_khau_moi')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Xác nhận mật khẩu mới</label>
-                            <input type="password" class="form-control" placeholder="Xác nhận mật khẩu mới">
+                            <input type="password" name="xac_nhan_mat_khau_moi" class="form-control @error('xac_nhan_mat_khau_moi') is-invalid @enderror" placeholder="Xác nhận mật khẩu mới" required minlength="6">
+                            @error('xac_nhan_mat_khau_moi')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
                     <div class="text-end">

@@ -413,7 +413,7 @@ Route::post('/admin/hoa-don/{id}/tra-hang', [HoaDonController::class, 'xuLyTraHa
 
 
 // Routes nhân viên (Preview)
-Route::middleware([VaiTroBanHang::class, 'vai_tro:Nhân viên,Trưởng ca'])->prefix('nhan-vien')->group(function () {
+Route::middleware([VaiTroBanHang::class, 'vai_tro:Nhân viên,Trưởng ca,Admin'])->prefix('nhan-vien')->group(function () {
     Route::get('/', [NhanVienController::class, 'index'])->name('nhan-vien.dashboard');
     Route::get('/ban-hang', [NhanVienController::class, 'banHang'])->name('nhan-vien.ban-hang');
     Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don');
@@ -453,4 +453,5 @@ Route::middleware([VaiTroBanHang::class, 'vai_tro:Nhân viên,Trưởng ca'])->p
     Route::post('/diem-danh/vao-ca', [NhanVienDiemDanhController::class, 'vaoCa'])->name('nhan-vien.diem-danh.vao-ca');
     Route::post('/diem-danh/ket-thuc-ca', [NhanVienDiemDanhController::class, 'ketThucCa'])->name('nhan-vien.diem-danh.ket-thuc-ca');
     Route::get('/ho-so', [NhanVienController::class, 'hoSo'])->name('nhan-vien.ho-so');
+    Route::post('/ho-so/doi-mat-khau', [NhanVienController::class, 'doiMatKhau'])->name('nhan-vien.ho-so.doi-mat-khau');
 });
