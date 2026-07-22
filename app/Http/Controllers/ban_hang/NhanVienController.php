@@ -246,20 +246,36 @@ class NhanVienController extends Controller
         });
     }
 
-    return response()->json(
-        $query->select(
-            'bien_the_san_pham.id',
-            'san_pham.id as id_san_pham',
-            'san_pham.id_danh_muc',
-            DB::raw("CONCAT(san_pham.ten_san_pham, ' - ', bien_the_san_pham.ten_bien_the) as ten_san_pham"),
-            'bien_the_san_pham.ma_vach',
-            'bien_the_san_pham.gia_ban',
-            'bien_the_san_pham.so_luong_ton as so_luong_ton_kho',
-            'bien_the_san_pham.hinh_anh'
-        )
-        ->orderByDesc('bien_the_san_pham.id')
-        ->get()
-    );
+    $products = $query->select(
+        'bien_the_san_pham.id',
+        'san_pham.id as id_san_pham',
+        'san_pham.id_danh_muc',
+        'san_pham.ten_san_pham',
+        'bien_the_san_pham.ten_bien_the',
+        'bien_the_san_pham.ma_hang',
+        'bien_the_san_pham.ma_vach',
+        'bien_the_san_pham.gia_ban',
+        'bien_the_san_pham.so_luong_ton as so_luong_ton_kho',
+        'bien_the_san_pham.hinh_anh'
+    )
+    ->orderByDesc('bien_the_san_pham.id')
+    ->get();
+
+    $products = $products->map(function ($product) {
+        $product->ten_san_pham = trim(($product->ten_san_pham ?? '') . ' ' . ($product->ten_bien_the ?? ''));
+        $product->ten_san_pham = preg_replace('/\s+/', ' ', $product->ten_san_pham);
+        $product->ten_san_pham = trim($product->ten_san_pham);
+
+        $product->ma_hang = $product->ma_hang ?? null;
+        $product->ma_vach = $product->ma_vach ?? null;
+        $product->gia_ban = (float) ($product->gia_ban ?? 0);
+        $product->so_luong_ton_kho = (int) ($product->so_luong_ton_kho ?? 0);
+        $product->hinh_anh = $product->hinh_anh ?? null;
+
+        return $product;
+    });
+
+    return response()->json($products);
 }
 public function layDanhMuc()
 {
@@ -518,12 +534,14 @@ public function chiTietHoaDon($id)
         ->where('chi_tiet_hoa_don.id_hoa_don', $id)
         ->get();
 
-    return view('nhan_vien_view.hoa-don.chi-tiet', compact('hoaDon', 'chiTiet'));
+    return view('ban_hang.hoa-don.chi-tiet', compact('hoaDon', 'chiTiet'));
 }
 
 public function inHoaDon($id)
 {
-    return $this->chiTietHoaDon($id);
+    $view = $this->chiTietHoaDon($id);
+
+    return $view->with('auto_print', request()->boolean('print'));
 }
 public function huyHoaDon($id)
 {

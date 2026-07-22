@@ -1521,11 +1521,12 @@ function renderProducts(filter = '') {
 
     if (filter) {
         const q = filter.toLowerCase();
-        filtered = filtered.filter(p =>
-            (p.ten_san_pham && p.ten_san_pham.toLowerCase().includes(q)) ||
-            (p.ma_hang && String(p.ma_hang).toLowerCase().includes(q)) ||
-            (p.ma_vach && String(p.ma_vach).toLowerCase().includes(q))
-        );
+        filtered = filtered.filter(p => {
+            const name = String(p.ten_san_pham || '').toLowerCase();
+            const code = String(p.ma_hang || '').toLowerCase();
+            const barcode = String(p.ma_vach || '').toLowerCase();
+            return name.includes(q) || code.includes(q) || barcode.includes(q);
+        });
     }
 
     if (filtered.length === 0) {
@@ -1539,7 +1540,7 @@ function renderProducts(filter = '') {
     }
 
     grid.innerHTML = filtered.map(p => {
-        const ten = p.ten_san_pham ?? 'Chưa có tên';
+        const ten = String(p.ten_san_pham || 'Chưa có tên').trim();
 
         const gia = Number(
             p.gia_ban ??
@@ -1961,10 +1962,9 @@ const response = await fetch('/nhan-vien/ban-hang/thanh-toan', {
             return;
         }
 
-        alert(
-            'Thanh toán thành công!\n' +
-            'Mã hóa đơn: #' + data.hoa_don_id + '\n' +
-            'Tổng tiền: ' + formatCurrency(total)
+        showToast(
+            'Thanh toán thành công! Mã hóa đơn #' + data.hoa_don_id + ' đang mở bản in.',
+            'success'
         );
         const hoaDonId = data.hoa_don_id;
 
@@ -1974,8 +1974,8 @@ closePaidInvoiceTab();
 // Cập nhật lại sản phẩm
 loadProducts();
 
-// Hỏi có muốn in không
-showPrintInvoiceDialog(hoaDonId);
+// Mở trang in hóa đơn ngay lập tức
+printInvoiceImmediately(hoaDonId);
     } catch (error) {
         console.error(error);
         showToast('Lỗi kết nối máy chủ!', 'error');
@@ -2306,25 +2306,13 @@ async function saveCustomerQuick() {
         showToast('Không thể thêm khách hàng', 'danger');
     }
 }
-function showPrintInvoiceDialog(hoaDonId) {
+function printInvoiceImmediately(hoaDonId) {
+    const printUrl = '/nhan-vien/hoa-don/' + hoaDonId + '/in?print=1';
+    const printWindow = window.open(printUrl, '_blank', 'noopener,noreferrer');
 
-    document.getElementById('btnPrintInvoice').onclick = function () {
-
-        window.open(
-            '/nhan-vien/hoa-don/' + hoaDonId + '/in',
-            '_blank'
-        );
-
-        bootstrap.Modal
-            .getInstance(document.getElementById('printInvoiceModal'))
-            .hide();
-
-    };
-
-    new bootstrap.Modal(
-        document.getElementById('printInvoiceModal')
-    ).show();
-
+    if (!printWindow) {
+        window.location.href = printUrl;
+    }
 }
 // ─────────────────────────────────────────────
 // Init
