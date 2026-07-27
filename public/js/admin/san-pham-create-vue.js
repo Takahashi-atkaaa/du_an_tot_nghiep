@@ -776,23 +776,26 @@
 
                 const bienThe = gridData.value.map((row, i) => {
                     const idField = row.existingId ? { id: row.existingId } : {};
+                    const isBase = row.isBase === true;
 
-                    // Dùng savedUnits (reference gốc từ initFromProduct, không bị debouncedRegen overwrite)
-                    // Lọc ra các đơn vị QUY ĐỔI (ty_le > 1) thuộc dòng này
-                    const unitsPayload = (row.savedUnits || [])
-                        .filter(u => (parseInt(u.ty_le_quy_doi) || 1) > 1)
-                        .map(u => {
-                            return {
-                                id: u.id,
-                                don_vi_chuan_id: u.don_vi_chuan_id || null,
-                                ten_don_vi: u.ten_don_vi,
-                                so_luong_san_pham_trong_don_vi: parseInt(u.ty_le_quy_doi) || 1,
-                                gia_von_quy_doi: parseFloat(u.gia_von_quy_doi) || 0,
-                                gia_ban_quy_doi: parseFloat(u.gia_ban_quy_doi) || 0,
-                                ma_hang: u.ma_hang || '',
-                                ma_vach: u.ma_vach || ''
-                            };
-                        });
+                    // Chỉ row CHA (isBase=true) mới gửi units (đơn vị quy đổi).
+                    // Row conversion (isBase=false) gửi units=[] để backend biết lưu vào don_vi_quy_doi.
+                    const unitsPayload = isBase
+                        ? (row.savedUnits || [])
+                            .filter(u => (parseInt(u.ty_le_quy_doi) || 1) > 1)
+                            .map(u => {
+                                return {
+                                    id: u.id,
+                                    don_vi_chuan_id: u.don_vi_chuan_id || null,
+                                    ten_don_vi: u.ten_don_vi,
+                                    so_luong_san_pham_trong_don_vi: parseInt(u.ty_le_quy_doi) || 1,
+                                    gia_von_quy_doi: parseFloat(u.gia_von_quy_doi) || 0,
+                                    gia_ban_quy_doi: parseFloat(u.gia_ban_quy_doi) || 0,
+                                    ma_hang: u.ma_hang || '',
+                                    ma_vach: u.ma_vach || ''
+                                };
+                            })
+                        : [];
 
                     const tenBienThe = row.tenBienThe || row.unitName;
 
@@ -813,6 +816,8 @@
                         so_luong_ton: parseInt(row.soLuong) || 0,
                         dinh_muc_toi_thieu: parseInt(row.dinhMucToiThieu) || 0,
                         thuoc_tinh_ids: Array.isArray(row.attrValueIds) ? row.attrValueIds.join(',') : (row.attrValueIds || ''),
+                        ty_le: parseInt(row.tyLe) || 1,
+                        is_base: isBase ? 1 : 0,
                         units: unitsPayload
                     });
                 });

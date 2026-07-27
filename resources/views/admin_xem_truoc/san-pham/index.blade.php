@@ -97,6 +97,18 @@
     <div id="selectedIdsContainer"></div>
 </form>
 
+{{-- ============================================================
+DROPDOWN ĐƠN VỊ QUY ĐỔI - 1 instance duy nhất, fixed position
+Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
+============================================================ --}}
+<div id="unitConversionDropdown" class="unit-conversion-popover" style="display:none;">
+    <div class="unit-popover-header">
+        <i class="fas fa-balance-scale me-1"></i>
+        <span>Đơn vị quy đổi</span>
+    </div>
+    <ul id="unitConversionList" class="unit-popover-list"></ul>
+</div>
+
 <div class="card">
     <div class="card-body p-0">
         <div class="d-flex justify-content-between align-items-center px-3 py-2 bg-light border-bottom">
@@ -119,43 +131,69 @@
 
         @if($sanPhams->count() > 0)
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover mb-0 align-middle">
                 <thead>
                     <tr>
                         <th style="width:40px;"></th>
                         <th style="width:60px;">Ảnh</th>
                         <th>Tên sản phẩm</th>
-                        <th>Danh mục</th>
-                        <th style="width:100px;">Đơn vị tính</th>
-                        <th style="width:130px;">Biến thể</th>
-                        <th style="width:110px;">Giá bán</th>
-                        <th style="width:80px;">Tồn kho</th>
-                        <th style="width:100px;">Trạng thái</th>
+                        <th style="width:130px;">Danh mục</th>
+                        <th style="width:160px;">Đơn vị</th>
+                        <th style="width:140px;">Biến thể</th>
+                        <th style="width:140px;">Giá bán</th>
+                        <th style="width:90px;">Tồn kho</th>
+                        <th style="width:110px;">Trạng thái</th>
                     </tr>
                 </thead>
                 <tbody id="productTableBody">
                     @foreach($sanPhams as $sp)
                         @php
-                            $rows = $sp->flattenedRows;
-                            $hasMoreThanOneRow = $rows->count() > 1;
-                            $firstRow = $rows->first();
+                            // Danh sách biến thể (mỗi variant = 1 dòng con trong ERP)
+                            $variants = $sp->variants;
+                            $variantCount = $variants->count();
+                            $hasManyVariants = ($variantCount > 1);
+
+                            // Tổng tồn kho của tất cả biến thể
+                            $tongTonKho = $variants->sum(function($v) { return (int)($v->so_luong_ton ?? 0); });
+
+                            // Khoảng giá bán (min-max) giữa các biến thể
+                            $allPrices = $variants->map(function($v) { return (float)($v->gia_ban ?? 0); })->all();
+                            $minPrice = !empty($allPrices) ? min($allPrices) : 0;
+                            $maxPrice = !empty($allPrices) ? max($allPrices) : 0;
+
+                            // Trạng thái tổng: dựa vào tổng tồn kho + trạng thái sp
+                            $trangThaiSP = $sp->trang_thai ?? true;
+                            $firstVariant = $variants->first();
                         @endphp
 
-                        @if($rows->isNotEmpty())
-                        {{-- DÒNG CHÍNH (dòng đầu tiên) --}}
-                        <tr class="product-parent-row {{ !$firstRow->trang_thai ? 'table-secondary opacity-50' : '' }}"
+                        @if($variantCount > 0)
+                        {{-- ============================================================
+                        DÒNG CHA (PARENT ROW) - DUY NHẤT 1 dòng cho mỗi sản phẩm
+                        Hiển thị thông tin tổng: tên SP, danh mục, tổng tồn kho, khoảng giá
+                        Cột Đơn vị: để trống (-) nếu có nhiều biến thể,
+                                     hoặc tên ĐVCB + Badge trigger Dropdown nếu chỉ có 1
+                        ============================================================ --}}
+                        <tr class="product-parent-row {{ !$trangThaiSP ? 'table-secondary opacity-50' : '' }}"
                             style="cursor:pointer;"
-                            data-id="{{ $firstRow->variant->id ?? $sp->id }}"
-                            data-variant-id="{{ $firstRow->variant->id ?? '' }}"
-                            data-unit-id="{{ $firstRow->unit->id ?? '' }}"
+                            data-id="{{ $sp->id }}"
+                            data-variant-id="{{ $firstVariant?->id ?? '' }}"
+                            data-unit-id=""
                             data-product-id="{{ $sp->id }}"
                             data-target-id="{{ $sp->id }}"
-                            data-row-type="goc">
+                            data-row-type="goc"
+                            data-base-donvi="{{ $firstVariant?->ten_don_vi ?? '' }}"
+                            data-base-gia="{{ $firstVariant?->gia_ban ?? 0 }}"
+                            data-base-giavon="{{ $firstVariant?->gia_von ?? 0 }}"
+                            data-base-tonkho="{{ $firstVariant?->so_luong_ton ?? 0 }}"
+                            data-base-mahang="{{ $firstVariant?->ma_hang ?? '' }}"
+                            data-base-mavach="{{ $firstVariant?->ma_vach ?? '' }}"
+                            data-base-trangthai="{{ $trangThaiSP ? '1' : '0' }}"
+                            data-base-dinhmuc="{{ $firstVariant?->dinh_muc_toi_thieu ?? 0 }}">
 
                             {{-- Toggle expand --}}
                             <td onclick="event.stopPropagation();">
                                 <div class="d-flex align-items-center gap-1">
-                                    @if($hasMoreThanOneRow)
+                                    @if($hasManyVariants)
                                         <button class="btn btn-sm btn-light p-0 border-0 expand-btn"
                                                 id="expandBtn{{ $sp->id }}"
                                                 onclick="event.stopPropagation(); window.toggleVariants && window.toggleVariants({{ $sp->id }})"
@@ -164,20 +202,23 @@
                                         </button>
                                     @endif
                                     <input type="checkbox" class="form-check-input product-checkbox"
-                                           value="{{ $firstRow->variant->id ?? $sp->id }}"
+                                           value="{{ $sp->id }}"
                                            data-product-id="{{ $sp->id }}"
-                                           data-type="{{ $firstRow->loai_dong }}"
+                                           data-type="goc"
                                            onclick="event.stopPropagation();">
                                 </div>
                             </td>
 
-                            {{-- Hình ảnh --}}
+                            {{-- Hình ảnh (lấy ảnh variant đầu) --}}
                             <td>
-                                @if(!empty($firstRow->hinh_anh))
-                                    <img src="{{ asset($firstRow->hinh_anh) }}" alt="{{ $sp->ten_san_pham }}"
-                                         style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
-                                @elseif(!empty($sp->hinh_anh))
-                                    <img src="{{ asset($sp->hinh_anh) }}" alt="{{ $sp->ten_san_pham }}"
+                                @php $firstImg = $firstVariant?->hinh_anh ?? $sp->hinh_anh; @endphp
+                                @if(!empty($firstImg))
+                                    @php
+                                        $firstImgSrc = (str_starts_with($firstImg, 'http://') || str_starts_with($firstImg, 'https://'))
+                                            ? $firstImg
+                                            : (str_starts_with($firstImg, '/') ? $firstImg : asset($firstImg));
+                                    @endphp
+                                    <img src="{{ $firstImgSrc }}" alt="{{ $sp->ten_san_pham }}"
                                          style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
                                 @else
                                     <div style="width:48px;height:48px;border-radius:6px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;">
@@ -186,17 +227,17 @@
                                 @endif
                             </td>
 
-                            {{-- Tên sản phẩm + số dòng --}}
+                            {{-- Tên sản phẩm + Thương hiệu --}}
                             <td>
                                 <div>
                                     <span class="fw-semibold" style="font-size:0.9rem;">{{ $sp->ten_san_pham }}</span>
                                     @if(!empty($sp->thuong_hieu))
                                         <div class="small text-muted">{{ $sp->thuong_hieu }}</div>
                                     @endif
-                                    @if($hasMoreThanOneRow)
+                                    @if($hasManyVariants)
                                         <div class="mt-1">
                                             <span class="badge bg-light text-dark border" style="font-size:0.68rem;">
-                                                <i class="fas fa-layer-group me-1"></i>{{ $rows->count() }} đơn vị
+                                                <i class="fas fa-layer-group me-1"></i>{{ $variantCount }} biến thể
                                             </span>
                                         </div>
                                     @endif
@@ -208,66 +249,225 @@
                                 <span class="text-muted small">{{ $sp->danhMuc?->ten_danh_muc ?? '-' }}</span>
                             </td>
 
-                            {{-- Đơn vị tính (dòng đầu = gốc) --}}
+                            {{-- Đơn vị --}}
                             <td>
-                                <span class="text-muted small">{{ $firstRow->ten_don_vi ?: '—' }}</span>
+                                @if($hasManyVariants)
+                                    {{-- Nhiều biến thể: ĐỂ TRỐNG dấu "-" --}}
+                                    <span class="text-muted small">—</span>
+                                @else
+                                    {{-- Chỉ có 1 biến thể: hiển thị tên đơn vị cơ bản + Badge trigger Dropdown --}}
+                                    @php
+                                        $onlyVariant = $firstVariant;
+                                        $laDonVi = $onlyVariant?->la_don_vi ?? false;
+                                        $tenDonViCoBan = $laDonVi ? ($onlyVariant?->ten_don_vi ?? '') : ($onlyVariant?->ten_bien_the ?? '');
+                                        $units = $onlyVariant?->units ?? collect();
+                                        $unitsCount = $units->count();
+                                        $unitsJson = $units->map(function($u) {
+                                            return [
+                                                'id' => $u->id,
+                                                'ten_don_vi' => $u->ten_don_vi,
+                                                'ty_le' => (int)($u->so_luong_san_pham_trong_don_vi ?: 1),
+                                                'ty_le_quy_doi' => (int)($u->so_luong_san_pham_trong_don_vi ?: 1),
+                                                'gia_ban' => (float)($u->gia_ban_quy_doi ?? 0),
+                                                'gia_ban_quy_doi' => (float)($u->gia_ban_quy_doi ?? 0),
+                                                'gia_von' => (float)($u->gia_von_quy_doi ?? 0),
+                                                'gia_von_quy_doi' => (float)($u->gia_von_quy_doi ?? 0),
+                                                'ma_hang' => $u->ma_hang ?? '',
+                                                'ma_vach' => $u->ma_vach ?? '',
+                                                'hinh_anh' => $u->hinh_anh ?? '',
+                                            ];
+                                        })->values()->toJson();
+                                    @endphp
+                                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                                        <span class="small fw-medium js-donvi">{{ $tenDonViCoBan ?: '—' }}</span>
+                                        @if($unitsCount > 0)
+                                            <div class="unit-dropdown-container position-relative d-inline-block">
+                                                <button type="button"
+                                                        class="unit-dropdown-toggle badge bg-info text-white border-0"
+                                                        style="font-size:0.65rem; cursor:pointer;"
+                                                        data-product-id="{{ $sp->id }}"
+                                                        data-variant-id="{{ $onlyVariant->id }}"
+                                                        data-units="{{ $unitsJson }}"
+                                                        data-row-selector="product-parent-row"
+                                                        onclick="event.stopPropagation(); window.toggleUnitDropdown(this);">
+                                                    +{{ $unitsCount }} ĐVT <i class="fas fa-caret-down ms-1"></i>
+                                                </button>
+                                                <ul class="unit-dropdown-menu unit-popover-list" style="display:none; position:absolute; top:100%; left:0; z-index:1055; min-width:220px; max-width:280px; background:#fff; border:1px solid #dee2e6; border-radius:8px; box-shadow:0 4px 18px rgba(0,0,0,0.15); padding:4px 0; margin:0; list-style:none;">
+                                                    <li class="is-base" style="padding:8px 12px; cursor:pointer; background:#e7f5ff; font-weight:600; border-bottom:1px solid #f1f3f5;" onclick="event.stopPropagation(); window.selectBaseUnit(this);">
+                                                        <span class="unit-name">Đơn vị cơ bản</span>
+                                                        <span class="unit-ratio" style="font-size:0.7rem; padding:2px 7px; border-radius:10px; background:#0d6efd; color:#fff; font-weight:600; margin-left:8px;">×1</span>
+                                                    </li>
+                                                    @foreach($units as $u)
+                                                        @php
+                                                            $unitObj = [
+                                                                'id' => $u->id,
+                                                                'ten_don_vi' => $u->ten_don_vi,
+                                                                'ty_le' => (int)($u->so_luong_san_pham_trong_don_vi ?: 1),
+                                                                'ty_le_quy_doi' => (int)($u->so_luong_san_pham_trong_don_vi ?: 1),
+                                                                'gia_ban' => (float)($u->gia_ban_quy_doi ?? 0),
+                                                                'gia_ban_quy_doi' => (float)($u->gia_ban_quy_doi ?? 0),
+                                                                'gia_von' => (float)($u->gia_von_quy_doi ?? 0),
+                                                                'gia_von_quy_doi' => (float)($u->gia_von_quy_doi ?? 0),
+                                                                'ma_hang' => $u->ma_hang ?? '',
+                                                                'ma_vach' => $u->ma_vach ?? '',
+                                                                'hinh_anh' => $u->hinh_anh ?? '',
+                                                            ];
+                                                        @endphp
+                                                        <li data-unit-obj='{{ json_encode($unitObj, JSON_UNESCAPED_UNICODE) }}'
+                                                            style="padding:8px 12px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid #f1f3f5;"
+                                                            onclick="event.stopPropagation(); window.selectUnitFromDropdown(this);">
+                                                            <span class="unit-name">{{ $u->ten_don_vi }}</span>
+                                                            <span class="unit-ratio" style="font-size:0.7rem; padding:2px 7px; border-radius:10px; background:#e9ecef; color:#495057; font-weight:600;">×{{ (int)($u->so_luong_san_pham_trong_don_vi ?: 1) }}</span>
+                                                            <span class="unit-price" style="font-size:0.72rem; color:#6c757d; margin-left:auto;">{{ number_format((float)($u->gia_ban_quy_doi ?? 0), 0, ',', '.') }} d</span>
+                                                        </li>
+                                                    @endforeach
+                                                </ul>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
                             </td>
 
-                            {{-- Biến thể (dòng đầu) --}}
+                            {{-- Biến thể (cột tóm tắt cho dòng cha) --}}
                             <td>
-                                @if(!empty($firstRow->ten_bien_the_display))
-                                    <span class="small">{{ $firstRow->ten_bien_the_display }}</span>
+                                @if($hasManyVariants)
+                                    <span class="text-muted small">{{ $variantCount }} loại</span>
+                                @else
+                                    @php
+                                        $fv = $firstVariant;
+                                        $fvLaDonVi = $fv?->la_don_vi ?? false;
+                                    @endphp
+                                    @if(!$fvLaDonVi && !empty($fv?->ten_bien_the))
+                                        <span class="small">{{ $fv->ten_bien_the }}</span>
+                                    @else
+                                        <span class="text-muted small">—</span>
+                                    @endif
+                                @endif
+                            </td>
+
+                            {{-- Giá bán (khoảng min-max nếu nhiều biến thể) --}}
+                            <td>
+                                @if($variantCount > 0)
+                                    @if($hasManyVariants)
+                                        @if($minPrice == $maxPrice)
+                                            <span class="fw-bold text-primary" style="font-size:0.88rem;">
+                                                {{ number_format($minPrice, 0, ',', '.') }} d
+                                            </span>
+                                        @else
+                                            <span class="fw-bold text-primary" style="font-size:0.88rem;">
+                                                {{ number_format($minPrice, 0, ',', '.') }} - {{ number_format($maxPrice, 0, ',', '.') }} d
+                                            </span>
+                                        @endif
+                                    @else
+                                        <span class="fw-bold text-primary js-giaban" style="font-size:0.88rem;">
+                                            {{ number_format((float)($firstVariant?->gia_ban ?? 0), 0, ',', '.') }} d
+                                        </span>
+                                    @endif
                                 @else
                                     <span class="text-muted small">—</span>
                                 @endif
                             </td>
 
-                            {{-- Giá bán (dòng đầu) --}}
+                            {{-- Tồn kho (tổng các variants) --}}
                             <td>
-                                <span class="fw-bold text-primary" style="font-size:0.88rem;">
-                                    {{ number_format((float)$firstRow->gia_ban, 0, ',', '.') }} d
-                                </span>
-                            </td>
-
-                            {{-- Tồn kho (dòng đầu) --}}
-                            <td>
-                                <span class="{{ $firstRow->so_luong_ton <= 0 ? 'text-danger' : ($firstRow->so_luong_ton <= 10 ? 'text-warning' : 'text-muted') }} small">
-                                    {{ $firstRow->so_luong_ton }}
-                                </span>
-                            </td>
-
-                            {{-- Trạng thái (dòng đầu) --}}
-                            <td>
-                                @if(!$firstRow->trang_thai)
-                                    <span class="badge bg-danger">Ngừng bán</span>
-                                @elseif($firstRow->so_luong_ton <= 0)
-                                    <span class="badge bg-secondary">Hết hàng</span>
-                                @elseif($firstRow->so_luong_ton <= 10)
-                                    <span class="badge bg-warning text-dark">Sắp hết</span>
+                                @if($hasManyVariants)
+                                    <span class="{{ $tongTonKho <= 0 ? 'text-danger' : ($tongTonKho <= 10 ? 'text-warning' : 'text-muted') }} small fw-medium">
+                                        {{ $tongTonKho }}
+                                    </span>
                                 @else
-                                    <span class="badge bg-success">Còn hàng</span>
+                                    <span class="js-tonkho {{ ($firstVariant?->so_luong_ton ?? 0) <= 0 ? 'text-danger' : (($firstVariant?->so_luong_ton ?? 0) <= 10 ? 'text-warning' : 'text-muted') }} small fw-medium">
+                                        {{ $firstVariant?->so_luong_ton ?? 0 }}
+                                    </span>
+                                @endif
+                            </td>
+
+                            {{-- Trạng thái --}}
+                            <td>
+                                @if($hasManyVariants)
+                                    @if(!$trangThaiSP)
+                                        <span class="badge bg-danger">Ngừng bán</span>
+                                    @elseif($tongTonKho <= 0)
+                                        <span class="badge bg-secondary">Hết hàng</span>
+                                    @elseif($tongTonKho <= 10)
+                                        <span class="badge bg-warning text-dark">Sắp hết</span>
+                                    @else
+                                        <span class="badge bg-success">Còn hàng</span>
+                                    @endif
+                                @else
+                                    <span class="js-trangthai">
+                                        @if(!$trangThaiSP)
+                                            <span class="badge bg-danger">Ngừng bán</span>
+                                        @elseif(($firstVariant?->so_luong_ton ?? 0) <= 0)
+                                            <span class="badge bg-secondary">Hết hàng</span>
+                                        @elseif(($firstVariant?->so_luong_ton ?? 0) <= 10)
+                                            <span class="badge bg-warning text-dark">Sắp hết</span>
+                                        @else
+                                            <span class="badge bg-success">Còn hàng</span>
+                                        @endif
+                                    </span>
                                 @endif
                             </td>
                         </tr>
-                        @endif
 
-                        @if($rows->count() > 1)
-                        {{-- CÁC DÒNG CON (các đơn vị còn lại) --}}
-                        @foreach($rows->slice(1) as $rowIndex => $row)
-                            <tr id="variantRow{{ $sp->id }}_{{ $rowIndex }}"
+                        {{-- ============================================================
+                        DÒNG CON (VARIANT CHILD ROW) - Mỗi variant 1 dòng
+                        Chỉ hiển thị khi user click expand (toggleVariants)
+                        Cột Đơn vị: tên đơn vị cơ bản + Badge trigger Dropdown đơn vị quy đổi
+                        ============================================================ --}}
+                        @foreach($variants as $vIndex => $variant)
+                            @php
+                                $laDonVi = $variant->la_don_vi ?? false;
+                                $tenDonViCoBan = $laDonVi ? ($variant->ten_don_vi ?? '') : ($variant->ten_bien_the ?? '');
+                                $units = $variant->units;
+                                $unitsCount = $units->count();
+                                $unitsJson = $units->map(function($u) {
+                                    return [
+                                        'id' => $u->id,
+                                        'ten_don_vi' => $u->ten_don_vi,
+                                        'ty_le' => (int)($u->so_luong_san_pham_trong_don_vi ?: 1),
+                                        'ty_le_quy_doi' => (int)($u->so_luong_san_pham_trong_don_vi ?: 1),
+                                        'gia_ban' => (float)($u->gia_ban_quy_doi ?? 0),
+                                        'gia_ban_quy_doi' => (float)($u->gia_ban_quy_doi ?? 0),
+                                        'gia_von' => (float)($u->gia_von_quy_doi ?? 0),
+                                        'gia_von_quy_doi' => (float)($u->gia_von_quy_doi ?? 0),
+                                        'ma_hang' => $u->ma_hang ?? '',
+                                        'ma_vach' => $u->ma_vach ?? '',
+                                        'hinh_anh' => $u->hinh_anh ?? '',
+                                    ];
+                                })->values()->toJson();
+                                $tonKhoV = (int)($variant->so_luong_ton ?? 0);
+                                $trangThaiV = $variant->trang_thai ?? true;
+                            @endphp
+
+                            <tr id="variantRow{{ $sp->id }}_{{ $vIndex }}"
                                 class="variant-child-row"
                                 style="display:none; background:#fafafa; cursor:pointer;"
-                                data-id="{{ $row->variant->id ?? $sp->id }}"
-                                data-variant-id="{{ $row->variant->id ?? '' }}"
-                                data-unit-id="{{ $row->unit->id ?? '' }}"
-                                data-target-id="{{ $row->variant->id ?? $sp->id }}"
-                                data-type="{{ $row->loai_dong }}"
-                                data-row-type="{{ $row->loai_dong }}"
-                                data-product-id="{{ $sp->id }}">
+                                data-id="{{ $variant->id }}"
+                                data-variant-id="{{ $variant->id }}"
+                                data-unit-id=""
+                                data-target-id="{{ $variant->id }}"
+                                data-type="goc"
+                                data-row-type="goc"
+                                data-product-id="{{ $sp->id }}"
+                                data-base-donvi="{{ $laDonVi ? ($variant->ten_don_vi ?? '') : ($variant->ten_bien_the ?? '') }}"
+                                data-base-gia="{{ $variant->gia_ban ?? 0 }}"
+                                data-base-giavon="{{ $variant->gia_von ?? 0 }}"
+                                data-base-tonkho="{{ $variant->so_luong_ton ?? 0 }}"
+                                data-base-mahang="{{ $variant->ma_hang ?? '' }}"
+                                data-base-mavach="{{ $variant->ma_vach ?? '' }}"
+                                data-base-trangthai="{{ $trangThaiV ? '1' : '0' }}"
+                                data-base-dinhmuc="{{ $variant->dinh_muc_toi_thieu ?? 0 }}">
                                 <td></td>
+
+                                {{-- Ảnh nhỏ --}}
                                 <td>
-                                    @if(!empty($row->hinh_anh))
-                                        <img src="{{ asset($row->hinh_anh) }}" alt=""
+                                    @if(!empty($variant->hinh_anh))
+                                        @php
+                                            $vImgSrc = (str_starts_with($variant->hinh_anh, 'http://') || str_starts_with($variant->hinh_anh, 'https://'))
+                                                ? $variant->hinh_anh
+                                                : (str_starts_with($variant->hinh_anh, '/') ? $variant->hinh_anh : asset($variant->hinh_anh));
+                                        @endphp
+                                        <img src="{{ $vImgSrc }}" alt=""
                                              style="width:40px;height:40px;object-fit:cover;border-radius:4px;">
                                     @else
                                         <div style="width:40px;height:40px;border-radius:4px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;">
@@ -275,65 +475,117 @@
                                         </div>
                                     @endif
                                 </td>
-                                <td style="padding-left: 2.5rem !important;">
-                                    <div>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <i class="fas fa-arrow-turn-down-right text-muted" style="font-size:0.55rem;"></i>
-                                            <span class="fw-semibold" style="font-size:0.85rem;">
-                                                {{ $row->ten_don_vi }}
-                                            </span>
-                                            @if($row->loai_dong === 'quy_doi')
-                                                <span class="badge bg-info" style="font-size:0.6rem;">
-                                                    x{{ $row->ty_le }} {{ $firstRow->ten_don_vi }}
-                                                </span>
-                                            @endif
-                                        </div>
-                                        @if(!empty($row->ma_vach))
-                                            <div class="small text-muted" style="padding-left: 1.1rem;">#{{ $row->ma_vach }}</div>
-                                        @endif
+
+                                {{-- Tên biến thể --}}
+                                <td style="padding-left: 2rem !important;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fas fa-arrow-turn-down-right text-muted" style="font-size:0.55rem;"></i>
+                                        <span class="fw-semibold" style="font-size:0.85rem;">
+                                            {{ $variant->ten_bien_the ?? $sp->ten_san_pham }}
+                                        </span>
                                     </div>
+                                    @if(!empty($variant->ma_vach))
+                                        <div class="small text-muted js-mavach" style="padding-left: 1.1rem; font-size:0.7rem;">#{{ $variant->ma_vach }}</div>
+                                    @else
+                                        <div class="small text-muted js-mavach" style="padding-left: 1.1rem; font-size:0.7rem;">—</div>
+                                    @endif
+                                    @if(!empty($variant->ma_hang))
+                                        <div class="small text-muted js-mahang" style="padding-left: 1.1rem; font-size:0.7rem;">MH: {{ $variant->ma_hang }}</div>
+                                    @else
+                                        <div class="small text-muted js-mahang" style="padding-left: 1.1rem; font-size:0.7rem;">MH: —</div>
+                                    @endif
                                 </td>
+
+                                {{-- Danh mục (placeholder) --}}
                                 <td><span class="text-muted small">—</span></td>
 
-                                {{-- Đơn vị tính --}}
+                                {{-- Đơn vị: tên đơn vị cơ bản + Badge trigger Dropdown --}}
                                 <td>
-                                    <span class="text-muted small">{{ $row->ten_don_vi }}</span>
+                                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                                        <span class="small fw-medium js-donvi">{{ $tenDonViCoBan ?: '—' }}</span>
+                                        @if($unitsCount > 0)
+                                            <div class="unit-dropdown-container position-relative d-inline-block">
+                                                <button type="button"
+                                                        class="unit-dropdown-toggle badge bg-info text-white border-0"
+                                                        style="font-size:0.65rem; cursor:pointer;"
+                                                        data-product-id="{{ $sp->id }}"
+                                                        data-variant-id="{{ $variant->id }}"
+                                                        data-units="{{ $unitsJson }}"
+                                                        data-row-selector="variant-child-row"
+                                                        onclick="event.stopPropagation(); window.toggleUnitDropdown(this);">
+                                                    +{{ $unitsCount }} ĐVT <i class="fas fa-caret-down ms-1"></i>
+                                                </button>
+                                                <ul class="unit-dropdown-menu unit-popover-list" style="display:none; position:absolute; top:100%; left:0; z-index:1055; min-width:220px; max-width:280px; background:#fff; border:1px solid #dee2e6; border-radius:8px; box-shadow:0 4px 18px rgba(0,0,0,0.15); padding:4px 0; margin:0; list-style:none;">
+                                                    <li class="is-base" style="padding:8px 12px; cursor:pointer; background:#e7f5ff; font-weight:600; border-bottom:1px solid #f1f3f5;" onclick="event.stopPropagation(); window.selectBaseUnit(this);">
+                                                        <span class="unit-name">Đơn vị cơ bản</span>
+                                                        <span class="unit-ratio" style="font-size:0.7rem; padding:2px 7px; border-radius:10px; background:#0d6efd; color:#fff; font-weight:600; margin-left:8px;">×1</span>
+                                                    </li>
+                                                    @foreach($units as $u)
+                                                        @php
+                                                            $unitObj = [
+                                                                'id' => $u->id,
+                                                                'ten_don_vi' => $u->ten_don_vi,
+                                                                'ty_le' => (int)($u->so_luong_san_pham_trong_don_vi ?: 1),
+                                                                'ty_le_quy_doi' => (int)($u->so_luong_san_pham_trong_don_vi ?: 1),
+                                                                'gia_ban' => (float)($u->gia_ban_quy_doi ?? 0),
+                                                                'gia_ban_quy_doi' => (float)($u->gia_ban_quy_doi ?? 0),
+                                                                'gia_von' => (float)($u->gia_von_quy_doi ?? 0),
+                                                                'gia_von_quy_doi' => (float)($u->gia_von_quy_doi ?? 0),
+                                                                'ma_hang' => $u->ma_hang ?? '',
+                                                                'ma_vach' => $u->ma_vach ?? '',
+                                                                'hinh_anh' => $u->hinh_anh ?? '',
+                                                            ];
+                                                        @endphp
+                                                        <li data-unit-obj='{{ json_encode($unitObj, JSON_UNESCAPED_UNICODE) }}'
+                                                            style="padding:8px 12px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid #f1f3f5;"
+                                                            onclick="event.stopPropagation(); window.selectUnitFromDropdown(this);">
+                                                            <span class="unit-name">{{ $u->ten_don_vi }}</span>
+                                                            <span class="unit-ratio" style="font-size:0.7rem; padding:2px 7px; border-radius:10px; background:#e9ecef; color:#495057; font-weight:600;">×{{ (int)($u->so_luong_san_pham_trong_don_vi ?: 1) }}</span>
+                                                            <span class="unit-price" style="font-size:0.72rem; color:#6c757d; margin-left:auto;">{{ number_format((float)($u->gia_ban_quy_doi ?? 0), 0, ',', '.') }} d</span>
+                                                        </li>
+                                                    @endforeach
+                                                </ul>
+                                            </div>
+                                        @endif
+                                    </div>
                                 </td>
 
                                 {{-- Biến thể --}}
                                 <td>
-                                    @if(!empty($row->ten_bien_the_display))
-                                        <span class="small">{{ $row->ten_bien_the_display }}</span>
+                                    @if(!$laDonVi && !empty($variant->ten_bien_the))
+                                        <span class="small">{{ $variant->ten_bien_the }}</span>
                                     @else
                                         <span class="text-muted small">—</span>
                                     @endif
                                 </td>
 
-                                {{-- Giá bán --}}
+                                {{-- Giá bán (của variant này) --}}
                                 <td>
-                                    <span class="fw-bold text-primary" style="font-size:0.85rem;">
-                                        {{ number_format((float)$row->gia_ban, 0, ',', '.') }} d
+                                    <span class="fw-bold text-primary js-giaban" style="font-size:0.85rem;">
+                                        {{ number_format((float)$variant->gia_ban, 0, ',', '.') }} d
                                     </span>
                                 </td>
 
-                                {{-- Tồn kho --}}
+                                {{-- Tồn kho (của variant này) --}}
                                 <td>
-                                    <span class="{{ $row->so_luong_ton <= 0 ? 'text-danger' : ($row->so_luong_ton <= 3 ? 'text-warning' : 'text-muted') }} small">
-                                        {{ $row->so_luong_ton }}
+                                    <span class="js-tonkho {{ $tonKhoV <= 0 ? 'text-danger' : ($tonKhoV <= 3 ? 'text-warning' : 'text-muted') }} small">
+                                        {{ $tonKhoV }}
                                     </span>
                                 </td>
 
                                 {{-- Trạng thái --}}
                                 <td>
-                                    @if(!$row->trang_thai)
-                                        <span class="badge bg-danger">Ngừng</span>
-                                    @elseif($row->so_luong_ton <= 0)
-                                        <span class="badge bg-secondary">Hết</span>
-                                    @elseif($row->so_luong_ton <= 3)
-                                        <span class="badge bg-warning text-dark">Sắp hết</span>
-                                    @else
-                                        <span class="badge bg-success">Còn hàng</span>
-                                    @endif
+                                    <span class="js-trangthai">
+                                        @if(!$trangThaiV)
+                                            <span class="badge bg-danger">Ngừng</span>
+                                        @elseif($tonKhoV <= 0)
+                                            <span class="badge bg-secondary">Hết</span>
+                                        @elseif($tonKhoV <= 3)
+                                            <span class="badge bg-warning text-dark">Sắp hết</span>
+                                        @else
+                                            <span class="badge bg-success">Còn</span>
+                                        @endif
+                                    </span>
                                 </td>
                             </tr>
                         @endforeach

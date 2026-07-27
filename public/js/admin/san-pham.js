@@ -191,13 +191,21 @@ function toggleSection(headerEl) {
             var targetId = row.dataset.targetId || row.dataset.variantId || productId;
             var rowType = row.dataset.rowType || 'goc';
             var unitId = row.dataset.unitId || '';
-            if (productId) window.openProductDrawer(productId, targetId, rowType, unitId);
+            // Đồng bộ state đơn vị từ Grid → Drawer (KHÔNG reset về base)
+            var activeUnit = row && typeof window.getActiveUnitView === 'function' ? window.getActiveUnitView(row) : null;
+            if (productId) window.openProductDrawer(productId, targetId, rowType, unitId, activeUnit);
         });
     }
 
-    window.openProductDrawer = async function(productId, targetId, rowType, unitId) {
+    window.openProductDrawer = async function(productId, targetId, rowType, unitId, activeUnit) {
         if (targetId === undefined) { targetId = productId; rowType = 'goc'; }
-        console.log('[Drawer] openProductDrawer called', { productId, targetId, rowType, unitId });
+        console.log('[Drawer] openProductDrawer called', { productId, targetId, rowType, unitId, activeUnit });
+
+        // Nếu caller không truyền activeUnit, tự lấy từ Grid state bằng targetId
+        if (activeUnit === undefined && typeof window.getActiveUnitView === 'function' && targetId) {
+            activeUnit = window.getActiveUnitView({ dataset: { variantId: targetId, productId: targetId }, getAttribute: function() { return targetId; } });
+        }
+        window.currentDrawerActiveUnit = activeUnit || null;
 
         var modal = new bootstrap.Offcanvas(drawer);
         drawerBody.innerHTML = '<div class="d-flex justify-content-center align-items-center" style="min-height:300px;">' +
@@ -281,6 +289,39 @@ function toggleSection(headerEl) {
         var theKho = data.theKho || [];
         var loHang = data.loHang || [];
 
+        // === Helper: resolve URL ảnh (xử lý path lưu trong DB) ===
+        function resolveImageUrl(imgPath) {
+            if (!imgPath) return '';
+            var s = String(imgPath).trim();
+            if (!s) return '';
+            // Đã là URL tuyệt đối (http/https/data:) thì giữ nguyên
+            if (/^(https?:|data:)/i.test(s)) return s;
+            // Bỏ leading slash nếu có để chuẩn hóa
+            var clean = s.replace(/^\/+/, '');
+            // Path lưu dạng "uploads/..." hoặc "public/uploads/..."
+            // Laravel public_path() đã strip "public/", nên DB lưu "uploads/..."
+            // Ảnh thực tế nằm trong public/uploads/... → URL là /uploads/...
+            if (clean.indexOf('public/') === 0) clean = clean.substring(7);
+            return '/' + clean;
+        }
+
+        // === Helper: lấy ảnh đang hiển thị (ưu tiên unit > variant > product) ===
+        function getActiveImage() {
+            // Ưu tiên 0: ảnh của unit đang active (khi user switch đơn vị từ Grid)
+            if (window.currentDrawerActiveUnit && window.currentDrawerActiveUnit.hinh_anh) {
+                return resolveImageUrl(window.currentDrawerActiveUnit.hinh_anh);
+            }
+            // Ưu tiên 1: ảnh variant (sau khi eager load)
+            if (displayVariant && displayVariant.hinh_anh) {
+                return resolveImageUrl(displayVariant.hinh_anh);
+            }
+            // Ưu tiên 2: ảnh product
+            if (sp && sp.hinh_anh) {
+                return resolveImageUrl(sp.hinh_anh);
+            }
+            return '';
+        }
+
         // === Tìm đúng variant để hiển thị trên Header ===
         // - Click dòng cha (targetId == productId, rowType=goc): dùng variant mặc định từ API
         // - Click dòng con (targetId = variant.id, rowType=goc): tìm trong allVariants
@@ -299,8 +340,13 @@ function toggleSection(headerEl) {
         // Tìm đơn vị tương ứng với variant đang hiển thị
         var displayUnit = null;
 
+        // Ưu tiên 0: currentDrawerActiveUnit từ Grid state (user đang switch đơn vị ngoài Grid)
+        if (window.currentDrawerActiveUnit && window.currentDrawerActiveUnit.id) {
+            displayUnit = window.currentDrawerActiveUnit;
+        }
+
         // Ưu tiên 1: selectedUnit từ API (khi click dòng quy đổi/đơn vị)
-        if (data.selectedUnit && data.selectedUnit.id) {
+        if (!displayUnit && data.selectedUnit && data.selectedUnit.id) {
             displayUnit = data.selectedUnit;
         }
 
@@ -330,12 +376,19 @@ function toggleSection(headerEl) {
             tenDonViHienThi = displayUnit.ten_don_vi;
             // Đánh dấu đang xem đơn vị quy đổi
             selectedUnitBadge = '<span class="badge bg-info ms-2" style="font-size:0.65rem;"><i class="fas fa-cube me-1"></i>Đơn vị quy đổi</span>';
+        } else if (window.currentDrawerActiveUnit && window.currentDrawerActiveUnit.id) {
+            // Đang switch đơn vị từ Grid → set tên đơn vị + badge
+            tenDonViHienThi = window.currentDrawerActiveUnit.ten_don_vi || tenDonViHienThi;
+            selectedUnitBadge = '<span class="badge bg-info ms-2" style="font-size:0.65rem;"><i class="fas fa-cube me-1"></i>Đơn vị quy đổi (Grid)</span>';
         }
 
         var maVachHienThi = displayUnit ? (displayUnit.ma_vach || '-') : (displayVariant.ma_vach || '-');
         var giaBanHienThi = displayUnit ? displayUnit.gia_ban_quy_doi : displayVariant.gia_ban;
         var giaVonHienThi = displayUnit ? displayUnit.gia_von_quy_doi : displayVariant.gia_von;
-        var tonKhoHienThi = displayUnit ? displayUnit.so_luong_ton : displayVariant.so_luong_ton;
+        // Tính tồn kho quy đổi: variant.so_luong_ton / ty_le (nếu có displayUnit)
+        var tonKhoHienThi = displayUnit
+            ? Math.floor((parseFloat(displayVariant.so_luong_ton) || 0) / (parseFloat(displayUnit.ty_le) || 1))
+            : displayVariant.so_luong_ton;
 
         var trangThaiVariant = !displayVariant.trang_thai
             ? '<span class="badge bg-danger">Ngừng bán</span>'
@@ -356,12 +409,16 @@ function toggleSection(headerEl) {
             });
         }
 
-        var variantHinhAnh = displayVariant.hinh_anh
-            ? '<img src="/' + displayVariant.hinh_anh + '" style="width:32px;height:32px;object-fit:cover;border-radius:4px;">'
+        var activeImageUrl = getActiveImage();
+
+        var variantHinhAnh = activeImageUrl
+            ? '<img src="' + activeImageUrl + '" class="js-drawer-thumb" style="width:32px;height:32px;object-fit:cover;border-radius:4px;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">' +
+              '<div style="width:32px;height:32px;border-radius:4px;background:#eee;display:none;align-items:center;justify-content:center;"><i class="fas fa-image text-muted" style="font-size:0.6rem;"></i></div>'
             : '<div style="width:32px;height:32px;border-radius:4px;background:#eee;display:flex;align-items:center;justify-content:center;"><i class="fas fa-image text-muted" style="font-size:0.6rem;"></i></div>';
 
-        var mainHinhAnh = displayVariant.hinh_anh
-            ? '<img src="/' + displayVariant.hinh_anh + '" class="img-fluid rounded" alt="' + (sp.ten_san_pham || '') + '" style="max-height:220px; object-fit:contain; background:#f8f9fa;">'
+        var mainHinhAnh = activeImageUrl
+            ? '<img src="' + activeImageUrl + '" class="img-fluid rounded js-drawer-main-image" alt="' + (sp.ten_san_pham || '') + '" style="max-height:220px; object-fit:contain; background:#f8f9fa;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">' +
+              '<div class="text-center text-muted py-5 bg-light rounded" style="display:none;"><i class="fas fa-image fa-3x"></i><p class="mt-2 mb-0">Không có ảnh</p></div>'
             : '<div class="text-center text-muted py-5 bg-light rounded"><i class="fas fa-image fa-3x"></i><p class="mt-2 mb-0">Không có ảnh</p></div>';
 
         var unitsHtml = '';
@@ -457,13 +514,13 @@ function toggleSection(headerEl) {
                 '<div class="col-8">' +
                     '<div class="d-flex justify-content-between align-items-start">' +
                         '<div>' +
-                            '<h5 class="fw-bold mb-1">' + (sp.ten_san_pham || '-') + selectedUnitBadge + '</h5>' +
-                            '<p class="text-muted small mb-1">#' + (displayVariant.ma_hang || displayVariant.ma_vach || displayVariant.id || sp.id || '-') + '</p>' +
-                            trangThaiVariant +
+                            '<h5 class="fw-bold mb-1 js-drawer-tensanpham">' + (sp.ten_san_pham || '-') + selectedUnitBadge + '</h5>' +
+                            '<p class="text-muted small mb-1 js-drawer-mahang">MH: ' + ((displayUnit && displayUnit.ma_hang) || displayVariant.ma_hang || displayVariant.ma_vach || displayVariant.id || sp.id || '-') + '</p>' +
+                            '<div class="js-drawer-trangthai">' + trangThaiVariant + '</div>' +
                         '</div>' +
                         '<div class="text-end">' +
-                            '<p class="fw-bold text-primary mb-0" style="font-size:1.4rem;">' + formatMoney(giaBanHienThi) + ' d</p>' +
-                            '<p class="text-muted small mb-0">Giá vốn: ' + formatMoney(giaVonHienThi) + ' d</p>' +
+                            '<p class="fw-bold text-primary mb-0 js-drawer-giaban" style="font-size:1.4rem;">' + formatMoney(giaBanHienThi) + ' d</p>' +
+                            '<p class="text-muted small mb-0 js-drawer-giavon">Giá vốn: <span class="js-drawer-giavon-value">' + formatMoney(giaVonHienThi) + '</span> d</p>' +
                         '</div>' +
                     '</div>' +
                     '<hr>' +
@@ -471,10 +528,10 @@ function toggleSection(headerEl) {
                         '<div class="col-6"><strong>Danh mục:</strong> ' + (sp.danh_muc?.ten_danh_muc || '-') + '</div>' +
                         '<div class="col-6"><strong>Thương hiệu:</strong> ' + (sp.thuong_hieu || '-') + '</div>' +
                         '<div class="col-6"><strong>Biến thể:</strong> ' + tenBienTheHienThi + '</div>' +
-                        '<div class="col-6"><strong>Đơn vị:</strong> ' + tenDonViHienThi + '</div>' +
-                        '<div class="col-6"><strong>Mã vạch:</strong> ' + maVachHienThi + '</div>' +
-                        '<div class="col-6"><strong>Tồn kho:</strong> ' + (tonKhoHienThi ?? 0) + '</div>' +
-                        '<div class="col-6"><strong>Định mức:</strong> ' + (displayVariant.dinh_muc_toi_thieu ?? 0) + '</div>' +
+                        '<div class="col-6"><strong>Đơn vị:</strong> <span class="js-drawer-tendonvi">' + tenDonViHienThi + '</span></div>' +
+                        '<div class="col-6"><strong>Mã vạch:</strong> <span class="js-drawer-mavach">' + maVachHienThi + '</span></div>' +
+                        '<div class="col-6"><strong>Tồn kho:</strong> <span class="js-drawer-tonkho">' + (tonKhoHienThi ?? 0) + '</span></div>' +
+                        '<div class="col-6"><strong>Định mức:</strong> <span class="js-drawer-dinhmuc">' + (displayVariant.dinh_muc_toi_thieu ?? 0) + '</span></div>' +
                     '</div>' +
                     (isLaDonVi ? '' : (thuocTinhLabels ? '<div class="mt-2">' + thuocTinhLabels + '</div>' : '')) +
                 '</div>' +
@@ -839,4 +896,161 @@ window.deleteVariant = async function(variantId, productId) {
             editEl.classList.add('d-none');
         }
     };
+})();
+
+// ============================================================
+// UNIT CONVERSION DROPDOWN (san-pham index) - Dynamic Switch
+// ============================================================
+(function() {
+    window.activeUnits = window.activeUnits || {};
+
+    function formatMoneyVN(num) {
+        if (num === null || num === undefined || num === '') return '0';
+        return Number(num).toLocaleString('vi-VN');
+    }
+
+    function recalcRow(row, unitObj) {
+        if (!row) return;
+        var isChild = row.classList.contains('variant-child-row');
+        var baseDonvi = row.getAttribute('data-base-donvi') || '';
+        var baseGia = parseFloat(row.getAttribute('data-base-gia')) || 0;
+        var baseTonKho = parseFloat(row.getAttribute('data-base-tonkho')) || 0;
+        var baseMaHang = row.getAttribute('data-base-mahang') || '';
+        var baseMaVach = row.getAttribute('data-base-mavach') || '';
+        var baseTrangThai = row.getAttribute('data-base-trangthai') === '1';
+
+        var showDonvi, showGia, showTonKho, showMaHang, showMaVach, showTrangThai;
+        if (!unitObj) {
+            showDonvi = baseDonvi || '—';
+            showGia = baseGia;
+            showTonKho = baseTonKho;
+            showMaHang = baseMaHang || '—';
+            showMaVach = baseMaVach || '—';
+            showTrangThai = baseTrangThai;
+        } else {
+            var tyLe = parseFloat(unitObj.ty_le) || 1;
+            showDonvi = unitObj.ten_don_vi || '—';
+            showGia = parseFloat(unitObj.gia_ban) || 0;
+            showTonKho = Math.floor(baseTonKho / tyLe);
+            showMaHang = unitObj.ma_hang || '—';
+            showMaVach = unitObj.ma_vach || '—';
+            showTrangThai = baseTrangThai;
+        }
+
+        var elDonvi = row.querySelector('.js-donvi');
+        if (elDonvi) elDonvi.textContent = showDonvi;
+
+        var elGia = row.querySelector('.js-giaban');
+        if (elGia) elGia.textContent = formatMoneyVN(showGia) + ' d';
+
+        var elTonKho = row.querySelector('.js-tonkho');
+        if (elTonKho) {
+            elTonKho.textContent = showTonKho;
+            var tonKhoClass = 'js-tonkho small ';
+            if (showTonKho <= 0) tonKhoClass += 'text-danger';
+            else if (showTonKho <= (isChild ? 3 : 10)) tonKhoClass += 'text-warning';
+            else tonKhoClass += 'text-muted';
+            elTonKho.className = tonKhoClass;
+        }
+
+        var elMaHang = row.querySelector('.js-mahang');
+        if (elMaHang) elMaHang.textContent = 'MH: ' + (showMaHang || '—');
+
+        var elMaVach = row.querySelector('.js-mavach');
+        if (elMaVach) elMaVach.textContent = showMaVach && showMaVach !== '—' ? '#' + showMaVach : '—';
+
+        var elTrangThai = row.querySelector('.js-trangthai');
+        if (elTrangThai) {
+            var badge = '';
+            if (!showTrangThai) badge = '<span class="badge bg-danger">Ngừng kinh doanh</span>';
+            else if (showTonKho <= 0) badge = '<span class="badge bg-secondary">Hết hàng</span>';
+            else if (showTonKho <= (isChild ? 3 : 10)) badge = '<span class="badge bg-warning text-dark">Sắp hết</span>';
+            else badge = '<span class="badge bg-success">Còn hàng</span>';
+            elTrangThai.innerHTML = badge;
+        }
+
+        if (unitObj) row.classList.add('is-unit-switched');
+        else row.classList.remove('is-unit-switched');
+    }
+
+    window.selectUnitView = function(row, unitObj) {
+        if (!row || !unitObj) return;
+        var targetId = row.dataset.variantId || row.dataset.productId || row.getAttribute('data-id') || row.id;
+        if (!targetId) return;
+        window.activeUnits[targetId] = unitObj;
+        recalcRow(row, unitObj);
+    };
+
+    window.resetUnitView = function(row) {
+        if (!row) return;
+        var targetId = row.dataset.variantId || row.dataset.productId || row.getAttribute('data-id') || row.id;
+        if (targetId) delete window.activeUnits[targetId];
+        recalcRow(row, null);
+    };
+
+    window.getActiveUnitView = function(row) {
+        if (!row) return null;
+        var targetId = row.dataset.variantId || row.dataset.productId || row.getAttribute('data-id') || row.id;
+        if (!targetId) return null;
+        return window.activeUnits[targetId] || null;
+    };
+
+    window.toggleUnitDropdown = function(element) {
+        if (!element) return;
+        var container = element.closest('.unit-dropdown-container');
+        if (!container) return;
+        var menu = container.querySelector('.unit-dropdown-menu');
+        if (!menu) return;
+        var isOpen = menu.style.display === 'block';
+        document.querySelectorAll('.unit-dropdown-menu').forEach(function(m) { m.style.display = 'none'; });
+        document.querySelectorAll('.unit-dropdown-toggle').forEach(function(b) { b.classList.remove('active'); });
+        if (!isOpen) {
+            menu.style.display = 'block';
+            if (element.classList) element.classList.add('active');
+        }
+    };
+
+    window.selectUnitFromDropdown = function(liEl) {
+        if (!liEl) return;
+        var row = liEl.closest('tr');
+        var raw = liEl.getAttribute('data-unit-obj');
+        if (!raw) return;
+        var unitObj;
+        try { unitObj = JSON.parse(raw); } catch(e) { return; }
+        window.selectUnitView(row, unitObj);
+        var container = liEl.closest('.unit-dropdown-container');
+        if (container) {
+            var menu = container.querySelector('.unit-dropdown-menu');
+            if (menu) menu.style.display = 'none';
+            var btn = container.querySelector('.unit-dropdown-toggle');
+            if (btn) btn.classList.add('active');
+        }
+    };
+
+    window.selectBaseUnit = function(liEl) {
+        if (!liEl) return;
+        var row = liEl.closest('tr');
+        window.resetUnitView(row);
+        var container = liEl.closest('.unit-dropdown-container');
+        if (container) {
+            var menu = container.querySelector('.unit-dropdown-menu');
+            if (menu) menu.style.display = 'none';
+            var btn = container.querySelector('.unit-dropdown-toggle');
+            if (btn) btn.classList.remove('active');
+        }
+    };
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.unit-dropdown-container')) {
+            document.querySelectorAll('.unit-dropdown-menu').forEach(function(m) { m.style.display = 'none'; });
+            document.querySelectorAll('.unit-dropdown-toggle').forEach(function(b) { b.classList.remove('active'); });
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.unit-dropdown-menu').forEach(function(m) { m.style.display = 'none'; });
+            document.querySelectorAll('.unit-dropdown-toggle').forEach(function(b) { b.classList.remove('active'); });
+        }
+    });
 })();

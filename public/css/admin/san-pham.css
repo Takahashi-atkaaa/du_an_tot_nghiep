@@ -251,7 +251,133 @@
     .badge.bien-the-badge { font-size: 0.7rem; }
     .badge.unit-badge { font-size: 0.65rem; }
 
-    /* ======= Row types in table ======= */
-    .variant-row { background: #fff; }
-    .unit-row { background: #fafafa; }
+/* ======= Row types in table ======= */
+.variant-row { background: #fff; }
+.unit-row { background: #fafafa; }
+
+/* ======= Unit Conversion Dropdown (3-tier ERP) ======= */
+/* Single fixed-position popover, không nằm trong table để không phá layout */
+.unit-conversion-popover {
+    position: fixed;
+    z-index: 1055;
+    min-width: 220px;
+    max-width: 280px;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    font-size: 0.82rem;
+}
+
+.unit-popover-header {
+    background: #f8f9fa;
+    padding: 8px 12px;
+    font-weight: 600;
+    color: #495057;
+    border-bottom: 1px solid #e9ecef;
+    font-size: 0.78rem;
+    display: flex;
+    align-items: center;
+}
+
+.unit-popover-list {
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.unit-popover-list li {
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    transition: background 0.15s;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+.unit-popover-list li:last-child {
+    border-bottom: none;
+}
+
+.unit-popover-list li:hover {
+    background: #f0f7ff;
+}
+
+.unit-popover-list li.is-base {
+    background: #e7f5ff;
+    font-weight: 600;
+}
+
+.unit-popover-list li.active {
+    background: #0d6efd !important;
+    color: #fff;
+}
+
+.unit-popover-list li.active .unit-name,
+.unit-popover-list li.active .unit-ratio {
+    color: #fff;
+}
+
+.unit-popover-list li.active.is-base {
+    background: #198754 !important;
+}
+
+.unit-popover-list .unit-name {
+    color: #212529;
+    font-weight: 500;
+}
+
+.unit-popover-list .unit-ratio {
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: #e9ecef;
+    color: #495057;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.unit-popover-list li.is-base .unit-ratio {
+    background: #0d6efd;
+    color: #fff;
+}
+
+.unit-popover-list .unit-price {
+    font-size: 0.72rem;
+    color: #6c757d;
+    margin-left: auto;
+}
+
+/* Badge trigger (nút +X ĐVT) - thiết kế giống chip nhỏ */
+.unit-dropdown-toggle {
+    padding: 3px 8px !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    transition: background 0.15s;
+}
+
+.unit-dropdown-toggle:hover {
+    background: #0a58ca !important;
+}
+
+.unit-dropdown-toggle.active {
+    background: #0a58ca !important;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+}
+
+/* Visual hint cho dòng đang switch sang đơn vị quy đổi */
+tr.is-unit-switched {
+    background-color: #fff8e1 !important;
+}
+
+tr.is-unit-switched .js-donvi {
+    color: #d97706;
+    font-weight: 600;
+}
 

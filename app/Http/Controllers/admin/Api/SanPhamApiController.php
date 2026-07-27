@@ -74,10 +74,14 @@ class SanPhamApiController extends Controller
                         'id' => $u->id,
                         'ten_don_vi' => $u->ten_don_vi,
                         'so_luong_san_pham_trong_don_vi' => $u->so_luong_san_pham_trong_don_vi,
+                        'ty_le_quy_doi' => $u->so_luong_san_pham_trong_don_vi,
                         'gia_von_quy_doi' => $u->gia_von_quy_doi,
                         'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
+                        'gia_ban_si' => $u->gia_ban_si,
                         'ma_hang' => $u->ma_hang,
                         'ma_vach' => $u->ma_vach,
+                        'hinh_anh' => $u->hinh_anh,
+                        'so_luong_ton' => $u->so_luong_ton,
                     ])->all(),
                 ];
             }
@@ -188,6 +192,22 @@ class SanPhamApiController extends Controller
             $variant->product->load('danhMuc');
         }
 
+        // Helper: lọc bỏ path hinh_anh trỏ tới file không tồn tại trên disk
+        $cleanupImage = function (?string $path): ?string {
+            if (!$path) return null;
+            if (str_starts_with($path, 'http')) return $path;
+            $fullPath = public_path($path);
+            return file_exists($fullPath) ? $path : null;
+        };
+        $variant->hinh_anh = $cleanupImage($variant->hinh_anh);
+        $variant->product->hinh_anh = $cleanupImage($variant->product->hinh_anh);
+        if ($selectedUnit) {
+            $selectedUnit->hinh_anh = $cleanupImage($selectedUnit->hinh_anh);
+        }
+        foreach ($variant->units as $u) {
+            $u->hinh_anh = $cleanupImage($u->hinh_anh);
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -195,7 +215,19 @@ class SanPhamApiController extends Controller
                 'variant' => $variant->toArray(),
                 'selectedUnit' => $selectedUnit?->toArray(),
                 'allVariants' => $variant->product->variants->toArray(),
-                'units' => $variant->units->toArray(),
+                'units' => $variant->units->map(fn($u) => [
+                    'id' => $u->id,
+                    'ten_don_vi' => $u->ten_don_vi,
+                    'so_luong_san_pham_trong_don_vi' => $u->so_luong_san_pham_trong_don_vi,
+                    'ty_le_quy_doi' => $u->so_luong_san_pham_trong_don_vi,
+                    'gia_von_quy_doi' => $u->gia_von_quy_doi,
+                    'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
+                    'gia_ban_si' => $u->gia_ban_si,
+                    'ma_hang' => $u->ma_hang,
+                    'ma_vach' => $u->ma_vach,
+                    'hinh_anh' => $u->hinh_anh,
+                    'so_luong_ton' => $u->so_luong_ton,
+                ])->toArray(),
                 'theKho' => $theKho,
                 'loHang' => $loHang,
             ],

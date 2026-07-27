@@ -155,28 +155,104 @@ class SanPhamController extends Controller
                     }
                 }
 
-                foreach ($bienThe as $idx => $variant) {
+                // ============================================================
+                // BỌC THÉP DỰA VÀO VỊ TRÍ (INDEX):
+                //   - Phần tử ĐẦU TIÊN (không có thuộc tính)  → Đơn vị cơ bản (CHA) → bien_the_san_pham
+                //   - Phần tử CÒN LẠI (không có thuộc tính)    → Đơn vị quy đổi       → don_vi_quy_doi
+                //   - Có thuoc_tinh_ids                        → bỏ qua, không áp dụng tách đơn vị
+                // (Tuyệt đối KHÔNG tin tưởng ty_le từ frontend; fallback default = 2 để an toàn DB)
+                // ============================================================
+                $baseVariantData = null;
+                $conversionUnitsData = [];
+                $attrVariantRows = [];
+                $isFirst = true;
+
+                foreach ($bienThe as $idx => $item) {
+                    if (!empty($item['thuoc_tinh_ids'])) {
+                        $attrVariantRows[$idx] = $item;
+                        continue;
+                    }
+                    if ($isFirst) {
+                        $baseVariantData = $item; // Dòng đầu tiên LUÔN là Đơn vị cơ bản
+                        $isFirst = false;
+                    } else {
+                        $conversionUnitsData[] = $item; // Từ dòng thứ 2 trở đi LUÔN là Đơn vị quy đổi
+                    }
+                }
+
+                // ----- 2b.1: Lưu đơn vị cơ bản (CHA) vào bien_the_san_pham -----
+                $createdBaseVariant = null;
+                if ($baseVariantData !== null) {
+                    $baseKeys = array_keys(array_filter($bienThe, fn($x) => $x === $baseVariantData));
+                    $baseIdx = $baseKeys[0] ?? null;
+                    $baseImage = $variantImages[$baseIdx] ?? $imagePath;
+                    $createdBaseVariant = BienTheSanPham::create([
+                        'product_id'       => $product->id,
+                        'la_don_vi'        => true,
+                        'ten_don_vi'       => $baseVariantData['ten_don_vi'] ?? 'Đơn vị cơ bản',
+                        'ten_bien_the'     => null,
+                        'ma_hang'          => !empty($baseVariantData['ma_hang']) ? $baseVariantData['ma_hang'] : $this->generateUniqueMaHang(),
+                        'ma_vach'          => !empty($baseVariantData['ma_vach']) ? $baseVariantData['ma_vach'] : $this->generateUniqueMaVach(),
+                        'gia_von'          => $baseVariantData['gia_von'] ?? 0,
+                        'gia_ban'          => $baseVariantData['gia_ban'] ?? 0,
+                        'so_luong_ton'     => $baseVariantData['so_luong_ton'] ?? 0,
+                        'dinh_muc_toi_thieu' => $baseVariantData['dinh_muc_toi_thieu'] ?? 0,
+                        'hinh_anh'         => $baseImage,
+                        'thuoc_tinh_ids'   => null,
+                        'trang_thai'       => $data['trang_thai'] ?? true,
+                    ]);
+                }
+
+                // ----- 2b.2: Lưu TẤT CẢ đơn vị quy đổi vào don_vi_quy_doi -----
+                // Gắn variant_id của biến thể CHA (nếu có)
+                $parentVariant = $createdBaseVariant
+                    ?? BienTheSanPham::where('product_id', $product->id)->orderBy('id')->first();
+                if ($parentVariant && !empty($conversionUnitsData)) {
+                    foreach ($conversionUnitsData as $unitData) {
+                        $tyLeQuyDoi = isset($unitData['ty_le']) ? (int)$unitData['ty_le']
+                            : (isset($unitData['so_luong_san_pham_trong_don_vi']) ? (int)$unitData['so_luong_san_pham_trong_don_vi'] : 2);
+                        $uMaHang = !empty($unitData['ma_hang']) ? $unitData['ma_hang'] : $this->generateUniqueMaHang();
+                        DonViQuyDoi::create([
+                            'variant_id'   => $parentVariant->id,
+                            'product_id'   => $product->id,
+                            'don_vi_chuan_id' => $unitData['don_vi_chuan_id'] ?? null,
+                            'ten_don_vi'   => $unitData['ten_don_vi'] ?? '',
+                            'so_luong_san_pham_trong_don_vi' => $tyLeQuyDoi,
+                            'ma_hang'      => $uMaHang,
+                            'ma_vach'      => $unitData['ma_vach'] ?? null,
+                            'gia_von_quy_doi' => $unitData['gia_von'] ?? ($unitData['gia_von_quy_doi'] ?? 0),
+                            'gia_ban_quy_doi' => $unitData['gia_ban'] ?? ($unitData['gia_ban_quy_doi'] ?? 0),
+                            'gia_ban_si'   => $unitData['gia_ban_si'] ?? null,
+                            'hinh_anh'     => $unitData['hinh_anh'] ?? null,
+                            'la_don_vi_mac_dinh' => false,
+                        ]);
+                    }
+                }
+
+                // ----- 2b.3: Lưu các variant có thuộc tính (màu/size) vào bien_the_san_pham -----
+                foreach ($attrVariantRows as $idx => $variant) {
                     $variantImage = $variantImages[$idx] ?? $imagePath;
 
-                    // Parse thuoc_tinh_ids
                     $thuocTinhIds = null;
                     if (!empty($variant['thuoc_tinh_ids'])) {
                         $ids = array_map('intval', explode(',', $variant['thuoc_tinh_ids']));
                         $thuocTinhIds = array_filter($ids);
                     }
 
-                    // Xác định loại biến thể: đơn vị hay thuộc tính
-                    $laDonVi = !empty($variant['la_don_vi']);
-                    $tenDonVi = $laDonVi ? ($variant['ten_don_vi'] ?? null) : null;
-                    $tenBienThe = $laDonVi ? null : ($variant['ten_bien_the'] ?? $variant['ten_day_du'] ?? null);
+                    $laDonVi = false;
+                    $tenDonVi = null;
+                    $tenBienThe = $variant['ten_bien_the'] ?? $variant['ten_day_du'] ?? null;
+
+                    $maHang = !empty($variant['ma_hang']) ? $variant['ma_hang'] : $this->generateUniqueMaHang();
+                    $maVach = !empty($variant['ma_vach']) ? $variant['ma_vach'] : $this->generateUniqueMaVach();
 
                     $createdVariant = BienTheSanPham::create([
                         'product_id' => $product->id,
                         'ten_bien_the' => $tenBienThe,
                         'la_don_vi' => $laDonVi,
                         'ten_don_vi' => $tenDonVi,
-                        'ma_hang' => $variant['ma_hang'] ?? $this->generateUniqueMaHang(),
-                        'ma_vach' => !empty($variant['ma_vach']) ? $variant['ma_vach'] : $this->generateUniqueMaVach(),
+                        'ma_hang' => $maHang,
+                        'ma_vach' => $maVach,
                         'gia_von' => $variant['gia_von'] ?? 0,
                         'gia_ban' => $variant['gia_ban'] ?? 0,
                         'so_luong_ton' => $variant['so_luong_ton'] ?? 0,
@@ -186,28 +262,31 @@ class SanPhamController extends Controller
                         'trang_thai' => $data['trang_thai'] ?? true,
                     ]);
 
-                    // 3. Tạo units cho variant
-                    // Chỉ lưu đơn vị có tỷ lệ > 1 (đơn vị quy đổi) vào bảng don_vi_quy_doi.
-                    // Đơn vị cơ bản (ty_le = 1) đã được lưu vào bien_the_san_pham rồi → bỏ qua.
+                    // Vẫn xử lý units[] lồng trong row (nếu frontend có gửi)
+                    $unitsToCreate = [];
                     if (!empty($variant['units'])) {
                         foreach ($variant['units'] as $unit) {
-                            if ((int)($unit['so_luong_san_pham_trong_don_vi'] ?? 1) <= 1) {
-                                continue; // Bỏ qua đơn vị cơ bản
-                            }
-                            DonViQuyDoi::create([
-                                'product_id' => $product->id,
-                                'don_vi_chuan_id' => $unit['don_vi_chuan_id'] ?? null,
-                                'ten_don_vi' => $unit['ten_don_vi'],
-                                'so_luong_san_pham_trong_don_vi' => (int)($unit['so_luong_san_pham_trong_don_vi'] ?? 1),
-                                'ma_hang' => $unit['ma_hang'] ?? $this->generateUniqueMaHang(),
-                                'ma_vach' => $unit['ma_vach'] ?? null,
-                                'gia_von_quy_doi' => $unit['gia_von_quy_doi'] ?? 0,
-                                'gia_ban_quy_doi' => $unit['gia_ban_quy_doi'] ?? 0,
-                                'gia_ban_si' => $unit['gia_ban_si'] ?? null,
-                                'hinh_anh' => $variantImage,
-                                'la_don_vi_mac_dinh' => false,
-                            ]);
+                            $uTyLe = (int)($unit['so_luong_san_pham_trong_don_vi'] ?? 1);
+                            if ($uTyLe <= 1) continue;
+                            $unitsToCreate[] = $unit;
                         }
+                    }
+                    foreach ($unitsToCreate as $unit) {
+                        $uMaHang = !empty($unit['ma_hang']) ? $unit['ma_hang'] : $this->generateUniqueMaHang();
+                        DonViQuyDoi::create([
+                            'variant_id' => $createdVariant->id,
+                            'product_id' => $product->id,
+                            'don_vi_chuan_id' => $unit['don_vi_chuan_id'] ?? null,
+                            'ten_don_vi' => $unit['ten_don_vi'],
+                            'so_luong_san_pham_trong_don_vi' => (int)($unit['so_luong_san_pham_trong_don_vi'] ?? 1),
+                            'ma_hang' => $uMaHang,
+                            'ma_vach' => $unit['ma_vach'] ?? null,
+                            'gia_von_quy_doi' => $unit['gia_von_quy_doi'] ?? 0,
+                            'gia_ban_quy_doi' => $unit['gia_ban_quy_doi'] ?? 0,
+                            'gia_ban_si' => $unit['gia_ban_si'] ?? null,
+                            'hinh_anh' => $unit['hinh_anh'] ?? $variantImage,
+                            'la_don_vi_mac_dinh' => false,
+                        ]);
                     }
                 }
             }
@@ -286,6 +365,18 @@ class SanPhamController extends Controller
             }
         }
 
+        // Form edit Vue có thể gửi ảnh ở top-level key 'hinh_anh' (1 ảnh cho variant đầu tiên)
+        $topLevelImage = null;
+        if ($request->hasFile('hinh_anh')) {
+            $topLevelImage = $this->uploadImage($request->file('hinh_anh'));
+            // Map vào variantImages[0] để áp dụng cho row đầu tiên
+            $variantImages[0] = $topLevelImage;
+        }
+
+        // Nếu payload bien_the là mảng có/variant[0], ảnh top-level sẽ được apply
+        // cho index 0. Nếu user upload qua bien_the[0][hinh_anh], sẽ ghi đè.
+        // Logic: biến thể đầu tiên trong payload là variant "gốc", ảnh của nó = top-level image (nếu có).
+
         // Safety check: If bien_the is empty or not sent, preserve existing variants
         if (empty($data['bien_the']) && $product->variants()->exists()) {
             // No variants sent means user didn't change variants - preserve them
@@ -304,7 +395,7 @@ class SanPhamController extends Controller
         $updatedVariantsList = [];
         $createdVariantsList = [];
  
-        return DB::transaction(function () use ($product, $data, $request, $variantImages, &$deletedVariantsList, &$updatedVariantsList, &$createdVariantsList) {
+        return DB::transaction(function () use ($id, $product, $data, $request, $variantImages, &$deletedVariantsList, &$updatedVariantsList, &$createdVariantsList) {
             // 2. Cap nhat thong tin chung
             $product->update([
                 'id_danh_muc' => $data['id_danh_muc'],
@@ -314,10 +405,34 @@ class SanPhamController extends Controller
                 'trang_thai' => $data['trang_thai'] ?? true,
             ]);
 
+            // ============================================================
+            // BỌC THÉP DỰA VÀO VỊ TRÍ (INDEX):
+            //   - Phần tử ĐẦU TIÊN (không có thuộc tính)  → Đơn vị cơ bản (CHA) → bien_the_san_pham
+            //   - Phần tử CÒN LẠI (không có thuộc tính)    → Đơn vị quy đổi       → don_vi_quy_doi
+            //   - Có thuoc_tinh_ids                        → variantRows (biến thể thuộc tính)
+            // (Tuyệt đối KHÔNG tin tưởng ty_le từ frontend; fallback default = 2 để an toàn DB)
+            // ============================================================
+            $variantRows = [];
+            $conversionRows = [];
+            $isFirst = true;
+            foreach ($data['bien_the'] ?? [] as $idx => $item) {
+                if (!empty($item['thuoc_tinh_ids'])) {
+                    $variantRows[$idx] = $item;
+                    $isFirst = false; // variant có thuộc tính KHÔNG tính là dòng đầu đơn vị
+                    continue;
+                }
+                if ($isFirst) {
+                    $variantRows[$idx] = $item; // Dòng đầu tiên LUÔN là Đơn vị cơ bản
+                    $isFirst = false;
+                } else {
+                    $conversionRows[$idx] = $item; // Từ dòng thứ 2 trở đi LUÔN là Đơn vị quy đổi
+                }
+            }
+
             $incomingVariantIds = [];
 
-            // 3. CRUD variants
-            foreach ($data['bien_the'] ?? [] as $idx => $variant) {
+            // 3. CRUD variants CHỈ trên $variantRows
+            foreach ($variantRows as $idx => $variant) {
                 $existingId = $variant['id'] ?? null;
                 // Xac dinh anh: upload moi > anh cu cua variant
                 $variantImage = $variantImages[$idx] ?? null;
@@ -339,10 +454,14 @@ class SanPhamController extends Controller
                     $tenDonVi = $laDonVi ? ($variant['ten_don_vi'] ?? $existingVariant->ten_don_vi) : null;
                     $tenBienThe = $laDonVi ? null : ($variant['ten_bien_the'] ?? $existingVariant->ten_bien_the);
 
+                    // ma_hang: dùng payload nếu có, ngược lại giữ nguyên DB
+                    $maHang = !empty($variant['ma_hang']) ? $variant['ma_hang'] : $existingVariant->ma_hang;
+
                     $existingVariant->update([
                         'ten_bien_the' => $tenBienThe,
                         'la_don_vi' => $laDonVi,
                         'ten_don_vi' => $tenDonVi,
+                        'ma_hang' => $maHang,                                  // ← sửa: ghi ma_hang
                         'ma_vach' => !empty($variant['ma_vach']) ? $variant['ma_vach'] : null,
                         'gia_von' => $variant['gia_von'] ?? 0,
                         'gia_ban' => $variant['gia_ban'] ?? 0,
@@ -377,13 +496,17 @@ class SanPhamController extends Controller
                         continue;
                     }
 
+                    // Auto-generate ma_hang chỉ khi rỗng
+                    $maHang = !empty($variant['ma_hang']) ? $variant['ma_hang'] : $this->generateUniqueMaHang();
+                    $maVach = !empty($variant['ma_vach']) ? $variant['ma_vach'] : $this->generateUniqueMaVach();
+
                     $newVariant = BienTheSanPham::create([
                         'product_id' => $product->id,
                         'ten_bien_the' => $tenBienThe,
                         'la_don_vi' => $laDonVi,
                         'ten_don_vi' => $tenDonVi,
-                        'ma_hang' => $this->generateUniqueMaHang(),
-                        'ma_vach' => !empty($variant['ma_vach']) ? $variant['ma_vach'] : $this->generateUniqueMaVach(),
+                        'ma_hang' => $maHang,                                  // ← sửa: dùng payload
+                        'ma_vach' => $maVach,
                         'gia_von' => $variant['gia_von'] ?? 0,
                         'gia_ban' => $variant['gia_ban'] ?? 0,
                         'so_luong_ton' => 0,
@@ -396,9 +519,37 @@ class SanPhamController extends Controller
                     $incomingVariantIds[] = $newVariant->id;
                 }
 
-                // 4. CRUD units cho variant - truyen anh da xac dinh + product_id
+                // 4. CRUD units cho variant CHA (chỉ từ field units[] lồng trong row)
                 $lastVariantId = $existingId ?? $incomingVariantIds[count($incomingVariantIds) - 1];
                 $this->syncUnits($lastVariantId, $variant['units'] ?? [], $variantImage, $product->id);
+            }
+
+            // 4b. Lưu conversionRows (các dòng CÒN LẠI không phải thuộc tính, không phải dòng đầu) vào don_vi_quy_doi
+            // Gắn variant_id của biến thể CHA đầu tiên của product
+            if (!empty($conversionRows)) {
+                $parentVariant = BienTheSanPham::where('product_id', $product->id)
+                    ->orderBy('id')->first();
+                if ($parentVariant) {
+                    foreach ($conversionRows as $cRow) {
+                        $tyLeQuyDoi = isset($cRow['ty_le']) ? (int)$cRow['ty_le']
+                            : (isset($cRow['so_luong_san_pham_trong_don_vi']) ? (int)$cRow['so_luong_san_pham_trong_don_vi'] : 2);
+                        $uMaHang = !empty($cRow['ma_hang']) ? $cRow['ma_hang'] : $this->generateUniqueMaHang();
+                        DonViQuyDoi::create([
+                            'variant_id'   => $parentVariant->id,
+                            'product_id'   => $product->id,
+                            'don_vi_chuan_id' => $cRow['don_vi_chuan_id'] ?? null,
+                            'ten_don_vi'   => $cRow['ten_don_vi'] ?? '',
+                            'so_luong_san_pham_trong_don_vi' => $tyLeQuyDoi,
+                            'ma_hang'      => $uMaHang,
+                            'ma_vach'      => $cRow['ma_vach'] ?? null,
+                            'gia_von_quy_doi' => $cRow['gia_von'] ?? ($cRow['gia_von_quy_doi'] ?? 0),
+                            'gia_ban_quy_doi' => $cRow['gia_ban'] ?? ($cRow['gia_ban_quy_doi'] ?? 0),
+                            'gia_ban_si'   => $cRow['gia_ban_si'] ?? null,
+                            'hinh_anh'     => $cRow['hinh_anh'] ?? null,
+                            'la_don_vi_mac_dinh' => false,
+                        ]);
+                    }
+                }
             }
 
             // 5. Xoa variants bi loai bo
@@ -1019,6 +1170,23 @@ class SanPhamController extends Controller
             }
         }
 
+        // Nếu user upload ảnh mới cho variant cha → propagate xuống TẤT CẢ units
+        // của variant (cả units có trong payload lẫn units không có trong payload)
+        if ($image !== null) {
+            $allUnits = DonViQuyDoi::where('variant_id', $variantId)->get();
+            foreach ($allUnits as $u) {
+                if ($u->hinh_anh !== $image) {
+                    $oldImg = $u->hinh_anh;
+                    $u->hinh_anh = $image;
+                    $u->save();
+                    // Xóa file cũ nếu không còn ai dùng
+                    if ($oldImg && !str_starts_with($oldImg, 'http')) {
+                        $this->deleteImageIfUnused($oldImg);
+                    }
+                }
+            }
+        }
+
         // Query các unit thuộc VỀ variant hiện tại (không bao gồm unit được share từ variant khác)
         $existingIds = DonViQuyDoi::where('variant_id', $variantId)
             ->pluck('id')->toArray();
@@ -1049,11 +1217,12 @@ class SanPhamController extends Controller
                 // Cập nhật đơn vị hiện có
                 $existingUnit = DonViQuyDoi::find($unitId);
                 if ($existingUnit) {
+                    $unitMaHang = !empty($unit['ma_hang']) ? $unit['ma_hang'] : $existingUnit->ma_hang;
                     $existingUnit->update([
                         'don_vi_chuan_id' => $unit['don_vi_chuan_id'] ?? null,
                         'ten_don_vi' => $unit['ten_don_vi'],
                         'so_luong_san_pham_trong_don_vi' => (int)($unit['so_luong_san_pham_trong_don_vi'] ?? 1),
-                        'ma_hang' => $unit['ma_hang'] ?? null,
+                        'ma_hang' => $unitMaHang,                            // ← sửa: giữ ma_hang cũ
                         'ma_vach' => $unit['ma_vach'] ?? null,
                         'gia_von_quy_doi' => $unit['gia_von_quy_doi'] ?? 0,
                         'gia_ban_quy_doi' => $unit['gia_ban_quy_doi'] ?? 0,
@@ -1065,13 +1234,14 @@ class SanPhamController extends Controller
                 }
             } else {
                 // Tạo mới — thừa hưởng ảnh từ variant
+                $unitMaHang = !empty($unit['ma_hang']) ? $unit['ma_hang'] : $this->generateUniqueMaHang();
                 $newUnit = DonViQuyDoi::create([
                     'variant_id' => $variantId,
                     'product_id' => $productId,
                     'don_vi_chuan_id' => $unit['don_vi_chuan_id'] ?? null,
                     'ten_don_vi' => $unit['ten_don_vi'],
                     'so_luong_san_pham_trong_don_vi' => (int)($unit['so_luong_san_pham_trong_don_vi'] ?? 1),
-                    'ma_hang' => $unit['ma_hang'] ?? $this->generateUniqueMaHang(),
+                    'ma_hang' => $unitMaHang,                                // ← sửa: ưu tiên payload
                     'ma_vach' => $unit['ma_vach'] ?? null,
                     'gia_von_quy_doi' => $unit['gia_von_quy_doi'] ?? 0,
                     'gia_ban_quy_doi' => $unit['gia_ban_quy_doi'] ?? 0,

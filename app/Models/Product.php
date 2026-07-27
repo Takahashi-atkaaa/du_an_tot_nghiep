@@ -154,15 +154,16 @@ class Product extends BaseModel
                 $key = trim($u->ten_don_vi);
                 if ($key === '') continue;
                 if (!isset($units[$key])) {
-                    $units[$key] = [
-                        'name' => $key,
-                        'so_luong_san_pham_trong_don_vi' => $u->so_luong_san_pham_trong_don_vi,
-                        'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
-                        'gia_von_quy_doi' => $u->gia_von_quy_doi,
-                        'ma_vach' => $u->ma_vach,
-                        'variant_id' => $v->id,
-                        'don_vi_chuan_id' => $u->don_vi_chuan_id,
-                    ];
+                $units[$key] = [
+                    'name' => $key,
+                    'so_luong_san_pham_trong_don_vi' => $u->so_luong_san_pham_trong_don_vi,
+                    'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
+                    'gia_von_quy_doi' => $u->gia_von_quy_doi,
+                    'ma_vach' => $u->ma_vach,
+                    'variant_id' => $v->id,
+                    'don_vi_chuan_id' => $u->don_vi_chuan_id,
+                    'hinh_anh' => $u->hinh_anh,
+                ];
                 }
             }
         }
@@ -190,9 +191,11 @@ class Product extends BaseModel
                 'so_luong_san_pham_trong_don_vi' => $u->so_luong_san_pham_trong_don_vi,
                 'gia_von_quy_doi' => $u->gia_von_quy_doi,
                 'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
+                'ma_hang' => $u->ma_hang,
                 'ma_vach' => $u->ma_vach,
                 'la_don_vi_mac_dinh' => $u->la_don_vi_mac_dinh,
                 'don_vi_chuan_id' => $u->don_vi_chuan_id,
+                'hinh_anh' => $u->hinh_anh,
             ])->all();
             $variantsArr[] = [
                 'id' => $v->id,

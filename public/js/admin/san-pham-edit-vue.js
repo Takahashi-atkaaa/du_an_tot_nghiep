@@ -258,12 +258,19 @@
                         // beingEdited: mark units as "being edited" vs "unchanged"
                         const rowConversionUnits = (bt.units || []).map(u => ({
                             id: u.id,
+                            _dbId: u.id ?? null,
+                            don_vi_chuan_id: u.don_vi_chuan_id ?? null,
                             ten_don_vi: u.ten_don_vi,
+                            so_luong_san_pham_trong_don_vi: u.so_luong_san_pham_trong_don_vi,
                             ty_le_quy_doi: u.ty_le_quy_doi,
                             gia_von_quy_doi: u.gia_von_quy_doi,
                             gia_ban_quy_doi: u.gia_ban_quy_doi,
                             ma_hang: u.ma_hang,
                             ma_vach: u.ma_vach,
+                            hinh_anh: u.hinh_anh || '',
+                            // Map fields theo format buildPayload expects
+                            name: u.ten_don_vi,
+                            rate: u.so_luong_san_pham_trong_don_vi ?? u.ty_le_quy_doi ?? 1,
                             // Flag: true = tồn tại trong DB, false = mới thêm
                             _fromDb: true
                         }));
