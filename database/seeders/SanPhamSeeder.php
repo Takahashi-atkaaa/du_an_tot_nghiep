@@ -124,7 +124,7 @@ class SanPhamSeeder extends Seeder
         DB::table('don_vi_quy_doi')->insert([
             'product_id'          => $spHeinekenId,
             'ten_don_vi'          => 'Thùng',
-            'ty_le_quy_doi'       => 24,
+            'so_luong_san_pham_trong_don_vi' => 24,
             'ma_hang'             => 'HEI-THU001',
             'ma_vach'             => '8934801000027',
             'gia_von_quy_doi'     => 240000,
@@ -199,7 +199,7 @@ class SanPhamSeeder extends Seeder
         DB::table('don_vi_quy_doi')->insert([
             'product_id'          => $spNuocEpId,
             'ten_don_vi'          => 'Thùng',
-            'ty_le_quy_doi'       => 12,
+            'so_luong_san_pham_trong_don_vi' => 12,
             'ma_hang'             => 'NJT-THU001',
             'ma_vach'             => '8935100000025',
             'gia_von_quy_doi'     => 216000,

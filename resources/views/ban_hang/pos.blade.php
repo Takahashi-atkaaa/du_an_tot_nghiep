@@ -1233,7 +1233,7 @@ let selectedPromotion = null;
 let discountAmount = 0;
 async function loadProducts() {
     try {
-        let url = '/nhan-vien/ban-hang/san-pham';
+        let url = '/ban-hang/san-pham';
         const params = new URLSearchParams();
 
         const search = document.getElementById('searchInput').value;
@@ -1936,7 +1936,7 @@ if (selectedPayment === 'cash') {
     try {
        const diemThuDuoc = Math.floor(total / 10000);
 
-const response = await fetch('/nhan-vien/ban-hang/thanh-toan', {
+const response = await fetch('/ban-hang/thanh-toan', {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json',
@@ -2031,7 +2031,7 @@ document.addEventListener('keydown', function(e) {
 });
 async function loadCategories() {
     try {
-        const response = await fetch('/nhan-vien/ban-hang/danh-muc');
+        const response = await fetch('/ban-hang/danh-muc');
         const categories = await response.json();
 
         const bar = document.getElementById('categoryBar');
@@ -2064,7 +2064,7 @@ function searchCustomers() {
     }
 
     customerSearchTimer = setTimeout(async () => {
-        const response = await fetch('/nhan-vien/ban-hang/khach-hang?q=' + encodeURIComponent(keyword));
+        const response = await fetch('/ban-hang/khach-hang?q=' + encodeURIComponent(keyword));
         const customers = await response.json();
 
         if (customers.length === 0) {
@@ -2119,7 +2119,7 @@ function clearSelectedCustomer() {
     calculateChange();
 }
 async function loadPromotions() {
-    const response = await fetch('/nhan-vien/ban-hang/khuyen-mai');
+    const response = await fetch('/ban-hang/khuyen-mai');
     promotions = await response.json();
 
     const select = document.getElementById('promotionSelect');
@@ -2205,7 +2205,7 @@ async function handleSearchEnter(event) {
     if (!keyword) return;
 
     try {
-        const response = await fetch('/nhan-vien/ban-hang/san-pham?q=' + encodeURIComponent(keyword));
+        const response = await fetch('/ban-hang/san-pham?q=' + encodeURIComponent(keyword));
         const data = await response.json();
 
         const product = data.find(p =>
