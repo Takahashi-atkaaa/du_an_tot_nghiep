@@ -1,6 +1,99 @@
 @extends('admin_xem_truoc.layouts.admin')
 
 @section('title', 'Sửa giao ca')
+<style>
+    body{
+        background:#eef3f8;
+    }
+
+    .container{
+        max-width:1100px;
+    }
+
+    .card{
+        border:none;
+        border-radius:18px;
+        overflow:hidden;
+        box-shadow:0 10px 30px rgba(0,0,0,.08);
+    }
+
+    .card-header{
+        background:linear-gradient(135deg,#2563eb,#3b82f6);
+        color:#fff;
+        padding:18px 25px;
+    }
+
+    .card-header h4{
+        margin:0;
+        font-weight:700;
+    }
+
+    .card-body{
+        padding:35px;
+        background:#fff;
+    }
+
+    .group-title{
+        font-size:17px;
+        font-weight:700;
+        color:#2563eb;
+        border-left:5px solid #2563eb;
+        padding-left:12px;
+        margin:30px 0 20px;
+    }
+
+    .group-title:first-child{
+        margin-top:0;
+    }
+
+    .form-label{
+        font-weight:600;
+        color:#334155;
+        margin-bottom:8px;
+    }
+
+    .form-control,
+    .form-select{
+        border-radius:12px;
+        border:1px solid #dbe4f0;
+        background:#fafcff;
+        height:48px;
+        transition:.3s;
+    }
+
+    textarea.form-control{
+        height:120px;
+        resize:none;
+    }
+
+    .form-control:focus,
+    .form-select:focus{
+        border-color:#2563eb;
+        box-shadow:0 0 0 .2rem rgba(37,99,235,.15);
+        background:#fff;
+    }
+
+    .form-control[readonly]{
+        background:#f1f5f9;
+        font-weight:600;
+    }
+
+    .btn-update{
+        background:linear-gradient(135deg,#2563eb,#3b82f6);
+        color:#fff;
+        border:none;
+        border-radius:12px;
+        padding:12px 35px;
+        font-weight:600;
+        transition:.3s;
+    }
+
+    .btn-update:hover{
+        transform:translateY(-2px);
+        box-shadow:0 10px 20px rgba(37,99,235,.25);
+        color:#fff;
+    }
+</style>
 
 @section('content')
 
@@ -18,90 +111,143 @@
                 @csrf
                 @method('PUT')
 
-                {{-- Trưởng ca bàn giao --}}
-                <div class="mb-3">
-                    <label class="form-label">Trưởng ca bàn giao</label>
-
-                    <input type="text"
-                           class="form-control"
-                           value="{{ $giaoCa->truongCaBanGiao->ho_ten }}">
+                {{-- Thông tin ca làm  --}}
+                <div class="group-title">
+                    👤 Thông tin ca làm
                 </div>
 
-                {{-- Trưởng ca nhận --}}
-                <div class="mb-3">
-                    <label class="form-label">Trưởng ca nhận</label>
+                <div class="row">
 
-                    <select name="id_truong_ca_nhan_ca" class="form-select">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Trưởng ca bàn giao</label>
 
-                        @foreach($danhSachTruongCa as $nguoi)
+                        <input type="text"
+                            class="form-control"
+                            value="{{ $giaoCa->truongCaBanGiao->ho_ten }}"
+                            readonly>
+                    </div>
 
-                            <option value="{{ $nguoi->id }}"
-                                @selected($nguoi->id == $giaoCa->id_truong_ca_nhan_ca)>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Trưởng ca nhận</label>
 
-                                {{ $nguoi->ho_ten }}
+                        <select name="id_truong_ca_nhan_ca" class="form-select">
 
-                            </option>
+                            @foreach($danhSachTruongCa as $nguoi)
 
-                        @endforeach
+                                <option value="{{ $nguoi->id }}"
+                                    @selected($nguoi->id == $giaoCa->id_truong_ca_nhan_ca)>
 
-                    </select>
+                                    {{ $nguoi->ho_ten }}
+
+                                </option>
+
+                            @endforeach
+
+                        </select>
+                    </div>
+
                 </div>
 
-                {{-- Ca làm việc --}}
-                <div class="mb-3">
-                    <label class="form-label">Ca làm việc</label>
+                <div class="row">
 
-                    <input type="text"
-                           class="form-control"
-                           value="{{ $giaoCa->caLamViec->ten_ca }}">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Ca làm việc</label>
+
+                        <input type="text"
+                            class="form-control"
+                            value="{{ $giaoCa->caLamViec->ten_ca }}"
+                            readonly>
+                    </div>
+
                 </div>
 
-                {{-- Tiền đầu ca --}}
-                <div class="mb-3">
-                    <label class="form-label">Tiền đầu ca</label>
-
-                    <input type="number"
-                           class="form-control"
-                           id="tien_mat_dau_ca"
-                           name="tien_mat_dau_ca"
-                           value="{{ $giaoCa->tien_mat_dau_ca }}">
+                {{-- Thời gian ca làm --}}
+                <div class="group-title">
+                    🕒 Thời gian ca làm
                 </div>
 
-                {{-- Tiền cuối ca --}}
-                <div class="mb-3">
-                    <label class="form-label">Tiền cuối ca</label>
+                <div class="row">
 
-                    <input type="number"
-                           class="form-control"
-                           id="tien_cuoi_ca"
-                           name="tien_mat_cuoi_ca"
-                           value="{{ $giaoCa->tien_mat_cuoi_ca }}">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Thời gian bắt đầu</label>
+
+                        <input type="datetime-local"
+                            class="form-control"
+                            name="thoi_gian_bat_dau_ca"
+                            value="{{ \Carbon\Carbon::parse($giaoCa->thoi_gian_bat_dau_ca)->format('Y-m-d\TH:i') }}">
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Thời gian kết thúc</label>
+
+                        <input type="datetime-local"
+                            class="form-control"
+                            name="thoi_gian_ket_thuc_ca"
+                            value="{{ $giaoCa->thoi_gian_ket_thuc_ca ? \Carbon\Carbon::parse($giaoCa->thoi_gian_ket_thuc_ca)->format('Y-m-d\TH:i') : '' }}">
+                    </div>
+
                 </div>
 
-                {{-- Chênh lệch --}}
-                <div class="mb-3">
-                    <label class="form-label">Chênh lệch</label>
+                {{-- Thông tin tiền mặt --}}
+                <div class="group-title">
+                    💰 Thông tin tiền mặt
+                </div>
 
-                    <input type="number"
-                           class="form-control"
-                           id="chenh_lech"
-                           name="chenh_lech"
-                           value={{ $giaoCa->chenh_lech}}>
+                <div class="row">
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Tiền đầu ca</label>
+
+                        <input type="number"
+                            class="form-control"
+                            id="tien_mat_dau_ca"
+                            name="tien_mat_dau_ca"
+                            value="{{ $giaoCa->tien_mat_dau_ca }}">
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Tiền cuối ca</label>
+
+                        <input type="number"
+                            class="form-control"
+                            id="tien_cuoi_ca"
+                            name="tien_mat_cuoi_ca"
+                            value="{{ $giaoCa->tien_mat_cuoi_ca }}">
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Chênh lệch</label>
+
+                        <input type="number"
+                            class="form-control"
+                            id="chenh_lech"
+                            name="chenh_lech"
+                            value="{{ $giaoCa->chenh_lech }}">
+                    </div>
+
                 </div>
 
                 {{-- Ghi chú --}}
-                <div class="mb-3">
-                    <label class="form-label">Ghi chú</label>
-
-                    <textarea class="form-control"
-                              name="ghi_chu"
-                              rows="4">{{ $giaoCa->ghi_chu }}</textarea>
+                <div class="group-title">
+                    📝 Ghi chú
                 </div>
 
-                <button class="btn btn-primary">
-                    <i class="bi bi-save"></i>
-                    Cập nhật
-                </button>
+                <div class="mb-4">
+
+                    <textarea class="form-control"
+                            name="ghi_chu"
+                            rows="5">{{ $giaoCa->ghi_chu }}</textarea>
+
+                </div>
+
+                {{-- nút cập nhật --}}
+                <div class="d-flex justify-content-end">
+
+                    <button class="btn btn-primary">
+                        Cập nhật giao ca
+                    </button>
+
+                </div>
 
             </form>
 

@@ -202,20 +202,24 @@ class LichSuCaLam extends Controller
     public function cap_nhat_giao_ca(Request $request, $id)
     {
         $request->validate([
-            'id_truong_ca_nhan_ca' => 'required|exists:nguoi_dung,id',
-            'tien_mat_cuoi_ca' => 'required|numeric|min:0',
-            'tien_mat_dau_ca' => 'required|numeric|min:0',
-            'ghi_chu' => 'nullable|string',
+            'id_truong_ca_nhan_ca'  => 'required|exists:nguoi_dung,id',
+            'tien_mat_cuoi_ca'      => 'required|numeric|min:0',
+            'tien_mat_dau_ca'       => 'required|numeric|min:0',
+            'ghi_chu'               => 'nullable|string',
+            'thoi_gian_bat_dau_ca'  => 'required',
+            'thoi_gian_ket_thuc_ca' => 'required',
         ]);
 
         $giaoCa = GiaoCa::findOrFail($id);
 
         $giaoCa->update([
-            'id_truong_ca_nhan_ca' => $request->id_truong_ca_nhan_ca,
-            'tien_mat_cuoi_ca' => $request->tien_mat_cuoi_ca,
-            'tien_mat_dau_ca' => $request->tien_mat_dau_ca,
-            'chenh_lech' => $request->chenh_lech,
-            'ghi_chu' => $request->ghi_chu,
+            'id_truong_ca_nhan_ca'  => $request->id_truong_ca_nhan_ca,
+            'tien_mat_cuoi_ca'      => $request->tien_mat_cuoi_ca,
+            'tien_mat_dau_ca'       => $request->tien_mat_dau_ca,
+            'chenh_lech'            => $request->chenh_lech,
+            'ghi_chu'               => $request->ghi_chu,
+            'thoi_gian_bat_dau_ca'  => $request->thoi_gian_bat_dau_ca,
+            'thoi_gian_ket_thuc_ca' => $request->thoi_gian_ket_thuc_ca,
         ]);
 
         return redirect()
