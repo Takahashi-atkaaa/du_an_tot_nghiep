@@ -4,44 +4,70 @@
 
 <style>
     body{
-        background:#f5f7fb;
+        background:#f4f7fb;
     }
 
-    .handover-card{
+    .container{
+        max-width:1100px;
+    }
+
+    .card{
         border:none;
-        border-radius:15px;
+        border-radius:18px;
         overflow:hidden;
+        box-shadow:0 12px 30px rgba(0,0,0,.08);
     }
 
-    .handover-card .card-header{
+    .card-header{
         background:linear-gradient(135deg,#0d6efd,#4f8dfd);
         color:#fff;
         padding:18px 25px;
     }
 
-    .handover-card .card-header h4{
+    .card-header h4{
         margin:0;
-        font-weight:600;
+        font-weight:700;
     }
 
-    .handover-card .card-body{
-        padding:30px;
+    .card-body{
+        padding:35px;
+        background:#fff;
+    }
+
+    .section-title{
+        background:#eef5ff;
+        color:#0d6efd;
+        border-left:5px solid #0d6efd;
+        border-radius:8px;
+        padding:10px 15px;
+        margin-bottom:20px;
+        font-size:17px;
+        font-weight:700;
+    }
+
+    .info-box{
+        background:#fafcff;
+        border:1px solid #e2e8f0;
+        border-radius:12px;
+        padding:20px;
+        margin-bottom:30px;
     }
 
     .form-label{
         font-weight:600;
-        color:#555;
-        margin-bottom:8px;
+        color:#334155;
     }
 
     .form-control,
     .form-select{
-        border-radius:10px;
         height:48px;
+        border-radius:10px;
+        border:1px solid #dbe4f0;
+        transition:.3s;
     }
 
     textarea.form-control{
-        height:auto;
+        height:120px;
     }
 
     .form-control:focus,
@@ -51,179 +77,282 @@
     }
 
     .btn-save{
+        background:linear-gradient(135deg,#0d6efd,#4f8dfd);
+        color:#fff;
+        border:none;
         border-radius:10px;
         padding:10px 35px;
         font-weight:600;
+        transition:.3s;
     }
 
-    .section-title{
-        font-size:18px;
-        font-weight:600;
-        color:#0d6efd;
-        margin-bottom:20px;
-        border-left:4px solid #0d6efd;
-        padding-left:10px;
+    .btn-save:hover{
+        color:#fff;
+        transform:translateY(-2px);
+        box-shadow:0 10px 20px rgba(13,110,253,.25);
     }
 </style>
 
 @section('content')
 
+<div class="container">
 
-   <div class="container">
-    <div class="card shadow">
-        <div class="card-header">
-            <h4>Thêm phiếu giao ca</h4>
+    <div class="card">
+
+        <div class="d-inline-block bg-primary text-white px-4 py-2 rounded">
+            <h4 class="mb-0">
+                <i class="fas fa-file-signature me-2"></i>
+                Thêm phiếu giao ca
+            </h4>
         </div>
 
         <div class="card-body">
+
             <form action="{{ route('giao-ca.store') }}" method="POST">
+
                 @csrf
 
-                {{-- Trưởng ca bàn giao --}}
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Trưởng ca bàn giao</label>
-
-                        <select name="id_truong_ca_ban_giao" class="form-select">
-                            <option value="">-- Chọn trưởng ca --</option>
-
-                            @foreach ($danhSachTruongCa as $nguoi)
-                                <option value="{{ $nguoi->id }}"
-                                    {{ old('id_truong_ca_ban_giao') == $nguoi->id ? 'selected' : '' }}>
-                                    {{ $nguoi->ho_ten }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                {{-- Trưởng ca nhận ca --}}
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Trưởng ca nhận</label>
-
-                        <select name="id_truong_ca_nhan_ca" class="form-select">
-                            <option value="">-- Chọn trưởng ca --</option>
-
-                            @foreach ($danhSachTruongCa as $nguoi)
-                                <option value="{{ $nguoi->id }}"
-                                    {{ old('id_truong_ca_nhan_ca') == $nguoi->id ? 'selected' : '' }}>
-                                    {{ $nguoi->ho_ten }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+                {{-- Thông tin ca làm --}}
+                <div class="section-title">
+                    <i class="fas fa-users me-2"></i>
+                    Thông tin ca làm
                 </div>
 
-                {{-- ca làm việc --}}
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Ca làm việc</label>
+                <div class="info-box">
 
-                        <select name="id_ca_lam_viec" class="form-select">
-                            <option value="">-- Chọn ca --</option>
+                    <div class="row">
 
-                            @foreach ($caLamViecs as $ca)
-                                <option value="{{ $ca->id }}"
-                                    {{ old('id_ca_lam_viec') == $ca->id ? 'selected' : '' }}>
-                                    {{ $ca->ten_ca }}
+                        <div class="col-md-6 mb-3">
+
+                            <label class="form-label">
+                                Trưởng ca bàn giao
+                            </label>
+
+                            <select name="id_truong_ca_ban_giao" class="form-select">
+
+                                <option value="">
+                                    -- Chọn trưởng ca --
                                 </option>
-                            @endforeach
-                        </select>
+
+                                @foreach ($danhSachTruongCa as $nguoi)
+
+                                    <option value="{{ $nguoi->id }}"
+                                        {{ old('id_truong_ca_ban_giao') == $nguoi->id ? 'selected' : '' }}>
+
+                                        {{ $nguoi->ho_ten }}
+
+                                    </option>
+
+                                @endforeach
+
+                            </select>
+
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+
+                            <label class="form-label">
+                                Trưởng ca nhận
+                            </label>
+
+                            <select name="id_truong_ca_nhan_ca" class="form-select">
+
+                                <option value="">
+                                    -- Chọn trưởng ca --
+                                </option>
+
+                                @foreach ($danhSachTruongCa as $nguoi)
+
+                                    <option value="{{ $nguoi->id }}"
+                                        {{ old('id_truong_ca_nhan_ca') == $nguoi->id ? 'selected' : '' }}>
+
+                                        {{ $nguoi->ho_ten }}
+
+                                    </option>
+
+                                @endforeach
+
+                            </select>
+
+                        </div>
+
                     </div>
 
-                {{-- trạng thái --}}
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Trạng thái</label>
+                    <div class="row">
 
-                        <select name="trang_thai" class="form-select">
-                            <option value="0">Chờ xác nhận</option>
-                        </select>
-                    </div>
-                </div>
+                        <div class="col-md-6">
 
-                {{-- Tiền --}}
-                <div class="row">
+                            <label class="form-label">
+                                Ca làm việc
+                            </label>
 
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Tiền đầu ca</label>
+                            <select name="id_ca_lam_viec" class="form-select">
 
-                        <input
-                            type="number"
-                            class="form-control"
-                            name="tien_mat_dau_ca"
-                            step="0.01"
-                            min="0"
-                            value="{{ old('tien_mat_dau_ca') }}">
-                    </div>
+                                <option value="">
+                                    -- Chọn ca --
+                                </option>
 
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Tiền cuối ca</label>
+                                @foreach ($caLamViecs as $ca)
 
-                        <input
-                            type="number"
-                            class="form-control"
-                            name="tien_mat_cuoi_ca"
-                            step="0.01"
-                            min="0">
-                    </div>
+                                    <option value="{{ $ca->id }}"
+                                        {{ old('id_ca_lam_viec') == $ca->id ? 'selected' : '' }}>
 
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Chênh lệch</label>
+                                        {{ $ca->ten_ca }}
 
-                        <input
-                            type="number"
-                            class="form-control"
-                            name="chenh_lech"
-                            value="{{ old('chenh_lech') }}">
+                                    </option>
+
+                                @endforeach
+
+                            </select>
+
+                        </div>
+
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Trạng thái
+                            </label>
+
+                            <select name="trang_thai" class="form-select">
+
+                                <option value="0">
+                                    Chờ xác nhận
+                                </option>
+
+                            </select>
+
+                        </div>
+
                     </div>
 
                 </div>
 
                 {{-- Thời gian --}}
-                <div class="row">
+                <div class="section-title">
+                    <i class="far fa-clock me-2"></i>
+                    Thời gian ca làm
+                </div>
 
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Thời gian bắt đầu</label>
+                <div class="info-box">
 
-                        <input
-                            type="datetime-local"
-                            class="form-control"
-                            name="thoi_gian_bat_dau_ca"
-                            value="{{ old('thoi_gian_bat_dau_ca') }}">
+                    <div class="row">
+
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Thời gian bắt đầu
+                            </label>
+
+                            <input
+                                type="datetime-local"
+                                class="form-control"
+                                name="thoi_gian_bat_dau_ca"
+                                value="{{ old('thoi_gian_bat_dau_ca') }}">
+
+                        </div>
+
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Thời gian kết thúc
+                            </label>
+
+                            <input
+                                type="datetime-local"
+                                class="form-control"
+                                name="thoi_gian_ket_thuc_ca"
+                                value="{{ old('thoi_gian_ket_thuc_ca') }}">
+
+                        </div>
+
                     </div>
 
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Thời gian kết thúc</label>
+                </div>
 
-                        <input
-                            type="datetime-local"
-                            class="form-control"
-                            name="thoi_gian_ket_thuc_ca"
-                            value="{{ old('thoi_gian_ket_thuc_ca') }}">
+                {{-- Tiền --}}
+                <div class="section-title">
+                    <i class="fas fa-wallet me-2"></i>
+                    Thông tin tiền mặt
+                </div>
+
+                <div class="info-box">
+
+                    <div class="row">
+
+                        <div class="col-md-4">
+
+                            <label class="form-label">
+                                Tiền đầu ca
+                            </label>
+
+                            <input
+                                type="number"
+                                class="form-control"
+                                name="tien_mat_dau_ca"
+                                value="{{ old('tien_mat_dau_ca') }}">
+
+                        </div>
+
+                        <div class="col-md-4">
+
+                            <label class="form-label">
+                                Tiền cuối ca
+                            </label>
+
+                            <input
+                                type="number"
+                                class="form-control"
+                                name="tien_mat_cuoi_ca">
+
+                        </div>
+
+                        <div class="col-md-4">
+
+                            <label class="form-label">
+                                Chênh lệch
+                            </label>
+
+                            <input
+                                type="number"
+                                class="form-control"
+                                name="chenh_lech"
+                                value="{{ old('chenh_lech') }}">
+
+                        </div>
+
                     </div>
 
                 </div>
 
                 {{-- Ghi chú --}}
-                <div class="mb-4">
-                    <label class="form-label">Ghi chú</label>
+                <div class="section-title">
+                    <i class="fas fa-clipboard me-2"></i>
+                    Ghi chú
+                </div>
+
+                <div class="info-box">
 
                     <textarea
-                        name="ghi_chu"
+                        class="form-control"
                         rows="5"
-                        class="form-control">{{ old('ghi_chu') }}</textarea>
+                        name="ghi_chu">{{ old('ghi_chu') }}</textarea>
+
                 </div>
 
-                {{-- nút --}}
                 <div class="text-end">
-                    <button class="btn btn-primary btn-save">
-                        <i class="fas fa-save me-2"></i>
+
+                    <button class="btn btn-primary">
                         Lưu giao ca
                     </button>
+
                 </div>
-              
+
             </form>
+
         </div>
+
     </div>
+
 </div>
 
 @endsection

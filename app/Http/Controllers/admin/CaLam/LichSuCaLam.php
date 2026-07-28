@@ -220,6 +220,7 @@ class LichSuCaLam extends Controller
             'ghi_chu'               => $request->ghi_chu,
             'thoi_gian_bat_dau_ca'  => $request->thoi_gian_bat_dau_ca,
             'thoi_gian_ket_thuc_ca' => $request->thoi_gian_ket_thuc_ca,
+            'trang_thai'            => 1,  
         ]);
 
         return redirect()
@@ -230,7 +231,7 @@ class LichSuCaLam extends Controller
 
 
     //xác nhận giao ca
-    public function xac_nhan_gia_ca($id)
+    public function xac_nhan_giao_ca($id)
     {
         $giaoCa = GiaoCa::findOrFail($id);
 
@@ -251,5 +252,28 @@ class LichSuCaLam extends Controller
         return redirect()
             ->back()
             ->with('success', 'Xác nhận giao ca thành công.');
+    }
+
+    public function tu_choi_giao_ca($id)
+    {
+        $giaoCa = GiaoCa::findOrFail($id);
+
+        // Chỉ xác nhận khi đang chờ
+        if ($giaoCa->trang_thai == 1) {
+            return back()->with('error', 'Giao ca đã được xác nhận.');
+        }
+
+        // Kiểm tra quyền
+        if (Auth::user()->id_vai_tro != 1 && Auth::id() != $giaoCa->id_truong_ca_nhan_ca) {
+            abort(403, 'Bạn không có quyền xác nhận giao ca.');
+        }
+
+        $giaoCa->trang_thai = 2;
+
+        $giaoCa->save();
+
+        return redirect()
+            ->back()
+            ->with('success', 'Đã từ chối giao ca.');
     }
 }

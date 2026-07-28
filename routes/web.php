@@ -344,7 +344,8 @@ Route::get('/admin/cai-dat', function () {
             Route::get('/lich-su-ca-lam-giao-ca-chi-tiet/{id}',[LichSuCaLam::class, 'giao_ca_chi_tiet'])->name('giao-ca.chi-tiet')->middleware('permission:ca_lam');
             Route::get('/lich-su-ca-lam-giao-ca-sua/{id}',[LichSuCaLam::class, 'sua_giao_ca'])->name('giao-ca.sua')->middleware('permission:ca_lam');
             Route::put('/lich-su-ca-lam-giao-cap-nhat/{id}',[LichSuCaLam::class, 'cap_nhat_giao_ca'])->name('giao-ca.cap-nhat')->middleware('permission:ca_lam');
-            Route::put('/lich-su-ca-lam-giao-ca/{id}/xac-nhan', [LichSuCaLam::class, 'xac_nhan_gia_ca'])->name('giao-ca.xac-nhan')->middleware('permission:ca_lam');
+            Route::put('/lich-su-ca-lam-giao-ca/{id}/xac-nhan', [LichSuCaLam::class, 'xac_nhan_giao_ca'])->name('giao-ca.xac-nhan')->middleware('permission:ca_lam');
+            Route::put('/lich-su-ca-lam-giao-ca/{id}/tu-choi', [LichSuCaLam::class, 'tu_choi_giao_ca'])->name('giao-ca.tu-choi')->middleware('permission:ca_lam');
         
         //điểm danh
             Route::get('/chi-tiet-diem-danh-nhan-vien/{id_chia_ca_lam_viec}/{id_nv}',[DiemDanhNhanVien::class, 'chi_tiet_diem_danh'])->name('lich-su-ca-lam.chi_tiet_diem_danh')->middleware('permission:ca_lam');

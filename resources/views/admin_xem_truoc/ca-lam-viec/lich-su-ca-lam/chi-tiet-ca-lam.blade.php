@@ -139,7 +139,7 @@
                             </div>
 
                             <h5 class="mb-0 text-danger">
-                                {{ number_format($tongDoanhThuCuaCa) }}đ
+                                {{ number_format($tongDoanhThuCuaCa) }}  VND
                             </h5>
                         </div>
                     </div>
@@ -209,11 +209,11 @@
                         <div>
 
                             <h6 class="text-muted mb-1">
-                                Tiền mặt trong ca
+                                Doanh thu tiền mặt trong ca
                             </h6>
 
                             <h4 class="fw-bold text-success mb-0">
-                                {{ number_format($tongTienMatCuaCa, 0, ',', '.') }} đ
+                                {{ number_format($tongTienMatCuaCa, 0, ',', '.') }} VND
                             </h4>
 
                         </div>
@@ -258,6 +258,32 @@
                                             </a>
                                     @else
                                         {{-- nếu giao ca tồn tại mà id không phải admin hay trưởng ca thuộc ca thì chỉ được xem chi tiết --}}
+                                            <a href="{{ route('giao-ca.chi-tiet', ['id' => $giaoCa->id]) }}"
+                                                class="btn btn-outline-primary btn-sm">
+                                                <i class="bi bi-eye"></i>
+                                                Xem chi tiết
+                                            </a>
+                                    @endif
+                                @elseif($giaoCa->trang_thai ==2)
+                                     @if(Auth::user()->id_vai_tro == 1 || $danhSachTrongCaTrongCa->contains('id_nguoi_dung', Auth::id()))
+                                    {{-- nếu giao ca tồn tại mà id đó là của admin hoặc trưởng ca của ca thì được phép sửa giao ca --}}
+                                            <span style="color:red";>giao ca bị từ chối</span>
+                                            <a href="{{ route('giao-ca.sua', ['id' => $giaoCa->id]) }}"
+                                                class="btn btn-outline-warning btn-sm">
+                                                <i class="bi bi-pencil-square"></i>
+                                                Sửa giao ca
+                                            </a>
+                                    @elseif(Auth::id() == $giaoCa->id_truong_ca_nhan_ca)
+                                        {{-- nếu ca thuộc người nhân phải vào xác nhận --}}
+                                        <span style="color:red";>Bạn đã từ chối giao ca</span>
+                                            <a href="{{ route('giao-ca.chi-tiet', ['id' => $giaoCa->id]) }}"
+                                                class="btn btn-outline-danger btn-sm">
+                                                <i class="bi bi-eye"></i>
+                                                Cập nhật lại trạng thái
+                                            </a>
+                                    @else
+                                        {{-- nếu giao ca tồn tại mà id không phải admin hay trưởng ca thuộc ca thì chỉ được xem chi tiết --}}
+                                        <span style="color:red";>giao ca bị từ chối</span>
                                             <a href="{{ route('giao-ca.chi-tiet', ['id' => $giaoCa->id]) }}"
                                                 class="btn btn-outline-primary btn-sm">
                                                 <i class="bi bi-eye"></i>

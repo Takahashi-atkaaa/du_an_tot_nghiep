@@ -101,8 +101,11 @@
 
     <div class="card shadow">
 
-        <div class="card-header">
-            <h4>Sửa phiếu giao ca</h4>
+        <div class="d-inline-block bg-primary text-white px-4 py-2 rounded">
+            <h4 class="mb-0">
+                <i class="fas fa-file-signature me-2"></i>
+                Sửa phiếu giao ca
+            </h4>
         </div>
 
         <div class="card-body">
