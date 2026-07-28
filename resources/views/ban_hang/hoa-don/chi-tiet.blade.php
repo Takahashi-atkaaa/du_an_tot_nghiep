@@ -16,7 +16,7 @@
     <h1 class="h2">Chi tiết hóa đơn #HD{{ str_pad($hoaDon->id, 4, '0', STR_PAD_LEFT) }}</h1>
 
     <div>
-        <a href="{{ url('/nhan-vien/hoa-don') }}" class="btn btn-secondary">
+        <a href="{{ route('nhan-vien.hoa-don') }}" class="btn btn-secondary">
             Quay lại
         </a>
 
