@@ -1173,9 +1173,9 @@ body {
                     <i class="fas fa-university"></i>
                     Chuyển khoản
                 </button>
-                <button class="pay-btn" data-method="vnpay" onclick="selectPayment('vnpay')">
+                <button class="pay-btn" data-method="payos" onclick="selectPayment('payos')">
                     <i class="fas fa-qrcode"></i>
-                    VNPay
+                    PayOS
                 </button>
             </div>
 
@@ -1868,8 +1868,8 @@ async function processPayment(isTransferConfirmed = false) {
     return;
 }
 
-    if (selectedPayment === 'vnpay') {
-        await vnpayCreate();
+    if (selectedPayment === 'payos') {
+        await payosCreate();
         return;
     }
 
@@ -1973,14 +1973,13 @@ showPrintInvoiceDialog(hoaDonId);
 }
 
 // ─────────────────────────────────────────────
-// VNPay flow
+// PayOS flow
 // ─────────────────────────────────────────────
-let vnpayPollTimer = null;
-let vnpayWindow = null;
-let vnpayCurrentHoaDonId = null;
-let vnpayPollLoggedFirst = false;
+let payosPollTimer = null;
+let payosWindow = null;
+let payosCurrentHoaDonId = null;
 
-async function vnpayCreate() {
+async function payosCreate() {
     const cart = getCurrentCart();
     if (cart.length === 0) {
         showToast('Giỏ hàng trống!', 'error');
@@ -1989,27 +1988,14 @@ async function vnpayCreate() {
 
     const usePoint = parseInt(document.getElementById('usePoint')?.value || 0);
 
-    // H1: mở popup NGAY từ click handler (synchronously) để né popup-blocker.
+    // Mở popup NGAY từ click handler (synchronously) để né popup-blocker.
     // window.open() phải nằm trực tiếp trong user gesture, KHÔNG bọc trong await.
-    let popupOpened = false;
     try {
-        vnpayWindow = window.open('about:blank', 'vnpayWindow', 'width=900,height=700,left=200,top=100');
-        popupOpened = !!vnpayWindow && !vnpayWindow.closed;
-        fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-Debug-Session-Id': '379e58'},
-            body: JSON.stringify({
-                sessionId: '379e58', runId: 'post-fix-loi-03', hypothesisId: 'H1',
-                location: 'pos.blade.php:vnpayCreate',
-                message: 'POPUP_BEFORE_FETCH',
-                data: { popupOpened, cartLen: cart.length },
-                timestamp: Date.now(),
-            }),
-        }).catch(() => {});
+        payosWindow = window.open('about:blank', 'payosWindow', 'width=900,height=700,left=200,top=100');
     } catch (_) {}
 
     try {
-        const response = await fetch('/nhan-vien/ban-hang/vnpay/create', {
+        const response = await fetch('/nhan-vien/ban-hang/payos/create', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2025,166 +2011,100 @@ async function vnpayCreate() {
 
         const data = await response.json();
         if (!response.ok || !data.success) {
-            showToast(data.message || 'Không thể tạo giao dịch VNPay!', 'error');
+            if (payosWindow && !payosWindow.closed) payosWindow.close();
+            showToast(data.message || 'Không thể tạo giao dịch PayOS!', 'error');
             return;
         }
 
-        vnpayCurrentHoaDonId = data.hoa_don_id;
+        payosCurrentHoaDonId = data.hoa_don_id;
 
-        // H5 fix: VNPay vpcpay.html CHỈ chấp nhận GET (theo docs + curl test: POST → error 03).
-        // Đổi từ `document.write(form_html)` (POST auto-submit) sang `location = redirect_url`
-        // (GET redirect). `redirect_url` đã chứa đầy đủ params + vnp_SecureHash đúng chuẩn
-        // VNPay reconstruct được.
-        if (vnpayWindow && !vnpayWindow.closed) {
+        if (payosWindow && !payosWindow.closed) {
             try {
-                vnpayWindow.location = data.redirect_url;
-                // #region agent log
-                fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'X-Debug-Session-Id': '379e58'},
-                    body: JSON.stringify({
-                        sessionId: '379e58', runId: 'post-fix-loi-03', hypothesisId: 'H5',
-                        location: 'pos.blade.php:vnpayCreate',
-                        message: 'POPUP_REDIRECTED_TO_GET_URL',
-                        data: {
-                            hoa_don_id: data.hoa_don_id,
-                            redirect_url_length: (data.redirect_url || '').length,
-                            redirect_url_host: (() => { try { return new URL(data.redirect_url).host; } catch(_) { return null; } })(),
-                            payload_keys: Object.keys(data || {}),
-                        },
-                        timestamp: Date.now(),
-                    }),
-                }).catch(() => {});
-                // #endregion agent log
+                payosWindow.location = data.checkout_url;
             } catch (e) {
-                showToast('Trình duyệt chặn popup — hãy cho phép popup để thanh toán VNPay.', 'error');
+                showToast('Trình duyệt chặn popup — hãy cho phép popup để thanh toán PayOS.', 'error');
                 return;
             }
         } else {
-            // #region agent log
-            fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-Debug-Session-Id': '379e58'},
-                body: JSON.stringify({
-                    sessionId: '379e58', runId: 'post-fix-loi-03', hypothesisId: 'H1',
-                    location: 'pos.blade.php:vnpayCreate',
-                    message: 'POPUP_BLOCKED_BY_BROWSER',
-                    data: { hoa_don_id: data.hoa_don_id },
-                    timestamp: Date.now(),
-                }),
-            }).catch(() => {});
-            // #endregion agent log
             showToast('Trình duyệt chặn popup. Vui lòng bật popup cho trang này.', 'error');
             return;
         }
 
-        // H3: bắt đầu polling để bắt trạng thái thanh_cong
-        vnpayStartPolling();
+        payosStartPolling();
     } catch (error) {
         console.error(error);
-        if (vnpayWindow && !vnpayWindow.closed) vnpayWindow.close();
-        showToast('Lỗi khi tạo giao dịch VNPay!', 'error');
+        if (payosWindow && !payosWindow.closed) payosWindow.close();
+        showToast('Lỗi khi tạo giao dịch PayOS!', 'error');
     }
 }
 
-function vnpayStartPolling() {
-    if (vnpayPollTimer) {
-        clearInterval(vnpayPollTimer);
+function payosStartPolling() {
+    if (payosPollTimer) {
+        clearInterval(payosPollTimer);
     }
     const deadline = Date.now() + 5 * 60 * 1000; // 5 phút
 
-    vnpayPollTimer = setInterval(async () => {
-        if (!vnpayCurrentHoaDonId) {
-            vnpayStopPolling();
+    payosPollTimer = setInterval(async () => {
+        if (!payosCurrentHoaDonId) {
+            payosStopPolling();
             return;
         }
         if (Date.now() > deadline) {
-            vnpayStopPolling();
-            showToast('Đã hết thời gian chờ VNPay.', 'error');
+            payosStopPolling();
+            showToast('Đã hết thời gian chờ PayOS.', 'error');
             return;
         }
         try {
-            const response = await fetch('/nhan-vien/ban-hang/vnpay/check-status/' + vnpayCurrentHoaDonId);
+            const response = await fetch('/nhan-vien/ban-hang/payos/check-status/' + payosCurrentHoaDonId);
             if (!response.ok) return;
             const data = await response.json();
-            // #region agent log
-            // H3: ghi nhận polling lần đầu và lần phát hiện thanh_cong
-            if (!vnpayPollLoggedFirst) {
-                vnpayPollLoggedFirst = true;
-                fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'X-Debug-Session-Id': '996f8c'},
-                    body: JSON.stringify({
-                        sessionId: '996f8c', runId: 'pos-cach1', hypothesisId: 'H3',
-                        location: 'pos.blade.php:vnpayStartPolling',
-                        message: 'POLL_FIRST_HIT',
-                        data: { trang_thai: data.trang_thai, hoa_don_id: vnpayCurrentHoaDonId },
-                        timestamp: Date.now(),
-                    }),
-                }).catch(() => {});
-            }
-            // #endregion agent log
 
             if (data.trang_thai === 'thanh_cong') {
-                vnpayStopPolling();
-                if (vnpayWindow && !vnpayWindow.closed) vnpayWindow.close();
-                showToast('Thanh toán VNPay thành công!', 'success');
+                payosStopPolling();
+                if (payosWindow && !payosWindow.closed) payosWindow.close();
+                showToast('Thanh toán PayOS thành công!', 'success');
                 closePaidInvoiceTab();
                 loadProducts();
-                showPrintInvoiceDialog(vnpayCurrentHoaDonId);
-                vnpayCurrentHoaDonId = null;
+                showPrintInvoiceDialog(payosCurrentHoaDonId);
+                payosCurrentHoaDonId = null;
             } else if (data.trang_thai === 'that_bai' || data.trang_thai === 'hoan_tien') {
-                vnpayStopPolling();
-                if (vnpayWindow && !vnpayWindow.closed) vnpayWindow.close();
-                showToast('Thanh toán VNPay thất bại.', 'error');
-                vnpayCurrentHoaDonId = null;
+                payosStopPolling();
+                if (payosWindow && !payosWindow.closed) payosWindow.close();
+                showToast('Thanh toán PayOS thất bại.', 'error');
+                payosCurrentHoaDonId = null;
             }
         } catch (e) {
-            console.error('VNPay poll error', e);
+            console.error('PayOS poll error', e);
         }
     }, 3000);
 }
 
-function vnpayStopPolling() {
-    if (vnpayPollTimer) {
-        clearInterval(vnpayPollTimer);
-        vnpayPollTimer = null;
+function payosStopPolling() {
+    if (payosPollTimer) {
+        clearInterval(payosPollTimer);
+        payosPollTimer = null;
     }
 }
 
-// Lắng nghe message từ popup /vnpay/return
+// Lắng nghe message từ popup /payos/return
 window.addEventListener('message', function (event) {
     if (!event.data) return;
     const type = event.data.type;
-    if (type !== 'vnpay-return' && type !== 'vnpay_returned') return;
-    if (!event.data.hoa_don_id && !event.data.txn_ref) return;
-    const msgId = parseInt(event.data.hoa_don_id || event.data.txn_ref, 10);
-    if (msgId !== parseInt(vnpayCurrentHoaDonId, 10)) return;
-
-    // #region agent log
-    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-Debug-Session-Id': '996f8c'},
-        body: JSON.stringify({
-            sessionId: '996f8c', runId: 'pos-cach1', hypothesisId: 'H4',
-            location: 'pos.blade.php:messageListener',
-            message: 'POST_MESSAGE_RECEIVED',
-            data: {
-                type, success: event.data.success, verified: event.data.verified,
-                msgId, currentId: vnpayCurrentHoaDonId,
-            },
-            timestamp: Date.now(),
-        }),
-    }).catch(() => {});
-    // #endregion agent log
+    if (type !== 'payos-return' && type !== 'payos_returned') return;
+    const msgId = parseInt(event.data.hoa_don_id || event.data.orderCode, 10);
+    if (msgId !== parseInt(payosCurrentHoaDonId, 10)) return;
 
     if (event.data.success) {
         if (event.data.verified) {
-            showToast('VNPay xác nhận thanh toán, đang đồng bộ...', 'info');
+            showToast('PayOS xác nhận thanh toán, đang đồng bộ...', 'info');
         }
+    } else if (event.data.cancelled) {
+        payosStopPolling();
+        showToast('Khách đã hủy thanh toán PayOS.', 'info');
+        payosCurrentHoaDonId = null;
     } else {
-        vnpayStopPolling();
-        showToast('Thanh toán VNPay chưa hoàn tất.', 'error');
+        payosStopPolling();
+        showToast('Thanh toán PayOS chưa hoàn tất.', 'error');
     }
 });
 

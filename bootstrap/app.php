@@ -25,10 +25,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => KTVaiTro::class,    // middleware kiểm tra quyền của người dùng khi được admin cấp cho
         ]);
 
-        // VNPay server-to-server gọi /vnpay/ipn và /vnpay/return mà không có CSRF token
+        // PayOS server-to-server gọi /payos/webhook mà không có CSRF token
         $middleware->validateCsrfTokens(except: [
-            'vnpay/ipn',
-            'vnpay/return',
+            'payos/webhook',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

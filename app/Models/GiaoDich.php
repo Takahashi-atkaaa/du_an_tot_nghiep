@@ -15,6 +15,7 @@ class GiaoDich extends Model
 
     public const PHUONG_THUC_TIEN_MAT = 'tien_mat';
     public const PHUONG_THUC_VNPAY = 'vnpay';
+    public const PHUONG_THUC_PAYOS = 'payos';
 
     public const TRANG_THAI_CHO_XAC_NHAN = 'cho_xac_nhan';
     public const TRANG_THAI_THANH_CONG = 'thanh_cong';

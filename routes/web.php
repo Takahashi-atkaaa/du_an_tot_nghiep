@@ -30,6 +30,7 @@ use App\Http\Controllers\admin\NhanSu\DiemDanhController;
 
 use App\Http\Controllers\nhan_vien\KhachHangController as NhanVienKhachHangController;
 use App\Http\Controllers\nhan_vien\DiemDanhController as NhanVienDiemDanhController;
+use App\Http\Controllers\PayOSController;
 use App\Http\Controllers\VnpayController;
 
 use App\Http\Middleware\AuthAdmin;
@@ -406,11 +407,11 @@ Route::middleware([VaiTroBanHang::class, 'vai_tro:Nhân viên,Trưởng ca,Admin
  Route::get('/ban-hang/khuyen-mai', [NhanVienController::class, 'layKhuyenMai'])
    ->name('nhan-vien.ban-hang.khuyen-mai');
 
- // VNPay POS flow: tạo giao dịch + polling trạng thái
- Route::post('/ban-hang/vnpay/create', [VnpayController::class, 'createPayment'])
-     ->name('nhan-vien.ban-hang.vnpay.create');
- Route::get('/ban-hang/vnpay/check-status/{hoaDonId}', [VnpayController::class, 'checkStatus'])
-     ->name('nhan-vien.ban-hang.vnpay.check-status');
+ // PayOS POS flow: tạo giao dịch + polling trạng thái
+    Route::post('/ban-hang/payos/create', [PayOSController::class, 'createPayment'])
+        ->name('nhan-vien.ban-hang.payos.create');
+    Route::get('/ban-hang/payos/check-status/{hoaDonId}', [PayOSController::class, 'checkStatus'])
+        ->name('nhan-vien.ban-hang.payos.check-status');
   
     Route::get('/khach-hang', [NhanVienKhachHangController::class, 'index'])->name('nhan-vien.khach-hang.index');
     Route::get('/khach-hang/create', [NhanVienKhachHangController::class, 'create'])->name('nhan-vien.khach-hang.create');
@@ -430,6 +431,7 @@ Route::middleware([VaiTroBanHang::class, 'vai_tro:Nhân viên,Trưởng ca,Admin
     Route::post('/ho-so/doi-mat-khau', [NhanVienController::class, 'doiMatKhau'])->name('nhan-vien.ho-so.doi-mat-khau');
 });
 
-// ==== VNPay callbacks (public, VNPay server gọi) ====
-Route::get('/vnpay/return', [VnpayController::class, 'return'])->name('vnpay.return');
-Route::post('/vnpay/ipn', [VnpayController::class, 'ipn'])->name('vnpay.ipn');
+// ==== PayOS callbacks (public, PayOS server gọi) ====
+Route::get('/payos/return', [PayOSController::class, 'return'])->name('payos.return');
+Route::get('/payos/cancel', [PayOSController::class, 'cancel'])->name('payos.cancel');
+Route::post('/payos/webhook', [PayOSController::class, 'webhook'])->name('payos.webhook');

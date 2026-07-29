@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kết quả thanh toán VNPay</title>
+    <title>Kết quả thanh toán PayOS</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -12,7 +12,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, {{ $success ? '#10b981 0%, #059669 100%' : '#ef4444 0%, #dc2626 100%' }});
+            background: linear-gradient(135deg, {{ $success ? '#10b981 0%, #059669 100%' : ($cancelled ?? false ? '#f59e0b 0%, #d97706 100%' : '#ef4444 0%, #dc2626 100%') }});
             color: #fff;
             padding: 20px;
         }
@@ -35,8 +35,8 @@
             align-items: center;
             justify-content: center;
             font-size: 48px;
-            background: {{ $success ? '#d1fae5' : '#fee2e2' }};
-            color: {{ $success ? '#059669' : '#dc2626' }};
+            background: {{ $success ? '#d1fae5' : (($cancelled ?? false) ? '#fef3c7' : '#fee2e2') }};
+            color: {{ $success ? '#059669' : (($cancelled ?? false) ? '#d97706' : '#dc2626') }};
         }
         h1 {
             font-size: 24px;
@@ -66,7 +66,7 @@
         }
         .details tr:last-child td { border-bottom: none; }
         .details td:first-child { color: #6b7280; }
-        .details td:last-child { text-align: right; font-weight: 600; color: #111827; }
+        .details td:last-child { text-align: right; font-weight: 600; color: #111827; word-break: break-all; }
         .actions { display: flex; gap: 12px; justify-content: center; }
         button {
             padding: 12px 24px;
@@ -78,7 +78,7 @@
             transition: all 0.2s;
         }
         .btn-primary {
-            background: {{ $success ? '#059669' : '#dc2626' }};
+            background: {{ $success ? '#059669' : (($cancelled ?? false) ? '#d97706' : '#dc2626') }};
             color: #fff;
         }
         .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
@@ -91,55 +91,69 @@
 </head>
 <body>
     <div class="card">
-        <div class="icon">{{ $success ? '✓' : '✕' }}</div>
+        <div class="icon">
+            @if($success) ✓
+            @elseif($cancelled ?? false) !
+            @else ✕
+            @endif
+        </div>
 
         @if($success)
             <h1>Thanh toán thành công!</h1>
-            <p class="subtitle">Hóa đơn #{{ $payload['txn_ref'] ?? '' }} đã được thanh toán qua VNPay.</p>
+            <p class="subtitle">Hóa đơn #{{ $payload['orderCode'] ?? '' }} đã được thanh toán qua PayOS VietQR.</p>
+        @elseif($cancelled ?? false)
+            <h1>Đã hủy thanh toán</h1>
+            <p class="subtitle">Khách hàng đã hủy thanh toán PayOS. Hóa đơn sẽ được đánh dấu thất bại.</p>
         @else
-            <h1>{{ $verified ? 'Thanh toán thất bại' : 'Chữ ký không hợp lệ' }}</h1>
+            <h1>{{ $verified ? 'Thanh toán thất bại' : 'Có lỗi xảy ra' }}</h1>
             <p class="subtitle">
-                {{ $verified ? 'VNPay không xác nhận giao dịch này. Vui lòng liên hệ nhân viên hỗ trợ.' : 'Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại hoặc liên hệ nhân viên.' }}
+                {{ $verified ? 'PayOS không xác nhận giao dịch này. Vui lòng liên hệ nhân viên hỗ trợ.' : 'Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại hoặc liên hệ nhân viên.' }}
             </p>
         @endif
 
         @if(!empty($payload))
             <div class="details">
                 <table>
-                    @if(!empty($payload['txn_ref']))
+                    @if(!empty($payload['orderCode']))
                     <tr>
                         <td>Mã hóa đơn</td>
-                        <td>#{{ $payload['txn_ref'] }}</td>
+                        <td>#{{ $payload['orderCode'] }}</td>
                     </tr>
                     @endif
                     @if(!empty($payload['amount']))
                     <tr>
                         <td>Số tiền</td>
-                        <td>{{ number_format($payload['amount'], 0, ',', '.') }} ₫</td>
+                        <td>{{ number_format((float) $payload['amount'], 0, ',', '.') }} ₫</td>
                     </tr>
                     @endif
-                    @if(!empty($payload['transaction_no']) && $payload['transaction_no'] !== '0')
+                    @if(!empty($payload['amountPaid']) && $payload['amountPaid'] !== $payload['amount'])
                     <tr>
-                        <td>Mã GD VNPay</td>
-                        <td>{{ $payload['transaction_no'] }}</td>
+                        <td>Đã thanh toán</td>
+                        <td>{{ number_format((float) $payload['amountPaid'], 0, ',', '.') }} ₫</td>
                     </tr>
                     @endif
-                    @if(!empty($payload['bank_code']))
+                    @if(!empty($payload['paymentLinkId']) || !empty($payload['reference']))
                     <tr>
-                        <td>Ngân hàng</td>
-                        <td>{{ $payload['bank_code'] }}</td>
+                        <td>Mã GD PayOS</td>
+                        <td>{{ $payload['paymentLinkId'] ?? $payload['reference'] }}</td>
                     </tr>
                     @endif
-                    @if(!empty($payload['pay_date']))
+                    @if(!empty($payload['accountNumber']))
                     <tr>
-                        <td>Thời gian</td>
-                        <td>{{ preg_match('/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/', $payload['pay_date'], $m) ? "{$m[3]}/{$m[2]}/{$m[1]} {$m[4]}:{$m[5]}:{$m[6]}" : $payload['pay_date'] }}</td>
+                        <td>STK nhận</td>
+                        <td>{{ $payload['accountNumber'] }}</td>
                     </tr>
                     @endif
-                    @if(!empty($payload['response_code']))
+                    @if(!empty($payload['status']))
+                    <tr>
+                        <td>Trạng thái</td>
+                        <td>{{ $payload['status'] }}</td>
+                    </tr>
+                    @endif
+                    @if(!empty($payload['code']))
                     <tr>
                         <td>Mã phản hồi</td>
-                        <td>{{ $payload['response_code'] }}</td>
+                        <td>{{ $payload['code'] }}</td>
                     </tr>
                     @endif
                 </table>
@@ -149,6 +163,28 @@
         <div class="actions">
             <button class="btn-primary" onclick="window.close()">Đóng cửa sổ</button>
         </div>
+
+        <script>
+            (function () {
+                const success = @json($success);
+                const cancelled = @json($cancelled ?? false);
+                const orderCode = @json((string) ($payload['orderCode'] ?? ''));
+                const verified = @json($verified);
+
+                if (window.opener && !window.opener.closed) {
+                    try {
+                        window.opener.postMessage({
+                            type: 'payos-return',
+                            success,
+                            cancelled,
+                            verified,
+                            hoa_don_id: orderCode,
+                            orderCode,
+                        }, '*');
+                    } catch (_) {}
+                }
+            })();
+        </script>
 
         @if($success)
             <p class="countdown">Cửa sổ sẽ tự đóng sau <span id="countdown">5</span> giây...</p>
@@ -161,17 +197,6 @@
                     if (n <= 0) {
                         clearInterval(timer);
                         try { window.close(); } catch (_) {}
-                        try {
-                            // Fallback: báo cho opener (POS) biết đã xong
-                            if (window.opener && !window.opener.closed) {
-                                window.opener.postMessage({
-                                    type: 'vnpay-return',
-                                    success: true,
-                                    verified: true,
-                                    hoa_don_id: '{{ $payload['txn_ref'] ?? '' }}',
-                                }, '*');
-                            }
-                        } catch (_) {}
                     }
                 }, 1000);
             </script>
