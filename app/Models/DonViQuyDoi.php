@@ -13,6 +13,7 @@ class DonViQuyDoi extends BaseModel
     protected $fillable = [
         'variant_id',
         'product_id',
+        'don_vi_chuan_id',
         'ten_don_vi',
         'so_luong_san_pham_trong_don_vi',
         'ma_hang',

@@ -191,13 +191,15 @@ function toggleSection(headerEl) {
             var targetId = row.dataset.targetId || row.dataset.variantId || productId;
             var rowType = row.dataset.rowType || 'goc';
             var unitId = row.dataset.unitId || '';
-            if (productId) window.openProductDrawer(productId, targetId, rowType, unitId);
+            var isMaster = row.dataset.isMaster || '0';
+            if (productId) window.openProductDrawer(productId, targetId, rowType, unitId, isMaster);
         });
     }
 
-    window.openProductDrawer = async function(productId, targetId, rowType, unitId) {
+    window.openProductDrawer = async function(productId, targetId, rowType, unitId, isMaster) {
         if (targetId === undefined) { targetId = productId; rowType = 'goc'; }
-        console.log('[Drawer] openProductDrawer called', { productId, targetId, rowType, unitId });
+        if (isMaster === undefined) { isMaster = '0'; }
+        console.log('[Drawer] openProductDrawer called', { productId, targetId, rowType, unitId, isMaster });
 
         var modal = new bootstrap.Offcanvas(drawer);
         drawerBody.innerHTML = '<div class="d-flex justify-content-center align-items-center" style="min-height:300px;">' +
@@ -223,6 +225,9 @@ function toggleSection(headerEl) {
             }
             if (unitId) {
                 queryParts.push('unit_id=' + encodeURIComponent(unitId));
+            }
+            if (isMaster === '1') {
+                queryParts.push('is_master=1');
             }
             if (queryParts.length) {
                 apiUrl += '?' + queryParts.join('&');
@@ -280,10 +285,11 @@ function toggleSection(headerEl) {
         var units = data.units || [];
         var theKho = data.theKho || [];
         var loHang = data.loHang || [];
+        var hasMultipleVariants = data.hasMultipleVariants || false;
+        var masterSummary = data.masterSummary || null;
+        var isMaster = data.isMaster || false;
 
         // === Tìm đúng variant để hiển thị trên Header ===
-        // - Click dòng cha (targetId == productId, rowType=goc): dùng variant mặc định từ API
-        // - Click dòng con (targetId = variant.id, rowType=goc): tìm trong allVariants
         var displayVariant = variant;
 
         if (targetId && String(targetId) !== String(sp.id)) {
@@ -291,7 +297,7 @@ function toggleSection(headerEl) {
             if (found) displayVariant = found;
         }
 
-        // Lấy units đúng của variant đang hiển thị (allVariants đã eager load units)
+        // Lấy units đúng của variant đang hiển thị
         var displayUnits = displayVariant && displayVariant.units
             ? displayVariant.units
             : units;
@@ -299,43 +305,62 @@ function toggleSection(headerEl) {
         // Tìm đơn vị tương ứng với variant đang hiển thị
         var displayUnit = null;
 
-        // Ưu tiên 1: selectedUnit từ API (khi click dòng quy đổi/đơn vị)
         if (data.selectedUnit && data.selectedUnit.id) {
             displayUnit = data.selectedUnit;
         }
 
-        // Ưu tiên 2: tìm theo don_vi_id của variant
         if (!displayUnit && displayVariant && displayVariant.don_vi_id) {
             displayUnit = displayUnits.find(function(u) { return String(u.id) === String(displayVariant.don_vi_id); });
         }
 
-        // Xác định hiển thị dựa trên la_don_vi
+        // Xác định hiển thị dựa trên la_don_vi và isMaster
         var isLaDonVi = displayVariant && displayVariant.la_don_vi;
         var tenDonViHienThi;
         var tenBienTheHienThi;
 
         if (isLaDonVi) {
-            // Biến thể đơn vị: hiển thị tên đơn vị, không hiển thị biến thể
             tenDonViHienThi = displayVariant.ten_don_vi || '-';
             tenBienTheHienThi = '-';
         } else {
-            // Biến thể thuộc tính: hiển thị biến thể + đơn vị quy đổi
             tenDonViHienThi = displayUnit ? displayUnit.ten_don_vi : (units.length > 0 ? (units[0].ten_don_vi || '-') : '-');
             tenBienTheHienThi = displayVariant.ten_bien_the || '-';
         }
 
-        // Khi click vào dòng quy đổi, hiển thị tên đơn vị quy đổi ưu tiên
         var selectedUnitBadge = '';
         if (rowType === 'quy_doi' && displayUnit) {
             tenDonViHienThi = displayUnit.ten_don_vi;
-            // Đánh dấu đang xem đơn vị quy đổi
             selectedUnitBadge = '<span class="badge bg-info ms-2" style="font-size:0.65rem;"><i class="fas fa-cube me-1"></i>Đơn vị quy đổi</span>';
         }
 
-        var maVachHienThi = displayUnit ? (displayUnit.ma_vach || '-') : (displayVariant.ma_vach || '-');
-        var giaBanHienThi = displayUnit ? displayUnit.gia_ban_quy_doi : displayVariant.gia_ban;
-        var giaVonHienThi = displayUnit ? displayUnit.gia_von_quy_doi : displayVariant.gia_von;
-        var tonKhoHienThi = displayUnit ? displayUnit.so_luong_ton : displayVariant.so_luong_ton;
+        // === Xác định giá trị hiển thị dựa trên isMaster ===
+        var maVachHienThi;
+        var giaBanHienThi;
+        var giaVonHienThi;
+        var tonKhoHienThi;
+
+        if (isMaster) {
+            // TRẠNG THÁI A: MASTER PRODUCT (Dòng Cha) - Hiển thị thông tin tổng hợp
+            maVachHienThi = '<span class="text-muted fst-italic">Nhiều SKU</span>';
+            giaBanHienThi = masterSummary && masterSummary.gia_ban_min !== null
+                ? (masterSummary.gia_ban_min === masterSummary.gia_ban_max
+                    ? formatMoney(masterSummary.gia_ban_min)
+                    : formatMoney(masterSummary.gia_ban_min) + ' - ' + formatMoney(masterSummary.gia_ban_max))
+                : '-';
+            giaVonHienThi = masterSummary && masterSummary.gia_von_min !== null
+                ? (masterSummary.gia_von_min === masterSummary.gia_von_max
+                    ? formatMoney(masterSummary.gia_von_min)
+                    : formatMoney(masterSummary.gia_von_min) + ' - ' + formatMoney(masterSummary.gia_von_max))
+                : '-';
+            tonKhoHienThi = masterSummary ? masterSummary.tong_ton_kho : 0;
+            tenBienTheHienThi = '<span class="text-muted fst-italic">Nhiều biến thể</span>';
+            tenDonViHienThi = '<span class="text-muted fst-italic">Nhiều đơn vị</span>';
+        } else {
+            // TRẠNG THÁI B: VARIANT CỤ THỂ - Hiển thị thông tin variant
+            maVachHienThi = displayUnit ? (displayUnit.ma_vach || '-') : (displayVariant.ma_vach || '-');
+            giaBanHienThi = displayUnit ? displayUnit.gia_ban_quy_doi : displayVariant.gia_ban;
+            giaVonHienThi = displayUnit ? displayUnit.gia_von_quy_doi : displayVariant.gia_von;
+            tonKhoHienThi = displayUnit ? displayUnit.so_luong_ton : displayVariant.so_luong_ton;
+        }
 
         var trangThaiVariant = !displayVariant.trang_thai
             ? '<span class="badge bg-danger">Ngừng bán</span>'
@@ -356,16 +381,13 @@ function toggleSection(headerEl) {
             });
         }
 
-        var variantHinhAnh = displayVariant.hinh_anh
-            ? '<img src="/' + displayVariant.hinh_anh + '" style="width:32px;height:32px;object-fit:cover;border-radius:4px;">'
-            : '<div style="width:32px;height:32px;border-radius:4px;background:#eee;display:flex;align-items:center;justify-content:center;"><i class="fas fa-image text-muted" style="font-size:0.6rem;"></i></div>';
-
         var mainHinhAnh = displayVariant.hinh_anh
             ? '<img src="/' + displayVariant.hinh_anh + '" class="img-fluid rounded" alt="' + (sp.ten_san_pham || '') + '" style="max-height:220px; object-fit:contain; background:#f8f9fa;">'
             : '<div class="text-center text-muted py-5 bg-light rounded"><i class="fas fa-image fa-3x"></i><p class="mt-2 mb-0">Không có ảnh</p></div>';
 
+        // === Bảng đơn vị quy đổi (chỉ hiển thị khi KHÔNG phải Master) ===
         var unitsHtml = '';
-        if (units.length > 0) {
+        if (!isMaster && units.length > 0) {
             unitsHtml = '<div class="mb-3">' +
                 '<h6 class="fw-bold mb-2"><i class="fas fa-balance-scale me-1"></i>Đơn vị quy đổi <span class="fw-normal text-muted small">(' + displayUnits.length + ')</span></h6>' +
                 '<table class="table table-sm table-bordered mb-0" style="font-size:0.82rem;">' +
@@ -393,64 +415,117 @@ function toggleSection(headerEl) {
             unitsHtml += '</tbody></table></div>';
         }
 
+        // === Bảng Thẻ kho (chỉ hiển thị khi KHÔNG phải Master) ===
         var theKhoHtml = '';
-        if (theKho.length > 0) {
-            theKhoHtml = '<div class="table-scroll-wrap">' +
-                '<table class="table table-sm table-hover mb-0">' +
+        if (!isMaster) {
+            if (theKho.length > 0) {
+                theKhoHtml = '<div class="table-scroll-wrap">' +
+                    '<table class="table table-sm table-hover mb-0">' +
+                        '<thead class="table-light">' +
+                            '<tr>' +
+                                '<th>Mã phiếu</th>' +
+                                '<th>Thời gian</th>' +
+                                '<th>Loại</th>' +
+                                '<th>Lô</th>' +
+                                '<th class="text-end">Giá nhập</th>' +
+                                '<th class="text-center">SL</th>' +
+                                '<th class="text-center">SL còn lại</th>' +
+                            '</tr>' +
+                        '</thead>' +
+                        '<tbody>';
+                theKho.forEach(function(item) {
+                    theKhoHtml += '<tr>' +
+                        '<td class="small">' + (item.maPhieu || '-') + '</td>' +
+                        '<td class="small">' + formatDate(item.thoiGian) + '</td>' +
+                        '<td>' + loaiPhieuLabel(item.loaiPhieu) + '</td>' +
+                        '<td class="small">' + (item.maLo || '-') + '</td>' +
+                        '<td class="small text-end">' + formatMoney(item.gia) + ' d</td>' +
+                        '<td class="small text-center">' + (item.soLuong ?? '-') + '</td>' +
+                        '<td class="small text-center">' + (item.soLuongConLai ?? '-') + '</td>' +
+                    '</tr>';
+                });
+                theKhoHtml += '</tbody></table></div>';
+            } else {
+                theKhoHtml = '<p class="text-muted text-center py-3 mb-0 small">Chưa có dữ liệu thẻ kho.</p>';
+            }
+        }
+
+        // === Bảng Lô hàng (chỉ hiển thị khi KHÔNG phải Master) ===
+        var loHangHtml = '';
+        if (!isMaster) {
+            if (loHang.length > 0) {
+                loHangHtml = '<table class="table table-sm table-hover mb-0">' +
                     '<thead class="table-light">' +
                         '<tr>' +
-                            '<th>Mã phiếu</th>' +
-                            '<th>Thời gian</th>' +
-                            '<th>Loại</th>' +
-                            '<th>Lô</th>' +
-                            '<th class="text-end">Giá nhập</th>' +
-                            '<th class="text-center">SL</th>' +
-                            '<th class="text-center">SL còn lại</th>' +
+                            '<th>Số lô</th>' +
+                            '<th>Hạn sử dụng</th>' +
+                            '<th class="text-end">SL nhập</th>' +
+                            '<th class="text-end">SL còn lại</th>' +
                         '</tr>' +
                     '</thead>' +
                     '<tbody>';
-            theKho.forEach(function(item) {
-                theKhoHtml += '<tr>' +
-                    '<td class="small">' + (item.maPhieu || '-') + '</td>' +
-                    '<td class="small">' + formatDate(item.thoiGian) + '</td>' +
-                    '<td>' + loaiPhieuLabel(item.loaiPhieu) + '</td>' +
-                    '<td class="small">' + (item.maLo || '-') + '</td>' +
-                    '<td class="small text-end">' + formatMoney(item.gia) + ' d</td>' +
-                    '<td class="small text-center">' + (item.soLuong ?? '-') + '</td>' +
-                    '<td class="small text-center">' + (item.soLuongConLai ?? '-') + '</td>' +
-                '</tr>';
-            });
-            theKhoHtml += '</tbody></table></div>';
-        } else {
-            theKhoHtml = '<p class="text-muted text-center py-3 mb-0 small">Chưa có dữ liệu thẻ kho.</p>';
+                loHang.forEach(function(item) {
+                    var isExpired = item.hanSuDung && new Date(item.hanSuDung) < new Date();
+                    loHangHtml += '<tr>' +
+                        '<td class="small">' + (item.maLo || '-') + '</td>' +
+                        '<td class="small ' + (isExpired ? 'text-danger' : '') + '">' + formatDate(item.hanSuDung) + ' ' + (isExpired ? '<i class="fas fa-exclamation-circle"></i>' : '') + '</td>' +
+                        '<td class="small text-end">' + (item.so_luong ?? '-') + '</td>' +
+                        '<td class="small text-end">' + (item.soLuongConLai ?? '-') + '</td>' +
+                    '</tr>';
+                });
+                loHangHtml += '</tbody></table>';
+            } else {
+                loHangHtml = '<p class="text-muted text-center py-3 mb-0 small">Chưa có lô hàng.</p>';
+            }
         }
 
-        var loHangHtml = '';
-        if (loHang.length > 0) {
-            loHangHtml = '<table class="table table-sm table-hover mb-0">' +
-                '<thead class="table-light">' +
-                    '<tr>' +
-                        '<th>Số lô</th>' +
-                        '<th>Hạn sử dụng</th>' +
-                        '<th class="text-end">SL nhập</th>' +
-                        '<th class="text-end">SL còn lại</th>' +
-                    '</tr>' +
-                '</thead>' +
-                '<tbody>';
-            loHang.forEach(function(item) {
-                var isExpired = item.hanSuDung && new Date(item.hanSuDung) < new Date();
-                loHangHtml += '<tr>' +
-                    '<td class="small">' + (item.maLo || '-') + '</td>' +
-                    '<td class="small ' + (isExpired ? 'text-danger' : '') + '">' + formatDate(item.hanSuDung) + ' ' + (isExpired ? '<i class="fas fa-exclamation-circle"></i>' : '') + '</td>' +
-                    '<td class="small text-end">' + (item.so_luong ?? '-') + '</td>' +
-                    '<td class="small text-end">' + (item.soLuongConLai ?? '-') + '</td>' +
+        // === Bảng biến thể (CHỉ hiển thị khi LÀ Master) ===
+        var variantsTableHtml = '';
+        if (isMaster && hasMultipleVariants) {
+            variantsTableHtml = '<div class="mb-3">' +
+                '<h6 class="fw-bold mb-2"><i class="fas fa-boxes me-1"></i>Danh sách biến thể <span class="badge bg-secondary ms-1" style="font-size:0.7rem;">' + allVariants.length + '</span></h6>' +
+                '<div class="table-responsive" style="max-height:250px;overflow-y:auto;border:1px solid #dee2e6;border-radius:6px;">' +
+                '<table class="table table-sm table-bordered table-hover mb-0" style="font-size:0.8rem;">' +
+                    '<thead class="table-light sticky-top">' +
+                        '<tr>' +
+                            '<th>Tên biến thể</th>' +
+                            '<th>Mã hàng</th>' +
+                            '<th>Mã vạch</th>' +
+                            '<th class="text-end">Giá vốn</th>' +
+                            '<th class="text-end">Giá bán</th>' +
+                            '<th class="text-end">Tồn kho</th>' +
+                        '</tr>' +
+                    '</thead>' +
+                    '<tbody>';
+            allVariants.forEach(function(vt) {
+                var vtTonKho = vt.so_luong_ton || 0;
+                var vtTonBadge = vtTonKho > 0 ? 'bg-success' : 'bg-secondary';
+                var thuocTinhLabels = '';
+                if (vt.thuoc_tinh_ids && Array.isArray(vt.thuoc_tinh_ids)) {
+                    vt.thuoc_tinh_ids.forEach(function(ttId) {
+                        var found = (window.thuocTinhChasData || []).find(function(t) { return String(t.id) === String(ttId); });
+                        if (found) {
+                            thuocTinhLabels += '<span class="badge bg-light text-dark border" style="font-size:0.6rem;">' + found.ten_thuoc_tinh + '</span> ';
+                        }
+                    });
+                }
+                var vtTen = vt.ten_bien_the
+                    ? vt.ten_bien_the + (thuocTinhLabels ? '<br>' + thuocTinhLabels : '')
+                    : (thuocTinhLabels ? thuocTinhLabels : '<span class="text-muted fst-italic">Mặc định</span>');
+
+                variantsTableHtml += '<tr>' +
+                    '<td class="small">' + vtTen + '</td>' +
+                    '<td class="small text-muted">' + (vt.ma_hang || '-') + '</td>' +
+                    '<td class="small text-muted">' + (vt.ma_vach || '-') + '</td>' +
+                    '<td class="text-end small">' + formatMoney(vt.gia_von) + ' đ</td>' +
+                    '<td class="text-end small fw-bold text-primary">' + formatMoney(vt.gia_ban) + ' đ</td>' +
+                    '<td class="text-end"><span class="badge ' + vtTonBadge + '" style="font-size:0.65rem;">' + vtTonKho + '</span></td>' +
                 '</tr>';
             });
-            loHangHtml += '</tbody></table>';
-        } else {
-            loHangHtml = '<p class="text-muted text-center py-3 mb-0 small">Chưa có lô hàng.</p>';
+            variantsTableHtml += '</tbody></table></div></div>';
         }
 
+        // === Render HTML ===
         drawerBody.innerHTML = '<div class="p-3">' +
             '<div class="row g-3 mb-3">' +
                 '<div class="col-4">' + mainHinhAnh + '</div>' +
@@ -462,8 +537,8 @@ function toggleSection(headerEl) {
                             trangThaiVariant +
                         '</div>' +
                         '<div class="text-end">' +
-                            '<p class="fw-bold text-primary mb-0" style="font-size:1.4rem;">' + formatMoney(giaBanHienThi) + ' d</p>' +
-                            '<p class="text-muted small mb-0">Giá vốn: ' + formatMoney(giaVonHienThi) + ' d</p>' +
+                            '<p class="fw-bold text-primary mb-0" style="font-size:1.4rem;">' + (typeof giaBanHienThi === 'string' ? giaBanHienThi : formatMoney(giaBanHienThi)) + ' đ</p>' +
+                            '<p class="text-muted small mb-0">Giá vốn: ' + (typeof giaVonHienThi === 'string' ? giaVonHienThi : formatMoney(giaVonHienThi)) + ' đ</p>' +
                         '</div>' +
                     '</div>' +
                     '<hr>' +
@@ -474,25 +549,31 @@ function toggleSection(headerEl) {
                         '<div class="col-6"><strong>Đơn vị:</strong> ' + tenDonViHienThi + '</div>' +
                         '<div class="col-6"><strong>Mã vạch:</strong> ' + maVachHienThi + '</div>' +
                         '<div class="col-6"><strong>Tồn kho:</strong> ' + (tonKhoHienThi ?? 0) + '</div>' +
-                        '<div class="col-6"><strong>Định mức:</strong> ' + (displayVariant.dinh_muc_toi_thieu ?? 0) + '</div>' +
+                        (!isMaster ? '<div class="col-6"><strong>Định mức:</strong> ' + (displayVariant.dinh_muc_toi_thieu ?? 0) + '</div>' : '') +
                     '</div>' +
-                    (isLaDonVi ? '' : (thuocTinhLabels ? '<div class="mt-2">' + thuocTinhLabels + '</div>' : '')) +
+                    (!isMaster && thuocTinhLabels ? '<div class="mt-2">' + thuocTinhLabels + '</div>' : '') +
                 '</div>' +
             '</div>' +
 
             (sp.mo_ta ? '<div class="mb-3"><h6 class="fw-bold mb-2"><i class="fas fa-align-left me-1"></i>Mô tả</h6><div class="bg-light rounded p-2 small text-muted" style="white-space:pre-line;">' + sp.mo_ta + '</div></div>' : '') +
 
+            // === Bảng biến thể: CHỉ hiển thị khi LÀ MASTER ===
+            variantsTableHtml +
+
+            // === Bảng đơn vị quy đổi: CHỉ hiển thị khi KHÔNG phải Master ===
             unitsHtml +
 
-            '<div class="mb-3">' +
-                '<h6 class="fw-bold mb-2"><i class="fas fa-history me-1"></i>Thẻ kho <span class="fw-normal text-muted small">(' + theKho.length + ')</span></h6>' +
-                theKhoHtml +
-            '</div>' +
+            // === Bảng Thẻ kho: CHỉ hiển thị khi KHÔNG phải Master ===
+            (!isMaster ? '<div class="mb-3">' : '') +
+            (!isMaster ? '<h6 class="fw-bold mb-2"><i class="fas fa-history me-1"></i>Thẻ kho <span class="fw-normal text-muted small">(' + theKho.length + ')</span></h6>' : '') +
+            (!isMaster ? theKhoHtml : '') +
+            (!isMaster ? '</div>' : '') +
 
-            '<div class="mb-3">' +
-                '<h6 class="fw-bold mb-2"><i class="fas fa-boxes-stacked me-1"></i>Lô - Hạn sử dụng <span class="fw-normal text-muted small">(' + loHang.length + ')</span></h6>' +
-                loHangHtml +
-            '</div>' +
+            // === Bảng Lô hàng: CHỉ hiển thị khi KHÔNG phải Master ===
+            (!isMaster ? '<div class="mb-3">' : '') +
+            (!isMaster ? '<h6 class="fw-bold mb-2"><i class="fas fa-boxes-stacked me-1"></i>Lô - Hạn sử dụng <span class="fw-normal text-muted small">(' + loHang.length + ')</span></h6>' : '') +
+            (!isMaster ? loHangHtml : '') +
+            (!isMaster ? '</div>' : '') +
 
             '<div class="text-muted small border-top pt-2">' +
                 '<i class="fas fa-clock me-1"></i>Tạo: ' + formatDate(sp.created_at) + ' | Cập nhật: ' + formatDate(sp.updated_at) +
@@ -634,7 +715,7 @@ window.deleteVariant = async function(variantId, productId) {
                 '<input type="text" name="bien_the[' + variantIdx + '][units][' + unitIdx + '][ten_don_vi]" class="form-control form-control-sm" placeholder="VD: Thùng" value="">' +
             '</td>' +
             '<td>' +
-                '<input type="number" name="bien_the[' + variantIdx + '][units][' + unitIdx + '][ty_le_quy_doi]" class="form-control form-control-sm" placeholder="VD: 24" min="1" value="1">' +
+                '<input type="number" name="bien_the[' + variantIdx + '][units][' + unitIdx + '][so_luong_san_pham_trong_don_vi]" class="form-control form-control-sm" placeholder="VD: 24" min="1" value="1">' +
             '</td>' +
             '<td>' +
                 '<input type="number" name="bien_the[' + variantIdx + '][units][' + unitIdx + '][gia_von_quy_doi]" class="form-control form-control-sm" placeholder="0" min="0" step="0.01" value="">' +

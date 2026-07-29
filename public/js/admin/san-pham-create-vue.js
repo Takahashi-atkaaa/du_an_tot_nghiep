@@ -115,14 +115,20 @@
                 if (gridData.value.length < 2) return false;
 
                 // Trích xuất "Attribute Signature" từ mỗi dòng
-                // Signature = chuỗi các attrValueIds đã sort
+                // Signature = chuỗi (attrValueIds đã sort) + '_' + (ten_don_vi hoặc ty_le)
+                // FIX: trước đây chỉ gom attrValueIds, làm 2 dòng cùng thuộc tính
+                // nhưng khác đơn vị (VD: Đen-38 ở "cái" và Đen-38 ở "Bao 6") bị
+                // tính là trùng. Giờ thêm ten_don_vi / ty_le vào key để phân biệt.
                 const signatures = gridData.value.map(row => {
                     if (!row.attrValueIds || row.attrValueIds.length === 0) {
                         return ''; // Dòng không có thuộc tính
                     }
                     // Clone và sort để đảm bảo "M-Đỏ" = "Đỏ-M"
                     const sortedIds = [...row.attrValueIds].map(id => String(id)).sort();
-                    return sortedIds.join('-');
+                    const attrPart = sortedIds.join('-');
+                    // Phân biệt đơn vị: ten_don_vi (unitName) hoặc tyLe
+                    const donViPart = row.unitName || (row.tyLe != null ? String(row.tyLe) : '');
+                    return `${attrPart}__${donViPart}`;
                 });
 
                 // So sánh độ dài: nếu có trùng lặp thì unique sẽ ngắn hơn
@@ -149,7 +155,14 @@
                 const signatures = gridData.value.map((row, idx) => ({
                     idx: idx,
                     sig: row.attrValueIds && row.attrValueIds.length > 0
-                        ? [...row.attrValueIds].map(id => String(id)).sort().join('-')
+                        ? (() => {
+                            const sortedIds = [...row.attrValueIds].map(id => String(id)).sort();
+                            const attrPart = sortedIds.join('-');
+                            // FIX: thêm ten_don_vi / ty_le vào key để phân biệt
+                            // đơn vị, tránh báo trùng sai khi kết hợp thuộc tính + đơn vị quy đổi
+                            const donViPart = row.unitName || (row.tyLe != null ? String(row.tyLe) : '');
+                            return `${attrPart}__${donViPart}`;
+                        })()
                         : ''
                 }));
 
@@ -262,7 +275,7 @@
                             conversionUnits: (bt.units || []).map(u => ({
                                 id: u.id,
                                 ten_don_vi: u.ten_don_vi,
-                                ty_le_quy_doi: u.ty_le_quy_doi,
+                                so_luong_san_pham_trong_don_vi: u.so_luong_san_pham_trong_don_vi,
                                 gia_von_quy_doi: u.gia_von_quy_doi,
                                 gia_ban_quy_doi: u.gia_ban_quy_doi,
                                 ma_hang: u.ma_hang,
@@ -271,7 +284,7 @@
                             savedUnits: (bt.units || []).map(u => ({
                                 id: u.id,
                                 ten_don_vi: u.ten_don_vi,
-                                ty_le_quy_doi: u.ty_le_quy_doi,
+                                so_luong_san_pham_trong_don_vi: u.so_luong_san_pham_trong_don_vi,
                                 gia_von_quy_doi: u.gia_von_quy_doi,
                                 gia_ban_quy_doi: u.gia_ban_quy_doi,
                                 ma_hang: u.ma_hang,
@@ -778,15 +791,15 @@
                     const idField = row.existingId ? { id: row.existingId } : {};
 
                     // Dùng savedUnits (reference gốc từ initFromProduct, không bị debouncedRegen overwrite)
-                    // Lọc ra các đơn vị QUY ĐỔI (ty_le > 1) thuộc dòng này
+                    // Lọc ra các đơn vị QUY ĐỔI (so_luong_san_pham_trong_don_vi > 1) thuộc dòng này
                     const unitsPayload = (row.savedUnits || [])
-                        .filter(u => (parseInt(u.ty_le_quy_doi) || 1) > 1)
+                        .filter(u => (parseInt(u.so_luong_san_pham_trong_don_vi) || 1) > 1)
                         .map(u => {
                             return {
                                 id: u.id,
                                 don_vi_chuan_id: u.don_vi_chuan_id || null,
                                 ten_don_vi: u.ten_don_vi,
-                                so_luong_san_pham_trong_don_vi: parseInt(u.ty_le_quy_doi) || 1,
+                                so_luong_san_pham_trong_don_vi: parseInt(u.so_luong_san_pham_trong_don_vi) || 1,
                                 gia_von_quy_doi: parseFloat(u.gia_von_quy_doi) || 0,
                                 gia_ban_quy_doi: parseFloat(u.gia_ban_quy_doi) || 0,
                                 ma_hang: u.ma_hang || '',
@@ -794,18 +807,12 @@
                             };
                         });
 
-                    const tenBienThe = row.tenBienThe || row.unitName;
-
-                    // Xác định loại biến thể: đơn vị hay thuộc tính
-                    // Nếu có thuộc tính → la_don_vi = false, ten_don_vi = null
-                    // Nếu không có thuộc tính (chỉ có đơn vị) → la_don_vi = true, ten_don_vi = tên đơn vị của dòng này
-                    const isLaDonVi = !hasAttr && unitConfig.baseUnit;
-                    const tenDonViPayload = isLaDonVi ? row.unitName : null;
-
                     return Object.assign({}, idField, {
+                        is_base: row.isBase ? 1 : 0,
                         ten_bien_the: tenBienThe,
-                        la_don_vi: isLaDonVi ? 1 : 0,
-                        ten_don_vi: tenDonViPayload,
+                        la_don_vi: row.isBase && !hasAttr ? 1 : 0,
+                        ten_don_vi: row.isBase ? unitConfig.baseUnit : row.unitName,
+                        ty_le: row.tyLe || 1,
                         ma_hang: row.maHang,
                         ma_vach: row.maVach,
                         gia_von: parseFloat(row.giaVon) || 0,
@@ -813,6 +820,7 @@
                         so_luong_ton: parseInt(row.soLuong) || 0,
                         dinh_muc_toi_thieu: parseInt(row.dinhMucToiThieu) || 0,
                         thuoc_tinh_ids: Array.isArray(row.attrValueIds) ? row.attrValueIds.join(',') : (row.attrValueIds || ''),
+                        ten_don_vi_bien_the: row.unitName || '',
                         units: unitsPayload
                     });
                 });

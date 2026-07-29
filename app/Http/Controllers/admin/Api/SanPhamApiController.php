@@ -106,7 +106,8 @@ class SanPhamApiController extends Controller
     {
         $requestedVariantId = request()->query('variant_id');
         $requestedUnitId = request()->query('unit_id');
-        \Log::info('[SanPhamApi show] id=' . $id . ' variant_id=' . ($requestedVariantId ?? 'null') . ' unit_id=' . ($requestedUnitId ?? 'null'));
+        $isMaster = request()->query('is_master') === '1';
+        \Log::info('[SanPhamApi show] id=' . $id . ' variant_id=' . ($requestedVariantId ?? 'null') . ' unit_id=' . ($requestedUnitId ?? 'null') . ' is_master=' . ($isMaster ? '1' : '0'));
 
         $product = Product::with([
             'variants' => fn($q) => $q->with('units')->orderBy('id'),
@@ -188,6 +189,28 @@ class SanPhamApiController extends Controller
             $variant->product->load('danhMuc');
         }
 
+        // Tính toán thông tin tổng hợp cho Master Product (nhiều biến thể)
+        $allVariantsData = $variant->product->variants;
+        $tongTonKho = $allVariantsData->sum('so_luong_ton');
+        $giaVonMin = $allVariantsData->min('gia_von');
+        $giaVonMax = $allVariantsData->max('gia_von');
+        $giaBanMin = $allVariantsData->min('gia_ban');
+        $giaBanMax = $allVariantsData->max('gia_ban');
+        $hasMultipleVariants = $allVariantsData->count() > 1;
+
+        // Tạo summary cho Master Product
+        $masterSummary = null;
+        if ($hasMultipleVariants) {
+            $masterSummary = [
+                'tong_ton_kho' => $tongTonKho,
+                'gia_von_min' => $giaVonMin,
+                'gia_von_max' => $giaVonMax,
+                'gia_ban_min' => $giaBanMin,
+                'gia_ban_max' => $giaBanMax,
+                'so_bien_the' => $allVariantsData->count(),
+            ];
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -198,6 +221,9 @@ class SanPhamApiController extends Controller
                 'units' => $variant->units->toArray(),
                 'theKho' => $theKho,
                 'loHang' => $loHang,
+                'masterSummary' => $masterSummary,
+                'hasMultipleVariants' => $hasMultipleVariants,
+                'isMaster' => $isMaster,
             ],
         ]);
     }

@@ -900,7 +900,9 @@ async function autoCheckAll() {
                 ma_vach: row.variant?.ma_vach || '',
                 ten_san_pham: row.variant?.product?.ten_san_pham || '',
                 ten_bien_the: row.variant?.ten_bien_the || '',
-                ten_don_vi: row.variant?.ten_bien_the || 'cái',
+                // FIX Phase 4.1: lay don vi co ban tu BienTheSanPham.ten_don_vi
+                // (truoc day nham sang ten_bien_the gay hien thi sai don vi)
+                ten_don_vi: row.variant?.ten_don_vi || 'cái',
                 han_su_dung: row.han_su_dung,
                 ma_lo: row.lo_hang?.ma_lo || null,
                 so_luong_ton: row.so_luong_ton,
