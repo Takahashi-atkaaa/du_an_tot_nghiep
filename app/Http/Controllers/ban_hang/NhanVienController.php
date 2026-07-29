@@ -359,28 +359,53 @@ public function thanhToan(Request $request)
                     $tongTienHang >= ($khuyenMai->don_hang_toi_thieu ?? 0) &&
                     $tongSoLuong >= ($khuyenMai->so_luong_sp_toi_thieu ?? 0)
                 ) {
-                    switch ($khuyenMai->loai_giam_gia) {
-                        case 'phan_tram':
-                            $tienGiamGia = $tongTienHang * $khuyenMai->gia_tri_giam / 100;
+                    $loaiGiamGia = Str::of((string) $khuyenMai->loai_giam_gia)
+    ->trim()
+    ->lower()
+    ->ascii()
+    ->replace([' ', '-'], '_')
+    ->value();
 
-                            if (!empty($khuyenMai->giam_toi_da)) {
-                                $tienGiamGia = min($tienGiamGia, $khuyenMai->giam_toi_da);
-                            }
-                            break;
+$giaTriGiam = (float) ($khuyenMai->gia_tri_giam ?? 0);
+$giamToiDa = (float) ($khuyenMai->giam_toi_da ?? 0);
 
-                        case 'bogo':
-                            foreach ($items as $item) {
-                                $freeQty = floor($item['so_luong'] / 2);
-                                $tienGiamGia += $freeQty * $item['gia_ban'];
-                            }
-                            break;
+switch ($loaiGiamGia) {
+    case 'phan_tram':
+    case 'percent':
+        $tienGiamGia = $tongTienHang * $giaTriGiam / 100;
 
-                        default:
-                            $tienGiamGia = $khuyenMai->gia_tri_giam ?? 0;
-                            break;
-                    }
+        if ($giamToiDa > 0) {
+            $tienGiamGia = min($tienGiamGia, $giamToiDa);
+        }
+        break;
 
-                    $tienGiamGia = min($tienGiamGia, $tongTienHang);
+    case 'bogo':
+    case 'mua_1_tang_1':
+        foreach ($items as $item) {
+            $freeQty = floor($item['so_luong'] / 2);
+            $tienGiamGia += $freeQty * $item['gia_ban'];
+        }
+        break;
+
+    case 'tien_mat':
+    case 'so_tien':
+    case 'giam_tien':
+    case 'fixed':
+        $tienGiamGia = $giaTriGiam;
+        break;
+
+    default:
+        return response()->json([
+            'success' => false,
+            'message' => 'Loại giảm giá không hợp lệ: '
+                . $khuyenMai->loai_giam_gia
+        ], 422);
+}
+
+$tienGiamGia = min(
+    max($tienGiamGia, 0),
+    $tongTienHang
+);
                 }
             }
         }
