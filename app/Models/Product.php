@@ -56,7 +56,10 @@ class Product extends BaseModel
         foreach ($variants as $variant) {
             // Xác định loại biến thể: đơn vị hay thuộc tính
             $laDonVi = $variant->la_don_vi ?? false;
-            $tenDonViVariant = $laDonVi ? ($variant->ten_don_vi ?? '') : '';
+            // ten_don_vi của variant CHA: lấy trực tiếp từ variant
+            // (variant la_don_vi=true: tên đơn vị của variant gốc
+            //  variant thuộc tính: tên đơn vị cơ bản của variant đó, vd "Hộp")
+            $tenDonViVariant = $variant->ten_don_vi ?? '';
 
             // Build ten_bien_the_display từ thuoc_tinh_ids (chỉ khi KHÔNG phải biến thể đơn vị)
             $ten_bien_the_display = '';
@@ -136,10 +139,14 @@ class Product extends BaseModel
             'imagePreview' => $first->hinh_anh ? asset($first->hinh_anh) : '',
         ];
 
-        // Collect all units: base from bien_the_san_pham.ten_bien_the + conversion from don_vi_quy_doi
+        // Collect all units: base from bien_the_san_pham.ten_don_vi + conversion from don_vi_quy_doi
+        // FIX: Ưu tiên ten_don_vi (đơn vị cơ bản) làm base, không dùng ten_bien_the
         $units = [];
+        $baseUnitName = '';
+
         foreach ($variants as $v) {
-            $baseName = trim($v->ten_bien_the ?? '');
+            // Đơn vị cơ bản: lấy từ ten_don_vi, không phải ten_bien_the
+            $baseName = trim($v->ten_don_vi ?? '');
             if ($baseName !== '' && !isset($units[$baseName])) {
                 $units[$baseName] = [
                     'name' => $baseName,
@@ -148,8 +155,14 @@ class Product extends BaseModel
                     'gia_von_quy_doi' => $v->gia_von,
                     'ma_vach' => $v->ma_vach,
                     'variant_id' => $v->id,
+                    'is_base' => true,
                 ];
+                // Ghi nhớ tên đơn vị cơ bản đầu tiên
+                if ($baseUnitName === '') {
+                    $baseUnitName = $baseName;
+                }
             }
+            // Các đơn vị quy đổi
             foreach ($v->units as $u) {
                 $key = trim($u->ten_don_vi);
                 if ($key === '') continue;
@@ -162,6 +175,7 @@ class Product extends BaseModel
                         'ma_vach' => $u->ma_vach,
                         'variant_id' => $v->id,
                         'don_vi_chuan_id' => $u->don_vi_chuan_id,
+                        'is_base' => false,
                     ];
                 }
             }
@@ -211,19 +225,22 @@ class Product extends BaseModel
         }
 
         $unitList = array_values($units);
-        $baseUnit = '';
+        $baseUnit = $baseUnitName ?: '';
         $basePrice = $basic['defaultPrice'];
         $conversionUnits = [];
 
         if (!empty($unitList)) {
-            // Lay don vi dau tien lam base (thuong la don vi co ty_le = 1)
-            $baseUnitItem = $unitList[0];
-            $baseUnit = $baseUnitItem['name'];
-            $basePrice = (float)($baseUnitItem['gia_ban_quy_doi'] ?? $basic['defaultPrice']);
+            // Tìm item có is_base = true làm base
+            foreach ($unitList as $u) {
+                if (!empty($u['is_base'])) {
+                    $baseUnit = $u['name'];
+                    $basePrice = (float)($u['gia_ban_quy_doi'] ?? $basic['defaultPrice']);
+                    break;
+                }
+            }
 
-            // Cac don vi con lai = conversion units
-            for ($i = 1; $i < count($unitList); $i++) {
-                $u = $unitList[$i];
+            // Các đơn vị còn lại = conversion units
+            foreach ($unitList as $u) {
                 if (trim($u['name']) !== trim($baseUnit)) {
                     $conversionUnits[] = $u;
                 }

@@ -6,22 +6,26 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * ResetSanPhamSeeder
+ * SanPhamSeeder
  *
- * Xóa toàn bộ dữ liệu sản phẩm cũ (theo kiến trúc sai)
- * và tạo dữ liệu mới đúng kiến trúc POS chuẩn 3 bảng:
+ * Reset và tạo dữ liệu sản phẩm theo kiến trúc POS chuẩn 3 bảng:
  *
  *   san_pham (cha)
  *     └── bien_the_san_pham  ← Đơn vị cơ bản (ty_le = 1), chứa giá gốc, mã vạch gốc, tồn kho
  *           └── don_vi_quy_doi ← Đơn vị quy đổi (ty_le > 1), KHÔNG có đơn vị cơ bản
  *
  * Thứ tự xóa: bảng con trước → bảng cha sau.
+ *
+ * 3 loại sản phẩm:
+ *   - thuong     : 1 variant, 0 đơn vị quy đổi
+ *   - don_vi     : 1 variant (là đơn vị cơ bản), nhiều đơn vị quy đổi
+ *   - thuoc_tinh : nhiều variant (mỗi variant = 1 đơn vị cơ bản), 0 đơn vị quy đổi
  */
-class ResetSanPhamSeeder extends Seeder
+class SanPhamSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->command->info('[ResetSanPhamSeeder] Bat dau reset du lieu san pham...');
+        $this->command->info('[SanPhamSeeder] Bat dau reset va tao du lieu san pham...');
 
         // ==========================================================
         // BUOC 1: XOA DU LIEU CU (thu tu tu ngoai vao trong)
@@ -275,6 +279,8 @@ class ResetSanPhamSeeder extends Seeder
                 DB::table('bien_the_san_pham')->insert([
                     'product_id'        => $productId,
                     'ten_bien_the'      => null,
+                    'la_don_vi'         => false,
+                    'ten_don_vi'        => null,
                     'ma_hang'          => $maHangPrefix . '-001',
                     'ma_vach'          => '8934' . str_pad((string)$productId, 8, '0', STR_PAD_LEFT),
                     'gia_von'          => $giaVon,
@@ -315,14 +321,17 @@ class ResetSanPhamSeeder extends Seeder
 
                 // Chi insert don_vi_quy_doi cho cac don vi TY LE > 1
                 // Dung product_id de co the tai su dung cho cac variant khac cung san pham
+                // QUAN TRONG: variant_id bat buoc FK -> bien_the_san_pham (Gom-nhom)
                 foreach ($p['units'] as $idx => $u) {
                     if ((int)$u['ty_le'] <= 1) {
                         continue; // BO QUA don vi co ban (ty_le = 1)
                     }
                     DB::table('don_vi_quy_doi')->insert([
                         'product_id'         => $productId,
+                        'variant_id'         => $variantId, // FK den bien_the_san_pham
+                        'don_vi_chuan_id'    => null,
                         'ten_don_vi'         => $u['ten'],
-                        'ty_le_quy_doi'      => (int)$u['ty_le'],
+                        'so_luong_san_pham_trong_don_vi' => (int)$u['ty_le'],
                         'ma_hang'           => $maHangPrefix . '-' . str_pad((string)($idx + 2), 3, '0', STR_PAD_LEFT),
                         'ma_vach'           => '8934'
                             . str_pad((string)$productId, 4, '0', STR_PAD_LEFT)
@@ -347,6 +356,8 @@ class ResetSanPhamSeeder extends Seeder
                     DB::table('bien_the_san_pham')->insert([
                         'product_id'        => $productId,
                         'ten_bien_the'     => $tenBienThe,
+                        'la_don_vi'         => false,
+                        'ten_don_vi'        => null,
                         'ma_hang'          => $maHangPrefix . '-' . str_pad((string)($idx + 1), 3, '0', STR_PAD_LEFT),
                         'ma_vach'          => '8934'
                             . str_pad((string)$productId, 4, '0', STR_PAD_LEFT)
@@ -519,7 +530,7 @@ class ResetSanPhamSeeder extends Seeder
         // ==========================================================
         // TONG KET
         // ==========================================================
-        $this->command->info('[5/5] ResetSanPhamSeeder hoan tat!');
+        $this->command->info('[5/5] SanPhamSeeder hoan tat!');
         $this->table('danh_muc_san_pham');
         $this->table('san_pham');
         $this->table('bien_the_san_pham');
