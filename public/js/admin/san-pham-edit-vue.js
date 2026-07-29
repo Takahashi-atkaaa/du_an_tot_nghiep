@@ -115,14 +115,20 @@
                 if (gridData.value.length < 2) return false;
 
                 // Trích xuất "Attribute Signature" từ mỗi dòng
-                // Signature = chuỗi các attrValueIds đã sort
+                // Signature = chuỗi (attrValueIds đã sort) + '__' + (ten_don_vi hoặc ty_le)
+                // FIX: trước đây chỉ gom attrValueIds, làm 2 dòng cùng thuộc tính
+                // nhưng khác đơn vị (VD: Đen-38 ở "cái" và Đen-38 ở "Bao 6") bị
+                // tính là trùng. Giờ thêm ten_don_vi / ty_le vào key để phân biệt.
                 const signatures = gridData.value.map(row => {
                     if (!row.attrValueIds || row.attrValueIds.length === 0) {
                         return ''; // Dòng không có thuộc tính
                     }
                     // Clone và sort để đảm bảo "M-Đỏ" = "Đỏ-M"
                     const sortedIds = [...row.attrValueIds].map(id => String(id)).sort();
-                    return sortedIds.join('-');
+                    const attrPart = sortedIds.join('-');
+                    // Phân biệt đơn vị: ten_don_vi (unitName) hoặc tyLe
+                    const donViPart = row.unitName || (row.tyLe != null ? String(row.tyLe) : '');
+                    return `${attrPart}__${donViPart}`;
                 });
 
                 // So sánh độ dài: nếu có trùng lặp thì unique sẽ ngắn hơn
@@ -149,7 +155,14 @@
                 const signatures = gridData.value.map((row, idx) => ({
                     idx: idx,
                     sig: row.attrValueIds && row.attrValueIds.length > 0
-                        ? [...row.attrValueIds].map(id => String(id)).sort().join('-')
+                        ? (() => {
+                            const sortedIds = [...row.attrValueIds].map(id => String(id)).sort();
+                            const attrPart = sortedIds.join('-');
+                            // FIX: thêm ten_don_vi / ty_le vào key để phân biệt
+                            // đơn vị, tránh báo trùng sai khi kết hợp thuộc tính + đơn vị quy đổi
+                            const donViPart = row.unitName || (row.tyLe != null ? String(row.tyLe) : '');
+                            return `${attrPart}__${donViPart}`;
+                        })()
                         : ''
                 }));
 
@@ -238,8 +251,10 @@
                         });
                     });
 
-                    // Grid: mỗi row = 1 variant từ DB
-                    gridData.value = (prod.bien_the || []).map(bt => {
+                    // Grid: map dữ liệu từ Backend trả về
+                    // Mỗi variant tạo ra: 1 dòng Base + N dòng Conversion
+                    const mappedRows = [];
+                    (prod.bien_the || []).forEach(bt => {
                         const attrValueIds = Array.isArray(bt.thuoc_tinh_ids)
                             ? bt.thuoc_tinh_ids
                             : (bt.thuoc_tinh_ids ? String(bt.thuoc_tinh_ids).split(',').map(x => x.trim()).filter(Boolean) : []);
@@ -249,35 +264,20 @@
                             if (found) attrLabels[found.groupName] = found.label;
                         });
 
-                        const rowUnitName = bt.ten_bien_the || prod.unitConfig?.baseUnit || '';
-                        const unitKey = rowUnitName === prod.unitConfig?.baseUnit
-                            ? 'base'
-                            : ('cv_' + (bt.units && bt.units.length > 0 ? (bt.units[0].id || uid()) : uid()));
+                        // Xác định isBase dựa trên la_don_vi hoặc so sánh với baseUnit
+                        const isBaseRow = bt.la_don_vi || (bt.ten_don_vi && bt.ten_don_vi === prod.unitConfig?.baseUnit);
 
-                        // conversionUnits: units người dùng đang chỉnh sửa (reactive, dùng cho payload)
-                        // beingEdited: mark units as "being edited" vs "unchanged"
-                        const rowConversionUnits = (bt.units || []).map(u => ({
-                            id: u.id,
-                            ten_don_vi: u.ten_don_vi,
-                            ty_le_quy_doi: u.ty_le_quy_doi,
-                            gia_von_quy_doi: u.gia_von_quy_doi,
-                            gia_ban_quy_doi: u.gia_ban_quy_doi,
-                            ma_hang: u.ma_hang,
-                            ma_vach: u.ma_vach,
-                            // Flag: true = tồn tại trong DB, false = mới thêm
-                            _fromDb: true
-                        }));
-
-                        return {
-                            key: buildRowKey(attrLabels, { key: unitKey, name: rowUnitName }),
+                        // 1. LUÔN LUÔN tạo Dòng Gốc (Base) trước
+                        const baseRowUnitName = bt.ten_don_vi || bt.ten_bien_the || prod.unitConfig?.baseUnit || '';
+                        mappedRows.push({
                             existingId: bt.id ?? null,
-                            _dbId: bt.id ?? null, // Preserve original ID for safety
-                            attrLabels: attrLabels,
-                            attrValueIds: attrValueIds,
-                            unitKey: unitKey,
-                            unitName: rowUnitName,
+                            _dbId: bt.id ?? null,
+                            attrLabels: { ...attrLabels },
+                            attrValueIds: [...attrValueIds],
+                            unitKey: 'base',
+                            unitName: baseRowUnitName,
                             tyLe: 1,
-                            isBase: rowUnitName === prod.unitConfig?.baseUnit,
+                            isBase: true,
                             tenBienThe: bt.ten_bien_the ?? '',
                             maHang: bt.ma_hang ?? '',
                             maVach: bt.ma_vach ?? '',
@@ -286,12 +286,54 @@
                             dinhMucToiThieu: bt.dinh_muc_toi_thieu ?? 0,
                             soLuong: bt.so_luong_ton ?? 0,
                             touched: {},
-                            // conversionUnits: dùng cho payload (reactive, user edits)
-                            conversionUnits: rowConversionUnits,
-                            // savedUnits: bản sao gốc từ DB (fallback safety)
-                            savedUnits: rowConversionUnits.map(u => ({ ...u }))
-                        };
+                            // conversionUnits: đơn vị quy đổi (dùng cho payload)
+                            conversionUnits: (bt.units || []).map(u => ({
+                                id: u.id,
+                                ten_don_vi: u.ten_don_vi,
+                                so_luong_san_pham_trong_don_vi: u.so_luong_san_pham_trong_don_vi,
+                                gia_von_quy_doi: u.gia_von_quy_doi,
+                                gia_ban_quy_doi: u.gia_ban_quy_doi,
+                                ma_hang: u.ma_hang ?? '',
+                                ma_vach: u.ma_vach ?? '',
+                                _fromDb: true
+                            })),
+                            savedUnits: (bt.units || []).map(u => ({ ...u }))
+                        });
+
+                        // 2. Sau đó tạo các Dòng Quy đổi (Conversion) từ bt.units
+                        (bt.units || []).forEach((u, idx) => {
+                            const convUnitName = u.ten_don_vi || '';
+                            if (!convUnitName) return;
+
+                            mappedRows.push({
+                                existingId: u.id ?? null,
+                                _dbId: u.id ?? null,
+                                attrLabels: { ...attrLabels },
+                                attrValueIds: [...attrValueIds],
+                                unitKey: 'cv_' + (u.id || idx),
+                                unitName: convUnitName,
+                                tyLe: parseInt(u.so_luong_san_pham_trong_don_vi) || 1,
+                                isBase: false,
+                                tenBienThe: bt.ten_bien_the ?? '',
+                                maHang: u.ma_hang ?? '',
+                                maVach: u.ma_vach ?? '',
+                                giaVon: parseFloat(u.gia_von_quy_doi) || parseFloat(bt.gia_von) || 0,
+                                giaBan: parseFloat(u.gia_ban_quy_doi) || parseFloat(bt.gia_ban) || 0,
+                                dinhMucToiThieu: 0,
+                                soLuong: 0,
+                                touched: {},
+                                conversionUnits: [],
+                                savedUnits: []
+                            });
+                        });
                     });
+
+                    // Gán key cho mỗi row
+                    mappedRows.forEach(row => {
+                        row.key = buildRowKey(row.attrLabels, { key: row.unitKey, name: row.unitName });
+                    });
+
+                    gridData.value = mappedRows;
 
                     // Populate _variantIdMap for regenerateGrid to preserve IDs
                     _variantIdMap = new Map();
@@ -645,6 +687,9 @@
             // ====== buildPayload: tạo payload cho request ======
             // FIX: dùng conversionUnits (reactive, user đang sửa) thay vì savedUnits
             function buildPayload() {
+                // Khai báo biến kiểm tra xem sản phẩm có thuộc tính hay không
+                const hasAttr = effectiveAttrGroups.value && effectiveAttrGroups.value.length > 0;
+
                 // Thu thập thuộc tính MỚI (user gõ tay, chưa có trong DB)
                 const newAttributes = [];
                 effectiveAttrGroups.value.forEach(g => {
@@ -686,18 +731,14 @@
 
                     console.log(`[buildPayload] row[${i}] unitsPayload.length=${unitsPayload.length}`);
 
-                    // Xác định loại biến thể: đơn vị hay thuộc tính
-                    // Nếu có thuộc tính → la_don_vi = false, ten_don_vi = null
-                    // Nếu không có thuộc tính (chỉ có đơn vị) → la_don_vi = true, ten_don_vi = tên đơn vị cơ bản
-                    const hasAttr = effectiveAttrGroups.value.length > 0;
-                    const isLaDonVi = !hasAttr && unitConfig.baseUnit;
-                    const tenDonViPayload = isLaDonVi ? unitConfig.baseUnit : null;
-
+                    // Xác định loại biến thể: dựa vào row.isBase thay vì hasAttr
                     return {
                         id: existingId ?? null,
+                        is_base: row.isBase ? 1 : 0,
                         ten_bien_the: row.tenBienThe || row.unitName,
-                        la_don_vi: isLaDonVi ? 1 : 0,
-                        ten_don_vi: tenDonViPayload,
+                        la_don_vi: row.isBase && !hasAttr ? 1 : 0,
+                        ten_don_vi: row.isBase ? unitConfig.baseUnit : row.unitName,
+                        ty_le: row.tyLe || 1,
                         ma_hang: row.maHang,
                         ma_vach: row.maVach,
                         gia_von: parseFloat(row.giaVon) || 0,
@@ -706,6 +747,7 @@
                         dinh_muc_toi_thieu: parseInt(row.dinhMucToiThieu) || 0,
                         thuoc_tinh_ids: Array.isArray(row.attrValueIds)
                             ? row.attrValueIds.join(',') : (row.attrValueIds || ''),
+                        ten_don_vi_bien_the: row.unitName || '',
                         units: unitsPayload
                     };
                 });
@@ -855,19 +897,20 @@
                         return;
                     }
 
-                    // Các lỗi khác
+                    // Các lỗi khác (500, 400, etc.)
                     const msg = (data && (data.message || data.error || data))
                         ? (typeof data === 'object' ? JSON.stringify(data) : data)
                         : ('HTTP ' + res.status);
-                    generalError.value = msg;
+                    generalError.value = 'Lỗi từ server: ' + msg;
                     submitHadError.value = true;
-                    alert('Lỗi khi lưu sản phẩm: ' + msg);
                 } catch (err) {
+                    // BẮT BUỘC tắt spinner khi có lỗi
+                    submitting.value = false;
                     const msg = (err && err.message ? err.message : String(err));
-                    generalError.value = 'Lỗi mạng: ' + msg;
+                    generalError.value = 'Lỗi kết nối: ' + msg;
                     submitHadError.value = true;
-                    alert('Lỗi kết nối: ' + msg);
                 } finally {
+                    // Đảm bảo spinner luôn được tắt sau khi xử lý xong
                     submitting.value = false;
                 }
             }
@@ -947,6 +990,17 @@
                     regenerateGrid();
                 }
                 formLoaded.value = true;
+
+                // Bổ sung đơn vị dự phòng: nếu đơn vị cơ bản không có trong danh sách,
+                // thêm vào availableUnits để dropdown hiển thị đúng thay vì tự nhảy sang option khác
+                const currentBaseUnit = unitConfig.baseUnit?.trim();
+                if (currentBaseUnit && !availableUnits.value.find(u => u.name === currentBaseUnit)) {
+                    availableUnits.value.push({
+                        id: 'temp_custom_' + currentBaseUnit,
+                        name: currentBaseUnit,
+                        qty: 1
+                    });
+                }
 
                 const btn = document.getElementById('btnLuuSanPham');
                 if (btn) { btn.disabled = false; btn.classList.remove('disabled'); }

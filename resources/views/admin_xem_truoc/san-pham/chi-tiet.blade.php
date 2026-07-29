@@ -264,7 +264,7 @@
                                                                                 @endif
                                                                             </td>
                                                                             <td class="text-center">
-                                                                                <span class="badge bg-secondary">1 : {{ $unit->ty_le_quy_doi }}</span>
+                                                                                <span class="badge bg-secondary">1 : {{ $unit->so_luong_san_pham_trong_don_vi ?? '—' }}</span>
                                                                             </td>
                                                                             <td class="text-end text-muted">
                                                                                 {{ number_format((float)$unit->gia_von_quy_doi, 0, ',', '.') }} đ
