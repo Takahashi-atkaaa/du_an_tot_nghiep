@@ -1072,7 +1072,9 @@ body {
         <input
             type="text"
             id="searchInput"
-            placeholder="Tìm sản phẩm hoặc quét mã vạch..."
+            placeholder="Quét mã vạch hoặc tìm sản phẩm..."
+            autocomplete="off"
+            inputmode="text"
             oninput="filterProducts()"
             onkeydown="handleSearchEnter(event)">
     </div>
@@ -1231,9 +1233,48 @@ let products = [];
 let promotions = [];
 let selectedPromotion = null;
 let discountAmount = 0;
+const productListUrl = '{{ route('nhan-vien.ban-hang.san-pham') }}';
+const categoryListUrl = '{{ route('nhan-vien.ban-hang.danh-muc') }}';
+const customerListUrl = '{{ route('nhan-vien.ban-hang.khach-hang') }}';
+const promotionListUrl = '{{ route('nhan-vien.ban-hang.khuyen-mai') }}';
+const checkoutUrl = '{{ route('nhan-vien.ban-hang.thanh-toan') }}';
+const invoiceListUrl = '{{ url('/hoa-don') }}';
+
+function resolveImageUrl(path) {
+    if (!path) {
+        return 'https://via.placeholder.com/300x300?text=No+Image';
+    }
+
+    const value = String(path).trim();
+
+    if (/^https?:\/\//i.test(value)) {
+        return value;
+    }
+
+    const normalized = value.replace(/^\/+/, '');
+
+    if (!normalized) {
+        return 'https://via.placeholder.com/300x300?text=No+Image';
+    }
+
+    if (normalized.startsWith('storage/')) {
+        return '/' + normalized;
+    }
+
+    if (normalized.startsWith('public/')) {
+        return '/' + normalized.replace(/^public\//, '');
+    }
+
+    if (normalized.startsWith('uploads/')) {
+        return '/' + normalized;
+    }
+
+    return '/' + normalized;
+}
+
 async function loadProducts() {
     try {
-        let url = '/nhan-vien/ban-hang/san-pham';
+        let url = productListUrl;
         const params = new URLSearchParams();
 
         const search = document.getElementById('searchInput').value;
@@ -1250,12 +1291,19 @@ async function loadProducts() {
             url += '?' + params.toString();
         }
 
-        const response = await fetch(url);
-        products = await response.json();
+        const response = await fetch(url, {
+            headers: { 'Accept': 'application/json' }
+        });
 
+        if (!response.ok) {
+            throw new Error('Không thể tải sản phẩm từ server.');
+        }
+
+        products = await response.json();
         renderProducts();
     } catch (error) {
         console.error('Lỗi tải sản phẩm:', error);
+        showToast('Không thể tải sản phẩm. Vui lòng kiểm tra đăng nhập hoặc route.', 'error');
     }
 }
 // ─────────────────────────────────────────────
@@ -1515,9 +1563,9 @@ function confirmTransferPaid() {
 // ─────────────────────────────────────────────
 // Render Products
 // ─────────────────────────────────────────────
-function renderProducts(filter = '') {
+function renderProducts(source = products, filter = '') {
     const grid = document.getElementById('productGrid');
-    let filtered = [...products];
+    let filtered = [...source];
 
     if (filter) {
         const q = filter.toLowerCase();
@@ -1552,14 +1600,12 @@ function renderProducts(filter = '') {
 
         const ton = Number(p.so_luong_ton_kho ?? 0);
 
-        const hinh = p.hinh_anh
-            ? '/' + p.hinh_anh.replace(/^\/+/, '')
-            : 'https://via.placeholder.com/300x300?text=No+Image';
+        const hinh = resolveImageUrl(p.hinh_anh);
 
         return `
             <div class="pos-product-card" onclick="addToCart(${p.id})">
                 <div class="product-img">
-                    <img src="${hinh}" alt="${ten}">
+                    <img src="${hinh}" alt="${ten}" onerror="this.onerror=null;this.src='https://via.placeholder.com/300x300?text=No+Image';">
                 </div>
 
                 <div class="product-info">
@@ -1595,7 +1641,8 @@ function switchCategory(cat) {
 // Filter Products
 // ─────────────────────────────────────────────
 function filterProducts() {
-    loadProducts();
+    const keyword = document.getElementById('searchInput').value.trim();
+    renderProducts(products, keyword);
 }
 
 // ─────────────────────────────────────────────
@@ -1657,12 +1704,12 @@ function renderCart() {
     container.innerHTML = cart.map(item => {
         const ten = item.ten_san_pham ?? 'Chưa có tên';
         const gia = Number(item.gia_ban ?? 0);
-        const hinh = item.hinh_anh ? item.hinh_anh : 'https://via.placeholder.com/80';
+        const hinh = resolveImageUrl(item.hinh_anh);
 
         return `
             <div class="cart-item">
                 <div class="item-img">
-                    <img src="${hinh}" alt="${ten}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">
+                    <img src="${hinh}" alt="${ten}" onerror="this.onerror=null;this.src='https://via.placeholder.com/80?text=No+Image';" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">
                 </div>
                 <div class="item-details">
                     <div class="item-name">${ten}</div>
@@ -1936,7 +1983,7 @@ if (selectedPayment === 'cash') {
     try {
        const diemThuDuoc = Math.floor(total / 10000);
 
-const response = await fetch('/nhan-vien/ban-hang/thanh-toan', {
+const response = await fetch(checkoutUrl, {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json',
@@ -2031,7 +2078,14 @@ document.addEventListener('keydown', function(e) {
 });
 async function loadCategories() {
     try {
-        const response = await fetch('/nhan-vien/ban-hang/danh-muc');
+        const response = await fetch(categoryListUrl, {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!response.ok) {
+            throw new Error('Không thể tải danh mục.');
+        }
+
         const categories = await response.json();
 
         const bar = document.getElementById('categoryBar');
@@ -2064,7 +2118,14 @@ function searchCustomers() {
     }
 
     customerSearchTimer = setTimeout(async () => {
-        const response = await fetch('/nhan-vien/ban-hang/khach-hang?q=' + encodeURIComponent(keyword));
+        const response = await fetch(customerListUrl + '?q=' + encodeURIComponent(keyword), {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!response.ok) {
+            throw new Error('Không thể tải khách hàng.');
+        }
+
         const customers = await response.json();
 
         if (customers.length === 0) {
@@ -2119,7 +2180,14 @@ function clearSelectedCustomer() {
     calculateChange();
 }
 async function loadPromotions() {
-    const response = await fetch('/nhan-vien/ban-hang/khuyen-mai');
+    const response = await fetch(promotionListUrl, {
+        headers: { 'Accept': 'application/json' }
+    });
+
+    if (!response.ok) {
+        throw new Error('Không thể tải khuyến mãi.');
+    }
+
     promotions = await response.json();
 
     const select = document.getElementById('promotionSelect');
@@ -2205,15 +2273,22 @@ async function handleSearchEnter(event) {
     if (!keyword) return;
 
     try {
-        const response = await fetch('/nhan-vien/ban-hang/san-pham?q=' + encodeURIComponent(keyword));
+        const response = await fetch(productListUrl + '?q=' + encodeURIComponent(keyword), {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!response.ok) {
+            throw new Error('Không thể tìm sản phẩm.');
+        }
+
         const data = await response.json();
 
         const product = data.find(p =>
             String(p.ma_vach || '').toLowerCase() === keyword.toLowerCase()
-        );
+        ) || data[0];
 
         if (!product) {
-            showToast('Không tìm thấy mã vạch này!', 'error');
+            showToast('Không tìm thấy sản phẩm phù hợp!', 'error');
             return;
         }
 
@@ -2221,7 +2296,7 @@ async function handleSearchEnter(event) {
         addToCart(product.id);
 
         event.target.value = '';
-        loadProducts();
+        renderProducts(products, '');
 
         setTimeout(() => {
             event.target.focus();
@@ -2307,11 +2382,18 @@ async function saveCustomerQuick() {
     }
 }
 function printInvoiceImmediately(hoaDonId) {
-    const printUrl = '/nhan-vien/hoa-don/' + hoaDonId + '/in?print=1';
-    const printWindow = window.open(printUrl, '_blank', 'noopener,noreferrer');
+    const detailUrl = invoiceListUrl + '/' + hoaDonId + '?print=1';
+
+    const printWindow = window.open(detailUrl, '_blank', 'width=900,height=700,noopener,noreferrer');
 
     if (!printWindow) {
-        window.location.href = printUrl;
+        const tempLink = document.createElement('a');
+        tempLink.href = detailUrl;
+        tempLink.target = '_blank';
+        tempLink.rel = 'noopener noreferrer';
+        document.body.appendChild(tempLink);
+        tempLink.click();
+        tempLink.remove();
     }
 }
 // ─────────────────────────────────────────────

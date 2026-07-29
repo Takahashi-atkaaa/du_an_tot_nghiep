@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\KhachHang;
 
@@ -434,7 +435,7 @@ public function thanhToan(Request $request)
         }
 
         $hoaDonId = DB::table('hoa_don')->insertGetId([
-            'id_nguoi_dung' => auth()->user()->id,
+            'id_nguoi_dung' => Auth::id(),
             'id_khach_hang' => $request->id_khach_hang,
             'id_ca_lam_viec' => session('id_ca_lam_viec') ?? null,
             'id_khuyen_mai' => $request->id_khuyen_mai,
@@ -514,10 +515,14 @@ public function chiTietHoaDon($id)
     $hoaDon = DB::table('hoa_don')
         ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
         ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
+        ->leftJoin('ca_lam_viec', 'hoa_don.id_ca_lam_viec', '=', 'ca_lam_viec.id')
         ->select(
             'hoa_don.*',
             'khach_hang.ten_khach_hang',
-            'nguoi_dung.ho_ten as ten_nhan_vien'
+            'nguoi_dung.ho_ten as ten_nhan_vien',
+            'ca_lam_viec.ten_ca',
+            'ca_lam_viec.gio_bat_dau',
+            'ca_lam_viec.gio_ket_thuc'
         )
         ->where('hoa_don.id', $id)
         ->first();
@@ -534,14 +539,13 @@ public function chiTietHoaDon($id)
         ->where('chi_tiet_hoa_don.id_hoa_don', $id)
         ->get();
 
-    return view('ban_hang.hoa-don.chi-tiet', compact('hoaDon', 'chiTiet'));
+    return view('ban_hang.hoa-don.chi-tiet', compact('hoaDon', 'chiTiet'))
+        ->with('auto_print', request()->boolean('print'));
 }
 
 public function inHoaDon($id)
 {
-    $view = $this->chiTietHoaDon($id);
-
-    return $view->with('auto_print', request()->boolean('print'));
+    return redirect()->route('nhan-vien.hoa-don.chi-tiet', ['id' => $id, 'print' => 1]);
 }
 public function huyHoaDon($id)
 {
