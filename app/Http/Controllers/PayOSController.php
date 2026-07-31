@@ -13,7 +13,18 @@ use Illuminate\Support\Facades\Log;
 
 class PayOSController extends Controller
 {
-    public function __construct(protected PayOSService $payos) {}
+    public function __construct(protected PayOSService $payos)
+    {
+        // Khi chạy local (hoặc bật flag), tự chuyển service sang kênh Test
+        // để dùng checkout URL có nút giả lập "Xác nhận thanh toán thành công".
+        // Kênh Production vẫn chạy bình thường nếu không kích hoạt.
+        $useTest = (bool) config('payos.use_test', false)
+            || app()->environment('local');
+
+        if ($useTest && (string) config('payos.test_client_id') !== '') {
+            $this->payos->useTestChannel(true);
+        }
+    }
 
     /**
      * Nhân viên POS khởi tạo giao dịch PayOS:
@@ -92,12 +103,25 @@ class PayOSController extends Controller
         $amountVnd = (int) round((float) $calc['khach_can_tra']);
         $description = 'DH '.$hoaDonId;
 
+        Log::info('PayOS createPaymentLink start', [
+            'hoa_don_id' => $hoaDonId,
+            'channel' => $this->payos->isTestChannel() ? 'test' : 'production',
+            'amount' => $amountVnd,
+        ]);
+
         try {
             $linkData = $this->payos->createPaymentLink(
                 orderCode: $hoaDonId,
                 amount: $amountVnd,
                 description: $description,
             );
+
+            Log::info('PayOS createPaymentLink success', [
+                'hoa_don_id' => $hoaDonId,
+                'channel' => $this->payos->isTestChannel() ? 'test' : 'production',
+                'checkoutUrl' => $linkData['checkoutUrl'] ?? null,
+                'qrCode' => substr((string) ($linkData['qrCode'] ?? ''), 0, 50),
+            ]);
         } catch (\Throwable $e) {
             Log::error('PayOS createPaymentLink exception', [
                 'hoa_don_id' => $hoaDonId,
@@ -352,6 +376,107 @@ class PayOSController extends Controller
         return response()->json([
             'code' => '00',
             'desc' => 'Confirm Success',
+        ]);
+    }
+
+    /**
+     * [Local/Test only] Simulate PayOS calling your webhook.
+     * Bypass signature verification so you can trigger the full end-to-end flow
+     * (hoa_don → paid, giao_dich → thanh_cong, inventory deducted) without
+     * actually transferring money.
+     *
+     * Usage: POST /payos/test-webhook
+     * Body: { "orderCode": 27, "amount": 15000, "success": true }
+     */
+    public function testWebhook(Request $request): JsonResponse
+    {
+        if (! app()->environment('local')) {
+            return response()->json(['error' => 'Only available in local env'], 403);
+        }
+
+        $request->validate([
+            'orderCode' => 'required|integer',
+            'amount' => 'required|integer',
+            'success' => 'nullable|boolean',
+        ]);
+
+        $orderCode = $request->integer('orderCode');
+        $amount = $request->integer('amount');
+        $success = $request->boolean('success', true);
+
+        $gd = GiaoDich::where('ma_tham_chieu', (string) $orderCode)
+            ->where('phuong_thuc', GiaoDich::PHUONG_THUC_PAYOS)
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $gd) {
+            return response()->json(['error' => 'Giao dich not found'], 404);
+        }
+
+        $hoaDon = DB::table('hoa_don')->where('id', $gd->id_hoa_don)->first();
+        if (! $hoaDon) {
+            return response()->json(['error' => 'Hoa don not found'], 404);
+        }
+
+        $fakeWebhookData = [
+            'orderCode' => $orderCode,
+            'code' => $success ? '00' : '02',
+            'amount' => $amount,
+            'paidAt' => now()->unix(),
+            'reference' => 'TEST_WEBHOOK_'.now()->timestamp,
+        ];
+
+        $this->xuLyKetQuaThanhToan($gd, $hoaDon, array_merge($fakeWebhookData, [
+            'processed_via' => 'test_webhook',
+        ]), $success);
+
+        Log::info('PayOS testWebhook simulated', [
+            'hoa_don_id' => $hoaDon->id,
+            'orderCode' => $orderCode,
+            'success' => $success,
+        ]);
+
+        return response()->json([
+            'code' => '00',
+            'desc' => 'Test webhook processed',
+            'hoa_don_id' => $hoaDon->id,
+            'hoa_don_trang_thai' => DB::table('hoa_don')->where('id', $hoaDon->id)->value('trang_thai'),
+            'giao_dich_trang_thai' => GiaoDich::find($gd->id)->trang_thai,
+        ]);
+    }
+
+    /**
+     * Trang checkout nội bộ: hiển thị QR + nút test (thay vì mở PayOS hosted page).
+     * Accessed directly from POS via popup window.
+     */
+    public function checkoutPage(int $hoaDonId): \Illuminate\Http\Response|Factory|\Illuminate\Contracts\View\View
+    {
+        $gd = GiaoDich::where('id_hoa_don', $hoaDonId)
+            ->where('phuong_thuc', GiaoDich::PHUONG_THUC_PAYOS)
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $gd) {
+            abort(404, 'Không tìm thấy giao dịch');
+        }
+
+        $data = is_string($gd->du_lieu_phan_hoi)
+            ? json_decode($gd->du_lieu_phan_hoi, true) ?? []
+            : ($gd->du_lieu_phan_hoi ?? []);
+
+        $amount = (int) $gd->so_tien;
+        $hoaDon = DB::table('hoa_don')->where('id', $hoaDonId)->first();
+
+        return view('nhan_vien_view.payment.payos-checkout', [
+            'hoaDonId' => $hoaDonId,
+            'amount' => $amount,
+            'checkoutUrl' => $data['checkoutUrl'] ?? null,
+            'qrCode' => $data['qrCode'] ?? null,
+            'accountNumber' => $data['accountNumber'] ?? null,
+            'bin' => $data['bin'] ?? null,
+            'accountName' => $data['accountName'] ?? 'NGUYEN TUNG ANH',
+            'paymentLinkId' => $data['paymentLinkId'] ?? null,
+            'hoaDonTrangThai' => $hoaDon->trang_thai ?? null,
         ]);
     }
 

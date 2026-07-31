@@ -432,6 +432,13 @@ Route::middleware([VaiTroBanHang::class, 'vai_tro:Nhân viên,Trưởng ca,Admin
 });
 
 // ==== PayOS callbacks (public, PayOS server gọi) ====
-Route::get('/payos/return', [PayOSController::class, 'return'])->name('payos.return');
-Route::get('/payos/cancel', [PayOSController::class, 'cancel'])->name('payos.cancel');
-Route::post('/payos/webhook', [PayOSController::class, 'webhook'])->name('payos.webhook');
+    Route::get('/payos/return', [PayOSController::class, 'return'])->name('payos.return');
+    Route::get('/payos/cancel', [PayOSController::class, 'cancel'])->name('payos.cancel');
+    Route::post('/payos/webhook', [PayOSController::class, 'webhook'])->name('payos.webhook');
+    Route::get('/payos/checkout/{hoaDonId}', [PayOSController::class, 'checkoutPage'])
+        ->name('payos.checkout-page');
+
+    // Test-only: simulate PayOS webhook (local env only)
+    Route::post('/payos/test-webhook', [PayOSController::class, 'testWebhook'])
+        ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+        ->name('payos.test-webhook');

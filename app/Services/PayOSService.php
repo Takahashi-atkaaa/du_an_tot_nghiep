@@ -11,14 +11,65 @@ class PayOSService
 {
     protected Client $http;
 
+    /**
+     * Cờ runtime xác định đang dùng kênh Test (sandbox) hay Production.
+     * ServiceProvider có thể set qua {@see useTestChannel()}; nếu không,
+     * sẽ tự đọc config 'payos.use_test' ở constructor.
+     */
+    protected bool $isTestChannel = false;
+
     public function __construct()
     {
+        $this->isTestChannel = (bool) config('payos.use_test', false);
+
         $this->http = new Client([
-            'base_uri' => rtrim((string) config('payos.api_base', 'https://api.payos.vn'), '/').'/',
+            'base_uri' => rtrim((string) config('payos.api_base', 'https://api-merchant.payos.vn'), '/').'/',
             'timeout' => 20,
             'connect_timeout' => 10,
             'http_errors' => false,
         ]);
+    }
+
+    /**
+     * Bật/tắt chế độ test channel (sandbox). Trả về instance để chain.
+     * Khi bật, các call tới PayOS sẽ dùng bộ credentials PAYOS_TEST_* và
+     * checkout URL trả về sẽ nằm trong môi trường sandbox (có nút giả lập).
+     */
+    public function useTestChannel(bool $on = true): self
+    {
+        $this->isTestChannel = $on;
+
+        return $this;
+    }
+
+    /**
+     * Đang chạy ở kênh Test (sandbox) hay không?
+     */
+    public function isTestChannel(): bool
+    {
+        return $this->isTestChannel;
+    }
+
+    /**
+     * Lấy bộ credentials hiện tại theo channel đang chọn.
+     *
+     * @return array{client_id:string,api_key:string,checksum_key:string}
+     */
+    protected function credentials(): array
+    {
+        if ($this->isTestChannel) {
+            return [
+                'client_id' => (string) config('payos.test_client_id', ''),
+                'api_key' => (string) config('payos.test_api_key', ''),
+                'checksum_key' => (string) config('payos.test_checksum_key', ''),
+            ];
+        }
+
+        return [
+            'client_id' => (string) config('payos.client_id', ''),
+            'api_key' => (string) config('payos.api_key', ''),
+            'checksum_key' => (string) config('payos.checksum_key', ''),
+        ];
     }
 
     /**
@@ -203,7 +254,7 @@ class PayOSService
 
     protected function hmac(string $data): string
     {
-        return hash_hmac('sha256', $data, (string) config('payos.checksum_key'));
+        return hash_hmac('sha256', $data, $this->credentials()['checksum_key']);
     }
 
     /**
@@ -211,7 +262,8 @@ class PayOSService
      */
     protected function request(string $method, string $path, array $payload = [])
     {
-        $apiKey = (string) config('payos.api_key');
+        $creds = $this->credentials();
+        $apiKey = $creds['api_key'];
         $headers = [
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
@@ -220,7 +272,7 @@ class PayOSService
         if ($apiKey !== '') {
             // PayOS chấp nhận cả 'x-client-id' + 'x-api-key' hoặc 'Authorization: Bearer'.
             // Dùng header chuẩn để tương thích rộng.
-            $headers['x-client-id'] = (string) config('payos.client_id');
+            $headers['x-client-id'] = $creds['client_id'];
             $headers['x-api-key'] = $apiKey;
         }
 
@@ -237,6 +289,7 @@ class PayOSService
             Log::error('PayOS HTTP error', [
                 'method' => $method,
                 'path' => $path,
+                'channel' => $this->isTestChannel ? 'test' : 'production',
                 'error' => $e->getMessage(),
             ]);
             throw new RuntimeException('Không thể kết nối PayOS: '.$e->getMessage(), 0, $e);
