@@ -18,8 +18,14 @@
         <a href="{{ url('admin/kho-hang') }}" class="btn btn-outline-secondary btn-sm">
             <i class="fas fa-th-large me-1"></i>Hub kho hàng
         </a>
+        <button class="btn btn-outline-success btn-sm" id="btn-xuat-excel-nhap" title="Xuất Excel">
+            <i class="fas fa-file-excel me-1"></i>Xuất Excel
+        </button>
         <button class="btn btn-success btn-sm" id="btn-tao-phieu-nhap">
             <i class="fas fa-plus me-1"></i>Tạo phiếu nhập
+        </button>
+        <button class="btn btn-success btn-sm" id="btn-open-import-nhap" title="Import từ Excel">
+            <i class="fas fa-file-import me-1"></i>Import Excel
         </button>
     </div>
 </div>
@@ -118,7 +124,12 @@
                     <hr>
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h6 class="mb-0 small">Chi tiết sản phẩm</h6>
-                        <button type="button" class="btn btn-sm btn-outline-primary" id="btn-them-sp-nhap"><i class="fas fa-plus me-1"></i>Thêm</button>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-success" id="btn-open-import-nhap-modal">
+                                <i class="fas fa-file-import me-1"></i>Import Excel
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btn-them-sp-nhap"><i class="fas fa-plus me-1"></i>Thêm</button>
+                        </div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-sm table-bordered mb-0">
@@ -188,12 +199,75 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="fas fa-file-alt me-2 text-success"></i>Chi tiết phiếu nhập</h5>
+                <button type="button" class="btn btn-sm btn-success" id="btn-export-chi-tiet-pn">
+                    <i class="fas fa-download me-1"></i>Xuất Excel
+                </button>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="modal-xem-phieu-nhap-body"></div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
             </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal Import Excel --}}
+<div class="modal fade" id="modal-import-phieu-nhap" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-file-import me-2"></i>Import Phiếu Nhập từ Excel</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="form-import-phieu-nhap">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Loại nhập <span class="text-danger">*</span></label>
+                        <select name="loai_nhap" class="form-select" id="import-loai-nhap" required>
+                            <option value="mua_hang">Nhập mua hàng</option>
+                            <option value="tra_lai_tu_khach">Trả lại từ khách</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nhà cung cấp</label>
+                        <select name="id_nha_cung_cap" id="import-id-ncc" class="form-select">
+                            <option value="">-- Chọn NCC --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ghi chú</label>
+                        <input type="text" name="ghi_chu" id="import-ghi-chu" class="form-control" placeholder="Ghi chú phiếu nhập...">
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <label class="form-label">Chọn file Excel <span class="text-danger">*</span></label>
+                        <input type="file" id="import-file-nhap" accept=".xlsx,.xls,.csv" class="form-control" required>
+                        <small class="text-muted">Hỗ trợ định dạng .xlsx, .xls, .csv</small>
+                    </div>
+                    <div class="drop-zone-nhap border rounded p-4 text-center" id="drop-zone-nhap" style="border-style: dashed; background: #f8f9fa;">
+                        <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                        <p class="mb-0 text-muted">Kéo thả file Excel vào đây</p>
+                        <small class="text-muted">hoặc nhấn "Chọn file" ở trên</small>
+                    </div>
+                    <div id="import-file-preview-nhap" class="mt-2 d-none">
+                        <div class="alert alert-info py-2 mb-0 d-flex align-items-center">
+                            <i class="fas fa-file-excel me-2 text-success"></i>
+                            <span id="import-file-name-nhap"></span>
+                            <button type="button" class="btn-close ms-auto" onclick="xoaFileImportNhap()"></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-outline-primary" id="btn-download-template-nhap">
+                        <i class="fas fa-download me-1"></i>Tải file mẫu
+                    </button>
+                    <button type="submit" class="btn btn-success" id="btn-submit-import-nhap" disabled>
+                        <i class="fas fa-upload me-1"></i>Import
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -216,6 +290,12 @@ $(function () {
         $('#danh-sach-sp-nhap').html('');
         addPnRow();
         new bootstrap.Modal(document.getElementById('modal-tao-phieu-nhap')).show();
+    });
+
+    $(document).on('click', '#btn-open-import-nhap-modal', function () {
+        bootstrap.Modal.getInstance(document.getElementById('modal-tao-phieu-nhap')).hide();
+        taiNhaCungCapNhap();
+        $('#modal-import-phieu-nhap').modal('show');
     });
 
     $('#btn-them-sp-nhap').click(() => addPnRow());
@@ -257,6 +337,130 @@ $(function () {
     });
 
     $('#btn-loc-phieu-nhap').click(() => taiPhieuNhap(1));
+
+    // ========== IMPORT EXCEL ==========
+    let importFileNhap = null;
+    let currentExportPnId = null;
+
+    $('#btn-xuat-excel-nhap').click(function () {
+        const loai = $('#filter-loai').val();
+        const tuNgay = $('#filter-tu').val();
+        const denNgay = $('#filter-den').val();
+        let url = '/admin/api/phieu-nhap/export';
+        const params = [];
+        if (loai) params.push('loai_nhap=' + loai);
+        if (tuNgay) params.push('tu_ngay=' + tuNgay);
+        if (denNgay) params.push('den_ngay=' + denNgay);
+        if (params.length) url += '?' + params.join('&');
+        window.open(url, '_blank');
+    });
+
+    $('#btn-tao-phieu-nhap').click(function () {
+        $('#modal-tao-phieu-nhap .btn-outline-success').hide();
+    });
+
+    $(document).on('click', '#btn-export-chi-tiet-pn', function () {
+        if (currentExportPnId) {
+            window.open('/admin/api/phieu-nhap/' + currentExportPnId + '/export', '_blank');
+        }
+    });
+
+    $('#btn-download-template-nhap').click(function () {
+        window.open('/admin/api/phieu-nhap/download-template', '_blank');
+    });
+
+    $('#import-file-nhap').change(function () {
+        const file = this.files[0];
+        if (file) {
+            importFileNhap = file;
+            $('#import-file-name-nhap').text(file.name);
+            $('#import-file-preview-nhap').removeClass('d-none');
+            $('#btn-submit-import-nhap').prop('disabled', false);
+        }
+    });
+
+    $('#drop-zone-nhap').click(function () {
+        $('#import-file-nhap').click();
+    });
+
+    $('#drop-zone-nhap').on('dragover', function (e) {
+        e.preventDefault();
+        $(this).css('background-color', '#e7f1ff');
+    });
+
+    $('#drop-zone-nhap').on('dragleave', function () {
+        $(this).css('background-color', '#f8f9fa');
+    });
+
+    $('#drop-zone-nhap').on('drop', function (e) {
+        e.preventDefault();
+        $(this).css('background-color', '#f8f9fa');
+        const file = e.originalEvent.dataTransfer.files[0];
+        if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv'))) {
+            importFileNhap = file;
+            $('#import-file-nhap')[0].files = e.originalEvent.dataTransfer.files;
+            $('#import-file-name-nhap').text(file.name);
+            $('#import-file-preview-nhap').removeClass('d-none');
+            $('#btn-submit-import-nhap').prop('disabled', false);
+        } else {
+            hienThongBaoNhap('danger', 'Vui lòng chọn file Excel (.xlsx, .xls, .csv)');
+        }
+    });
+
+    $('#form-import-phieu-nhap').submit(function (e) {
+        e.preventDefault();
+        if (!importFileNhap) {
+            hienThongBaoNhap('danger', 'Vui lòng chọn file Excel.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', importFileNhap);
+        formData.append('loai_nhap', $('#import-loai-nhap').val());
+        formData.append('id_nha_cung_cap', $('#import-id-ncc').val() || '');
+        formData.append('ghi_chu', $('#import-ghi-chu').val() || '');
+
+        $('#btn-submit-import-nhap').prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Đang import...');
+
+        $.ajax({
+            url: '/admin/api/phieu-nhap/import',
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (res) {
+                if (res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('modal-import-phieu-nhap')).hide();
+                    hienThongBaoNhap('success', res.message);
+                    taiPhieuNhap(1);
+                    importFileNhap = null;
+                    $('#form-import-phieu-nhap')[0].reset();
+                    $('#import-file-preview-nhap').addClass('d-none');
+                } else {
+                    hienThongBaoNhap('danger', res.message);
+                    if (res.errors && res.errors.length) {
+                        console.error('Import errors:', res.errors);
+                    }
+                }
+            },
+            error: function (x) {
+                const msg = x.responseJSON?.message || 'Import thất bại.';
+                hienThongBaoNhap('danger', msg);
+            },
+            complete: function () {
+                $('#btn-submit-import-nhap').prop('disabled', false).html('<i class="fas fa-upload me-1"></i>Import');
+            }
+        });
+    });
+
+    // Nút mở modal import trong modal tạo phiếu
+    $(document).on('click', '#btn-open-import-nhap', function () {
+        taiNhaCungCapNhap();
+        $('#modal-import-phieu-nhap').modal('show');
+    });
 });
 
 function taiSanPhamNhap() {
@@ -350,6 +554,7 @@ function taiPhieuNhap(page = 1) {
 
 $(document).on('click', '.btn-xem-pn', function () {
     const id = $(this).data('id');
+    currentExportPnId = id; // Lưu để export chi tiết
     $.get('/admin/api/phieu-nhap/' + id, res => {
         if (!res.success) return;
         const pn = res.data;
@@ -423,6 +628,18 @@ function renderPagination(current, total) {
 function hienThongBao(type, message) {
     $('#alert-container').html(`<div class="alert alert-${type} alert-dismissible fade show" role="alert">${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`);
     setTimeout(() => $('.alert').fadeOut(), 4000);
+}
+
+function hienThongBaoNhap(type, message) {
+    $('#alert-container').html(`<div class="alert alert-${type} alert-dismissible fade show" role="alert">${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`);
+    setTimeout(() => $('.alert').fadeOut(), 5000);
+}
+
+function xoaFileImportNhap() {
+    importFileNhap = null;
+    $('#import-file-nhap').val('');
+    $('#import-file-preview-nhap').addClass('d-none');
+    $('#btn-submit-import-nhap').prop('disabled', true);
 }
 </script>
 @endsection

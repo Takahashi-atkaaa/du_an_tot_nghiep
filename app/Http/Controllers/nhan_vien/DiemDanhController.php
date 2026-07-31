@@ -63,7 +63,7 @@ class DiemDanhController extends Controller
             ->orderByDesc('gio_vao')
             ->paginate(10);
 
-        return view('nhan_vien_view.cham-cong', compact(
+        return view('nhan_vien.cham-cong', compact(
             'caHomNay',
             'tongBuoi',
             'diMuon',

@@ -12,8 +12,10 @@ class DonViQuyDoi extends BaseModel
 
     protected $fillable = [
         'variant_id',
+        'product_id',
+        'don_vi_chuan_id',
         'ten_don_vi',
-        'ty_le_quy_doi',
+        'so_luong_san_pham_trong_don_vi',
         'ma_hang',
         'ma_vach',
         'gia_von_quy_doi',
@@ -24,7 +26,7 @@ class DonViQuyDoi extends BaseModel
     ];
 
     protected $casts = [
-        'ty_le_quy_doi' => 'integer',
+        'so_luong_san_pham_trong_don_vi' => 'integer',
         'gia_von_quy_doi' => 'decimal:2',
         'gia_ban_quy_doi' => 'decimal:2',
         'gia_ban_si' => 'decimal:2',
@@ -36,7 +38,17 @@ class DonViQuyDoi extends BaseModel
         return $this->belongsTo(BienTheSanPham::class, 'variant_id');
     }
 
-    public function getProductAttribute()
+    public function product()
+    {
+        return $this->belongsTo(Product::class, 'product_id');
+    }
+
+    public function donViChuan()
+    {
+        return $this->belongsTo(DanhMucDonVi::class, 'don_vi_chuan_id');
+    }
+
+    public function getParentProductAttribute()
     {
         return $this->variant?->product;
     }

@@ -69,19 +69,15 @@
                             <textarea name="dia_chi" rows="3" class="form-control @error('dia_chi') is-invalid @enderror">{{ old('dia_chi', $khachHang->dia_chi) }}</textarea>
                             @error('dia_chi')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label fw-semibold">Điểm tích lũy</label>
                             <input type="text" class="form-control" value="{{ number_format($khachHang->diem_tich_luy ?? 0) }}" readonly>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label fw-semibold">Tổng chi tiêu</label>
                             <input type="text" class="form-control" value="{{ number_format($khachHang->tong_chi_tieu ?? 0, 0, ',', '.') }} đ" readonly>
                         </div>
-                        {{-- <div class="col-md-4">
-                            <label class="form-label fw-semibold">Công nợ <span class="text-danger">*</span></label>
-                            <input type="number" step="0.01" min="0" name="cong_no" value="{{ old('cong_no', $khachHang->cong_no) }}" class="form-control @error('cong_no') is-invalid @enderror">
-                            @error('cong_no')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div> --}}
+                       
                         <div class="col-12">
                             <label class="form-label fw-semibold">Ghi chú</label>
                             <textarea name="phi_chu" rows="4" class="form-control @error('phi_chu') is-invalid @enderror">{{ old('phi_chu', $khachHang->phi_chu) }}</textarea>

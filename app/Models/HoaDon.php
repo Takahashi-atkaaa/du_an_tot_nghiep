@@ -61,4 +61,11 @@ class HoaDon extends Model
 	public function giaoDich(){
 		return $this->hasMany(GiaoDich::class, 'id_hoa_don');
 	}
+	public function thanhToans()
+{
+    return $this->hasMany(
+        ThanhToanHoaDon::class,
+        'id_hoa_don'
+    );
+}
 }

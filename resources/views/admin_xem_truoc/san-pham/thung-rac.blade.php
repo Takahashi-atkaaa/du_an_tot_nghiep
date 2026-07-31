@@ -34,6 +34,12 @@
     </div>
 @endif
 
+{{-- Hidden form for bulk actions --}}
+<form id="bulkTrashForm" action="" method="POST" style="display:none;">
+    @csrf
+    <div id="bulkTrashIdsContainer"></div>
+</form>
+
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
         <form action="{{ url('admin/san-pham/trash') }}" method="GET" class="row g-3">
@@ -65,10 +71,22 @@
 
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <div>
-            <h5 class="mb-0 fw-bold"><i class="fas fa-trash-restore me-2 text-secondary"></i>Danh sách đã xóa</h5>
+        <div class="d-flex align-items-center gap-3">
+            <div>
+                <h5 class="mb-0 fw-bold"><i class="fas fa-trash-restore me-2 text-secondary"></i>Danh sách đã xóa</h5>
+            </div>
+            <span class="badge bg-secondary">{{ $trashed->total() }} mục</span>
         </div>
-        <span class="badge bg-secondary">{{ $trashed->total() }} mục</span>
+        {{-- Bulk Action Buttons (shown when items are selected) --}}
+        <div id="bulkActionButtons" class="d-flex gap-2" style="display:none;">
+            <span class="text-muted small align-self-center" id="selectedCount">0 đã chọn</span>
+            <button type="button" class="btn btn-sm btn-success" onclick="submitBulkTrashAction('restore')">
+                <i class="fas fa-trash-restore me-1"></i>Khôi phục
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="submitBulkTrashAction('forceDelete')">
+                <i class="fas fa-times-circle me-1"></i>Xóa vĩnh viễn
+            </button>
+        </div>
     </div>
     <div class="card-body p-0">
         @if($trashed->count() > 0)
@@ -76,6 +94,9 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
+                            <th class="text-center" style="width:40px;">
+                                <input type="checkbox" class="form-check-input" id="selectAllTrash">
+                            </th>
                             <th class="text-uppercase small fw-semibold" style="width:60px;">Ảnh</th>
                             <th class="text-uppercase small fw-semibold">Tên sản phẩm</th>
                             <th class="text-uppercase small fw-semibold">Tên biến thể</th>
@@ -85,9 +106,15 @@
                             <th class="text-uppercase small fw-semibold text-center" style="width:160px;">Thao tác</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="trashTableBody">
                         @foreach($trashed as $item)
-                            <tr class="align-middle">
+                            <tr class="align-middle trash-row">
+                                <td class="text-center">
+                                    <input type="checkbox"
+                                           class="form-check-input trash-checkbox"
+                                           value="{{ $item->id }}"
+                                           data-name="{{ $item->product->ten_san_pham ?? 'N/A' }} - {{ $item->ten_bien_the ?? 'Mặc định' }}">
+                                </td>
                                 <td>
                                     @if($item->hinh_anh)
                                         <img src="{{ asset($item->hinh_anh) }}"
@@ -206,6 +233,107 @@
 </div>
 @endsection
 
+@section('page_scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAllTrash');
+    const checkboxes = document.querySelectorAll('.trash-checkbox');
+    const bulkActionButtons = document.getElementById('bulkActionButtons');
+    const selectedCount = document.getElementById('selectedCount');
+    const bulkForm = document.getElementById('bulkTrashForm');
+    const idsContainer = document.getElementById('bulkTrashIdsContainer');
+
+    function updateBulkButtons() {
+        const checked = document.querySelectorAll('.trash-checkbox:checked');
+        const count = checked.length;
+
+        if (count > 0) {
+            bulkActionButtons.style.display = 'flex';
+            selectedCount.textContent = count + ' đã chọn';
+        } else {
+            bulkActionButtons.style.display = 'none';
+        }
+    }
+
+    // Select All functionality
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            checkboxes.forEach(cb => {
+                cb.checked = this.checked;
+            });
+            updateBulkButtons();
+        });
+    }
+
+    // Individual checkbox change
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            // Uncheck "select all" if any is unchecked
+            if (!this.checked) {
+                selectAllCheckbox.checked = false;
+            } else {
+                // Check if all are selected
+                const allChecked = Array.from(checkboxes).every(c => c.checked);
+                selectAllCheckbox.checked = allChecked;
+            }
+            updateBulkButtons();
+        });
+    });
+
+    // Submit bulk action
+    window.submitBulkTrashAction = function(action) {
+        const checked = document.querySelectorAll('.trash-checkbox:checked');
+
+        if (checked.length === 0) {
+            alert('Vui lòng chọn ít nhất một mục để thực hiện thao tác.');
+            return;
+        }
+
+        // Collect IDs
+        const ids = Array.from(checked).map(cb => cb.value);
+        const names = Array.from(checked).map(cb => cb.dataset.name);
+
+        // Build hidden inputs
+        idsContainer.innerHTML = '';
+        ids.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids[]';
+            input.value = id;
+            idsContainer.appendChild(input);
+        });
+
+        let confirmMessage = '';
+        let formAction = '';
+
+        if (action === 'restore') {
+            confirmMessage = `Bạn có chắc chắn muốn khôi phục ${ids.length} biến thể đã chọn?\n\nDanh sách:\n- ${names.slice(0, 5).join('\n- ')}${names.length > 5 ? '\n- ... và ' + (names.length - 5) + ' mục khác' : ''}`;
+            formAction = '{{ url("admin/san-pham/bulk-restore") }}';
+        } else if (action === 'forceDelete') {
+            confirmMessage = `⚠️ CẢNH BÁO!\n\nBạn sắp xóa vĩnh viễn ${ids.length} biến thể!\nHành động này KHÔNG THỂ HOÀN TÁC!\n\nDanh sách:\n- ${names.slice(0, 5).join('\n- ')}${names.length > 5 ? '\n- ... và ' + (names.length - 5) + ' mục khác' : ''}`;
+            formAction = '{{ url("admin/san-pham/bulk-force") }}';
+        }
+
+        if (confirm(confirmMessage)) {
+            // Nếu là forceDelete, thêm hidden input _method=DELETE để spoof method
+            // (vì HTML form chỉ hỗ trợ GET/POST, cần spoof DELETE để match route)
+            if (action === 'forceDelete') {
+                const methodInput = document.createElement('input');
+                methodInput.type = 'hidden';
+                methodInput.name = '_method';
+                methodInput.value = 'DELETE';
+                idsContainer.appendChild(methodInput);
+            }
+
+            bulkForm.action = formAction;
+            bulkForm.method = 'POST';
+            bulkForm.submit();
+        }
+    };
+});
+</script>
+@endsection
+
 @section('styles')
 <link rel="stylesheet" href="{{ asset('css/admin/san-pham.css') }}">
 <style>
@@ -214,6 +342,14 @@
     }
     .table tbody tr:hover {
         background-color: #f8f9fa;
+    }
+    .trash-row.selected {
+        background-color: #e7f1ff !important;
+    }
+    .trash-checkbox:checked + img,
+    .trash-checkbox:checked + .bg-light {
+        outline: 2px solid #0d6efd;
+        outline-offset: 2px;
     }
 </style>
 @endsection

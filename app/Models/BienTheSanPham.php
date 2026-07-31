@@ -23,6 +23,8 @@ class BienTheSanPham extends BaseModel
         'hinh_anh',
         'thuoc_tinh_ids',
         'trang_thai',
+        'la_don_vi',
+        'ten_don_vi',
     ];
 
     protected $casts = [
@@ -32,6 +34,7 @@ class BienTheSanPham extends BaseModel
         'so_luong_ton' => 'integer',
         'dinh_muc_toi_thieu' => 'integer',
         'trang_thai' => 'boolean',
+        'la_don_vi' => 'boolean',
     ];
 
     public function product()
@@ -42,6 +45,11 @@ class BienTheSanPham extends BaseModel
     public function units()
     {
         return $this->hasMany(DonViQuyDoi::class, 'variant_id');
+    }
+
+    public function productUnits()
+    {
+        return $this->hasMany(DonViQuyDoi::class, 'product_id');
     }
 
     public function chiTietLoHang()
@@ -65,9 +73,47 @@ class BienTheSanPham extends BaseModel
 
     public function getTenHienThiAttribute()
     {
+        if ($this->la_don_vi && $this->ten_don_vi) {
+            return ($this->product->ten_san_pham ?? '') . ' - ' . $this->ten_don_vi;
+        }
         if ($this->ten_bien_the) {
             return ($this->product->ten_san_pham ?? '') . ' - ' . $this->ten_bien_the;
         }
         return $this->product->ten_san_pham ?? '';
+    }
+
+    public function getTenHienThiDonViAttribute(): ?string
+    {
+        if ($this->la_don_vi) {
+            return $this->ten_don_vi;
+        }
+        return $this->ten_bien_the;
+    }
+
+    public function getTenBienTheHienThiAttribute(): ?string
+    {
+        if ($this->la_don_vi) {
+            return null;
+        }
+        return $this->ten_bien_the;
+    }
+
+    public function getThuocTinhLabelsAttribute(): array
+    {
+        if (empty($this->thuoc_tinh_ids)) {
+            return [];
+        }
+        $labels = [];
+        $attrs = ThuocTinhSanPham::whereIn('id', $this->thuoc_tinh_ids)->get()->keyBy('id');
+        foreach ($this->thuoc_tinh_ids as $id) {
+            if (isset($attrs[$id])) {
+                $attr = $attrs[$id];
+                if ($attr->thuoc_tinh_cha_id && isset($attrs[$attr->thuoc_tinh_cha_id])) {
+                    $labels[] = $attrs[$attr->thuoc_tinh_cha_id]->ten_thuoc_tinh;
+                }
+                $labels[] = $attr->ten_thuoc_tinh;
+            }
+        }
+        return $labels;
     }
 }

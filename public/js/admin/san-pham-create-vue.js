@@ -40,7 +40,8 @@
             // VD: [{ id: 5, name: 'Màu sắc', values: [{id:1, label:'Đỏ'},{id:2, label:'Xanh'}] }]
             const availableAttributes = ref(DATA.availableAttributes || []);
 
-            // availableUnits: tất cả đơn vị tính từ DB để gợi ý trong dropdown
+            // availableUnits: tất cả đơn vị chuẩn từ bảng danh_muc_don_vi
+            // VD: [{ id: 1, name: 'Thùng 24', qty: 24 }, { id: 2, name: 'Thùng 12', qty: 12 }]
             const availableUnits = ref(DATA.availableUnits || []);
 
             // allUnitOptions: availableUnits + giá trị hiện tại của baseUnit nếu không có trong list
@@ -74,6 +75,119 @@
 
             // hasImage: true khi user da chon file (co trong basicInfo.image)
             const hasImage = computed(() => basicInfo.image !== null);
+
+            // ============================================================
+            // YÊU CẦU 2: KIỂM TRA TRÙNG LẶP NHÓM THUỘC TÍNH (FRONTEND)
+            // ============================================================
+            // Phát hiện khi người dùng tạo 2 nhóm giống nhau (VD: 2 nhóm "Kích thước")
+            const duplicateAttrGroups = computed(() => {
+                const groups = attributesConfig.groups.filter(g => g.name.trim());
+                const seen = new Map();
+                const duplicates = [];
+
+                groups.forEach((g, idx) => {
+                    const key = g.name.trim();
+                    if (seen.has(key)) {
+                        duplicates.push({
+                            groupName: key,
+                            indices: [seen.get(key), idx + 1]
+                        });
+                    } else {
+                        seen.set(key, idx + 1);
+                    }
+                });
+
+                return duplicates;
+            });
+
+            // Computed: thông báo trùng nhóm thuộc tính
+            const duplicateAttrGroupWarning = computed(() => {
+                const dups = duplicateAttrGroups.value;
+                if (dups.length === 0) return '';
+                return `Cảnh báo: Có nhóm thuộc tính bị trùng tên! Vui lòng xóa bớt nhóm trùng lặp.`;
+            });
+
+            // ============================================================
+            // YÊU CẦU 2: KIỂM TRA TRÙNG LẶP BIẾN THỂ (FRONTEND VUE.JS)
+            // ============================================================
+            // Computed property: phát hiện biến thể trùng lặp trong gridData
+            const hasDuplicateVariants = computed(() => {
+                if (gridData.value.length < 2) return false;
+
+                // Trích xuất "Attribute Signature" từ mỗi dòng
+                // Signature = chuỗi (attrValueIds đã sort) + '_' + (ten_don_vi hoặc ty_le)
+                // FIX: trước đây chỉ gom attrValueIds, làm 2 dòng cùng thuộc tính
+                // nhưng khác đơn vị (VD: Đen-38 ở "cái" và Đen-38 ở "Bao 6") bị
+                // tính là trùng. Giờ thêm ten_don_vi / ty_le vào key để phân biệt.
+                const signatures = gridData.value.map(row => {
+                    if (!row.attrValueIds || row.attrValueIds.length === 0) {
+                        return ''; // Dòng không có thuộc tính
+                    }
+                    // Clone và sort để đảm bảo "M-Đỏ" = "Đỏ-M"
+                    const sortedIds = [...row.attrValueIds].map(id => String(id)).sort();
+                    const attrPart = sortedIds.join('-');
+                    // Phân biệt đơn vị: ten_don_vi (unitName) hoặc tyLe
+                    const donViPart = row.unitName || (row.tyLe != null ? String(row.tyLe) : '');
+                    return `${attrPart}__${donViPart}`;
+                });
+
+                // So sánh độ dài: nếu có trùng lặp thì unique sẽ ngắn hơn
+                const uniqueSignatures = [...new Set(signatures.filter(sig => sig !== ''))];
+                // Chỉ kiểm tra các signature không rỗng
+                const nonEmptySignatures = signatures.filter(sig => sig !== '');
+                const hasDuplicate = uniqueSignatures.length < nonEmptySignatures.length;
+
+                if (hasDuplicate) {
+                    console.warn('[Duplicate Detection] Phát hiện biến thể trùng lặp:', {
+                        total: nonEmptySignatures.length,
+                        unique: uniqueSignatures.length,
+                        signatures: nonEmptySignatures
+                    });
+                }
+
+                return hasDuplicate;
+            });
+
+            // Computed: lấy danh sách các dòng bị trùng (để hiển thị)
+            const duplicateVariantIndices = computed(() => {
+                if (!hasDuplicateVariants.value) return [];
+
+                const signatures = gridData.value.map((row, idx) => ({
+                    idx: idx,
+                    sig: row.attrValueIds && row.attrValueIds.length > 0
+                        ? (() => {
+                            const sortedIds = [...row.attrValueIds].map(id => String(id)).sort();
+                            const attrPart = sortedIds.join('-');
+                            // FIX: thêm ten_don_vi / ty_le vào key để phân biệt
+                            // đơn vị, tránh báo trùng sai khi kết hợp thuộc tính + đơn vị quy đổi
+                            const donViPart = row.unitName || (row.tyLe != null ? String(row.tyLe) : '');
+                            return `${attrPart}__${donViPart}`;
+                        })()
+                        : ''
+                }));
+
+                const seen = new Map();
+                const duplicates = [];
+
+                signatures.forEach(item => {
+                    if (item.sig === '') return; // Bỏ qua dòng không có thuộc tính
+                    if (seen.has(item.sig)) {
+                        duplicates.push(item.idx + 1); // 1-indexed
+                    } else {
+                        seen.set(item.sig, true);
+                    }
+                });
+
+                return [...new Set(duplicates)]; // Loại bỏ trùng lặp trong danh sách
+            });
+
+            // Computed: thông báo cảnh báo chi tiết
+            const duplicateWarningMessage = computed(() => {
+                if (!hasDuplicateVariants.value) return '';
+                const indices = duplicateVariantIndices.value;
+                if (indices.length === 0) return '';
+                return `Cảnh báo: Có biến thể đang bị trùng lặp kích thước/màu sắc tại dòng ${indices.join(', ')}!`;
+            });
 
             function clearErrors() {
                 errors.value = {};
@@ -161,7 +275,7 @@
                             conversionUnits: (bt.units || []).map(u => ({
                                 id: u.id,
                                 ten_don_vi: u.ten_don_vi,
-                                ty_le_quy_doi: u.ty_le_quy_doi,
+                                so_luong_san_pham_trong_don_vi: u.so_luong_san_pham_trong_don_vi,
                                 gia_von_quy_doi: u.gia_von_quy_doi,
                                 gia_ban_quy_doi: u.gia_ban_quy_doi,
                                 ma_hang: u.ma_hang,
@@ -170,7 +284,7 @@
                             savedUnits: (bt.units || []).map(u => ({
                                 id: u.id,
                                 ten_don_vi: u.ten_don_vi,
-                                ty_le_quy_doi: u.ty_le_quy_doi,
+                                so_luong_san_pham_trong_don_vi: u.so_luong_san_pham_trong_don_vi,
                                 gia_von_quy_doi: u.gia_von_quy_doi,
                                 gia_ban_quy_doi: u.gia_ban_quy_doi,
                                 ma_hang: u.ma_hang,
@@ -316,20 +430,18 @@
                         const key = buildRowKey(combo, u);
                         const old = oldMap.get(key);
 
-                        // Tên biến thể: ghép tên sp + thuộc tính (nếu có) + đơn vị
+                        // Tên biến thể: chỉ chứa thuộc tính (KHÔNG gộp tên SP và đơn vị)
                         const attrPart = Object.keys(combo)
-                            .filter(k => k !== '__ids')
+                            .filter(k => !k.startsWith('__'))
                             .map(k => combo[k])
                             .join(' - ');
-                        const tenBienThe = attrPart
-                            ? `${basicInfo.ten_san_pham.trim() || 'Sản phẩm'} (${attrPart}${attrPart ? ' - ' : ''}${u.name})`
-                            : `${basicInfo.ten_san_pham.trim() || 'Sản phẩm'} (${u.name})`;
+                        const tenBienThe = attrPart || '';
 
                         newRows.push({
                             key: key,
                             // Metadata
                             attrLabels: Object.keys(combo)
-                                .filter(k => k !== '__ids')
+                                .filter(k => !k.startsWith('__'))
                                 .reduce((o, k) => { o[k] = combo[k]; return o; }, {}),
                             attrValueIds: combo.__ids || [],
                             unitKey: u.key,
@@ -374,11 +486,25 @@
 
             // ------- METHODS -------
             function addConversion() {
-                unitConfig.conversionUnits.push({ id: uid(), name: '', rate: 1, price: 0 });
+                unitConfig.conversionUnits.push({ id: uid(), don_vi_chuan_id: null, name: '', rate: 1, price: 0 });
             }
             function removeConversion(idx) {
                 unitConfig.conversionUnits.splice(idx, 1);
             }
+
+            // Khi user chọn đơn vị từ dropdown → tự điền name (VD: "Thùng 24") và rate (= qty)
+            watch(() => unitConfig.conversionUnits.map(u => u.don_vi_chuan_id), (newIds) => {
+                unitConfig.conversionUnits.forEach((u, i) => {
+                    if (u.don_vi_chuan_id) {
+                        const found = availableUnits.value.find(a => a.id === u.don_vi_chuan_id);
+                        if (found) {
+                            u.name = found.name;
+                            u.rate = found.qty;
+                        }
+                    }
+                });
+            }, { deep: false });
+
             function onConversionRateInput(u, raw) {
                 u.rate = Math.max(1, parseInt(raw) || 1);
             }
@@ -437,10 +563,22 @@
                 return matched.values || [];
             }
 
-            // Lọc dropdown: không show giá trị đã được chọn rồi
+            // Lọc dropdown: không show giá trị đã được chọn rồi (trong cùng nhóm VÀ các nhóm cùng tên khác)
             function getFilteredDropdown(group) {
                 const all = getDropdownValues(group);
                 const selectedLabels = new Set(group.values.map(v => v.label));
+
+                // Lọc thêm các giá trị đã được chọn ở các nhóm CÙNG TÊN khác
+                if (group.name.trim()) {
+                    attributesConfig.groups.forEach(g => {
+                        if (g !== group && g.name.trim() === group.name.trim()) {
+                            g.values.forEach(v => {
+                                selectedLabels.add(v.label);
+                            });
+                        }
+                    });
+                }
+
                 return all.filter(v => !selectedLabels.has(v.label));
             }
 
@@ -599,6 +737,21 @@
                 if (!catId || catId <= 0) errs.push('Vui lòng chọn Nhóm hàng.');
                 if (!unitConfig.baseUnit.trim()) errs.push('Vui lòng nhập Tên đơn vị cơ bản.');
                 if (gridData.value.length === 0) errs.push('Vui lòng khai báo ít nhất 1 đơn vị tính.');
+
+                // ============================================================
+                // YÊU CẦU 2: KIỂM TRA TRÙNG NHÓM THUỘC TÍNH
+                // ============================================================
+                if (duplicateAttrGroups.value.length > 0) {
+                    errs.push('Có nhóm thuộc tính bị trùng tên. Vui lòng xóa bớt nhóm trùng lặp!');
+                }
+
+                // ============================================================
+                // YÊU CẦU 2: KIỂM TRA TRÙNG LẶP BIẾN THỂ
+                // ============================================================
+                if (hasDuplicateVariants.value) {
+                    errs.push('Có biến thể bị trùng lặp thuộc tính. Vui lòng kiểm tra lại!');
+                }
+
                 gridData.value.forEach((r, i) => {
                     const gb = parseFloat(r.giaBan);
                     if (!gb && gb !== 0) errs.push(`Dòng ${i + 1}: Giá bán không hợp lệ.`);
@@ -638,14 +791,15 @@
                     const idField = row.existingId ? { id: row.existingId } : {};
 
                     // Dùng savedUnits (reference gốc từ initFromProduct, không bị debouncedRegen overwrite)
-                    // Lọc ra các đơn vị QUY ĐỔI (ty_le > 1) thuộc dòng này
+                    // Lọc ra các đơn vị QUY ĐỔI (so_luong_san_pham_trong_don_vi > 1) thuộc dòng này
                     const unitsPayload = (row.savedUnits || [])
-                        .filter(u => (parseInt(u.ty_le_quy_doi) || 1) > 1)
+                        .filter(u => (parseInt(u.so_luong_san_pham_trong_don_vi) || 1) > 1)
                         .map(u => {
                             return {
                                 id: u.id,
+                                don_vi_chuan_id: u.don_vi_chuan_id || null,
                                 ten_don_vi: u.ten_don_vi,
-                                ty_le_quy_doi: u.ty_le_quy_doi,
+                                so_luong_san_pham_trong_don_vi: parseInt(u.so_luong_san_pham_trong_don_vi) || 1,
                                 gia_von_quy_doi: parseFloat(u.gia_von_quy_doi) || 0,
                                 gia_ban_quy_doi: parseFloat(u.gia_ban_quy_doi) || 0,
                                 ma_hang: u.ma_hang || '',
@@ -653,11 +807,12 @@
                             };
                         });
 
-                    // ten_bien_the = đơn vị cơ bản của dòng (VD: "Lon", "Kg")
-                    const tenBienThe = row.unitName;
-
                     return Object.assign({}, idField, {
+                        is_base: row.isBase ? 1 : 0,
                         ten_bien_the: tenBienThe,
+                        la_don_vi: row.isBase && !hasAttr ? 1 : 0,
+                        ten_don_vi: row.isBase ? unitConfig.baseUnit : row.unitName,
+                        ty_le: row.tyLe || 1,
                         ma_hang: row.maHang,
                         ma_vach: row.maVach,
                         gia_von: parseFloat(row.giaVon) || 0,
@@ -665,6 +820,7 @@
                         so_luong_ton: parseInt(row.soLuong) || 0,
                         dinh_muc_toi_thieu: parseInt(row.dinhMucToiThieu) || 0,
                         thuoc_tinh_ids: Array.isArray(row.attrValueIds) ? row.attrValueIds.join(',') : (row.attrValueIds || ''),
+                        ten_don_vi_bien_the: row.unitName || '',
                         units: unitsPayload
                     });
                 });
@@ -840,13 +996,41 @@
                 }
             }
 
-            // Cập nhật DOM hiển thị lỗi + spinner (vì button Lưu và alert box nằm ngoài Vue template)
+            // Cập nhật DOM hiển thị lỗi + spinner + cảnh báo trùng lặp
             function syncErrorUi() {
                 try {
                     const box = document.getElementById('formErrorBox');
                     const spinner = document.getElementById('btnLuuSpinner');
                     const icon = document.getElementById('btnLuuIcon');
                     const btn = document.getElementById('btnLuuSanPham');
+                    const dupWarning = document.getElementById('duplicateVariantWarning');
+                    const dupAttrGroupWarning = document.getElementById('duplicateAttrGroupWarning');
+
+                    // ============================================================
+                    // YÊU CẦU 2: HIỂN THỊ CẢNH BÁO TRÙNG NHÓM THUỘC TÍNH
+                    // ============================================================
+                    if (dupAttrGroupWarning) {
+                        if (duplicateAttrGroupWarning.value) {
+                            dupAttrGroupWarning.textContent = duplicateAttrGroupWarning.value;
+                            dupAttrGroupWarning.classList.remove('d-none');
+                        } else {
+                            dupAttrGroupWarning.textContent = '';
+                            dupAttrGroupWarning.classList.add('d-none');
+                        }
+                    }
+
+                    // ============================================================
+                    // YÊU CẦU 2: HIỂN THỊ CẢNH BÁO TRÙNG BIẾN THỂ
+                    // ============================================================
+                    if (dupWarning) {
+                        if (duplicateWarningMessage.value) {
+                            dupWarning.textContent = duplicateWarningMessage.value;
+                            dupWarning.classList.remove('d-none');
+                        } else {
+                            dupWarning.textContent = '';
+                            dupWarning.classList.add('d-none');
+                        }
+                    }
 
                     if (box) {
                         const msg = generalError.value || '';
@@ -867,10 +1051,21 @@
                         } else {
                             spinner.classList.add('d-none');
                             icon.classList.remove('d-none');
-                            // Chỉ bật nút khi form đã load xong VÀ không có lỗi submit trước đó
-                            if (formLoaded.value && !submitHadError.value) {
+                            // ============================================================
+                            // YÊU CẦU 2: VÔ HIỆU HÓA NÚT LƯU KHI CÓ TRÙNG LẶP
+                            // ============================================================
+                            // Chỉ bật nút khi:
+                            // - Form đã load xong
+                            // - Không có lỗi submit trước đó
+                            // - KHÔNG CÓ nhóm thuộc tính trùng lặp
+                            // - KHÔNG CÓ biến thể trùng lặp
+                            const hasAnyDuplicate = hasDuplicateVariants.value || duplicateAttrGroups.value.length > 0;
+                            if (formLoaded.value && !submitHadError.value && !hasAnyDuplicate) {
                                 btn.disabled = false;
                                 btn.classList.remove('disabled');
+                            } else {
+                                btn.disabled = true;
+                                btn.classList.add('disabled');
                             }
                         }
                     }
@@ -907,9 +1102,13 @@
                 window.handleSubmit = handleSubmit;
             });
 
-            // Theo dõi thay đổi của generalError & submitting để đồng bộ UI
+            // Theo dõi thay đổi của generalError & submitting & duplicate checks để đồng bộ UI
             watch(generalError, () => syncErrorUi());
             watch(submitting, () => syncErrorUi());
+            // Watch duplicate variants để tự động cập nhật UI khi grid thay đổi
+            watch(hasDuplicateVariants, () => syncErrorUi());
+            // Watch duplicate attr groups để tự động cập nhật UI
+            watch(duplicateAttrGroups, () => syncErrorUi(), { deep: true });
 
             return {
                 basicInfo, unitConfig, attributesConfig, sectionOpen,
@@ -924,7 +1123,15 @@
                 onAttrValueKey, toggleDropdown, closeDropdown,
                 getDropdownValues, getFilteredDropdown, selectFromDropdown,
                 onImageSelect, clearImage, onGridInput, fillDefaultsToGrid,
-                handleSubmit, validate, buildPayload
+                handleSubmit, validate, buildPayload,
+                // ============================================================
+                // YÊU CẦU 2: EXPOSE COMPUTED PROPERTIES CHO UI
+                // ============================================================
+                hasDuplicateVariants,
+                duplicateVariantIndices,
+                duplicateWarningMessage,
+                duplicateAttrGroups,
+                duplicateAttrGroupWarning
             };
         },
 
@@ -1089,8 +1296,11 @@
                                 <tbody>
                                     <tr v-for="(u, i) in unitConfig.conversionUnits" :key="u.id" class="border-t border-slate-100">
                                         <td class="p-2">
-                                            <input v-model="u.name" type="text" placeholder="VD: Thùng"
-                                                class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                                            <select v-model="u.don_vi_chuan_id"
+                                                class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                                <option value="">— Chọn đơn vị —</option>
+                                                <option v-for="opt in availableUnits" :key="opt.id" :value="opt.id">{{ opt.name }}</option>
+                                            </select>
                                         </td>
                                         <td class="p-2">
                                             <div class="flex items-center gap-1">

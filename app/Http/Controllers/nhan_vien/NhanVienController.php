@@ -7,7 +7,6 @@ use App\Http\Requests\DoiMatKhauRequest;
 use App\Models\ChiaCaLamViec;
 use App\Models\NguoiDung;
 use App\Models\SanPham;
-use App\Models\DanhMucSanPham;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -24,11 +23,6 @@ class NhanVienController extends Controller
         return view('nhan_vien_view.dashboard');
     }
 
-    public function banHang()
-    {
-        return view('nhan_vien_view.pos');
-    }
-
    public function hoaDon(Request $request)
 {
     $query = DB::table('hoa_don')
@@ -36,11 +30,13 @@ class NhanVienController extends Controller
         ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
         ->leftJoin('ca_lam_viec', 'hoa_don.id_ca_lam_viec', '=', 'ca_lam_viec.id')
         ->select(
-            'hoa_don.*',
-            'khach_hang.ten_khach_hang',
-            'nguoi_dung.ho_ten as ten_nhan_vien',
-            'ca_lam_viec.ten_ca'
-        )
+    'hoa_don.*',
+    'khach_hang.ten_khach_hang',
+    'nguoi_dung.ho_ten as ten_nhan_vien',
+    'ca_lam_viec.ten_ca',
+    'ca_lam_viec.gio_bat_dau',
+    'ca_lam_viec.gio_ket_thuc'
+)
         ->orderByDesc('hoa_don.id');
 
     if ($request->filled('q')) {
@@ -66,68 +62,7 @@ class NhanVienController extends Controller
     return view('nhan_vien_view.hoa-don.index', compact('hoaDons', 'caLamViecs'));
 }
 
-    public function sanPham(Request $request)
-    {
-        $tuKhoa = trim((string) $request->query('tu_khoa', ''));
-
-        $sanPhams = SanPham::query()
-            ->with([
-                'danhMuc',
-                'bienTheSanPhams' => function ($query) {
-                    $query->where('trang_thai', true)
-                        ->orderBy('id')
-                        ->with([
-                            'units' => function ($unitQuery) {
-                                $unitQuery->orderByDesc('la_don_vi_mac_dinh')
-                                    ->orderBy('id');
-                            },
-                        ]);
-                },
-            ])
-            ->where('trang_thai', true)
-            ->when($tuKhoa !== '', function ($query) use ($tuKhoa) {
-                $keyword = mb_strtolower($tuKhoa, 'UTF-8');
-
-                $query->where(function ($subQuery) use ($keyword) {
-                    $subQuery->whereRaw('LOWER(ten_san_pham) LIKE ?', ["%{$keyword}%"])
-                        ->orWhereRaw("LOWER(COALESCE(thuong_hieu, '')) LIKE ?", ["%{$keyword}%"]);
-                });
-            })
-            ->orderBy('ten_san_pham')
-            ->paginate(10)
-            ->withQueryString();
-
-        $sanPhams->getCollection()->transform(function (SanPham $sanPham) {
-            $bienThes = $sanPham->bienTheSanPhams ?? collect();
-            $bienTheDauTien = $bienThes->first();
-            $tatCaDonVi = $bienThes->flatMap(fn ($bienThe) => $bienThe->units);
-            $donViMacDinh = $tatCaDonVi->firstWhere('la_don_vi_mac_dinh', true);
-            $donViDauTien = $donViMacDinh ?? $tatCaDonVi->first();
-            $tongTonKho = (int) $bienThes->sum('so_luong_ton');
-
-            $sanPham->setAttribute(
-                'hinh_anh_hien_thi',
-                $donViDauTien?->hinh_anh ?: $bienTheDauTien?->hinh_anh
-            );
-            $sanPham->setAttribute(
-                'don_vi_tinh_hien_thi',
-                $donViDauTien?->ten_don_vi ?: $bienTheDauTien?->ten_bien_the
-            );
-            $sanPham->setAttribute(
-                'gia_ban_hien_thi',
-                $donViDauTien?->gia_ban_quy_doi ?? $bienTheDauTien?->gia_ban
-            );
-            $sanPham->setAttribute('tong_ton_kho_hien_thi', $tongTonKho);
-            $sanPham->setAttribute('trang_thai_kho_hien_thi', $tongTonKho > 0 ? 'Còn hàng' : 'Hết hàng');
-
-            return $sanPham;
-        });
-
-        return view('nhan_vien_view.san-pham.index', [
-            'sanPhams' => $sanPhams,
-            'tuKhoa' => $tuKhoa,
-        ]);
-    }
+   
     public function lichLamViec(Request $request): View
     {
         return $this->lichSuCaLam($request);
@@ -228,7 +163,7 @@ class NhanVienController extends Controller
             ? 'Trưởng ca'
             : $this->displayRole(optional($nguoiDung->vaiTro)->ten_vai_tro);
 
-        return view('nhan_vien_view.lich-lam-viec.xem-tuan', [
+        return view('nhan_vien.lich-lam-viec.xem-tuan', [
             'nguoiDung' => $nguoiDung,
             'weekStart' => $weekStart,
             'weekEnd' => $weekEnd,
@@ -254,7 +189,7 @@ class NhanVienController extends Controller
         $nguoiDung = auth()->user();
         $nguoiDung->load('vaiTro');
 
-        return view('nhan_vien_view.ho-so', [
+        return view('nhan_vien.ho-so', [
             'nguoiDung' => $nguoiDung,
         ]);
     }

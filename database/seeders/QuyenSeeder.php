@@ -230,6 +230,12 @@ class QuyenSeeder extends Seeder
                 'ten_quyen' => 'quản lý ca làm'
             ],
 
+            //bán hàng
+            [
+                'ma_quyen' => 'ban_hang',
+                'ten_quyen' => 'Bán hàng'
+            ],
+
         ];
 
         foreach ($quyens as $quyen) {

@@ -47,7 +47,7 @@
                     @foreach($donVis as $donVi)
                         <li class="list-group-item d-flex justify-content-between align-items-center" id="donvi-item-{{ $donVi->id }}">
                             <div class="donvi-view">
-                                <strong>{{ $donVi->ten_don_vi }}</strong>
+                                <strong>{{ $donVi->ten_hien_thi }}</strong>
                                 <div class="text-muted">Số lượng: {{ $donVi->so_luong_san_pham_trong_don_vi }}</div>
                             </div>
                             <div class="donvi-edit d-none">

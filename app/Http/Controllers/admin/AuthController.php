@@ -55,8 +55,13 @@ class AuthController extends Controller
         }
 
         if ($idVaiTro === 3) {
-            return redirect('/nhan-vien/');
+            return redirect('/trang-chu');
         }
+    
+        if ($idVaiTro === 4) {
+            return redirect('/dashboard');
+        }
+
 
         return redirect('/admin/dashboard');
     }
