@@ -63,6 +63,19 @@ class BienTheSanPham extends BaseModel
             ->where('so_luong_ton', '>', 0);
     }
 
+    // ============================================================
+    // ACCESSOR donVi: trả về thông tin đơn vị CƠ BẢN của variant
+    // Chỉ dùng cho Blade: $bienThe->donVi->ten_don_vi
+    // TUYỆT ĐỐI KHÔNG trả về đơn vị quy đổi ở đây!
+    // ============================================================
+    public function getDonViAttribute()
+    {
+        return (object)[
+            'ten_don_vi' => $this->ten_don_vi,
+            'ma_vach' => $this->ma_vach,
+        ];
+    }
+
     public function getThuocTinhsAttribute()
     {
         if (empty($this->thuoc_tinh_ids)) {
