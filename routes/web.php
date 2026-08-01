@@ -390,6 +390,8 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::get('/dashboard', [NhanVienController::class, 'index'])->name('nhan-vien.dashboard')->middleware('permission:ban_hang');
     Route::get('/ban-hang', [NhanVienController::class, 'banHang'])->name('nhan-vien.ban-hang')->middleware('permission:ban_hang');
     Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don')->middleware('permission:ban_hang');
+    // AJAX tìm kiếm sản phẩm cho chức năng đổi hàng (nhân viên)
+    Route::get('/hoa-don/search-product', [HoaDonController::class, 'searchProduct'])->name('nhan-vien.hoa-don.search-product')->middleware('permission:ban_hang');
     Route::get('/san-pham', [NhanVienController::class, 'sanPham'])->name('nhan-vien.san-pham')->middleware('permission:ban_hang');
     // khách hàng 
     Route::get('/ban-hang/san-pham', [NhanVienController::class, 'laySanPham'])->name('nhan-vien.ban-hang.san-pham')->middleware('permission:ban_hang');
@@ -398,6 +400,9 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don')->middleware('permission:ban_hang');
     Route::get('/hoa-don/{id}', [NhanVienController::class, 'chiTietHoaDon'])->name('nhan-vien.hoa-don.chi-tiet')->middleware('permission:ban_hang');
     Route::get('/hoa-don/{id}/in', [NhanVienController::class, 'inHoaDon'])->name('nhan-vien.hoa-don.in')->middleware('permission:ban_hang');
+    // Đổi / Trả hàng - nhân viên uses admin logic via wrapper methods
+    Route::get('/hoa-don/{id}/doi-tra', [NhanVienController::class, 'formDoiTra'])->name('nhan-vien.hoa-don.doi-tra')->middleware('permission:ban_hang');
+    Route::post('/hoa-don/{id}/doi-tra', [NhanVienController::class, 'xuLyDoiTraNhanVien'])->name('nhan-vien.hoa-don.xu-ly-doi-tra')->middleware('permission:ban_hang');
     //   Route::post('/hoa-don/{id}/huy', [NhanVienController::class, 'huyHoaDon'])
     //   ->name('nhan-vien.hoa-don.huy');
     Route::get('/ban-hang/khach-hang', [NhanVienController::class, 'layKhachHang'])->name('nhan-vien.ban-hang.khach-hang')->middleware('permission:ban_hang');

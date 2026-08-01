@@ -266,6 +266,9 @@ class HoaDonController extends Controller
                 }
 
                 $soLuongLoi = isset($reqItem['so_luong_loi']) ? (int) $reqItem['so_luong_loi'] : 0;
+                if (!empty($reqItem['is_loi']) && $soLuongLoi === 0) {
+                    $soLuongLoi = $reqItem['so_luong'];
+                }
                 if ($soLuongLoi < 0) {
                     return back()->with('error', 'Số lượng hàng lỗi không được âm.');
                 }
