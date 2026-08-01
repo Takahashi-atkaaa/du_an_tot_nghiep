@@ -26,7 +26,7 @@ class DonViQuyDoi extends BaseModel
     ];
 
     protected $casts = [
-        'so_luong_san_pham_trong_don_vi' => 'integer',
+        'so_luong_san_pham_trong_don_vi' => 'decimal:4',
         'gia_von_quy_doi' => 'decimal:2',
         'gia_ban_quy_doi' => 'decimal:2',
         'gia_ban_si' => 'decimal:2',

@@ -322,7 +322,8 @@ function toggleSection(headerEl) {
             tenDonViHienThi = displayVariant.ten_don_vi || '-';
             tenBienTheHienThi = '-';
         } else {
-            tenDonViHienThi = displayUnit ? displayUnit.ten_don_vi : (units.length > 0 ? (units[0].ten_don_vi || '-') : '-');
+            // Ưu tiên: displayVariant.ten_don_vi > units[0].ten_don_vi > fallback
+            tenDonViHienThi = displayVariant.ten_don_vi || (units.length > 0 ? (units[0].ten_don_vi || '-') : '-');
             tenBienTheHienThi = displayVariant.ten_bien_the || '-';
         }
 

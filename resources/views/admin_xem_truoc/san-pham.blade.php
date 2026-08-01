@@ -1999,7 +1999,7 @@
                     <div class="row g-2 small">
                         <div class="col-6"><strong>Danh mục:</strong> ${sp.danh_muc?.ten_danh_muc || '-'}</div>
                         <div class="col-6"><strong>Thương hiệu:</strong> ${sp.thuong_hieu || '-'}</div>
-                        <div class="col-6"><strong>Đơn vị:</strong> ${sp.don_vi?.ten_don_vi || '-'}</div>
+                        <div class="col-6"><strong>Đơn vị:</strong> ${sp.ten_don_vi || '-'}</div>
                         <div class="col-6"><strong>Mã vạch:</strong> ${sp.ma_vach || '-'}</div>
                         <div class="col-6"><strong>Tồn kho:</strong> ${sp.so_luong_ton_kho ?? 0}</div>
                         <div class="col-6"><strong>Định mức:</strong> ${sp.dinh_muc_toi_thieu ?? 0}</div>

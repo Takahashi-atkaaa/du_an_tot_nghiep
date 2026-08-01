@@ -33,13 +33,107 @@ class Product extends BaseModel
         return $this->hasMany(BienTheSanPham::class, 'product_id');
     }
 
+    // ============================================================
+    // ACCESSOR donVi: trả về object có ten_don_vi của biến thể đầu tiên
+    // Để tương thích với code Blade: $sanPham->donVi->ten_don_vi
+    // ============================================================
+    public function getDonViAttribute()
+    {
+        // Lấy variant đầu tiên hoặc variant có la_don_vi=true
+        $variant = $this->variants()->where('la_don_vi', 1)->first()
+            ?? $this->variants()->first();
+
+        if (!$variant) {
+            return (object)['ten_don_vi' => null];
+        }
+
+        return (object)[
+            'ten_don_vi' => $variant->ten_don_vi,
+            'ma_vach' => $variant->ma_vach,
+            'gia_von' => $variant->gia_von,
+            'gia_ban' => $variant->gia_ban,
+        ];
+    }
+
+    /**
+     * Accessor: variant đại diện cho đơn vị cơ bản.
+     * Dùng cho view danh sách sản phẩm để:
+     *   - Hiển thị tên đơn vị gốc ở dòng chính
+     *   - Lọc các đơn vị quy đổi thuộc về dòng chính
+     */
+    public function getFirstMasterVariantAttribute(): ?BienTheSanPham
+    {
+        $variants = $this->variants()->get();
+
+        // Ưu tiên variant có la_don_vi = 1
+        foreach ($variants as $v) {
+            if (($v->la_don_vi ?? 0) == 1) {
+                return $v;
+            }
+        }
+
+        // Nếu không có, chọn variant có ten_don_vi không trùng với đơn vị quy đổi
+        $conversionNames = [];
+        foreach ($variants as $v) {
+            foreach ($v->units as $u) {
+                $name = trim((string) $u->ten_don_vi);
+                if ($name !== '') {
+                    $conversionNames[strtolower($name)] = true;
+                }
+            }
+        }
+        foreach ($variants as $v) {
+            $tenDonVi = trim((string) ($v->ten_don_vi ?? ''));
+            if ($tenDonVi !== '' && !isset($conversionNames[strtolower($tenDonVi)])) {
+                return $v;
+            }
+        }
+
+        // Fallback: variant đầu tiên
+        return $variants->first();
+    }
+
     // Flattened rows for index table: each row = 1 variant unit (gốc hoặc quy đổi)
     public function getFlattenedRowsAttribute(): \Illuminate\Support\Collection
     {
         $rows = collect();
 
-        // Load tất cả variants trước
+        // Load tất cả variants trước (đã eager load units ở controller index)
         $variants = $this->variants()->get();
+
+        // Tập tên các đơn vị quy đổi (DonViQuyDoi) để phân biệt với đơn vị cơ bản.
+        $conversionNames = [];
+        foreach ($variants as $v) {
+            foreach ($v->units as $u) {
+                $name = trim((string) $u->ten_don_vi);
+                if ($name !== '') {
+                    $conversionNames[strtolower($name)] = true;
+                }
+            }
+        }
+
+        // Xác định variant đại diện cho đơn vị cơ bản (để render dòng gốc + dropdown quy đổi).
+        // Tiêu chí ưu tiên:
+        //   1) la_don_vi = 1
+        //   2) ten_don_vi không trùng với bất kỳ DonViQuyDoi nào (đảm bảo là base thật)
+        //   3) Fallback: variant đầu tiên
+        $firstVariant = null;
+        foreach ($variants as $v) {
+            if (($v->la_don_vi ?? 0) == 1) {
+                $firstVariant = $v;
+                break;
+            }
+        }
+        if (!$firstVariant) {
+            foreach ($variants as $v) {
+                $tenDonVi = trim((string) ($v->ten_don_vi ?? ''));
+                if ($tenDonVi !== '' && !isset($conversionNames[strtolower($tenDonVi)])) {
+                    $firstVariant = $v;
+                    break;
+                }
+            }
+        }
+        $firstVariant = $firstVariant ?? $variants->first();
 
         // Collect all thuoc_tinh_ids từ tất cả variants để query một lần (tránh N+1)
         $allAttrIds = [];
@@ -124,7 +218,10 @@ class Product extends BaseModel
     public function toEditVueData(): array
     {
         $variants = $this->variants()->with('units')->get();
-        $first = $variants->first();
+
+        // Ưu tiên variant có la_don_vi = 1 làm đại diện cho đơn vị cơ bản.
+        // Nếu không có, dùng variant đầu tiên (giữ tương thích ngược).
+        $first = $variants->firstWhere('la_don_vi', 1) ?? $variants->first();
 
         $basic = [
             'code' => $first->ma_hang ?? '',
@@ -139,15 +236,31 @@ class Product extends BaseModel
             'imagePreview' => $first->hinh_anh ? asset($first->hinh_anh) : '',
         ];
 
+        // Tập tên các đơn vị quy đổi (DonViQuyDoi) để phân biệt với đơn vị cơ bản.
+        // Nếu bien_the_san_pham.ten_don_vi trùng tên với một đơn vị quy đổi → KHÔNG phải đơn vị cơ bản
+        // (do dữ liệu cũ bị ghi đè nhầm), bỏ qua khi gom base.
+        $conversionNames = [];
+        foreach ($variants as $v) {
+            foreach ($v->units as $u) {
+                $name = trim((string) $u->ten_don_vi);
+                if ($name !== '') {
+                    $conversionNames[strtolower($name)] = true;
+                }
+            }
+        }
+
         // Collect all units: base from bien_the_san_pham.ten_don_vi + conversion from don_vi_quy_doi
         // FIX: Ưu tiên ten_don_vi (đơn vị cơ bản) làm base, không dùng ten_bien_the
         $units = [];
         $baseUnitName = '';
 
         foreach ($variants as $v) {
-            // Đơn vị cơ bản: lấy từ ten_don_vi, không phải ten_bien_the
-            $baseName = trim($v->ten_don_vi ?? '');
-            if ($baseName !== '' && !isset($units[$baseName])) {
+            $baseName = trim((string) ($v->ten_don_vi ?? ''));
+            // Chỉ coi là base khi tên này CHƯA tồn tại trong các đơn vị quy đổi
+            if ($baseName !== ''
+                && !isset($conversionNames[strtolower($baseName)])
+                && !isset($units[$baseName])
+            ) {
                 $units[$baseName] = [
                     'name' => $baseName,
                     'so_luong_san_pham_trong_don_vi' => 1,
@@ -157,7 +270,6 @@ class Product extends BaseModel
                     'variant_id' => $v->id,
                     'is_base' => true,
                 ];
-                // Ghi nhớ tên đơn vị cơ bản đầu tiên
                 if ($baseUnitName === '') {
                     $baseUnitName = $baseName;
                 }
@@ -172,6 +284,7 @@ class Product extends BaseModel
                         'so_luong_san_pham_trong_don_vi' => $u->so_luong_san_pham_trong_don_vi,
                         'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
                         'gia_von_quy_doi' => $u->gia_von_quy_doi,
+                        'ma_hang' => $u->ma_hang,
                         'ma_vach' => $u->ma_vach,
                         'variant_id' => $v->id,
                         'don_vi_chuan_id' => $u->don_vi_chuan_id,
@@ -204,6 +317,7 @@ class Product extends BaseModel
                 'so_luong_san_pham_trong_don_vi' => $u->so_luong_san_pham_trong_don_vi,
                 'gia_von_quy_doi' => $u->gia_von_quy_doi,
                 'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
+                'ma_hang' => $u->ma_hang,
                 'ma_vach' => $u->ma_vach,
                 'la_don_vi_mac_dinh' => $u->la_don_vi_mac_dinh,
                 'don_vi_chuan_id' => $u->don_vi_chuan_id,
@@ -256,5 +370,29 @@ class Product extends BaseModel
             'attributesConfig' => ['groups' => array_values($groups)],
             'bien_the' => $variantsArr,
         ];
+    }
+
+    /**
+     * Debug helper: trả về thông tin đơn vị của sản phẩm để debug.
+     */
+    public function debugUnits(): array
+    {
+        $variants = $this->variants()->with('units')->get();
+        $rows = [];
+        foreach ($variants as $v) {
+            $rows[] = [
+                'variant_id' => $v->id,
+                'ten_bien_the' => $v->ten_bien_the,
+                'ten_don_vi' => $v->ten_don_vi,
+                'la_don_vi' => $v->la_don_vi,
+                'thuoc_tinh_ids' => $v->thuoc_tinh_ids,
+                'units' => $v->units->map(fn($u) => [
+                    'id' => $u->id,
+                    'ten_don_vi' => $u->ten_don_vi,
+                    'so_luong_san_pham_trong_don_vi' => $u->so_luong_san_pham_trong_don_vi,
+                ])->all(),
+            ];
+        }
+        return $rows;
     }
 }
