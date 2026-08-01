@@ -66,6 +66,10 @@ class UpdateSanPhamRequest extends FormRequest
             // Biến thể đơn vị (la_don_vi = true khi sp chỉ có đơn vị)
             'bien_the.*.la_don_vi' => 'nullable|boolean',
             'bien_the.*.ten_don_vi' => 'nullable|string|max:255',
+            // FIX Gom-nhom: ty_le + ten_don_vi_bien_the dùng để Backend gom nhóm
+            // các dòng cùng thuộc tính thành 1 biến thể CHA + N đơn vị quy đổi
+            'bien_the.*.ty_le' => 'nullable|integer|min:1',
+            'bien_the.*.ten_don_vi_bien_the' => 'nullable|string|max:255',
 
             // Đơn vị quy đổi
             'bien_the.*.units' => 'sometimes|array',

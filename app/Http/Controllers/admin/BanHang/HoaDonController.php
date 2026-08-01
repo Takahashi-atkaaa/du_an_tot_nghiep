@@ -81,10 +81,13 @@ class HoaDonController extends Controller
 
         $chiTiet = DB::table('chi_tiet_hoa_don')
             ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
+            ->leftJoin('bien_the_san_pham', 'chi_tiet_hoa_don.id_chi_tiet_phieu', '=', 'bien_the_san_pham.id')
             ->select(
                 'chi_tiet_hoa_don.*',
                 'san_pham.ten_san_pham',
-                'san_pham.ma_vach'
+                'bien_the_san_pham.ten_bien_the',
+                'bien_the_san_pham.ten_don_vi',
+                'bien_the_san_pham.ma_vach'
             )
             ->where('chi_tiet_hoa_don.id_hoa_don', $id)
             ->get();
@@ -112,9 +115,15 @@ class HoaDonController extends Controller
             ->get();
 
         foreach ($chiTiet as $item) {
-            DB::table('san_pham')
-                ->where('id', $item->id_san_pham)
-                ->increment('so_luong_ton_kho', $item->so_luong);
+            if ($item->id_chi_tiet_phieu) {
+                DB::table('bien_the_san_pham')
+                    ->where('id', $item->id_chi_tiet_phieu)
+                    ->increment('so_luong_ton', $item->so_luong);
+            } else {
+                DB::table('san_pham')
+                    ->where('id', $item->id_san_pham)
+                    ->increment('so_luong_ton_kho', $item->so_luong);
+            }
         }
 
         DB::table('hoa_don')
@@ -143,10 +152,13 @@ public function formTraHang($id)
 
     $chiTiet = DB::table('chi_tiet_hoa_don')
         ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
+        ->leftJoin('bien_the_san_pham', 'chi_tiet_hoa_don.id_chi_tiet_phieu', '=', 'bien_the_san_pham.id')
         ->select(
             'chi_tiet_hoa_don.*',
             'san_pham.ten_san_pham',
-            'san_pham.ma_vach'
+            'bien_the_san_pham.ten_bien_the',
+            'bien_the_san_pham.ten_don_vi',
+            'bien_the_san_pham.ma_vach'
         )
         ->where('chi_tiet_hoa_don.id_hoa_don', $id)
         ->get();
@@ -222,6 +234,7 @@ public function xuLyTraHang(Request $request, $id)
 
             $itemsTra[] = [
                 'id_san_pham' => $item->id_san_pham,
+                'id_chi_tiet_phieu' => $item->id_chi_tiet_phieu,
                 'so_luong' => $soLuongTra,
                 'gia_ban' => $item->gia_ban,
                 'thanh_tien' => $soLuongTra * $item->gia_ban,
@@ -258,9 +271,15 @@ public function xuLyTraHang(Request $request, $id)
                 'updated_at' => now(),
             ]);
 
-            DB::table('san_pham')
-                ->where('id', $item['id_san_pham'])
-                ->increment('so_luong_ton_kho', $item['so_luong']);
+            if ($item['id_chi_tiet_phieu']) {
+                DB::table('bien_the_san_pham')
+                    ->where('id', $item['id_chi_tiet_phieu'])
+                    ->increment('so_luong_ton', $item['so_luong']);
+            } else {
+                DB::table('san_pham')
+                    ->where('id', $item['id_san_pham'])
+                    ->increment('so_luong_ton_kho', $item['so_luong']);
+            }
         }
 
         $tongDaMua = DB::table('chi_tiet_hoa_don')

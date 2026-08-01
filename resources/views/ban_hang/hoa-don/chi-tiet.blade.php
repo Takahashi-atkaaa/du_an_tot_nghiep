@@ -3,11 +3,20 @@
 @section('title', 'Chi tiết hóa đơn')
 
 @section('content')
+@if(($auto_print ?? false))
+    <script>
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                window.print();
+            }, 300);
+        });
+    </script>
+@endif
 <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Chi tiết hóa đơn #HD{{ str_pad($hoaDon->id, 4, '0', STR_PAD_LEFT) }}</h1>
 
     <div>
-        <a href="{{ url('/nhan-vien/hoa-don') }}" class="btn btn-secondary">
+        <a href="{{ route('nhan-vien.hoa-don') }}" class="btn btn-secondary">
             Quay lại
         </a>
 
@@ -93,7 +102,15 @@
             <tbody>
                 @foreach($chiTiet as $item)
                     <tr>
-                        <td>{{ $item->ten_san_pham }}</td>
+                        <td>
+                            {{ $item->ten_san_pham }}
+                            @php
+                                $variantName = $item->ten_don_vi ?: $item->ten_bien_the;
+                            @endphp
+                            @if($variantName)
+                                <br><small class="text-muted">({{ $variantName }})</small>
+                            @endif
+                        </td>
                         <td>{{ $item->ma_vach }}</td>
                         <td class="text-center">{{ $item->so_luong }}</td>
                         <td class="text-end">{{ number_format($item->gia_ban, 0, ',', '.') }}đ</td>

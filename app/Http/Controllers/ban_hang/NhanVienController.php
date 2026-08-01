@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\KhachHang;
 
@@ -246,20 +247,36 @@ class NhanVienController extends Controller
         });
     }
 
-    return response()->json(
-        $query->select(
-            'bien_the_san_pham.id',
-            'san_pham.id as id_san_pham',
-            'san_pham.id_danh_muc',
-            DB::raw("CONCAT(san_pham.ten_san_pham, ' - ', bien_the_san_pham.ten_bien_the) as ten_san_pham"),
-            'bien_the_san_pham.ma_vach',
-            'bien_the_san_pham.gia_ban',
-            'bien_the_san_pham.so_luong_ton as so_luong_ton_kho',
-            'bien_the_san_pham.hinh_anh'
-        )
-        ->orderByDesc('bien_the_san_pham.id')
-        ->get()
-    );
+    $products = $query->select(
+        'bien_the_san_pham.id',
+        'san_pham.id as id_san_pham',
+        'san_pham.id_danh_muc',
+        'san_pham.ten_san_pham',
+        'bien_the_san_pham.ten_bien_the',
+        'bien_the_san_pham.ma_hang',
+        'bien_the_san_pham.ma_vach',
+        'bien_the_san_pham.gia_ban',
+        'bien_the_san_pham.so_luong_ton as so_luong_ton_kho',
+        'bien_the_san_pham.hinh_anh'
+    )
+    ->orderByDesc('bien_the_san_pham.id')
+    ->get();
+
+    $products = $products->map(function ($product) {
+        $product->ten_san_pham = trim(($product->ten_san_pham ?? '') . ' ' . ($product->ten_bien_the ?? ''));
+        $product->ten_san_pham = preg_replace('/\s+/', ' ', $product->ten_san_pham);
+        $product->ten_san_pham = trim($product->ten_san_pham);
+
+        $product->ma_hang = $product->ma_hang ?? null;
+        $product->ma_vach = $product->ma_vach ?? null;
+        $product->gia_ban = (float) ($product->gia_ban ?? 0);
+        $product->so_luong_ton_kho = (int) ($product->so_luong_ton_kho ?? 0);
+        $product->hinh_anh = $product->hinh_anh ?? null;
+
+        return $product;
+    });
+
+    return response()->json($products);
 }
 public function layDanhMuc()
 {
@@ -342,28 +359,53 @@ public function thanhToan(Request $request)
                     $tongTienHang >= ($khuyenMai->don_hang_toi_thieu ?? 0) &&
                     $tongSoLuong >= ($khuyenMai->so_luong_sp_toi_thieu ?? 0)
                 ) {
-                    switch ($khuyenMai->loai_giam_gia) {
-                        case 'phan_tram':
-                            $tienGiamGia = $tongTienHang * $khuyenMai->gia_tri_giam / 100;
+                    $loaiGiamGia = Str::of((string) $khuyenMai->loai_giam_gia)
+    ->trim()
+    ->lower()
+    ->ascii()
+    ->replace([' ', '-'], '_')
+    ->value();
 
-                            if (!empty($khuyenMai->giam_toi_da)) {
-                                $tienGiamGia = min($tienGiamGia, $khuyenMai->giam_toi_da);
-                            }
-                            break;
+$giaTriGiam = (float) ($khuyenMai->gia_tri_giam ?? 0);
+$giamToiDa = (float) ($khuyenMai->giam_toi_da ?? 0);
 
-                        case 'bogo':
-                            foreach ($items as $item) {
-                                $freeQty = floor($item['so_luong'] / 2);
-                                $tienGiamGia += $freeQty * $item['gia_ban'];
-                            }
-                            break;
+switch ($loaiGiamGia) {
+    case 'phan_tram':
+    case 'percent':
+        $tienGiamGia = $tongTienHang * $giaTriGiam / 100;
 
-                        default:
-                            $tienGiamGia = $khuyenMai->gia_tri_giam ?? 0;
-                            break;
-                    }
+        if ($giamToiDa > 0) {
+            $tienGiamGia = min($tienGiamGia, $giamToiDa);
+        }
+        break;
 
-                    $tienGiamGia = min($tienGiamGia, $tongTienHang);
+    case 'bogo':
+    case 'mua_1_tang_1':
+        foreach ($items as $item) {
+            $freeQty = floor($item['so_luong'] / 2);
+            $tienGiamGia += $freeQty * $item['gia_ban'];
+        }
+        break;
+
+    case 'tien_mat':
+    case 'so_tien':
+    case 'giam_tien':
+    case 'fixed':
+        $tienGiamGia = $giaTriGiam;
+        break;
+
+    default:
+        return response()->json([
+            'success' => false,
+            'message' => 'Loại giảm giá không hợp lệ: '
+                . $khuyenMai->loai_giam_gia
+        ], 422);
+}
+
+$tienGiamGia = min(
+    max($tienGiamGia, 0),
+    $tongTienHang
+);
                 }
             }
         }
@@ -418,7 +460,7 @@ public function thanhToan(Request $request)
         }
 
         $hoaDonId = DB::table('hoa_don')->insertGetId([
-            'id_nguoi_dung' => auth()->user()->id,
+            'id_nguoi_dung' => Auth::id(),
             'id_khach_hang' => $request->id_khach_hang,
             'id_ca_lam_viec' => session('id_ca_lam_viec') ?? null,
             'id_khuyen_mai' => $request->id_khuyen_mai,
@@ -473,7 +515,7 @@ public function thanhToan(Request $request)
             DB::table('chi_tiet_hoa_don')->insert([
                 'id_hoa_don' => $hoaDonId,
                 'id_san_pham' => $item['bien_the']->product_id,
-                'id_chi_tiet_phieu' => null,
+                'id_chi_tiet_phieu' => $item['bien_the']->id,
                 'so_luong' => $item['so_luong'],
                 'gia_ban' => $item['gia_ban'],
                 'thanh_tien' => $item['thanh_tien'],
@@ -498,10 +540,14 @@ public function chiTietHoaDon($id)
     $hoaDon = DB::table('hoa_don')
         ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
         ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
+        ->leftJoin('ca_lam_viec', 'hoa_don.id_ca_lam_viec', '=', 'ca_lam_viec.id')
         ->select(
             'hoa_don.*',
             'khach_hang.ten_khach_hang',
-            'nguoi_dung.ho_ten as ten_nhan_vien'
+            'nguoi_dung.ho_ten as ten_nhan_vien',
+            'ca_lam_viec.ten_ca',
+            'ca_lam_viec.gio_bat_dau',
+            'ca_lam_viec.gio_ket_thuc'
         )
         ->where('hoa_don.id', $id)
         ->first();
@@ -510,20 +556,24 @@ public function chiTietHoaDon($id)
 
     $chiTiet = DB::table('chi_tiet_hoa_don')
         ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
+        ->leftJoin('bien_the_san_pham', 'chi_tiet_hoa_don.id_chi_tiet_phieu', '=', 'bien_the_san_pham.id')
         ->select(
             'chi_tiet_hoa_don.*',
             'san_pham.ten_san_pham',
-            DB::raw("'N/A' as ma_vach")
+            'bien_the_san_pham.ten_bien_the',
+            'bien_the_san_pham.ten_don_vi',
+            'bien_the_san_pham.ma_vach'
         )
         ->where('chi_tiet_hoa_don.id_hoa_don', $id)
         ->get();
 
-    return view('nhan_vien_view.hoa-don.chi-tiet', compact('hoaDon', 'chiTiet'));
+    return view('ban_hang.hoa-don.chi-tiet', compact('hoaDon', 'chiTiet'))
+        ->with('auto_print', request()->boolean('print'));
 }
 
 public function inHoaDon($id)
 {
-    return $this->chiTietHoaDon($id);
+    return redirect()->route('nhan-vien.hoa-don.chi-tiet', ['id' => $id, 'print' => 1]);
 }
 public function huyHoaDon($id)
 {
@@ -546,9 +596,15 @@ public function huyHoaDon($id)
             ->get();
 
         foreach ($chiTiet as $item) {
-            DB::table('san_pham')
-                ->where('id', $item->id_san_pham)
-                ->increment('so_luong_ton_kho', $item->so_luong);
+            if ($item->id_chi_tiet_phieu) {
+                DB::table('bien_the_san_pham')
+                    ->where('id', $item->id_chi_tiet_phieu)
+                    ->increment('so_luong_ton', $item->so_luong);
+            } else {
+                DB::table('san_pham')
+                    ->where('id', $item->id_san_pham)
+                    ->increment('so_luong_ton_kho', $item->so_luong);
+            }
         }
 if ($hoaDon->id_khach_hang && $hoaDon->diem_thu_duoc > 0) {
 

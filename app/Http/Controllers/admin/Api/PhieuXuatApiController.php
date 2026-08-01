@@ -442,8 +442,8 @@ class PhieuXuatApiController extends Controller
                         'so_luong_con_lai' => $soLuongTonSauKhiXuat,
                     ]);
 
-                    BienTheSanPham::where('id', $ct['variant_id'])
-                        ->decrement('so_luong_ton', $soLuongCanXuat);
+                    // ChiTietLoHangObserver đã tự đồng bộ tổng tồn
+                    // bien_the_san_pham.so_luong_ton từ dòng decrement() phía trên.
 
                     $successCount++;
                 }
