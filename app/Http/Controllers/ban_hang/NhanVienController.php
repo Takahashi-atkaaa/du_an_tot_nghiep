@@ -15,7 +15,8 @@ use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\KhachHang;
-
+use App\Http\Requests\Pos\ScanBarcodeRequest;
+use App\Services\Pos\BarcodeScanService;
 
 class NhanVienController extends Controller
 {
@@ -222,7 +223,32 @@ class NhanVienController extends Controller
     {
         return Str::of((string) $vaiTro)->lower()->ascii()->value() === 'admin';
     }
- public function laySanPham(Request $request)
+public function scanBarcode(ScanBarcodeRequest $request, BarcodeScanService $barcodeScanService)
+    {
+        $result = $barcodeScanService->resolveBarcode($request->input('barcode'));
+
+        if (!$result) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy sản phẩm.'
+            ], 404);
+        }
+
+        if (array_key_exists('message', $result) && $result['available_qty'] === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'] ?? 'Sản phẩm không còn hàng.',
+                'item' => $result,
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'item' => $result,
+        ]);
+    }
+
+    public function laySanPham(Request $request)
 {
     $query = DB::table('bien_the_san_pham')
         ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
@@ -292,9 +318,9 @@ public function thanhToan(Request $request)
 {
     $request->validate([
         'cart' => 'required|array|min:1',
-        'cart.*.id' => 'required|integer|exists:bien_the_san_pham,id',
-        'cart.*.qty' => 'required|integer|min:1',
-        'tien_khach_dua' => 'required|numeric|min:0',
+            'cart.*.row_key' => 'required|string',
+            'cart.*.id' => 'required|integer|exists:bien_the_san_pham,id',
+            'cart.*.unit_id' => 'nullable|integer|exists:don_vi_quy_doi,id',
         'phuong_thuc_thanh_toan' => 'required|string',
         'id_khach_hang' => 'nullable|integer|exists:khach_hang,id',
         'id_khuyen_mai' => 'nullable|integer|exists:khuyen_mai,id',
@@ -306,10 +332,12 @@ public function thanhToan(Request $request)
         $items = [];
 
         foreach ($request->cart as $item) {
-            $bienThe = DB::table('bien_the_san_pham')
+            $variant = DB::table('bien_the_san_pham')
                 ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
                 ->where('bien_the_san_pham.id', $item['id'])
+                ->where('bien_the_san_pham.trang_thai', 1)
                 ->whereNull('bien_the_san_pham.deleted_at')
+                ->where('san_pham.trang_thai', 1)
                 ->whereNull('san_pham.deleted_at')
                 ->select(
                     'bien_the_san_pham.*',
@@ -318,28 +346,58 @@ public function thanhToan(Request $request)
                 ->lockForUpdate()
                 ->first();
 
-            if (!$bienThe) {
+            if (!$variant) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Không tìm thấy sản phẩm.'
                 ], 422);
             }
 
-            if ((int)$bienThe->so_luong_ton < (int)$item['qty']) {
+            $unit = null;
+            $ratio = 1;
+            $unitPrice = $variant->gia_ban;
+
+            if (!empty($item['unit_id'])) {
+                $unit = DB::table('don_vi_quy_doi')
+                    ->where('id', $item['unit_id'])
+                    ->whereNull('deleted_at')
+                    ->where('variant_id', $variant->id)
+                    ->first();
+
+                if (!$unit) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Đơn vị quy đổi không hợp lệ.'
+                    ], 422);
+                }
+
+                $ratio = (float) ($unit->so_luong_san_pham_trong_don_vi ?: 1);
+                if ($ratio <= 0) {
+                    $ratio = 1;
+                }
+
+                $unitPrice = $unit->gia_ban_quy_doi ?: $variant->gia_ban;
+            }
+
+            $requiredStock = (int) ceil($item['qty'] * $ratio);
+
+            if ((int)$variant->so_luong_ton < $requiredStock) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Sản phẩm "' . $bienThe->ten_san_pham . '" không đủ tồn kho.'
+                    'message' => 'Sản phẩm "' . $variant->ten_san_pham . '" không đủ tồn kho.'
                 ], 422);
             }
 
-            $thanhTien = $bienThe->gia_ban * $item['qty'];
+            $thanhTien = $unitPrice * $item['qty'];
             $tongTienHang += $thanhTien;
 
             $items[] = [
-                'bien_the' => $bienThe,
+                'bien_the' => $variant,
+                'unit' => $unit,
                 'so_luong' => (int)$item['qty'],
-                'gia_ban' => $bienThe->gia_ban,
+                'gia_ban' => $unitPrice,
                 'thanh_tien' => $thanhTien,
+                'ty_le_quy_doi' => $ratio,
             ];
         }
 

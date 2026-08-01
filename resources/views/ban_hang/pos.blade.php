@@ -1235,6 +1235,7 @@ let selectedPromotion = null;
 let discountAmount = 0;
 const productListUrl = '{{ route('nhan-vien.ban-hang.san-pham') }}';
 const categoryListUrl = '{{ route('nhan-vien.ban-hang.danh-muc') }}';
+const scanBarcodeUrl = '{{ route('nhan-vien.ban-hang.scan-barcode') }}';
 const customerListUrl = '{{ route('nhan-vien.ban-hang.khach-hang') }}';
 const promotionListUrl = '{{ route('nhan-vien.ban-hang.khuyen-mai') }}';
 const checkoutUrl = '{{ route('nhan-vien.ban-hang.thanh-toan') }}';
@@ -1652,28 +1653,19 @@ function addToCart(id) {
     const product = products.find(p => p.id === id);
     if (!product) return;
 
-    const cart = getCurrentCart();
-    const existing = cart.find(item => item.id === id);
-
-    if (existing) {
-        if (existing.qty + 1 > Number(product.so_luong_ton_kho)) {
-            showToast('Số lượng vượt quá tồn kho!', 'error');
-            return;
-        }
-        existing.qty += 1;
-    } else {
-        cart.push({
-            id: product.id,
-            ten_san_pham: product.ten_san_pham,
-            gia_ban: Number(product.gia_ban),
-            so_luong_ton_kho: Number(product.so_luong_ton_kho),
-            hinh_anh: product.hinh_anh,
-            qty: 1
-        });
-    }
-
-    renderCart();
-    showToast(`Đã thêm "${product.ten_san_pham}" vào giỏ hàng`);
+    addOrUpdateCartItem({
+        row_key: 'variant_' + product.id,
+        id: product.id,
+        unit_id: null,
+        product_id: product.id_san_pham || product.product_id || null,
+        ten_san_pham: product.ten_san_pham,
+        ten_don_vi: product.ten_don_vi || product.don_vi_tinh_hien_thi || '',
+        gia_ban: Number(product.gia_ban || product.gia_ban_hien_thi || 0),
+        gia_von: Number(product.gia_von || 0),
+        hinh_anh: product.hinh_anh,
+        available_qty: Number(product.so_luong_ton_kho || product.so_luong_ton || 0),
+        ty_le_quy_doi: 1,
+    });
 }
 
 // ─────────────────────────────────────────────
@@ -1705,6 +1697,7 @@ function renderCart() {
         const ten = item.ten_san_pham ?? 'Chưa có tên';
         const gia = Number(item.gia_ban ?? 0);
         const hinh = resolveImageUrl(item.hinh_anh);
+        const donVi = item.ten_don_vi ? ` <span class="item-unit">(${item.ten_don_vi})</span>` : '';
 
         return `
             <div class="cart-item">
@@ -1712,20 +1705,20 @@ function renderCart() {
                     <img src="${hinh}" alt="${ten}" onerror="this.onerror=null;this.src='https://via.placeholder.com/80?text=No+Image';" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">
                 </div>
                 <div class="item-details">
-                    <div class="item-name">${ten}</div>
+                    <div class="item-name">${ten}${donVi}</div>
                     <div class="item-price">${formatCurrency(gia)}</div>
                 </div>
                 <div class="item-qty">
-                    <button class="qty-btn" onclick="updateQuantity(${item.id}, -1)">
+                    <button class="qty-btn" onclick="updateQuantity('${item.row_key}', -1)">
                         <i class="fas fa-minus"></i>
                     </button>
                     <span class="qty-num">${item.qty}</span>
-                    <button class="qty-btn" onclick="updateQuantity(${item.id}, 1)">
+                    <button class="qty-btn" onclick="updateQuantity('${item.row_key}', 1)">
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
                 <div class="item-total">${formatCurrency(gia * item.qty)}</div>
-                <button class="btn-remove" onclick="removeFromCart(${item.id})">
+                <button class="btn-remove" onclick="removeFromCart('${item.row_key}')">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1803,23 +1796,30 @@ function calculateTotal() {
 // ─────────────────────────────────────────────
 // Update Quantity
 // ─────────────────────────────────────────────
-function updateQuantity(id, change) {
+function updateQuantity(rowKey, change) {
     const cart = getCurrentCart();
-    const item = cart.find(i => i.id === id);
+    const item = cart.find(i => i.row_key === rowKey);
     if (!item) return;
+
     item.qty += change;
     if (item.qty <= 0) {
-        removeFromCart(id);
+        removeFromCart(rowKey);
         return;
     }
+
+    if (item.qty > Number(item.available_qty || 0)) {
+        item.qty = Number(item.available_qty || 0);
+        showToast('Số lượng vượt quá tồn kho!', 'error');
+    }
+
     renderCart();
 }
 
 // ─────────────────────────────────────────────
 // Remove from Cart
 // ─────────────────────────────────────────────
-function removeFromCart(id) {
-    invoiceTabs[currentTab].cart = getCurrentCart().filter(i => i.id !== id);
+function removeFromCart(rowKey) {
+    invoiceTabs[currentTab].cart = getCurrentCart().filter(i => i.row_key !== rowKey);
     renderCart();
 }
 
@@ -1990,16 +1990,18 @@ const response = await fetch(checkoutUrl, {
         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
     },
     body: JSON.stringify({
-    cart: cart.map(item => ({
-        id: item.id,
-        qty: item.qty
-    })),
-    id_khach_hang: selectedCustomer ? selectedCustomer.id : null,
-    id_khuyen_mai: selectedPromotion ? selectedPromotion.id : null,
-    tien_khach_dua: customer,
-    phuong_thuc_thanh_toan: selectedPayment,
-    diem_su_dung: usePoint
-})
+        cart: cart.map(item => ({
+            row_key: item.row_key,
+            id: item.id,
+            unit_id: item.unit_id || null,
+            qty: item.qty
+        })),
+        id_khach_hang: selectedCustomer ? selectedCustomer.id : null,
+        id_khuyen_mai: selectedPromotion ? selectedPromotion.id : null,
+        tien_khach_dua: customer,
+        phuong_thuc_thanh_toan: selectedPayment,
+        diem_su_dung: usePoint
+    })
 });
 
         const data = await response.json();
@@ -2263,50 +2265,80 @@ function applyPromotion() {
     calculateChange();
 } 
 
-// hàm tìm kiếm sản phẩm theo mã vạch khi nhấn Enter
 async function handleSearchEnter(event) {
-    if (event.key !== 'Enter') return;
+        if (event.key !== 'Enter') return;
 
-    event.preventDefault();
+        event.preventDefault();
 
-    const keyword = event.target.value.trim();
-    if (!keyword) return;
+        const barcode = event.target.value.trim();
+        if (!barcode) return;
 
-    try {
-        const response = await fetch(productListUrl + '?q=' + encodeURIComponent(keyword), {
-            headers: { 'Accept': 'application/json' }
-        });
+        try {
+            const response = await fetch(scanBarcodeUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                },
+                body: JSON.stringify({ barcode })
+            });
 
-        if (!response.ok) {
-            throw new Error('Không thể tìm sản phẩm.');
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                showToast(data.message || 'Không tìm thấy sản phẩm.', 'error');
+                event.target.value = '';
+                event.target.focus();
+                return;
+            }
+
+            addOrUpdateCartItem(data.item);
+
+            event.target.value = '';
+            renderCart();
+            setTimeout(() => {
+                event.target.focus();
+            }, 100);
+        } catch (error) {
+            console.error(error);
+            showToast('Lỗi quét mã vạch!', 'error');
         }
-
-        const data = await response.json();
-
-        const product = data.find(p =>
-            String(p.ma_vach || '').toLowerCase() === keyword.toLowerCase()
-        ) || data[0];
-
-        if (!product) {
-            showToast('Không tìm thấy sản phẩm phù hợp!', 'error');
-            return;
-        }
-
-        products = data;
-        addToCart(product.id);
-
-        event.target.value = '';
-        renderProducts(products, '');
-
-        setTimeout(() => {
-            event.target.focus();
-        }, 100);
-
-    } catch (error) {
-        console.error(error);
-        showToast('Lỗi quét mã vạch!', 'error');
     }
-}
+
+    function addOrUpdateCartItem(item) {
+        const cart = getCurrentCart();
+        const existing = cart.find(i => i.row_key === item.row_key);
+
+        if (existing) {
+            if (existing.qty + 1 > item.available_qty) {
+                showToast('Số lượng vượt quá tồn kho!', 'error');
+                return;
+            }
+            existing.qty += 1;
+            existing.thanh_tien = existing.gia_ban * existing.qty;
+        } else {
+            cart.push({
+                row_key: item.row_key,
+                id: item.id,
+                unit_id: item.unit_id || null,
+                product_id: item.product_id,
+                ten_san_pham: item.ten_san_pham,
+                ten_don_vi: item.ten_don_vi,
+                gia_ban: item.gia_ban,
+                gia_von: item.gia_von,
+                hinh_anh: item.hinh_anh,
+                qty: 1,
+                available_qty: item.available_qty,
+                ty_le_quy_doi: item.ty_le_quy_doi,
+                thanh_tien: item.gia_ban,
+            });
+        }
+
+        calculateTotal();
+        calculateChange();
+        showToast(`Đã thêm "${item.ten_san_pham}" vào giỏ hàng`);
+    }
 
 function capNhatDiem() {
     const tongTien = parseInt(document.getElementById('tongTien').value || 0);

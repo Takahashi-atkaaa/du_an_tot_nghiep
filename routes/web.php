@@ -389,6 +389,7 @@ Route::get('/admin/cai-dat', function () {
         // khách hàng 
         Route::get('/ban-hang/san-pham', [NhanVienController::class, 'laySanPham'])->name('nhan-vien.ban-hang.san-pham')->middleware('permission:ban_hang');
         Route::get('/ban-hang/danh-muc', [NhanVienController::class, 'layDanhMuc'])->name('nhan-vien.ban-hang.danh-muc')->middleware('permission:ban_hang');
+        Route::post('/ban-hang/scan-barcode', [NhanVienController::class, 'scanBarcode'])->name('nhan-vien.ban-hang.scan-barcode')->middleware('permission:ban_hang');
         Route::post('/ban-hang/thanh-toan', [NhanVienController::class, 'thanhToan'])->name('nhan-vien.ban-hang.thanh-toan')->middleware('permission:ban_hang');
         Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don')->middleware('permission:ban_hang');
         Route::get('/hoa-don/{id}', [NhanVienController::class, 'chiTietHoaDon'])->name('nhan-vien.hoa-don.chi-tiet')->middleware('permission:ban_hang');
