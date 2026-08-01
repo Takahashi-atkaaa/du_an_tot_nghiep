@@ -80,11 +80,12 @@ class HoaDonController extends Controller
         abort_if(!$hoaDon, 404);
 
         $chiTiet = DB::table('chi_tiet_hoa_don')
-            ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
+            ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'bien_the_san_pham.id')
+            ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
             ->select(
                 'chi_tiet_hoa_don.*',
                 'san_pham.ten_san_pham',
-                'san_pham.ma_vach'
+                'bien_the_san_pham.ma_vach'
             )
             ->where('chi_tiet_hoa_don.id_hoa_don', $id)
             ->get();
@@ -112,9 +113,9 @@ class HoaDonController extends Controller
             ->get();
 
         foreach ($chiTiet as $item) {
-            DB::table('san_pham')
+            DB::table('bien_the_san_pham')
                 ->where('id', $item->id_san_pham)
-                ->increment('so_luong_ton_kho', $item->so_luong);
+                ->increment('so_luong_ton', $item->so_luong);
         }
 
         DB::table('hoa_don')
@@ -142,11 +143,12 @@ public function formTraHang($id)
     }
 
     $chiTiet = DB::table('chi_tiet_hoa_don')
-        ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
+        ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'bien_the_san_pham.id')
+        ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
         ->select(
             'chi_tiet_hoa_don.*',
             'san_pham.ten_san_pham',
-            'san_pham.ma_vach'
+            'bien_the_san_pham.ma_vach'
         )
         ->where('chi_tiet_hoa_don.id_hoa_don', $id)
         ->get();
@@ -258,9 +260,9 @@ public function xuLyTraHang(Request $request, $id)
                 'updated_at' => now(),
             ]);
 
-            DB::table('san_pham')
+            DB::table('bien_the_san_pham')
                 ->where('id', $item['id_san_pham'])
-                ->increment('so_luong_ton_kho', $item['so_luong']);
+                ->increment('so_luong_ton', $item['so_luong']);
         }
 
         $tongDaMua = DB::table('chi_tiet_hoa_don')
