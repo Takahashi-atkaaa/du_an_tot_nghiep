@@ -1649,23 +1649,31 @@ function filterProducts() {
 // ─────────────────────────────────────────────
 // Add to Cart
 // ─────────────────────────────────────────────
-function addToCart(id) {
-    const product = products.find(p => p.id === id);
-    if (!product) return;
+function buildCartItemFromProduct(product) {
+    const variantId = Number(product.id ?? product.bien_the_id ?? 0);
 
-    addOrUpdateCartItem({
-        row_key: 'variant_' + product.id,
-        id: product.id,
+    return {
+        row_key: 'variant_' + variantId,
+        id: variantId,
         unit_id: null,
         product_id: product.id_san_pham || product.product_id || null,
-        ten_san_pham: product.ten_san_pham,
+        ten_san_pham: product.ten_san_pham || product.ten_bien_the || '',
         ten_don_vi: product.ten_don_vi || product.don_vi_tinh_hien_thi || '',
         gia_ban: Number(product.gia_ban || product.gia_ban_hien_thi || 0),
         gia_von: Number(product.gia_von || 0),
         hinh_anh: product.hinh_anh,
         available_qty: Number(product.so_luong_ton_kho || product.so_luong_ton || 0),
         ty_le_quy_doi: 1,
-    });
+    };
+}
+
+function addToCart(id) {
+    const product = products.find(p => String(p.id) === String(id));
+    if (!product) return;
+
+    const item = buildCartItemFromProduct(product);
+    addOrUpdateCartItem(item);
+    renderCart();
 }
 
 // ─────────────────────────────────────────────
@@ -2218,14 +2226,12 @@ function tinhTienGiam(subtotal) {
     if (subtotal < minOrder) return 0;
     if (minQty > 0 && totalQty < minQty) return 0;
 
-    // Mua 1 tặng 1 / BOGO
-    if (type === 'bogo') {
+    if (type === 'bogo' || type === 'mua_1_tang_1') {
         let discount = 0;
 
         cart.forEach(item => {
             const qty = Number(item.qty || 0);
             const price = Number(item.gia_ban || 0);
-
             const freeQty = Math.floor(qty / 2);
             discount += freeQty * price;
         });
@@ -2233,26 +2239,27 @@ function tinhTienGiam(subtotal) {
         return Math.min(discount, subtotal);
     }
 
-    // Giảm phần trăm
     if (type === 'phan_tram' || type === 'percent') {
+        let discount = subtotal * Number(selectedPromotion.gia_tri_giam || 0) / 100;
 
-    let discount =
-        subtotal * Number(selectedPromotion.gia_tri_giam || 0) / 100;
+        if (selectedPromotion.giam_toi_da) {
+            discount = Math.min(discount, Number(selectedPromotion.giam_toi_da));
+        }
 
-    if (selectedPromotion.giam_toi_da) {
-        discount = Math.min(
-            discount,
-            Number(selectedPromotion.giam_toi_da)
-        );
+        return Math.min(discount, subtotal);
     }
 
-    return Math.min(discount, subtotal);
-}
+    if (type === 'tien_mat' || type === 'so_tien' || type === 'giam_tien' || type === 'fixed') {
+        let discount = Number(selectedPromotion.gia_tri_giam || 0) * 1000;
 
-    // Giảm tiền trực tiếp
-    // Giảm tiền trực tiếp
-const discount = Number(selectedPromotion.gia_tri_giam || 0) * 1000;
-return Math.min(discount, subtotal);
+        if (selectedPromotion.giam_toi_da) {
+            discount = Math.min(discount, Number(selectedPromotion.giam_toi_da));
+        }
+
+        return Math.min(discount, subtotal);
+    }
+
+    return 0;
 }
 function applyPromotion() {
     const id = document.getElementById('promotionSelect').value;
@@ -2266,79 +2273,119 @@ function applyPromotion() {
 } 
 
 async function handleSearchEnter(event) {
-        if (event.key !== 'Enter') return;
+    if (event.key !== 'Enter') return;
 
-        event.preventDefault();
+    event.preventDefault();
 
-        const barcode = event.target.value.trim();
-        if (!barcode) return;
+    const keyword = event.target.value.trim();
+    if (!keyword) return;
 
-        try {
-            const response = await fetch(scanBarcodeUrl, {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                },
-                body: JSON.stringify({ barcode })
-            });
+    try {
+        const response = await fetch(scanBarcodeUrl, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            },
+            body: JSON.stringify({ barcode: keyword })
+        });
 
-            const data = await response.json();
+        const data = await response.json();
 
-            if (!response.ok || !data.success) {
-                showToast(data.message || 'Không tìm thấy sản phẩm.', 'error');
-                event.target.value = '';
-                event.target.focus();
-                return;
-            }
-
+        if (response.ok && data.success) {
             addOrUpdateCartItem(data.item);
-
             event.target.value = '';
             renderCart();
-            setTimeout(() => {
-                event.target.focus();
-            }, 100);
-        } catch (error) {
-            console.error(error);
-            showToast('Lỗi quét mã vạch!', 'error');
-        }
-    }
-
-    function addOrUpdateCartItem(item) {
-        const cart = getCurrentCart();
-        const existing = cart.find(i => i.row_key === item.row_key);
-
-        if (existing) {
-            if (existing.qty + 1 > item.available_qty) {
-                showToast('Số lượng vượt quá tồn kho!', 'error');
-                return;
-            }
-            existing.qty += 1;
-            existing.thanh_tien = existing.gia_ban * existing.qty;
-        } else {
-            cart.push({
-                row_key: item.row_key,
-                id: item.id,
-                unit_id: item.unit_id || null,
-                product_id: item.product_id,
-                ten_san_pham: item.ten_san_pham,
-                ten_don_vi: item.ten_don_vi,
-                gia_ban: item.gia_ban,
-                gia_von: item.gia_von,
-                hinh_anh: item.hinh_anh,
-                qty: 1,
-                available_qty: item.available_qty,
-                ty_le_quy_doi: item.ty_le_quy_doi,
-                thanh_tien: item.gia_ban,
-            });
+            setTimeout(() => event.target.focus(), 100);
+            return;
         }
 
-        calculateTotal();
-        calculateChange();
-        showToast(`Đã thêm "${item.ten_san_pham}" vào giỏ hàng`);
+        const localProduct = Array.isArray(products)
+            ? products.find(p => {
+                const barcode = String(p.ma_vach || '').toLowerCase();
+                const code = String(p.ma_hang || '').toLowerCase();
+                const name = String(p.ten_san_pham || '').toLowerCase();
+                const search = keyword.toLowerCase();
+                return barcode === search || code === search || name.includes(search);
+            })
+            : null;
+
+        if (localProduct) {
+            addOrUpdateCartItem(buildCartItemFromProduct(localProduct));
+            event.target.value = '';
+            renderCart();
+            setTimeout(() => event.target.focus(), 100);
+            return;
+        }
+
+        const searchResponse = await fetch(productListUrl + '?q=' + encodeURIComponent(keyword), {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!searchResponse.ok) {
+            throw new Error(data.message || 'Không tìm thấy sản phẩm.');
+        }
+
+        const searchData = await searchResponse.json();
+        const product = Array.isArray(searchData)
+            ? (searchData.find(p => String(p.ma_vach || '').toLowerCase() === keyword.toLowerCase()) || searchData[0])
+            : null;
+
+        if (!product) {
+            showToast(data.message || 'Không tìm thấy sản phẩm.', 'error');
+            event.target.value = '';
+            event.target.focus();
+            return;
+        }
+
+        products = Array.isArray(searchData) ? searchData : products;
+        addOrUpdateCartItem(buildCartItemFromProduct(product));
+
+        event.target.value = '';
+        renderProducts(products, '');
+        renderCart();
+        setTimeout(() => event.target.focus(), 100);
+    } catch (error) {
+        console.error(error);
+        showToast('Lỗi xử lý tìm sản phẩm!', 'error');
     }
+}
+
+function addOrUpdateCartItem(item) {
+    const cart = getCurrentCart();
+    const existing = cart.find(i => i.row_key === item.row_key);
+
+    if (existing) {
+        if (existing.qty + 1 > Number(item.available_qty || 0)) {
+            showToast('Số lượng vượt quá tồn kho!', 'error');
+            return;
+        }
+        existing.qty += 1;
+        existing.thanh_tien = existing.gia_ban * existing.qty;
+    } else {
+        cart.push({
+            row_key: item.row_key,
+            id: item.id,
+            unit_id: item.unit_id || null,
+            product_id: item.product_id,
+            ten_san_pham: item.ten_san_pham,
+            ten_don_vi: item.ten_don_vi,
+            gia_ban: item.gia_ban,
+            gia_von: item.gia_von,
+            hinh_anh: item.hinh_anh,
+            qty: 1,
+            available_qty: item.available_qty,
+            ty_le_quy_doi: item.ty_le_quy_doi,
+            thanh_tien: item.gia_ban,
+        });
+    }
+
+    renderCart();
+    calculateTotal();
+    calculateChange();
+    showToast(`Đã thêm "${item.ten_san_pham}" vào giỏ hàng`);
+}
 
 function capNhatDiem() {
     const tongTien = parseInt(document.getElementById('tongTien').value || 0);
