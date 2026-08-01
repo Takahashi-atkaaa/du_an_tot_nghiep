@@ -35,6 +35,11 @@ class ChiTietPhieu extends Model
         return $this->belongsTo(BienTheSanPham::class, 'variant_id');
     }
 
+    public function sanPham()
+    {
+        return $this->belongsTo(SanPham::class, 'id_san_pham');
+    }
+
     public function loHang()
     {
         return $this->belongsTo(LoHang::class, 'id_lo_hang');
