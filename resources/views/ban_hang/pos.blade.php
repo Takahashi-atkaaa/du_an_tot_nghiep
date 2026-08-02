@@ -1190,9 +1190,9 @@ body {
                     <i class="fas fa-university"></i>
                     Chuyển khoản
                 </button>
-                <button class="pay-btn" data-method="card" onclick="selectPayment('card')">
-                    <i class="fas fa-credit-card"></i>
-                    Quẹt thẻ
+                <button class="pay-btn" data-method="payos" onclick="selectPayment('payos')">
+                    <i class="fas fa-qrcode"></i>
+                    PayOS
                 </button>
             </div>
 
@@ -2019,11 +2019,18 @@ const response = await fetch(checkoutUrl, {
             return;
         }
 
+        const hoaDonId = data.hoa_don_id;
+
+        if (data.redirect_to_payos) {
+            showToast('Đang tạo link thanh toán PayOS...', 'success');
+            await redirectToPayOS(hoaDonId);
+            return;
+        }
+
         showToast(
-            'Thanh toán thành công! Mã hóa đơn #' + data.hoa_don_id + ' đang mở bản in.',
+            'Thanh toán thành công! Mã hóa đơn #' + hoaDonId + ' đang mở bản in.',
             'success'
         );
-        const hoaDonId = data.hoa_don_id;
 
 // Đóng tab vừa thanh toán
 closePaidInvoiceTab();
@@ -2036,6 +2043,33 @@ printInvoiceImmediately(hoaDonId);
     } catch (error) {
         console.error(error);
         showToast('Lỗi kết nối máy chủ!', 'error');
+    }
+}
+
+async function redirectToPayOS(hoaDonId) {
+    try {
+        const res = await fetch('{{ route('payos.create') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ hoa_don_id: hoaDonId })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success || !data.checkout_url) {
+            showToast(data.message || 'Không tạo được link PayOS!', 'error');
+            return;
+        }
+
+        closePaidInvoiceTab();
+        loadProducts();
+        window.open(data.checkout_url, '_blank');
+    } catch (error) {
+        console.error(error);
+        showToast('Lỗi khi tạo link PayOS!', 'error');
     }
 }
 

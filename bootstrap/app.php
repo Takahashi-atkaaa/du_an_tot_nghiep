@@ -17,7 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->validateCsrfTokens(except: [
+            'payos/webhook',
+        ]);
         // Dang ky middleware alias
         $middleware->alias([
             'auth.admin' => AuthAdmin::class,   // Middleware kiem tra dang nhap

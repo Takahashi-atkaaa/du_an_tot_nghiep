@@ -12,6 +12,18 @@
         });
     </script>
 @endif
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
 <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Chi tiết hóa đơn #HD{{ str_pad($hoaDon->id, 4, '0', STR_PAD_LEFT) }}</h1>
 
@@ -20,9 +32,14 @@
             Quay lại
         </a>
 
+
+
         <button onclick="window.print()" class="btn btn-success">
             <i class="fas fa-print me-1"></i> In hóa đơn
         </button>
+                <a href="{{ route('nhan-vien.hoa-don.doi-tra', $hoaDon->id) }}" class="btn btn-warning">
+            <i class="fas fa-undo me-1"></i> Đổi / Trả hàng
+        </a>
     </div>
 </div>
 
@@ -76,7 +93,6 @@
     $phuongThucThanhToan = [
         'cash' => 'Tiền mặt',
         'transfer' => 'Chuyển khoản',
-        'card' => 'Quẹt thẻ',
         'tien_mat' => 'Tiền mặt',
         'chuyen_khoan' => 'Chuyển khoản',
     ];

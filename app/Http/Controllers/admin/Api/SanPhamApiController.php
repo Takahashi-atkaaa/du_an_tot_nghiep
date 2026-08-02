@@ -154,6 +154,7 @@ class SanPhamApiController extends Controller
 
         $theKho = DB::table('phieu')
             ->join('chi_tiet_phieu', 'phieu.id', '=', 'chi_tiet_phieu.id_phieu')
+            ->leftJoin('lo_hang', 'lo_hang.id', '=', 'chi_tiet_phieu.id_lo_hang')
             ->where('chi_tiet_phieu.variant_id', $variant->id)
             ->select(
                 DB::raw("CONCAT('PN-', phieu.id) as maPhieu"),
@@ -162,12 +163,20 @@ class SanPhamApiController extends Controller
                 'chi_tiet_phieu.gia_nhap as gia',
                 'chi_tiet_phieu.so_luong as soLuong',
                 'chi_tiet_phieu.so_luong_con_lai as soLuongConLai',
-                'chi_tiet_phieu.ma_lo as maLo',
+                'chi_tiet_phieu.ma_lo as maLoChiTietPhieu',
+                'lo_hang.ma_lo as maLoLoHang',
+                'chi_tiet_phieu.id_lo_hang as idLoHang',
                 'chi_tiet_phieu.han_su_dung as hanSuDung'
             )
             ->orderByDesc('phieu.created_at')
             ->limit(20)
-            ->get();
+            ->get()
+            ->map(function ($item) {
+                // Ưu tiên chi_tiet_phieu.ma_lo, fallback sang lo_hang.ma_lo hoặc L-{id}
+                $item->maLo = $item->maLoChiTietPhieu ?: $item->maLoLoHang ?: ($item->idLoHang ? 'L-' . $item->idLoHang : '-');
+                unset($item->maLoChiTietPhieu, $item->maLoLoHang, $item->idLoHang);
+                return $item;
+            });
 
         $loHang = DB::table('chi_tiet_lo_hang as ct')
             ->join('lo_hang as lh', 'lh.id', '=', 'ct.id_lo_hang')
@@ -176,13 +185,19 @@ class SanPhamApiController extends Controller
             ->orderBy('ct.han_su_dung', 'asc')
             ->select(
                 'ct.id as idChiTietLo',
+                'ct.id_lo_hang as idLoHang',
                 'lh.ma_lo as maLo',
                 'ct.han_su_dung as hanSuDung',
                 'ct.so_luong_nhap as so_luong',
                 'ct.so_luong_ton as soLuongConLai',
                 'ct.gia_nhap as giaNhap'
             )
-            ->get();
+            ->get()
+            ->map(function ($item) {
+                // Bảo đảm luôn có mã lô hiển thị: dùng ma_lo DB hoặc fallback L-{id}
+                $item->maLo = $item->maLo ?: ('L-' . $item->idLoHang);
+                return $item;
+            });
 
         // Ensure product always has danhMuc loaded
         if (!$variant->product->relationLoaded('danhMuc')) {

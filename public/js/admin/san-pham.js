@@ -334,6 +334,7 @@ function toggleSection(headerEl) {
         }
 
         // === Xác định giá trị hiển thị dựa trên isMaster ===
+        var maHangHienThi;
         var maVachHienThi;
         var giaBanHienThi;
         var giaVonHienThi;
@@ -341,6 +342,7 @@ function toggleSection(headerEl) {
 
         if (isMaster) {
             // TRẠNG THÁI A: MASTER PRODUCT (Dòng Cha) - Hiển thị thông tin tổng hợp
+            maHangHienThi = '<span class="text-muted fst-italic">Nhiều SKU</span>';
             maVachHienThi = '<span class="text-muted fst-italic">Nhiều SKU</span>';
             giaBanHienThi = masterSummary && masterSummary.gia_ban_min !== null
                 ? (masterSummary.gia_ban_min === masterSummary.gia_ban_max
@@ -357,10 +359,24 @@ function toggleSection(headerEl) {
             tenDonViHienThi = '<span class="text-muted fst-italic">Nhiều đơn vị</span>';
         } else {
             // TRẠNG THÁI B: VARIANT CỤ THỂ - Hiển thị thông tin variant
-            maVachHienThi = displayUnit ? (displayUnit.ma_vach || '-') : (displayVariant.ma_vach || '-');
-            giaBanHienThi = displayUnit ? displayUnit.gia_ban_quy_doi : displayVariant.gia_ban;
-            giaVonHienThi = displayUnit ? displayUnit.gia_von_quy_doi : displayVariant.gia_von;
-            tonKhoHienThi = displayUnit ? displayUnit.so_luong_ton : displayVariant.so_luong_ton;
+            // QUAN TRỌNG: Khi user click vào dòng QUY ĐỔI (rowType='quy_doi'), displayUnit sẽ là
+            // đơn vị quy đổi cụ thể (VD: "thùng 24") - đơn vị này có mã hàng/mã vạch/giá RIÊNG
+            // trong DB. Không được hiển thị mã hàng/mã vạch/giá của variant CHA (lon).
+            maHangHienThi = (rowType === 'quy_doi' && displayUnit)
+                ? (displayUnit.ma_hang || displayUnit.ma_vach || '-')
+                : (displayVariant.ma_hang || displayVariant.ma_vach || '-');
+            maVachHienThi = (rowType === 'quy_doi' && displayUnit)
+                ? (displayUnit.ma_vach || '-')
+                : (displayVariant.ma_vach || '-');
+            giaBanHienThi = (rowType === 'quy_doi' && displayUnit)
+                ? displayUnit.gia_ban_quy_doi
+                : displayVariant.gia_ban;
+            giaVonHienThi = (rowType === 'quy_doi' && displayUnit)
+                ? displayUnit.gia_von_quy_doi
+                : displayVariant.gia_von;
+            tonKhoHienThi = (rowType === 'quy_doi' && displayUnit)
+                ? displayUnit.so_luong_ton
+                : displayVariant.so_luong_ton;
         }
 
         var trangThaiVariant = !displayVariant.trang_thai
@@ -435,11 +451,12 @@ function toggleSection(headerEl) {
                         '</thead>' +
                         '<tbody>';
                 theKho.forEach(function(item) {
+                    var maLoHienThi = item.maLo || (item.idLoHang ? 'L-' + item.idLoHang : '-');
                     theKhoHtml += '<tr>' +
                         '<td class="small">' + (item.maPhieu || '-') + '</td>' +
                         '<td class="small">' + formatDate(item.thoiGian) + '</td>' +
                         '<td>' + loaiPhieuLabel(item.loaiPhieu) + '</td>' +
-                        '<td class="small">' + (item.maLo || '-') + '</td>' +
+                        '<td class="small"><span class="badge bg-dark">' + maLoHienThi + '</span></td>' +
                         '<td class="small text-end">' + formatMoney(item.gia) + ' d</td>' +
                         '<td class="small text-center">' + (item.soLuong ?? '-') + '</td>' +
                         '<td class="small text-center">' + (item.soLuongConLai ?? '-') + '</td>' +
@@ -467,8 +484,9 @@ function toggleSection(headerEl) {
                     '<tbody>';
                 loHang.forEach(function(item) {
                     var isExpired = item.hanSuDung && new Date(item.hanSuDung) < new Date();
+                    var maLoHienThi = item.maLo || (item.idLoHang ? 'L-' + item.idLoHang : '-');
                     loHangHtml += '<tr>' +
-                        '<td class="small">' + (item.maLo || '-') + '</td>' +
+                        '<td class="small"><span class="badge bg-dark">' + maLoHienThi + '</span></td>' +
                         '<td class="small ' + (isExpired ? 'text-danger' : '') + '">' + formatDate(item.hanSuDung) + ' ' + (isExpired ? '<i class="fas fa-exclamation-circle"></i>' : '') + '</td>' +
                         '<td class="small text-end">' + (item.so_luong ?? '-') + '</td>' +
                         '<td class="small text-end">' + (item.soLuongConLai ?? '-') + '</td>' +
@@ -533,8 +551,8 @@ function toggleSection(headerEl) {
                 '<div class="col-8">' +
                     '<div class="d-flex justify-content-between align-items-start">' +
                         '<div>' +
-                            '<h5 class="fw-bold mb-1">' + (sp.ten_san_pham || '-') + selectedUnitBadge + '</h5>' +
-                            '<p class="text-muted small mb-1">#' + (displayVariant.ma_hang || displayVariant.ma_vach || displayVariant.id || sp.id || '-') + '</p>' +
+                            '<h5 class="fw-bold mb-1">' + (sp.ten_san_pham || '-') + ' <span class="text-primary">/ ' + (tenDonViHienThi || '-') + '</span>' + selectedUnitBadge + '</h5>' +
+                            '<p class="text-muted small mb-1">#' + (maHangHienThi || displayVariant.ma_vach || displayVariant.id || sp.id || '-') + '</p>' +
                             trangThaiVariant +
                         '</div>' +
                         '<div class="text-end">' +

@@ -64,4 +64,9 @@ class HoaDon extends Model
         'id_hoa_don'
     );
 }
+
+	public function giaoDiches()
+	{
+		return $this->hasMany(GiaoDich::class, 'id_hoa_don');
+	}
 }
