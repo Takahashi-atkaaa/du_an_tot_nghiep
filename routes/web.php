@@ -32,6 +32,8 @@ use App\Http\Controllers\admin\NhanSu\DiemDanhController;
 
 use App\Http\Controllers\ban_hang\KhachHangController as NhanVienKhachHangController;
 use App\Http\Controllers\nhan_vien\DiemDanhController as NhanVienDiemDanhController;
+use App\Http\Controllers\PayOSController;
+use App\Http\Controllers\VnpayController;
 use App\Http\Controllers\nhan_vien\TrangChuController;
 use App\Http\Controllers\nhan_vien\NhanVienController as NhanVienNhanVienController;
 
@@ -343,6 +345,176 @@ Route::middleware([KTVaiTro::class])->group(function () {
             Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}',[LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:ca_lam');
             Route::get('/lich-su-ca-lam-chi_tiet_ca_lam/{id_ca}/{ngay}',[LichSuCaLam::class, 'chi_tiet_ca'])->name('lich-su-ngay-lam-viec.chi_tiet_ca_lam')->middleware('permission:ca_lam');
             Route::get('/lich-su-ca-lam-chi_tiet-hoa-don/{id_hoaDon}/{ngay}',[LichSuCaLam::class, 'chi_tiet_hoa_don'])->name('lich-su-ca-lam-chi-tiet-hoa-don.show')->middleware('permission:ca_lam');
+        
+        //điểm danh
+            Route::get('/chi-tiet-diem-danh-nhan-vien/{id_chia_ca_lam_viec}/{id_nv}',[DiemDanhNhanVien::class, 'chi_tiet_diem_danh'])->name('lich-su-ca-lam.chi_tiet_diem_danh')->middleware('permission:ca_lam');
+            Route::get('/tao-diem-danh-nhan-vien/{id_chia_ca_lam_viec}/{id_nv}',[DiemDanhNhanVien::class, 'diem_danh_bu'])->name('lich-su-ca-lam.tao-diem-danh-bu')->middleware('permission:ca_lam');
+            Route::post('/luu-diem-danh-nhan-vien',[DiemDanhNhanVien::class, 'luu_diem_danh_bu'])->name('diem-danh.luu-diem-danh-bu')->middleware('permission:ca_lam');
+            Route::put('/cap-nhat-diem-danh-nhan-vien/{id}',[DiemDanhNhanVien::class, 'cap_nhat_diem_danh'])->name('diem-danh.cap-nhat')->middleware('permission:ca_lam');
+
+        // Quản lý điểm danh
+        Route::get('/admin/diem-danh', [DiemDanhController::class, 'index'])->name('diem-danh.index');
+        Route::post('/admin/diem-danh/{chiaCaLamViec}/xac-nhan', [DiemDanhController::class, 'xacNhanDiemDanh'])->name('diem-danh.xac-nhan');
+        Route::post('/admin/diem-danh/{chiaCaLamViec}/ket-thuc-ca', [DiemDanhController::class, 'ketThucCa'])->name('diem-danh.ket-thuc-ca');
+        Route::delete('/admin/diem-danh/{diemDanh}', [DiemDanhController::class, 'huyDiemDanh'])->name('diem-danh.destroy');
+        Route::get('/admin/diem-danh/lich-su', [DiemDanhController::class, 'lichSu'])->name('diem-danh.lich-su');
+        Route::get('/admin/diem-danh/thong-ke', [DiemDanhController::class, 'thongKe'])->name('diem-danh.thong-ke');
+
+
+        // Thiết lập lương
+        Route::get('/admin/thiet-lap-luong', [ThietLapLuongController::class, 'index'])->name('thiet-lap-luong.index')->middleware('permission:xem_thiet_lap_luong');
+        Route::get('/admin/thiet-lap-luong/create', [ThietLapLuongController::class, 'create'])->name('thiet-lap-luong.create')->middleware('permission:them_thiet_lap_luong');
+        Route::post('/admin/thiet-lap-luong', [ThietLapLuongController::class, 'store'])->name('thiet-lap-luong.store')->middleware('permission:them_thiet_lap_luong');
+        Route::get('/admin/thiet-lap-luong/{thietLapLuong}', [ThietLapLuongController::class, 'show'])->name('thiet-lap-luong.show')->middleware('permission:xem_thiet_lap_luong');
+        Route::get('/admin/thiet-lap-luong/{thietLapLuong}/edit', [ThietLapLuongController::class, 'edit'])->name('thiet-lap-luong.edit')->middleware('permission:sua_thiet_lap_luong');
+        Route::put('/admin/thiet-lap-luong/{thietLapLuong}', [ThietLapLuongController::class, 'update'])->name('thiet-lap-luong.update')->middleware('permission:sua_thiet_lap_luong');
+        Route::delete('/admin/thiet-lap-luong/{thietLapLuong}', [ThietLapLuongController::class, 'destroy'])->name('thiet-lap-luong.destroy')->middleware('permission:xoa_thiet_lap_luong');
+
+        // Bảng lương
+        Route::get('/admin/bang-luong', [BangLuongController::class, 'index'])->name('bang-luong.index')->middleware('permission:xem_bang_luong');
+        Route::get('/admin/bang-luong/create', [BangLuongController::class, 'create'])->name('bang-luong.create')->middleware('permission:them_bang_luong');
+        Route::post('/admin/bang-luong', [BangLuongController::class, 'store'])->name('bang-luong.store')->middleware('permission:them_bang_luong');
+        Route::get('/admin/bang-luong/{bangLuong}', [BangLuongController::class, 'show'])->name('bang-luong.show')->middleware('permission:xem_bang_luong');
+        Route::get('/admin/bang-luong/{bangLuong}/edit', [BangLuongController::class, 'edit'])->name('bang-luong.edit')->middleware('permission:sua_bang_luong');
+        Route::put('/admin/bang-luong/{bangLuong}', [BangLuongController::class, 'update'])->name('bang-luong.update')->middleware('permission:sua_bang_luong');
+        Route::delete('/admin/bang-luong/{bangLuong}', [BangLuongController::class, 'destroy'])->name('bang-luong.destroy')->middleware('permission:xoa_bang_luong');
+        Route::post('/admin/bang-luong/{bangLuong}/tinh-luong', [BangLuongController::class, 'tinhLuong'])->name('bang-luong.tinh-luong')->middleware('permission:xem_bang_luong');
+
+        // Phiếu lương
+        Route::get('/admin/phieu-luong', [PhieuLuongController::class, 'index'])->name('phieu-luong.index')->middleware('permission:xem_phieu_luong');
+        Route::get('/admin/phieu-luong/{phieuLuong}', [PhieuLuongController::class, 'show'])->name('phieu-luong.show')->middleware('permission:xem_phieu_luong');
+        Route::get('/admin/phieu-luong/{phieuLuong}/edit', [PhieuLuongController::class, 'edit'])->name('phieu-luong.edit')->middleware('permission:sua_phieu_luong');
+        Route::put('/admin/phieu-luong/{phieuLuong}', [PhieuLuongController::class, 'update'])->name('phieu-luong.update')->middleware('permission:sua_phieu_luong');
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Routes bán hàng
+        Route::get('/dashboard', [NhanVienController::class, 'index'])->name('nhan-vien.dashboard')->middleware('permission:ban_hang');
+        Route::get('/ban-hang', [NhanVienController::class, 'banHang'])->name('nhan-vien.ban-hang')->middleware('permission:ban_hang');
+        Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don')->middleware('permission:ban_hang');
+        Route::get('/san-pham', [NhanVienController::class, 'sanPham'])->name('nhan-vien.san-pham')->middleware('permission:ban_hang');
+        // khách hàng 
+        Route::get('/ban-hang/san-pham', [NhanVienController::class, 'laySanPham'])->name('nhan-vien.ban-hang.san-pham')->middleware('permission:ban_hang');
+        Route::get('/ban-hang/danh-muc', [NhanVienController::class, 'layDanhMuc'])->name('nhan-vien.ban-hang.danh-muc')->middleware('permission:ban_hang');
+        Route::post('/ban-hang/thanh-toan', [NhanVienController::class, 'thanhToan'])->name('nhan-vien.ban-hang.thanh-toan')->middleware('permission:ban_hang');
+        Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don')->middleware('permission:ban_hang');
+        Route::get('/hoa-don/{id}', [NhanVienController::class, 'chiTietHoaDon'])->name('nhan-vien.hoa-don.chi-tiet')->middleware('permission:ban_hang');
+        Route::get('/hoa-don/{id}/in', [NhanVienController::class, 'inHoaDon'])->name('nhan-vien.hoa-don.in')->middleware('permission:ban_hang');
+        //   Route::post('/hoa-don/{id}/huy', [NhanVienController::class, 'huyHoaDon'])
+        //   ->name('nhan-vien.hoa-don.huy');
+        Route::get('/ban-hang/khach-hang', [NhanVienController::class, 'layKhachHang'])->name('nhan-vien.ban-hang.khach-hang')->middleware('permission:ban_hang');
+        Route::get('/ban-hang/khuyen-mai', [NhanVienController::class, 'layKhuyenMai'])->name('nhan-vien.ban-hang.khuyen-mai')->middleware('permission:ban_hang');
+
+        Route::get('/khach-hang', [NhanVienKhachHangController::class, 'index'])->name('nhan-vien.khach-hang.index')->middleware('permission:ban_hang');
+        Route::get('/khach-hang/create', [NhanVienKhachHangController::class, 'create'])->name('nhan-vien.khach-hang.create')->middleware('permission:ban_hang');
+        Route::post('/khach-hang/them-nhanh',[NhanVienKhachHangController::class, 'themNhanh'])->name('nhan-vien.khach-hang.them-nhanh')->middleware('permission:ban_hang');
+        Route::post('/khach-hang', [NhanVienKhachHangController::class, 'store'])->name('nhan-vien.khach-hang.store')->middleware('permission:ban_hang');
+        Route::get('/khach-hang/{khachHang}', [NhanVienKhachHangController::class, 'show'])->name('nhan-vien.khach-hang.show')->middleware('permission:ban_hang');
+        Route::get('/khach-hang/{khachHang}/edit-phone', [NhanVienKhachHangController::class, 'editPhone'])->name('nhan-vien.khach-hang.edit_phone')->middleware('permission:ban_hang');
+        Route::put('/khach-hang/{khachHang}/update-phone', [KhachHangController::class, 'updatePhone'])->name('nhan-vien.khach-hang.update_phone')->middleware('permission:ban_hang');
+    }); //het router admin
+
+
+
+    // Routes nhân viên (Preview)
+    Route::middleware([NhanVien::class])->group(function () {
+        route::get('/trang-chu', [TrangChuController::class, 'trang_chu'])->name('nhan-vien.trang-chu');
+        Route::get('/lich-lam-viec', [NhanVienNhanVienController::class, 'lichLamViec'])->name('nhan-vien.lich');
+        Route::get('/lich-lam-viec/tuan', [NhanVienNhanVienController::class, 'lichLamViecTuan'])->name('nhan-vien.lich-tuan');
+        Route::get('/cham-cong', [NhanVienDiemDanhController::class, 'index'])->name('nhan-vien.cham-cong');
+        Route::get('/ho-so', [NhanVienNhanVienController::class, 'hoSo'])->name('nhan-vien.ho-so');
+        Route::post('/diem-danh/vao-ca', [NhanVienDiemDanhController::class, 'vaoCa'])->name('nhan-vien.diem-danh.vao-ca');
+        Route::post('/diem-danh/ket-thuc-ca', [NhanVienDiemDanhController::class, 'ketThucCa'])->name('nhan-vien.diem-danh.ket-thuc-ca');
+        Route::post('/ho-so/doi-mat-khau', [NhanVienNhanVienController::class, 'doiMatKhau'])->name('nhan-vien.ho-so.doi-mat-khau');
+    });
+
+
+
+    Route::get('/admin/khach-hang/create', [KhachHangController::class, 'create'])
+        ->name('khach-hang.create')->middleware('permission:them_khach_hang');
+
+    Route::post('/admin/khach-hang', [KhachHangController::class, 'store'])
+        ->name('khach-hang.store')->middleware('permission:them_khach_hang');
+
+    // ===== THÙNG RÁC =====
+    Route::get('/admin/khach-hang/thung-rac', [KhachHangController::class, 'trash'])
+        ->name('khach-hang.trash')->middleware('permission:xem_khach_hang');
+
+    Route::put('/admin/khach-hang/{id}/restore', [KhachHangController::class, 'restore'])
+        ->name('khach-hang.restore')->middleware('permission:xem_khach_hang');
+
+    Route::delete('/admin/khach-hang/{id}/force-delete', [KhachHangController::class, 'forceDelete'])
+        ->name('khach-hang.force-delete')->middleware('permission:xem_khach_hang');
+
+    // ===== ROUTE CÓ {khachHang} PHẢI ĐỂ CUỐI =====
+    Route::get('/admin/khach-hang/{khachHang}', [KhachHangController::class, 'show'])
+        ->name('khach-hang.show')->middleware('permission:xem_khach_hang');
+
+    Route::get('/admin/khach-hang/{khachHang}/edit', [KhachHangController::class, 'edit'])
+        ->name('khach-hang.edit')->middleware('permission:sua_khach_hang');
+
+    Route::put('/admin/khach-hang/{khachHang}', [KhachHangController::class, 'update'])
+        ->name('khach-hang.update')->middleware('permission:sua_khach_hang');
+
+    Route::delete('/admin/khach-hang/{khachHang}', [KhachHangController::class, 'destroy'])
+        ->name('khach-hang.destroy')->middleware('permission:xoa_khach_hang');
+
+
+    // Trang khuyen mai
+    Route::get('/admin/khuyen-mai', [KhuyenMaiController::class, 'index'])
+        ->name('khuyen-mai.index')->middleware('permission:xem_khuyen_mai');
+
+    Route::post('/admin/khuyen-mai', [KhuyenMaiController::class, 'store'])
+        ->name('khuyen-mai.store')->middleware('permission:them_khuyen_mai');
+
+    Route::get('/admin/khuyen-mai/thung-rac', [KhuyenMaiController::class, 'trash'])
+        ->name('khuyen-mai.trash')->middleware('permission:xem_khuyen_mai');
+
+    Route::post('/admin/khuyen-mai/{id}/toggle', [KhuyenMaiController::class, 'toggle'])
+        ->name('khuyen-mai.toggle')->middleware('permission:xem_khuyen_mai');
+
+    Route::post('/admin/khuyen-mai/{id}/ajax-toggle', [KhuyenMaiController::class, 'ajaxToggle'])
+        ->name('khuyen-mai.ajaxToggle')->middleware('permission:xem_khuyen_mai');
+
+    Route::post('/admin/khuyen-mai/{id}/restore', [KhuyenMaiController::class, 'restore'])
+        ->name('khuyen-mai.restore')->middleware('permission:xem_khuyen_mai');
+
+    Route::delete('/admin/khuyen-mai/{id}/force', [KhuyenMaiController::class, 'forceDelete'])
+        ->name('khuyen-mai.forceDelete')->middleware('permission:xem_khuyen_mai');
+
+    Route::get('/admin/khuyen-mai/{id}/edit', [KhuyenMaiController::class, 'edit'])
+        ->name('khuyen-mai.edit')->middleware('permission:xem_khuyen_mai');
+
+    Route::put('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'update'])
+        ->name('khuyen-mai.update')->middleware('permission:xem_khuyen_mai');
+
+    Route::delete('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'destroy'])
+        ->name('khuyen-mai.destroy')->middleware('permission:xem_khuyen_mai');
+
+    // / chia ca làm việc
+    Route::get('/admin/chia-ca-lam-viec', [ChiaCaController::class, 'index'])->name('chia-ca-lam-viec.index')->middleware('permission:xem_chia_ca_lam_viec');
+    Route::get('/admin/chia-ca-lam-viec/create', [ChiaCaController::class, 'create'])->name('chia-ca-lam-viec.create')->middleware('permission:them_chia_ca_lam_viec');
+    Route::post('/admin/chia-ca-lam-viec', [ChiaCaController::class, 'store'])->name('chia-ca-lam-viec.store')->middleware('permission:them_chia_ca_lam_viec');
+    Route::get('/admin/chia-ca-lam-viec/export', [ChiaCaController::class, 'export'])->name('chia-ca-lam-viec.export')->middleware('permission:xem_chia_ca_lam_viec');
+    Route::delete('/admin/chia-ca-lam-viec/xoa-o-lich', [ChiaCaController::class, 'destroyCell'])->name('chia-ca-lam-viec.destroy-cell')->middleware('permission:xoa_chia_ca_lam_viec');
+    Route::get('/admin/chia-ca-lam-viec/{chiaCaLamViec}/edit', [ChiaCaController::class, 'edit'])->name('chia-ca-lam-viec.edit')->middleware('permission:sua_chia_ca_lam_viec');
+    Route::put('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'update'])->name('chia-ca-lam-viec.update')->middleware('permission:sua_chia_ca_lam_viec');
+    Route::delete('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'destroy'])->name('chia-ca-lam-viec.destroy')->middleware('permission:xoa_chia_ca_lam_viec');
+
+        // quản lý ca làm hiện tại 
+        Route::get('/ca-lam',[CaLam::class, 'index'])->name('ca-lam.index')->middleware('permission:ca_lam');
+        Route::get('/chi-tiet-hoa-don/{id_hoadon}',[CaLam::class, 'show'])->name('chi-tiet-hoa-don.show')->middleware('permission:ca_lam');
+        //lịch sử ca làm
+        Route::get('/lich-su-ca-lam-viec',[LichSuCaLam::class, 'index'])->name('lich-su-ca-lam-viec.index')->middleware('permission:ca_lam');
+        Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}',[LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:ca_lam');
+        Route::get('/lich-su-ca-lam-chi_tiet_ca_lam/{id_ca}/{ngay}',[LichSuCaLam::class, 'chi_tiet_ca'])->name('lich-su-ngay-lam-viec.chi_tiet_ca_lam')->middleware('permission:ca_lam');
+        Route::get('/lich-su-ca-lam-chi_tiet-hoa-don/{id_hoaDon}/{ngay}',[LichSuCaLam::class, 'chi_tiet_hoa_don'])->name('lich-su-ca-lam-chi-tiet-hoa-don.show')->middleware('permission:ca_lam');
+       
+      //điểm danh
+        Route::get('/chi-tiet-diem-danh-nhan-vien/{id_chia_ca_lam_viec}/{id_nv}',[DiemDanhNhanVien::class, 'chi_tiet_diem_danh'])->name('lich-su-ca-lam.chi_tiet_diem_danh')->middleware('permission:ca_lam');
+        Route::get('/tao-diem-danh-nhan-vien/{id_chia_ca_lam_viec}/{id_nv}',[DiemDanhNhanVien::class, 'diem_danh_bu'])->name('lich-su-ca-lam.tao-diem-danh-bu')->middleware('permission:ca_lam');
+        Route::post('/luu-diem-danh-nhan-vien',[DiemDanhNhanVien::class, 'luu_diem_danh_bu'])->name('diem-danh.luu-diem-danh-bu')->middleware('permission:ca_lam');
+        Route::put('/cap-nhat-diem-danh-nhan-vien/{id}',[DiemDanhNhanVien::class, 'cap_nhat_diem_danh'])->name('diem-danh.cap-nhat')->middleware('permission:ca_lam');
             //giao ca
             Route::get('/lich-su-ca-lam-giao-ca/{id_ca}/{ngay}',[LichSuCaLam::class, 'tao_giao_ca'])->name('lich-su-ca-lam-giao-ca.tao-giao-ca')->middleware('permission:ca_lam');
             Route::post('/lich-su-ca-lam-giao-ca',[LichSuCaLam::class, 'giao_ca_store'])->name('giao-ca.store')->middleware('permission:ca_lam');
@@ -364,6 +536,8 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::delete('/admin/diem-danh/{diemDanh}', [DiemDanhController::class, 'huyDiemDanh'])->name('diem-danh.destroy');
     Route::get('/admin/diem-danh/lich-su', [DiemDanhController::class, 'lichSu'])->name('diem-danh.lich-su');
     Route::get('/admin/diem-danh/thong-ke', [DiemDanhController::class, 'thongKe'])->name('diem-danh.thong-ke');
+
+  
 
 
     // Thiết lập lương
@@ -390,6 +564,70 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::get('/admin/phieu-luong/{phieuLuong}', [PhieuLuongController::class, 'show'])->name('phieu-luong.show')->middleware('permission:xem_phieu_luong');
     Route::get('/admin/phieu-luong/{phieuLuong}/edit', [PhieuLuongController::class, 'edit'])->name('phieu-luong.edit')->middleware('permission:sua_phieu_luong');
     Route::put('/admin/phieu-luong/{phieuLuong}', [PhieuLuongController::class, 'update'])->name('phieu-luong.update')->middleware('permission:sua_phieu_luong');
+}); //het router admin
+
+
+// Routes nhân viên (Preview)
+Route::middleware([VaiTroBanHang::class, 'vai_tro:Nhân viên,Trưởng ca,Admin'])->prefix('nhan-vien')->group(function () {
+    Route::get('/', [NhanVienController::class, 'index'])->name('nhan-vien.dashboard');
+    Route::get('/ban-hang', [NhanVienController::class, 'banHang'])->name('nhan-vien.ban-hang');
+    Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don');
+    Route::get('/san-pham', [NhanVienController::class, 'sanPham'])->name('nhan-vien.san-pham');
+  // khách hàng 
+  Route::get('/ban-hang/san-pham', [NhanVienController::class, 'laySanPham'])
+  ->name('nhan-vien.ban-hang.san-pham');
+  Route::get('/ban-hang/danh-muc', [NhanVienController::class, 'layDanhMuc'])
+  ->name('nhan-vien.ban-hang.danh-muc');
+  Route::post('/ban-hang/thanh-toan', [NhanVienController::class, 'thanhToan'])
+  ->name('nhan-vien.ban-hang.thanh-toan');
+  Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])
+   ->name('nhan-vien.hoa-don');
+ Route::get('/hoa-don/{id}', [NhanVienController::class, 'chiTietHoaDon'])
+ ->name('nhan-vien.hoa-don.chi-tiet');
+ Route::get('/hoa-don/{id}/in', [NhanVienController::class, 'inHoaDon'])
+ ->name('nhan-vien.hoa-don.in');
+//   Route::post('/hoa-don/{id}/huy', [NhanVienController::class, 'huyHoaDon'])
+//   ->name('nhan-vien.hoa-don.huy');
+ Route::get('/ban-hang/khach-hang', [NhanVienController::class, 'layKhachHang'])
+ ->name('nhan-vien.ban-hang.khach-hang');
+ Route::get('/ban-hang/khuyen-mai', [NhanVienController::class, 'layKhuyenMai'])
+   ->name('nhan-vien.ban-hang.khuyen-mai');
+
+ // PayOS POS flow: tạo giao dịch + polling trạng thái
+    Route::post('/ban-hang/payos/create', [PayOSController::class, 'createPayment'])
+        ->name('nhan-vien.ban-hang.payos.create');
+    Route::get('/ban-hang/payos/check-status/{hoaDonId}', [PayOSController::class, 'checkStatus'])
+        ->name('nhan-vien.ban-hang.payos.check-status');
+  
+    Route::get('/khach-hang', [NhanVienKhachHangController::class, 'index'])->name('nhan-vien.khach-hang.index');
+    Route::get('/khach-hang/create', [NhanVienKhachHangController::class, 'create'])->name('nhan-vien.khach-hang.create');
+     Route::post('/khach-hang/them-nhanh',[NhanVienKhachHangController::class, 'themNhanh'])->name('nhan-vien.khach-hang.them-nhanh');
+    Route::post('/khach-hang', [NhanVienKhachHangController::class, 'store'])->name('nhan-vien.khach-hang.store');
+    Route::get('/khach-hang/{khachHang}', [NhanVienKhachHangController::class, 'show'])->name('nhan-vien.khach-hang.show');
+    Route::get('/khach-hang/{khachHang}/edit-phone', [NhanVienKhachHangController::class, 'editPhone'])->name('nhan-vien.khach-hang.edit_phone');
+    Route::put('/khach-hang/{khachHang}/update-phone', [NhanVienKhachHangController::class, 'updatePhone'])->name('nhan-vien.khach-hang.update_phone');
+
+    Route::get('/lich-lam-viec', [NhanVienController::class, 'lichLamViec'])->name('nhan-vien.lich');
+    Route::get('/lich-lam-viec/tuan', [NhanVienController::class, 'lichLamViecTuan'])->name('nhan-vien.lich-tuan');
+    Route::get('/cham-cong', [NhanVienDiemDanhController::class, 'index'])->name('nhan-vien.cham-cong');
+
+    Route::post('/diem-danh/vao-ca', [NhanVienDiemDanhController::class, 'vaoCa'])->name('nhan-vien.diem-danh.vao-ca');
+    Route::post('/diem-danh/ket-thuc-ca', [NhanVienDiemDanhController::class, 'ketThucCa'])->name('nhan-vien.diem-danh.ket-thuc-ca');
+    Route::get('/ho-so', [NhanVienController::class, 'hoSo'])->name('nhan-vien.ho-so');
+    Route::post('/ho-so/doi-mat-khau', [NhanVienController::class, 'doiMatKhau'])->name('nhan-vien.ho-so.doi-mat-khau');
+});
+
+// ==== PayOS callbacks (public, PayOS server gọi) ====
+    Route::get('/payos/return', [PayOSController::class, 'return'])->name('payos.return');
+    Route::get('/payos/cancel', [PayOSController::class, 'cancel'])->name('payos.cancel');
+    Route::post('/payos/webhook', [PayOSController::class, 'webhook'])->name('payos.webhook');
+    Route::get('/payos/checkout/{hoaDonId}', [PayOSController::class, 'checkoutPage'])
+        ->name('payos.checkout-page');
+
+    // Test-only: simulate PayOS webhook (local env only)
+    Route::post('/payos/test-webhook', [PayOSController::class, 'testWebhook'])
+        ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+        ->name('payos.test-webhook');
 
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

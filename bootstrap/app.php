@@ -22,7 +22,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth.admin' => AuthAdmin::class,   // Middleware kiem tra dang nhap
             'vai_tro'    => KiemTraVaiTro::class, // Middleware kiem tra vai tro
-            'permission' => KTVaiTro::class,    // middleware kiểm tra quyền của người dùng khi được admin cấp cho 
+            'permission' => KTVaiTro::class,    // middleware kiểm tra quyền của người dùng khi được admin cấp cho
+        ]);
+
+        // PayOS server-to-server gọi /payos/webhook mà không có CSRF token
+        $middleware->validateCsrfTokens(except: [
+            'payos/webhook',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -1190,9 +1190,13 @@ body {
                     <i class="fas fa-university"></i>
                     Chuyển khoản
                 </button>
-                <button class="pay-btn" data-method="card" onclick="selectPayment('card')">
-                    <i class="fas fa-credit-card"></i>
-                    Quẹt thẻ
+                <button class="pay-btn" data-method="payos" onclick="selectPayment('payos')">
+                    <i class="fas fa-qrcode"></i>
+                    PayOS
+                </button>
+                <button class="pay-btn" id="payosTestBtn" onclick="payosSimulateSuccess()" style="display:none;color:#ff9800;border-color:#ff9800">
+                    <i class="fas fa-flask"></i>
+                    Test Thanh Toán
                 </button>
             </div>
 
@@ -1931,6 +1935,11 @@ async function processPayment(isTransferConfirmed = false) {
     return;
 }
 
+    if (selectedPayment === 'payos') {
+        await payosCreate();
+        return;
+    }
+
   
 const subtotal = cart.reduce(
     (sum, item) => sum + Number(item.gia_ban) * item.qty,
@@ -2028,6 +2037,183 @@ printInvoiceImmediately(hoaDonId);
         showToast('Lỗi kết nối máy chủ!', 'error');
     }
 }
+
+// ─────────────────────────────────────────────
+// PayOS flow
+// ─────────────────────────────────────────────
+let payosPollTimer = null;
+let payosWindow = null;
+let payosCurrentHoaDonId = null;
+let payosOrderAmount = null;
+
+async function payosCreate() {
+    const cart = getCurrentCart();
+    if (cart.length === 0) {
+        showToast('Giỏ hàng trống!', 'error');
+        return;
+    }
+
+    const usePoint = parseInt(document.getElementById('usePoint')?.value || 0);
+
+    // Mở popup NGAY từ click handler (synchronously) để né popup-blocker.
+    // window.open() phải nằm trực tiếp trong user gesture, KHÔNG bọc trong await.
+    try {
+        payosWindow = window.open('about:blank', 'payosWindow', 'width=900,height=700,left=200,top=100');
+    } catch (_) {}
+
+    try {
+        const response = await fetch('/nhan-vien/ban-hang/payos/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            },
+            body: JSON.stringify({
+                cart: cart.map(item => ({ id: item.id, qty: item.qty })),
+                id_khach_hang: selectedCustomer ? selectedCustomer.id : null,
+                id_khuyen_mai: selectedPromotion ? selectedPromotion.id : null,
+                diem_su_dung: usePoint,
+            }),
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            if (payosWindow && !payosWindow.closed) payosWindow.close();
+            showToast(data.message || 'Không thể tạo giao dịch PayOS!', 'error');
+            return;
+        }
+
+        payosCurrentHoaDonId = data.hoa_don_id;
+        payosOrderAmount = data.amount || 0;
+
+        // Open PayOS hosted checkout page (production-like UI)
+        if (payosWindow && !payosWindow.closed) {
+            try {
+                payosWindow.location = data.checkout_url;
+            } catch (e) {
+                showToast('Trình duyệt chặn popup — hãy cho phép popup để thanh toán PayOS.', 'error');
+                return;
+            }
+        } else {
+            showToast('Trình duyệt chặn popup. Vui lòng bật popup cho trang này.', 'error');
+            return;
+        }
+
+        payosStartPolling();
+        const testBtn = document.getElementById('payosTestBtn');
+        if (testBtn) {
+            testBtn.style.display = 'inline-flex';
+        }
+    } catch (error) {
+        console.error(error);
+        if (payosWindow && !payosWindow.closed) payosWindow.close();
+        showToast('Lỗi khi tạo giao dịch PayOS!', 'error');
+    }
+}
+
+function payosStartPolling() {
+    if (payosPollTimer) {
+        clearInterval(payosPollTimer);
+    }
+    const deadline = Date.now() + 5 * 60 * 1000; // 5 phút
+
+    payosPollTimer = setInterval(async () => {
+        if (!payosCurrentHoaDonId) {
+            payosStopPolling();
+            return;
+        }
+        if (Date.now() > deadline) {
+            payosStopPolling();
+            showToast('Đã hết thời gian chờ PayOS.', 'error');
+            return;
+        }
+        try {
+            const response = await fetch('/nhan-vien/ban-hang/payos/check-status/' + payosCurrentHoaDonId);
+            if (!response.ok) return;
+            const data = await response.json();
+
+            if (data.trang_thai === 'thanh_cong') {
+                payosStopPolling();
+                if (payosWindow && !payosWindow.closed) payosWindow.close();
+                showToast('Thanh toán PayOS thành công!', 'success');
+                closePaidInvoiceTab();
+                loadProducts();
+                showPrintInvoiceDialog(payosCurrentHoaDonId);
+                payosCurrentHoaDonId = null;
+                payosOrderAmount = null;
+            } else if (data.trang_thai === 'that_bai' || data.trang_thai === 'hoan_tien') {
+                payosStopPolling();
+                if (payosWindow && !payosWindow.closed) payosWindow.close();
+                showToast('Thanh toán PayOS thất bại.', 'error');
+                payosCurrentHoaDonId = null;
+                payosOrderAmount = null;
+            }
+        } catch (e) {
+            console.error('PayOS poll error', e);
+        }
+    }, 3000);
+}
+
+function payosStopPolling() {
+    if (payosPollTimer) {
+        clearInterval(payosPollTimer);
+        payosPollTimer = null;
+    }
+    const testBtn = document.getElementById('payosTestBtn');
+    if (testBtn) testBtn.style.display = 'none';
+}
+
+// [Local only] Simulate PayOS webhook: marks the current pending order as paid
+async function payosSimulateSuccess() {
+    if (!payosCurrentHoaDonId) return;
+    const orderCode = payosCurrentHoaDonId;
+    const amount = payosOrderAmount || 0;
+    try {
+        const res = await fetch('/payos/test-webhook', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+            body: JSON.stringify({ orderCode, amount, success: true }),
+        });
+        const json = await res.json();
+        if (json.code === '00') {
+            payosStopPolling();
+            if (payosWindow && !payosWindow.closed) payosWindow.close();
+            payosCurrentHoaDonId = null;
+            payosOrderAmount = null;
+            showToast('Đã simulate thanh toán PayOS!', 'success');
+            closePaidInvoiceTab();
+            loadProducts();
+            showPrintInvoiceDialog(orderCode);
+        } else {
+            showToast('Simulate thất bại: ' + JSON.stringify(json), 'error');
+        }
+    } catch (e) {
+        showToast('Simulate lỗi: ' + e.message, 'error');
+    }
+}
+
+// Lắng nghe message từ popup /payos/return
+window.addEventListener('message', function (event) {
+    if (!event.data) return;
+    const type = event.data.type;
+    if (type !== 'payos-return' && type !== 'payos_returned') return;
+    const msgId = parseInt(event.data.hoa_don_id || event.data.orderCode, 10);
+    if (msgId !== parseInt(payosCurrentHoaDonId, 10)) return;
+
+    if (event.data.success) {
+        if (event.data.verified) {
+            showToast('PayOS xác nhận thanh toán, đang đồng bộ...', 'info');
+        }
+    } else if (event.data.cancelled) {
+        payosStopPolling();
+        showToast('Khách đã hủy thanh toán PayOS.', 'info');
+        payosCurrentHoaDonId = null;
+        payosOrderAmount = null;
+    } else {
+        payosStopPolling();
+        showToast('Thanh toán PayOS chưa hoàn tất.', 'error');
+    }
+});
 
 // ─────────────────────────────────────────────
 // Toast Notification

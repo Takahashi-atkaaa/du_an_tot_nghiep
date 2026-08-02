@@ -57,6 +57,10 @@ class HoaDon extends Model
 	public function caLamViec(){
 		return $this->belongsTo(CaLamViec::class, 'id_ca_lam_viec');
 	}
+
+	public function giaoDich(){
+		return $this->hasMany(GiaoDich::class, 'id_hoa_don');
+	}
 	public function thanhToans()
 {
     return $this->hasMany(
