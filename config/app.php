@@ -124,4 +124,19 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Trusted Proxies
+    |--------------------------------------------------------------------------
+    |
+    | When behind a reverse proxy (e.g. ngrok, Cloudflare, load balancer) you
+    | must list the proxy IPs (or '*') so Laravel honors X-Forwarded-* headers
+    | for scheme/host detection. Without this, route()/url() generates http://
+    | URLs even when the page is served over https://, causing mixed-content
+    | blocks in the browser.
+    |
+    */
+
+    'trusted_proxies' => env('TRUSTED_PROXIES'),
+
 ];

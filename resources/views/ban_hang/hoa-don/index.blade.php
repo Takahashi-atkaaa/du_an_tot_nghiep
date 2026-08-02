@@ -106,10 +106,9 @@
 
 
                             <td>@php
-                                 $pttt = [
-                                          'cash' => 'Tiền mặt',
+$pttt = [
+                                         'cash' => 'Tiền mặt',
                                          'transfer' => 'Chuyển khoản',
-                                         'card' => 'Quẹt thẻ',
                                         'tien_mat' => 'Tiền mặt',
                                          'chuyen_khoan' => 'Chuyển khoản',
                                     ];
