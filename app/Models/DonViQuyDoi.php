@@ -23,10 +23,11 @@ class DonViQuyDoi extends BaseModel
         'gia_ban_si',
         'hinh_anh',
         'la_don_vi_mac_dinh',
+        'ty_le_quy_doi',
     ];
 
     protected $casts = [
-        'so_luong_san_pham_trong_don_vi' => 'integer',
+        'so_luong_san_pham_trong_don_vi' => 'decimal:4',
         'gia_von_quy_doi' => 'decimal:2',
         'gia_ban_quy_doi' => 'decimal:2',
         'gia_ban_si' => 'decimal:2',

@@ -189,6 +189,10 @@ class SanPhamApiController extends Controller
             $variant->product->load('danhMuc');
         }
 
+        // NOTE: thuocTinhs là ACCESSOR (getThuocTinhsAttribute), KHÔNG phải relationship
+        // KHÔNG dùng $variant->load('thuocTinhs') - sẽ bị lỗi!
+        // Chỉ cần truy cập $variant->thuocTinhs - accessor tự query
+
         // Tính toán thông tin tổng hợp cho Master Product (nhiều biến thể)
         $allVariantsData = $variant->product->variants;
         $tongTonKho = $allVariantsData->sum('so_luong_ton');
@@ -211,11 +215,53 @@ class SanPhamApiController extends Controller
             ];
         }
 
+        // Tạo bienThe[] với thuocTinhs từ accessor cho JS drawer
+        // Lưu ý: thuocTinhs là accessor, KHÔNG gọi load() được
+        $bienTheArr = [];
+        foreach ($variant->product->variants as $v) {
+            $bienTheArr[] = [
+                'id' => $v->id,
+                'ten_bien_the' => $v->ten_bien_the,
+                'ten_don_vi' => $v->ten_don_vi ?? '',
+                'ma_vach' => $v->ma_vach,
+                'gia_ban' => $v->gia_ban,
+                'so_luong_ton_kho' => $v->so_luong_ton,
+                'dinh_muc_toi_thieu' => $v->dinh_muc_toi_thieu,
+                'trang_thai' => $v->trang_thai,
+                'hinh_anh' => $v->hinh_anh,
+                'thuoc_tinhs' => $v->thuocTinhs->map(fn($tt) => [
+                    'id' => $tt->id,
+                    'ten_thuoc_tinh' => $tt->ten_thuoc_tinh,
+                ])->all(),
+            ];
+        }
+
+        // Tạo sanPham object phẳng cho JS drawer (tương thích với sp.ten_don_vi, sp.ma_vach)
+        $sanPham = array_merge($variant->product->toArray(), [
+            'ten_don_vi' => $variant->ten_don_vi ?? '',
+            'so_luong_ton_kho' => $variant->so_luong_ton,
+            'ma_vach' => $variant->ma_vach, // Lấy từ variant!
+            'thuoc_tinhs' => $variant->thuocTinhs->map(fn($tt) => [
+                'id' => $tt->id,
+                'ten_thuoc_tinh' => $tt->ten_thuoc_tinh,
+            ])->all(),
+        ]);
+
         return response()->json([
             'success' => true,
             'data' => [
                 'product' => $variant->product->toArray(),
                 'variant' => $variant->toArray(),
+                // ============================================================
+                // TUYỆT ĐỐI: Dùng key 'sanPham' cho JS drawer, KHÔNG dùng 'product'
+                // (JS dùng data.sanPham.ten_don_vi)
+                // ============================================================
+                'sanPham' => $sanPham,
+                // ============================================================
+                // TUYỆT ĐỐI: Dùng key 'bienThe' cho JS drawer, KHÔNG dùng 'allVariants'
+                // (JS dùng data.bienThe.map(...))
+                // ============================================================
+                'bienThe' => $bienTheArr,
                 'selectedUnit' => $selectedUnit?->toArray(),
                 'allVariants' => $variant->product->variants->toArray(),
                 'units' => $variant->units->toArray(),

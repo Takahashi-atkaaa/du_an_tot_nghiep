@@ -139,22 +139,33 @@
                             $hasMoreThanOneRow = $rows->count() > 1;
                             $firstRow = $rows->first();
 
+                            // ============================================================
+                            // FIX: Chọn variant đại diện cho đơn vị cơ bản (dòng chính).
+                            // Trước đây: $firstRow = $rows->first() → có thể là variant
+                            // không phải đơn vị cơ bản (variant có ten_don_vi trùng với
+                            // đơn vị quy đổi, do dữ liệu cũ bị ghi đè nhầm).
+                            // Sau khi lưu, variant mới "Cái" có ID lớn hơn được sort
+                            // xuống dưới, khiến $firstRow luôn lấy variant cũ "Lon"
+                            // nhưng variant cũ có ten_don_vi trùng quy đổi → dropdown trống.
+                            // ============================================================
+                            $masterVariant = $sp->firstMasterVariant;
+                            $firstVariantId = $masterVariant?->id ?? $firstRow->variant?->id;
+
                             // Phân loại cho UI mới:
                             //   - $variantRows (loai_dong='goc' AND có thuộc tính) -> hiển thị thành <tr> riêng
                             //   - $conversionRows (loai_dong='quy_doi') -> gộp vào Dropdown tại dòng chính
                             $variantAttrRows = $rows->where('loai_dong', 'goc')
                                 ->filter(fn($r) => !empty($r->ten_bien_the_display));
                             // Lọc conversion rows theo variant CHA (chỉ conversion thuộc về dòng chính)
-                            $firstVariantId = $firstRow->variant?->id;
                             $conversionRows = $rows->where('loai_dong', 'quy_doi')
                                 ->filter(fn($r) => $r->variant?->id === $firstVariantId);
                             $countQuyDoi = $conversionRows->count();
                             $isDonViOnly = $variantAttrRows->count() === 0 && $countQuyDoi > 0;
 
-                            // Đơn vị cơ bản (CHA): tên đơn vị đầu tiên của dòng chính
-                            $baseUnitName = $firstRow->ten_don_vi ?: '—';
+                            // Đơn vị cơ bản (CHA): lấy từ master variant
+                            $baseUnitName = $masterVariant?->ten_don_vi ?: '—';
                             // Biến thể CHA + data gốc (để JS tính toán khi chọn đơn vị)
-                            $baseVariant   = $firstRow->variant ?? null;
+                            $baseVariant   = $masterVariant ?? $firstRow->variant ?? null;
                             $baseUnitId    = $baseVariant?->id ?? '';
                             $baseGiaBanGoc = $baseVariant?->gia_ban ?? 0;
                             $baseTonKhoGoc = $baseVariant?->so_luong_ton ?? 0;

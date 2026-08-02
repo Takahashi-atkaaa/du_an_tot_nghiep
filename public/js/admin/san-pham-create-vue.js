@@ -271,6 +271,9 @@
                             dinhMucToiThieu: bt.dinh_muc_toi_thieu ?? 0,
                             soLuong: bt.so_luong_ton ?? 0,
                             touched: {},
+                            // Ảnh biến thể
+                            hinhAnh: bt.hinh_anh || '',
+                            fileHinhAnh: null,
                             // conversionUnits: đơn vị quy đổi gốc từ DB (dùng cho payload)
                             conversionUnits: (bt.units || []).map(u => ({
                                 id: u.id,
@@ -463,7 +466,10 @@
                             // savedUnits: units gốc từ initFromProduct (dùng cho payload) hoặc conversionUnits hiện tại
                             // conversionUnits: units từ unitConfig (dùng cho UI)
                             savedUnits: old?.savedUnits ? [...old.savedUnits] : (old?.conversionUnits ? [...old.conversionUnits] : (unitConfig.conversionUnits || [])),
-                            conversionUnits: old?.conversionUnits ? [...old.conversionUnits] : (unitConfig.conversionUnits || [])
+                            conversionUnits: old?.conversionUnits ? [...old.conversionUnits] : (unitConfig.conversionUnits || []),
+                            // Ảnh biến thể: giữ ảnh cũ nếu regen, ảnh mới nếu user vừa upload
+                            hinhAnh: old?.hinhAnh ?? '',
+                            fileHinhAnh: old?.fileHinhAnh ?? null
                         });
                     });
                 });
@@ -700,6 +706,40 @@
                 }
             }
 
+            // ------- VARIANT IMAGE (ảnh riêng cho từng biến thể) -------
+            const _variantImageInputRefs = new Map();
+
+            function setVariantImageInputRef(key, el) {
+                if (el) _variantImageInputRefs.set(key, el);
+                else _variantImageInputRefs.delete(key);
+            }
+
+            function onVariantImageChange(row, e) {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                row.fileHinhAnh = file;
+                row.hinhAnh = '';
+            }
+
+            function clearVariantImage(row) {
+                row.fileHinhAnh = null;
+                row.hinhAnh = '';
+                const inputEl = _variantImageInputRefs.get(row.key);
+                if (inputEl) inputEl.value = '';
+            }
+
+            function getRowImagePreview(row) {
+                if (row.fileHinhAnh) return URL.createObjectURL(row.fileHinhAnh);
+                return '';
+            }
+
+            function getExistingImageUrl(path) {
+                if (!path) return '';
+                if (path.startsWith('http')) return path;
+                const base = (typeof window !== 'undefined' && window.location) ? window.location.origin : '';
+                return base + '/' + path.replace(/^\/+/, '');
+            }
+
             function cascadeByUnit(sourceRow, field, newValue) {
                 const sourceRatio = ratioToBase(sourceRow.unitKey);
                 if (!sourceRatio) return;
@@ -809,16 +849,16 @@
 
                     return Object.assign({}, idField, {
                         is_base: row.isBase ? 1 : 0,
-                        ten_bien_the: tenBienThe,
+                        ten_bien_the: row.tenBienThe || row.unitName || '',
                         la_don_vi: row.isBase && !hasAttr ? 1 : 0,
                         ten_don_vi: row.isBase ? unitConfig.baseUnit : row.unitName,
-                        ty_le: row.tyLe || 1,
-                        ma_hang: row.maHang,
-                        ma_vach: row.maVach,
-                        gia_von: parseFloat(row.giaVon) || 0,
-                        gia_ban: parseFloat(row.giaBan) || 0,
-                        so_luong_ton: parseInt(row.soLuong) || 0,
-                        dinh_muc_toi_thieu: parseInt(row.dinhMucToiThieu) || 0,
+                        ty_le: row.tyLe || row.ty_le || 1,
+                        ma_hang: row.maHang || row.ma_hang || '',
+                        ma_vach: row.maVach || row.ma_vach || '',
+                        gia_von: parseFloat(row.giaVon || row.gia_von) || 0,
+                        gia_ban: parseFloat(row.giaBan || row.gia_ban) || 0,
+                        so_luong_ton: parseInt(row.soLuong || row.so_luong_ton) || 0,
+                        dinh_muc_toi_thieu: parseInt(row.dinhMucToiThieu || row.dinh_muc_toi_thieu) || 0,
                         thuoc_tinh_ids: Array.isArray(row.attrValueIds) ? row.attrValueIds.join(',') : (row.attrValueIds || ''),
                         ten_don_vi_bien_the: row.unitName || '',
                         units: unitsPayload
@@ -862,7 +902,15 @@
                     return;
                 }
 
-                const payload = buildPayload();
+                let payload;
+                try {
+                    payload = buildPayload();
+                } catch (e) {
+                    console.error('[handleSubmit] buildPayload failed:', e);
+                    generalError.value = 'Lỗi xây dựng dữ liệu: ' + (e.message || String(e));
+                    submitting.value = false;
+                    return;
+                }
                 console.log("Payload gửi đi:", payload);
 
                 const csrf = getCsrfToken();
@@ -901,6 +949,11 @@
                                 }
                             });
                         });
+                        // Append file ảnh riêng cho biến thể (nếu user đã chọn)
+                        const row = gridData.value[i];
+                        if (row && row.fileHinhAnh instanceof File) {
+                            fd.append(`bien_the[${i}][hinh_anh]`, row.fileHinhAnh, row.fileHinhAnh.name);
+                        }
                     });
                     fd.append('hinh_anh', basicInfo.image);
                     body = fd;
@@ -928,6 +981,11 @@
                                 }
                             });
                         });
+                        // Append file ảnh riêng cho biến thể (nếu user đã chọn)
+                        const row = gridData.value[i];
+                        if (row && row.fileHinhAnh instanceof File) {
+                            fd.append(`bien_the[${i}][hinh_anh]`, row.fileHinhAnh, row.fileHinhAnh.name);
+                        }
                     });
                     body = fd;
                 }
@@ -1123,6 +1181,9 @@
                 onAttrValueKey, toggleDropdown, closeDropdown,
                 getDropdownValues, getFilteredDropdown, selectFromDropdown,
                 onImageSelect, clearImage, onGridInput, fillDefaultsToGrid,
+                // Ảnh biến thể
+                setVariantImageInputRef, onVariantImageChange, clearVariantImage,
+                getRowImagePreview, getExistingImageUrl,
                 handleSubmit, validate, buildPayload,
                 // ============================================================
                 // YÊU CẦU 2: EXPOSE COMPUTED PROPERTIES CHO UI
@@ -1477,6 +1538,7 @@
                                     <th class="px-2 py-2 text-left font-medium" v-for="g in effectiveAttrGroups" :key="g.id">
                                         {{ g.name }}
                                     </th>
+                                    <th class="px-2 py-2 text-left font-medium">Ảnh</th>
                                     <th class="px-2 py-2 text-left font-medium">Đơn vị</th>
                                     <th class="px-2 py-2 text-left font-medium">Tỷ lệ</th>
                                     <th class="px-2 py-2 text-left font-medium">Mã hàng</th>
@@ -1489,6 +1551,29 @@
                                 <tr v-for="row in gridData" :key="row.key" class="border-t border-slate-100 hover:bg-slate-50/50">
                                     <td v-for="g in effectiveAttrGroups" :key="g.id" class="px-2 py-1.5 text-slate-700">
                                         {{ row.attrLabels[g.name] || '-' }}
+                                    </td>
+                                    <td class="px-2 py-1.5">
+                                        <div class="flex items-center gap-2">
+                                            <div class="relative w-12 h-12 rounded border border-slate-300 overflow-hidden bg-slate-50 flex items-center justify-center">
+                                                <img v-if="row.fileHinhAnh"
+                                                    :src="getRowImagePreview(row)"
+                                                    alt="Ảnh biến thể"
+                                                    class="w-full h-full object-cover">
+                                                <img v-else-if="row.hinhAnh"
+                                                    :src="getExistingImageUrl(row.hinhAnh)"
+                                                    alt="Ảnh biến thể"
+                                                    class="w-full h-full object-cover">
+                                                <span v-else class="text-slate-400 text-[10px]">—</span>
+                                                <input type="file" accept="image/*"
+                                                    :ref="el => setVariantImageInputRef(row.key, el)"
+                                                    @change="onVariantImageChange(row, $event)"
+                                                    class="absolute inset-0 opacity-0 cursor-pointer"
+                                                    title="Chọn ảnh cho biến thể">
+                                            </div>
+                                            <button v-if="row.fileHinhAnh || row.hinhAnh" type="button"
+                                                @click="clearVariantImage(row)"
+                                                class="text-[10px] text-red-600 hover:underline whitespace-nowrap">Xóa</button>
+                                        </div>
                                     </td>
                                     <td class="px-2 py-1.5">
                                         <span class="px-2 py-0.5 rounded text-xs" :class="row.isBase ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'">
