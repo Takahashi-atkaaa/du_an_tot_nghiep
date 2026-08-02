@@ -335,15 +335,22 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::put('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'update'])->name('chia-ca-lam-viec.update')->middleware('permission:sua_chia_ca_lam_viec');
     Route::delete('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'destroy'])->name('chia-ca-lam-viec.destroy')->middleware('permission:xoa_chia_ca_lam_viec');
 
-    // quản lý ca làm hiện tại 
-    Route::get('/ca-lam', [CaLam::class, 'index'])->name('ca-lam.index')->middleware('permission:ca_lam');
-    Route::get('/chi-tiet-hoa-don/{id_hoadon}', [CaLam::class, 'show'])->name('chi-tiet-hoa-don.show')->middleware('permission:ca_lam');
-    //lịch sử ca làm
-    Route::get('/lich-su-ca-lam-viec', [LichSuCaLam::class, 'index'])->name('lich-su-ca-lam-viec.index')->middleware('permission:ca_lam');
-    Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}', [LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:ca_lam');
-    Route::get('/lich-su-ca-lam-chi_tiet_ca_lam/{id_ca}/{ngay}', [LichSuCaLam::class, 'chi_tiet_ca'])->name('lich-su-ngay-lam-viec.chi_tiet_ca_lam')->middleware('permission:ca_lam');
-    Route::get('/lich-su-ca-lam-chi_tiet-hoa-don/{id_hoaDon}/{ngay}', [LichSuCaLam::class, 'chi_tiet_hoa_don'])->name('lich-su-ca-lam-chi-tiet-hoa-don.show')->middleware('permission:ca_lam');
-
+     // quản lý ca làm hiện tại 
+           Route::get('/ca-lam',[CaLam::class, 'index'])->name('ca-lam.index')->middleware('permission:ca_lam');
+            Route::get('/chi-tiet-hoa-don/{id_hoadon}',[CaLam::class, 'show'])->name('chi-tiet-hoa-don.show')->middleware('permission:ca_lam');
+            //lịch sử ca làm
+            Route::get('/lich-su-ca-lam-viec',[LichSuCaLam::class, 'index'])->name('lich-su-ca-lam-viec.index')->middleware('permission:ca_lam');
+            Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}',[LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:ca_lam');
+            Route::get('/lich-su-ca-lam-chi_tiet_ca_lam/{id_ca}/{ngay}',[LichSuCaLam::class, 'chi_tiet_ca'])->name('lich-su-ngay-lam-viec.chi_tiet_ca_lam')->middleware('permission:ca_lam');
+            Route::get('/lich-su-ca-lam-chi_tiet-hoa-don/{id_hoaDon}/{ngay}',[LichSuCaLam::class, 'chi_tiet_hoa_don'])->name('lich-su-ca-lam-chi-tiet-hoa-don.show')->middleware('permission:ca_lam');
+            //giao ca
+            Route::get('/lich-su-ca-lam-giao-ca/{id_ca}/{ngay}',[LichSuCaLam::class, 'tao_giao_ca'])->name('lich-su-ca-lam-giao-ca.tao-giao-ca')->middleware('permission:ca_lam');
+            Route::post('/lich-su-ca-lam-giao-ca',[LichSuCaLam::class, 'giao_ca_store'])->name('giao-ca.store')->middleware('permission:ca_lam');
+            Route::get('/lich-su-ca-lam-giao-ca-chi-tiet/{id}',[LichSuCaLam::class, 'giao_ca_chi_tiet'])->name('giao-ca.chi-tiet')->middleware('permission:ca_lam');
+            Route::get('/lich-su-ca-lam-giao-ca-sua/{id}',[LichSuCaLam::class, 'sua_giao_ca'])->name('giao-ca.sua')->middleware('permission:ca_lam');
+            Route::put('/lich-su-ca-lam-giao-cap-nhat/{id}',[LichSuCaLam::class, 'cap_nhat_giao_ca'])->name('giao-ca.cap-nhat')->middleware('permission:ca_lam');
+            Route::put('/lich-su-ca-lam-giao-ca/{id}/xac-nhan', [LichSuCaLam::class, 'xac_nhan_giao_ca'])->name('giao-ca.xac-nhan')->middleware('permission:ca_lam');
+            Route::put('/lich-su-ca-lam-giao-ca/{id}/tu-choi', [LichSuCaLam::class, 'tu_choi_giao_ca'])->name('giao-ca.tu-choi')->middleware('permission:ca_lam');
     //điểm danh
     Route::get('/chi-tiet-diem-danh-nhan-vien/{id_chia_ca_lam_viec}/{id_nv}', [DiemDanhNhanVien::class, 'chi_tiet_diem_danh'])->name('lich-su-ca-lam.chi_tiet_diem_danh')->middleware('permission:ca_lam');
     Route::get('/tao-diem-danh-nhan-vien/{id_chia_ca_lam_viec}/{id_nv}', [DiemDanhNhanVien::class, 'diem_danh_bu'])->name('lich-su-ca-lam.tao-diem-danh-bu')->middleware('permission:ca_lam');
