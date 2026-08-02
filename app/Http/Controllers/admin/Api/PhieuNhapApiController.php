@@ -220,16 +220,10 @@ class PhieuNhapApiController extends Controller
                 }
             }
 
-            // Cộng tồn kho cho bien_the_san_pham.so_luong_ton theo số lượng THỰC (đã quy đổi)
-            foreach ($data['chi_tiet'] as $ct) {
-                $soLuongTrongDonVi = (int)($ct['so_luong_san_pham_trong_don_vi'] ?? 1);
-                $slNhap = (int)$ct['so_luong_nhap'];
-                $slThuc = $soLuongTrongDonVi > 1
-                    ? (int)($ct['so_luong_thuc'] ?? ($slNhap * $soLuongTrongDonVi))
-                    : $slNhap;
-                BienTheSanPham::where('id', $ct['variant_id'])
-                    ->increment('so_luong_ton', $slThuc);
-            }
+            // ChiTietLoHangObserver đã tự động đồng bộ tổng tồn
+            // trên bien_the_san_pham.so_luong_ton sau khi ChiTietLoHang::create()
+            // chạy ở các nhánh tao_lo_moi = 1 / 0 phía trên.
+            // Không cần increment thủ công ở đây nữa (trước đây gây double-counting).
 
             return $phieuNhap->load('phieu', 'chiTietPhieu.variant', 'chiTietPhieu.chiTietLoHang');
         });

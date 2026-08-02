@@ -249,9 +249,9 @@ class PhieuNhapImport implements ToCollection, WithHeadingRow, WithValidation
                     ]);
                 }
 
-                // Cập nhật tồn kho biến thể
-                BienTheSanPham::where('id', $ct['variant_id'])
-                    ->increment('so_luong_ton', $soLuongGoc);
+                // ChiTietLoHangObserver đã tự đồng bộ tổng tồn
+                // bien_the_san_pham.so_luong_ton sau khi ChiTietLoHang::update()
+                // hoặc ChiTietLoHang::create() ở phía trên.
             }
         });
     }

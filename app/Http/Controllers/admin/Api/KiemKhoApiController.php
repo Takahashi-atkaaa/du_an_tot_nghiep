@@ -332,11 +332,10 @@ class KiemKhoApiController extends Controller
                                 'han_su_dung' => $d->han_su_dung,
                                 'so_luong_con_lai' => 0,
                             ]);
-                            // Trừ tồn trực tiếp ở chi_tiet_lo_hang
+                            // Trừ tồn trực tiếp ở chi_tiet_lo_hang.
+                            // ChiTietLoHangObserver sẽ tự tính SUM lại tổng tồn
+                            // trên bien_the_san_pham sau khi ChiTietLoHang thay đổi.
                             ChiTietLoHang::where('id', $d->id_chi_tiet_lo_hang)
-                                ->decrement('so_luong_ton', $absLech);
-                            // Đồng bộ tồn tổng ở bien_the_san_pham
-                            BienTheSanPham::where('id', $vid)
                                 ->decrement('so_luong_ton', $absLech);
                         }
                     }
@@ -377,11 +376,10 @@ class KiemKhoApiController extends Controller
                                 'han_su_dung' => $d->han_su_dung,
                                 'so_luong_con_lai' => $slDu,
                             ]);
-                            // Cộng tồn trực tiếp ở chi_tiet_lo_hang
+                            // Cộng tồn trực tiếp ở chi_tiet_lo_hang.
+                            // ChiTietLoHangObserver tự đồng bộ tổng tồn
+                            // trên bien_the_san_pham.
                             ChiTietLoHang::where('id', $d->id_chi_tiet_lo_hang)
-                                ->increment('so_luong_ton', $slDu);
-                            // Đồng bộ tồn tổng
-                            BienTheSanPham::where('id', $vid)
                                 ->increment('so_luong_ton', $slDu);
                         }
                     }
