@@ -155,10 +155,6 @@
                                         'transfer' => 'Chuyển khoản',
                                         'chuyen_khoan' => 'Chuyển khoản',
                                         'Chuyển khoản' => 'Chuyển khoản',
-
-                                        'card' => 'Quẹt thẻ',
-                                        'quet_the' => 'Quẹt thẻ',
-                                        'Quẹt thẻ' => 'Quẹt thẻ',
                                     ];
 
                                     $tenPttt = $pttt[$hoaDon->phuong_thuc_thanh_toan] 

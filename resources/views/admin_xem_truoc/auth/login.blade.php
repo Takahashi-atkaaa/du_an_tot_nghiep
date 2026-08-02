@@ -142,7 +142,7 @@
 
                 <div class="text-end mb-3">
                     <a href="{{ url('/admin/quen-mat-khau') }}" class="text-decoration-none small">
-                        Quên mật khẩu?
+                      <h1>tung anh</h1>  Quên mật khẩu?
                     </a>
                 </div>
                 

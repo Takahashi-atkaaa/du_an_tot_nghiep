@@ -16,12 +16,11 @@
         <button onclick="window.print()" class="btn btn-success">
             <i class="fas fa-print me-1"></i> In hóa đơn
         </button>
-        @if($hoaDon->trang_thai !== 'Đã hủy')
-    <a href="{{ route('admin.hoa-don.tra-hang', $hoaDon->id) }}"
-       class="btn btn-warning">
-        <i class="fas fa-undo me-1"></i> Trả hàng
-    </a>
-@endif
+        @if(!in_array($hoaDon->trang_thai, ['Đã hủy', 'Đã trả toàn bộ']))
+            <a href="{{ route('admin.hoa-don.doi-tra', $hoaDon->id) }}" class="btn btn-warning ms-2">
+                <i class="fas fa-exchange-alt me-1"></i> Đổi / Trả hàng
+            </a>
+        @endif
     </div>
 </div>
 
@@ -63,7 +62,15 @@
             <tbody>
                 @foreach($chiTiet as $item)
                     <tr>
-                        <td>{{ $item->ten_san_pham }}</td>
+                        <td>
+                            {{ $item->ten_san_pham }}
+                            @php
+                                $variantName = $item->ten_don_vi ?: $item->ten_bien_the;
+                            @endphp
+                            @if($variantName)
+                                <br><small class="text-muted">({{ $variantName }})</small>
+                            @endif
+                        </td>
                         <td>{{ $item->ma_vach ?? 'N/A' }}</td>
                         <td class="text-center">{{ $item->so_luong }}</td>
                         <td class="text-end">{{ number_format($item->gia_ban, 0, ',', '.') }}đ</td>
