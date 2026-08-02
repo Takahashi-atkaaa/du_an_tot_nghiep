@@ -364,6 +364,112 @@
 
 @section('modals')
 
+@php $today = date('Y-m-d'); @endphp
+
+{{-- ===================== MODAL: XUẤT EXCEL NHẬP HÀNG ===================== --}}
+<div class="modal fade" id="modal-xuat-pn" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="form-xuat-pn">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-file-excel me-2"></i>Xuất Excel nhập hàng</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Loại phiếu</label>
+                        <select id="xuat-pn-loai" class="form-select">
+                            <option value="">Tất cả loại</option>
+                            <option value="mua_hang">Nhập mua hàng</option>
+                            <option value="tra_lai_tu_khach">Trả lại từ khách</option>
+                        </select>
+                    </div>
+
+                    <label class="form-label">Khoảng thời gian</label>
+                    <div class="btn-group btn-group-sm d-flex flex-wrap mb-2" role="group">
+                        <button type="button" class="btn btn-outline-secondary pn-preset" data-preset="today">Hôm nay</button>
+                        <button type="button" class="btn btn-outline-secondary pn-preset" data-preset="7days">7 ngày qua</button>
+                        <button type="button" class="btn btn-outline-secondary pn-preset" data-preset="this_month">Tháng này</button>
+                        <button type="button" class="btn btn-outline-secondary pn-preset" data-preset="last_month">Tháng trước</button>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label small">Từ ngày</label>
+                            <input type="date" id="xuat-pn-tu" class="form-control" max="{{ $today }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small">Đến ngày</label>
+                            <input type="date" id="xuat-pn-den" class="form-control" max="{{ $today }}">
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-2">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Nếu bỏ trống cả 2 ô, hệ thống sẽ xuất toàn bộ dữ liệu.
+                    </small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-download me-1"></i>Tải Excel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- ===================== MODAL: XUẤT EXCEL XUẤT HÀNG ===================== --}}
+<div class="modal fade" id="modal-xuat-px" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="form-xuat-px">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-file-excel me-2"></i>Xuất Excel xuất hàng</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Loại phiếu</label>
+                        <select id="xuat-px-loai" class="form-select">
+                            <option value="">Tất cả loại</option>
+                            <option value="tieu_huy">Tiêu hủy</option>
+                            <option value="tra_hang_nha_cung_cap">Trả hàng NCC</option>
+                        </select>
+                    </div>
+
+                    <label class="form-label">Khoảng thời gian</label>
+                    <div class="btn-group btn-group-sm d-flex flex-wrap mb-2" role="group">
+                        <button type="button" class="btn btn-outline-secondary px-preset" data-preset="today">Hôm nay</button>
+                        <button type="button" class="btn btn-outline-secondary px-preset" data-preset="7days">7 ngày qua</button>
+                        <button type="button" class="btn btn-outline-secondary px-preset" data-preset="this_month">Tháng này</button>
+                        <button type="button" class="btn btn-outline-secondary px-preset" data-preset="last_month">Tháng trước</button>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label small">Từ ngày</label>
+                            <input type="date" id="xuat-px-tu" class="form-control" max="{{ $today }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small">Đến ngày</label>
+                            <input type="date" id="xuat-px-den" class="form-control" max="{{ $today }}">
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-2">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Nếu bỏ trống cả 2 ô, hệ thống sẽ xuất toàn bộ dữ liệu.
+                    </small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-download me-1"></i>Tải Excel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {{-- ===================== MODAL: THÊM NHÀ CUNG CẤP ===================== --}}
 <div class="modal fade" id="modal-them-ncc" tabindex="-1">
     <div class="modal-dialog">
