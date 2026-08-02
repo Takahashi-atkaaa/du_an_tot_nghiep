@@ -224,35 +224,6 @@ class NhanVienController extends Controller
     }
     public function laySanPham(Request $request)
     {
-        // #region agent log (H1/H2/H4/H5: investigate why AJAX fails over ngrok)
-        try {
-            $logFile = '/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-d7dcc7.log';
-            $payload = [
-                'sessionId' => 'd7dcc7',
-                'runId' => 'run1',
-                'hypothesisId' => 'H1,H2,H4,H5',
-                'location' => 'ban_hang/NhanVienController.php:laySanPham:entry',
-                'message' => 'laySanPham called',
-                'data' => [
-                    'auth_check' => auth()->check(),
-                    'user_id' => auth()->id(),
-                    'session_id' => session()->getId(),
-                    'session_domain' => config('session.domain'),
-                    'session_secure' => config('session.secure'),
-                    'session_driver' => config('session.driver'),
-                    'request_url' => $request->fullUrl(),
-                    'request_scheme' => $request->getScheme(),
-                    'request_host' => $request->getHost(),
-                    'isSecure' => $request->isSecure(),
-                    'cookie_header' => $request->headers->get('cookie'),
-                    'x_forwarded_proto' => $request->headers->get('x-forwarded-proto'),
-                ],
-                'timestamp' => time() * 1000,
-            ];
-            file_put_contents($logFile, json_encode($payload) . PHP_EOL, FILE_APPEND);
-        } catch (\Throwable $e) {}
-        // #endregion
-
         $query = DB::table('bien_the_san_pham')
             ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
             ->where('san_pham.trang_thai', 1)

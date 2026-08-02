@@ -166,25 +166,6 @@ class PayOSController extends Controller
             ]),
         ]);
 
-        // #region agent log (H1/H2: track status transition)
-        try {
-            $logFile = '/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-d7dcc7.log';
-            file_put_contents($logFile, json_encode([
-                'sessionId' => 'd7dcc7',
-                'runId' => 'run2',
-                'hypothesisId' => 'H1,H2',
-                'location' => 'PayOSController.php:webhook:statusUpdated',
-                'message' => 'GiaoDich status updated',
-                'data' => [
-                    'giao_dich_id' => $giaoDich->id,
-                    'trang_thai' => $trangThai,
-                    'will_complete_hoadon' => ($trangThai === 'thanh_cong'),
-                ],
-                'timestamp' => time() * 1000,
-            ]) . PHP_EOL, FILE_APPEND);
-        } catch (\Throwable $e2) {}
-        // #endregion
-
         if ($trangThai === 'thanh_cong') {
             $this->completeHoaDon($giaoDich);
         } elseif (in_array($trangThai, ['that_bai', 'hoan_tien'], true)) {
@@ -223,18 +204,6 @@ class PayOSController extends Controller
         try {
             $info = $this->payOS->getPaymentInfo($orderCode);
         } catch (\Throwable $e) {
-            try {
-                $logFile = '/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-d7dcc7.log';
-                file_put_contents($logFile, json_encode([
-                    'sessionId' => 'd7dcc7',
-                    'runId' => 'run3',
-                    'hypothesisId' => 'H1',
-                    'location' => 'PayOSController.php:syncFromPayOSApi:apiFailed',
-                    'message' => 'getPaymentInfo failed',
-                    'data' => ['orderCode' => (string) $orderCode, 'error' => $e->getMessage()],
-                    'timestamp' => time() * 1000,
-                ]) . PHP_EOL, FILE_APPEND);
-            } catch (\Throwable $e2) {}
             return;
         }
 
@@ -249,24 +218,6 @@ class PayOSController extends Controller
                 'return_sync' => $info instanceof \JsonSerializable ? $info->jsonSerialize() : (array) $info,
             ]),
         ]);
-
-        try {
-            $logFile = '/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-d7dcc7.log';
-            file_put_contents($logFile, json_encode([
-                'sessionId' => 'd7dcc7',
-                'runId' => 'run3',
-                'hypothesisId' => 'H1',
-                'location' => 'PayOSController.php:syncFromPayOSApi:updated',
-                'message' => 'GiaoDich status updated via return sync',
-                'data' => [
-                    'giao_dich_id' => $giaoDich->id,
-                    'status' => $statusValue instanceof \BackedEnum ? $statusValue->value : $statusValue,
-                    'trang_thai' => $trangThai,
-                    'will_complete_hoadon' => ($trangThai === 'thanh_cong'),
-                ],
-                'timestamp' => time() * 1000,
-            ]) . PHP_EOL, FILE_APPEND);
-        } catch (\Throwable $e) {}
 
         if ($trangThai === 'thanh_cong') {
             $this->completeHoaDon($giaoDich);
@@ -343,23 +294,6 @@ class PayOSController extends Controller
             $hoaDon = DB::table('hoa_don')->where('id', $giaoDich->id_hoa_don)->lockForUpdate()->first();
 
             if (!$hoaDon || $hoaDon->trang_thai === 'Hoàn thành') {
-                // #region agent log (H2: log if we skip update)
-                try {
-                    $logFile = '/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-d7dcc7.log';
-                    file_put_contents($logFile, json_encode([
-                        'sessionId' => 'd7dcc7',
-                        'runId' => 'run2',
-                        'hypothesisId' => 'H2',
-                        'location' => 'PayOSController.php:completeHoaDon:skipped',
-                        'message' => 'completeHoaDon skipped - already completed or not found',
-                        'data' => [
-                            'hoa_don_found' => $hoaDon ? true : false,
-                            'current_trang_thai' => $hoaDon->trang_thai ?? null,
-                        ],
-                        'timestamp' => time() * 1000,
-                    ]) . PHP_EOL, FILE_APPEND);
-                } catch (\Throwable $e) {}
-                // #endregion
                 return;
             }
 
@@ -405,21 +339,6 @@ class PayOSController extends Controller
                     'trang_thai' => 'Hoàn thành',
                     'updated_at' => now(),
                 ]);
-
-            // #region agent log (H2: log successful completion)
-            try {
-                $logFile = '/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-d7dcc7.log';
-                file_put_contents($logFile, json_encode([
-                    'sessionId' => 'd7dcc7',
-                    'runId' => 'run2',
-                    'hypothesisId' => 'H2',
-                    'location' => 'PayOSController.php:completeHoaDon:completed',
-                    'message' => 'HoaDon marked Hoàn thành',
-                    'data' => ['hoa_don_id' => $hoaDon->id],
-                    'timestamp' => time() * 1000,
-                ]) . PHP_EOL, FILE_APPEND);
-            } catch (\Throwable $e) {}
-            // #endregion
         });
     }
 
