@@ -121,6 +121,25 @@
                             <textarea name="ghi_chu" class="form-control" rows="2" id="pn-ghi-chu" placeholder="Ghi chú..."></textarea>
                         </div>
                     </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label d-block">Cách tạo lô <span class="text-danger">*</span></label>
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Chon cach tao lo">
+                                <input type="radio" class="btn-check" name="tao_lo_moi_ui" id="pn-tao-lo-moi" value="1" checked>
+                                <label class="btn btn-outline-success" for="pn-tao-lo-moi"><i class="fas fa-plus-circle me-1"></i>Tạo lô mới</label>
+
+                                <input type="radio" class="btn-check" name="tao_lo_moi_ui" id="pn-tao-lo-cu" value="0">
+                                <label class="btn btn-outline-primary" for="pn-tao-lo-cu"><i class="fas fa-boxes-stacked me-1"></i>Thêm vào lô có sẵn</label>
+                            </div>
+                        </div>
+                        <div class="col-md-8" id="pn-chon-lo-cu-wrapper" style="display:none;">
+                            <label class="form-label">Chọn lô có sẵn <span class="text-danger">*</span></label>
+                            <select id="pn-id-lo-hang" class="form-select">
+                                <option value="">-- Đang tải --</option>
+                            </select>
+                            <small class="text-muted">Hệ thống sẽ cộng dồn số lượng nếu cùng (biến thể + HSD).</small>
+                        </div>
+                    </div>
                     <hr>
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h6 class="mb-0 small">Chi tiết sản phẩm</h6>
@@ -135,9 +154,10 @@
                         <table class="table table-sm table-bordered mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th style="width:35%">Sản phẩm</th>
-                                    <th style="width:90px">SL nhập</th>
-                                    <th style="width:110px">Giá nhập</th>
+                                    <th style="width:30%">Sản phẩm / Biến thể</th>
+                                    <th style="width:18%">Đơn vị nhập</th>
+                                    <th style="width:80px">SL nhập</th>
+                                    <th style="width:120px">Giá nhập</th>
                                     <th style="width:130px">Hạn sử dụng</th>
                                     <th style="width:40px"></th>
                                 </tr>
@@ -275,9 +295,11 @@
 
 @section('scripts')
 <script>
-let sanPhamListNhap = [];
+let sanPhamTreeNhap = [];
+let sanPhamFlatNhap = [];
 let chiTietNhapIndex = 0;
 let currentPageNhap = 1;
+let pnProductMap = {};
 
 $(function () {
     taiSanPhamNhap();
@@ -287,6 +309,9 @@ $(function () {
     $('#btn-tao-phieu-nhap').click(function () {
         chiTietNhapIndex = 0;
         $('#form-tao-phieu-nhap')[0].reset();
+        $('input[name="tao_lo_moi_ui"][value="1"]').prop('checked', true);
+        $('#pn-chon-lo-cu-wrapper').hide();
+        $('#pn-id-lo-hang').html('<option value="">-- Đang tải --</option>');
         $('#danh-sach-sp-nhap').html('');
         addPnRow();
         new bootstrap.Modal(document.getElementById('modal-tao-phieu-nhap')).show();
@@ -304,10 +329,26 @@ $(function () {
         if ($('#danh-sach-sp-nhap tr').length > 1) $(this).closest('tr').remove();
     });
 
+    // Đổi variant → cập nhật dropdown đơn vị + gợi ý đơn giá
+    $(document).on('change', '.pn-sp-select', function () {
+        const $row = $(this).closest('tr');
+        rebuildDonViSelect($row);
+        capNhatXemTruocQuyDoi($row);
+    });
+
+    // Đổi đơn vị / số lượng / giá → cập nhật xem trước
+    $(document).on('input change', '.pn-sl-input, .pn-gia-input, .pn-dv-select', function () {
+        capNhatXemTruocQuyDoi($(this).closest('tr'));
+    });
+
     $('#form-tao-phieu-nhap').submit(function (e) {
         e.preventDefault();
         const data = layDuLieuFormNhap();
         if (!data.chi_tiet.length) { hienThongBao('warning', 'Thêm ít nhất một sản phẩm.'); return; }
+        if (data.tao_lo_moi === '0' && !data.id_lo_hang) {
+            hienThongBao('warning', 'Vui lòng chọn lô có sẵn để thêm vào.');
+            return;
+        }
         $.ajax({ url: '/admin/api/phieu-nhap', method: 'POST', contentType: 'application/json', data: JSON.stringify(data),
             success: res => {
                 bootstrap.Modal.getInstance(document.getElementById('modal-tao-phieu-nhap')).hide();
@@ -464,7 +505,21 @@ $(function () {
 });
 
 function taiSanPhamNhap() {
-    $.get('/admin/api/san-pham', res => { sanPhamListNhap = res.data?.data || []; });
+    $.get('/admin/api/san-pham', res => {
+        sanPhamTreeNhap = res.data?.data || [];
+        pnProductMap = {};
+        sanPhamFlatNhap = [];
+        sanPhamTreeNhap.forEach(sp => {
+            (sp.bien_the || []).forEach(bt => {
+                pnProductMap[bt.id] = {
+                    variant: bt,
+                    product: sp,
+                    units: bt.units || [],
+                };
+                sanPhamFlatNhap.push(bt);
+            });
+        });
+    });
 }
 
 function taiNhaCungCapNhap() {
@@ -475,35 +530,170 @@ function taiNhaCungCapNhap() {
     });
 }
 
+function variantOptionsHtml(selectedId) {
+    if (!sanPhamTreeNhap.length) {
+        return '<option value="">-- Đang tải sản phẩm --</option>';
+    }
+    const opts = [];
+    sanPhamTreeNhap.forEach(sp => {
+        const variants = sp.bien_the || [];
+        variants.forEach(bt => {
+            const tenBt = bt.ten_bien_the ? ` - ${bt.ten_bien_the}` : '';
+            const code = bt.ma_vach || bt.id;
+            const label = `${sp.ten_san_pham}${tenBt} (${code})`;
+            opts.push(`<option value="${bt.id}" ${String(bt.id) === String(selectedId) ? 'selected' : ''}>${escapeHtml(label)}</option>`);
+        });
+    });
+    return opts.join('');
+}
+
+function escapeHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function addPnRow(id, sl, gia, hsd) {
     const idx = chiTietNhapIndex++;
-    const opts = sanPhamListNhap.map(sp => `<option value="${sp.id}" ${sp.id == id ? 'selected' : ''}>${sp.ten_san_pham} (${sp.ma_vach || sp.id})</option>`).join('');
-    $('#danh-sach-sp-nhap').append(`<tr>
-        <td><select class="form-select form-select-sm" name="chi_tiet[${idx}][id_san_pham]">${opts || '<option value="">-- Chọn --</option>'}</select></td>
-        <td><input type="number" class="form-control form-control-sm" name="chi_tiet[${idx}][so_luong_nhap]" value="${sl || 1}" min="1"></td>
-        <td><input type="number" class="form-control form-control-sm" name="chi_tiet[${idx}][gia_nhap]" value="${gia || 0}" min="0" step="100"></td>
+    const variants = variantOptionsHtml(id);
+    $('#danh-sach-sp-nhap').append(`<tr data-idx="${idx}">
+        <td>
+            <select class="form-select form-select-sm pn-sp-select" name="chi_tiet[${idx}][variant_id]">${variants}</select>
+            <input type="hidden" class="pn-he-so-hidden" name="chi_tiet[${idx}][so_luong_san_pham_trong_don_vi]" value="1">
+        </td>
+        <td>
+            <select class="form-select form-select-sm pn-dv-select" name="chi_tiet[${idx}][don_vi_id]">
+                <option value="">-- Đang tải --</option>
+            </select>
+            <small class="text-muted pn-dv-hint d-block mt-1">Đơn vị cơ bản</small>
+        </td>
+        <td>
+            <input type="number" class="form-control form-control-sm pn-sl-input" name="chi_tiet[${idx}][so_luong_nhap]" value="${sl || 1}" min="0.0001" step="0.0001">
+            <small class="text-muted pn-sl-hint d-block mt-1">SL theo đơn vị đã chọn</small>
+        </td>
+        <td>
+            <input type="number" class="form-control form-control-sm pn-gia-input" name="chi_tiet[${idx}][gia_nhap]" value="${gia || 0}" min="0" step="100">
+            <small class="text-muted pn-gia-hint d-block mt-1">đơn giá / đơn vị đã chọn</small>
+        </td>
         <td><input type="date" class="form-control form-control-sm" name="chi_tiet[${idx}][han_su_dung]" value="${hsd || ''}"></td>
         <td><button type="button" class="btn btn-sm btn-outline-danger btn-remove-sp-nhap"><i class="fas fa-times"></i></button></td>
     </tr>`);
+    if (id) {
+        const $row = $('#danh-sach-sp-nhap tr').last();
+        rebuildDonViSelect($row);
+        capNhatXemTruocQuyDoi($row);
+    } else {
+        const $row = $('#danh-sach-sp-nhap tr').last();
+        rebuildDonViSelect($row);
+        capNhatXemTruocQuyDoi($row);
+    }
+}
+
+function rebuildDonViSelect($row) {
+    const variantId = $row.find('.pn-sp-select').val();
+    const $dv = $row.find('.pn-dv-select');
+    const $heSo = $row.find('.pn-he-so-hidden');
+    const $gia = $row.find('.pn-gia-input');
+
+    if (!variantId || !pnProductMap[variantId]) {
+        $dv.html('<option value="">-- Chọn sản phẩm trước --</option>');
+        $heSo.val(1);
+        return;
+    }
+    const data = pnProductMap[variantId];
+    const variant = data.variant;
+    const baseUnitLabel = variant.ten_don_vi || 'đơn vị cơ bản';
+
+    const opts = [`<option value="" data-he-so="1" data-ten="${escapeHtml(baseUnitLabel)}" selected>${escapeHtml(baseUnitLabel)} (đơn vị cơ bản)</option>`];
+    (data.units || []).forEach(u => {
+        const heSo = u.so_luong_san_pham_trong_don_vi || 1;
+        opts.push(`<option value="${u.id}" data-he-so="${heSo}" data-ten="${escapeHtml(u.ten_don_vi)}">${escapeHtml(u.ten_don_vi)} (×${heSo})</option>`);
+    });
+    $dv.html(opts.join(''));
+    $heSo.val(1);
+
+    if (!$gia.val() || Number($gia.val()) === 0) {
+        $gia.val(variant.gia_ban || 0);
+    }
+}
+
+function capNhatXemTruocQuyDoi($row) {
+    const sl = parseFloat($row.find('.pn-sl-input').val()) || 0;
+    const gia = parseFloat($row.find('.pn-gia-input').val()) || 0;
+    const $dv = $row.find('.pn-dv-select');
+    const $heSo = $row.find('.pn-he-so-hidden');
+    const opt = $dv.find('option:selected');
+    const heSo = parseFloat(opt.data('he-so')) || 1;
+    const tenDonVi = opt.data('ten') || 'đơn vị cơ bản';
+
+    const variantId = $row.find('.pn-sp-select').val();
+    const data = variantId && pnProductMap[variantId] ? pnProductMap[variantId].variant : null;
+    const tenCoBan = data ? (data.ten_don_vi || 'đơn vị cơ bản') : 'đơn vị cơ bản';
+
+    $heSo.val(heSo);
+
+    if (heSo === 1) {
+        $row.find('.pn-dv-hint').text('Đơn vị cơ bản');
+        $row.find('.pn-sl-hint').html(`= <strong>${sl.toLocaleString()}</strong> ${escapeHtml(tenCoBan)}`);
+        $row.find('.pn-gia-hint').html(`đơn giá / ${escapeHtml(tenCoBan)}`);
+    } else {
+        const tong = sl * heSo;
+        const donGiaCoBan = gia / heSo;
+        $row.find('.pn-dv-hint').html(`1 ${escapeHtml(tenDonVi)} = ${heSo} ${escapeHtml(tenCoBan)}`);
+        $row.find('.pn-sl-hint').html(`= <strong class="text-primary">${tong.toLocaleString()}</strong> ${escapeHtml(tenCoBan)}`);
+        $row.find('.pn-gia-hint').html(`đơn giá / ${escapeHtml(tenDonVi)} → <strong class="text-info">${donGiaCoBan.toLocaleString(undefined, {maximumFractionDigits: 2})}</strong> / ${escapeHtml(tenCoBan)}`);
+    }
 }
 
 function layDuLieuFormNhap() {
     const chi_tiet = [];
     $('#danh-sach-sp-nhap tr').each(function () {
-        const sp = $(this).find('select').val();
-        const sl = $(this).find('input[name*="so_luong_nhap"]').val();
-        const gia = $(this).find('input[name*="gia_nhap"]').val();
-        const hsd = $(this).find('input[name*="han_su_dung"]').val();
-        if (sp) chi_tiet.push({ id_san_pham: sp, so_luong: sl, so_luong_nhap: sl, gia_nhap: gia, han_su_dung: hsd });
+        const variant_id = $(this).find('.pn-sp-select').val();
+        const don_vi_id = $(this).find('.pn-dv-select').val();
+        const so_luong_nhap = $(this).find('.pn-sl-input').val();
+        const gia_nhap = $(this).find('.pn-gia-input').val();
+        const han_su_dung = $(this).find('input[type="date"]').val();
+        if (variant_id) {
+            chi_tiet.push({
+                variant_id,
+                don_vi_id: don_vi_id || null,
+                so_luong_nhap,
+                gia_nhap,
+                han_su_dung,
+            });
+        }
     });
+
+    const taoLoMoi = $('input[name="tao_lo_moi_ui"]:checked').val() || '1';
+    const idLoHang = taoLoMoi === '0' ? ($('#pn-id-lo-hang').val() || '') : '';
+
     return {
         loai_nhap: $('#pn-loai-nhap').val(),
         id_nha_cung_cap: $('#pn-id-ncc').val() || null,
         ghi_chu: $('#pn-ghi-chu').val(),
-        tao_lo_moi: '1',
-        id_lo_hang: '',
+        tao_lo_moi: taoLoMoi,
+        id_lo_hang: idLoHang,
         chi_tiet,
     };
+}
+
+function taiDanhSachLoHangNhap() {
+    $.get('/admin/api/phieu-nhap/danh-sach-lo-hang', res => {
+        const items = (res && res.data) || [];
+        if (!items.length) {
+            $('#pn-id-lo-hang').html('<option value="">-- Chưa có lô nào --</option>');
+            return;
+        }
+        const opts = ['<option value="">-- Chọn lô --</option>'].concat(items.map(l => {
+            const ma = l.ma_lo || ('L-' + l.id);
+            const ngay = l.ngay_nhap ? String(l.ngay_nhap).slice(0, 10) : '';
+            const ncc = l.nha_cung_cap?.ten_nha_cung_cap || '';
+            const slBienThe = (l.chi_tiet_lo_hang || []).length;
+            return `<option value="${l.id}">${ma} | ${ngay} | ${ncc} | ${slBienThe} biến thể</option>`;
+        }));
+        $('#pn-id-lo-hang').html(opts.join(''));
+    }).fail(() => {
+        $('#pn-id-lo-hang').html('<option value="">-- Lỗi tải lô --</option>');
+    });
 }
 
 function taiPhieuNhap(page = 1) {

@@ -4,15 +4,18 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Imports\PhieuNhapImport;
+use App\Exports\PhieuNhapDanhSachExport;
 use App\Models\Phieu;
 use App\Models\PhieuNhap;
 use App\Models\LoHang;
 use App\Models\ChiTietLoHang;
 use App\Models\ChiTietPhieu;
 use App\Models\BienTheSanPham;
+use App\Models\DonViQuyDoi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -89,10 +92,10 @@ class PhieuNhapApiController extends Controller
             'id_lo_hang' => 'required_if:tao_lo_moi,0|nullable|integer|exists:lo_hang,id',
             'chi_tiet' => 'required|array|min:1',
             'chi_tiet.*.variant_id' => 'required|integer|exists:bien_the_san_pham,id',
-            'chi_tiet.*.don_vi_id' => 'nullable|string|max:50',
+            'chi_tiet.*.don_vi_id' => 'nullable',
             'chi_tiet.*.so_luong_san_pham_trong_don_vi' => 'nullable|integer|min:1',
-            'chi_tiet.*.so_luong_nhap' => 'required|integer|min:1',
-            'chi_tiet.*.so_luong_thuc' => 'nullable|integer|min:0',
+            'chi_tiet.*.so_luong_nhap' => 'required|numeric|min:0.0001',
+            'chi_tiet.*.so_luong_thuc' => 'nullable|numeric|min:0',
             'chi_tiet.*.gia_nhap' => 'required|numeric|min:0',
             'chi_tiet.*.han_su_dung' => 'required|date',
         ], [
@@ -102,7 +105,7 @@ class PhieuNhapApiController extends Controller
             'id_lo_hang.required_if' => 'Vui lòng chọn lô hàng khi không tạo lô mới.',
         ]);
 
-        $loaiPhieuEnum = $data['loai_nhap'] === 'mua_hang' ? 'nhap_mua_hang' : 'nhap_tra_lai_tu_khach';
+            $loaiPhieuEnum = $data['loai_nhap'] === 'mua_hang' ? 'nhap_mua_hang' : 'nhap_tra_lai_tu_khach';
 
         $result = DB::transaction(function () use ($data, $loaiPhieuEnum) {
             $idNguoiDung = auth()->id();
@@ -124,105 +127,75 @@ class PhieuNhapApiController extends Controller
                 'ghi_chu' => $data['ghi_chu'] ?? null,
             ]);
 
-            if ($data['tao_lo_moi'] == '1') {
-                $variantIds = collect($data['chi_tiet'])->pluck('variant_id')->unique()->all();
-                $variantMap = BienTheSanPham::whereIn('id', $variantIds)
-                    ->pluck('product_id', 'id')
-                    ->toArray();
+            $variantIds = collect($data['chi_tiet'])->pluck('variant_id')->unique()->all();
+            $variants = BienTheSanPham::whereIn('id', $variantIds)->get()->keyBy('id');
 
+            $unitLookup = $this->resolveDonViLookup($data['chi_tiet'], $variants);
+
+            if ($data['tao_lo_moi'] == '1') {
                 $loHang = LoHang::create([
                     'id_phieu' => $phieu->id,
                     'id_nha_cung_cap' => $data['id_nha_cung_cap'] ?? null,
+                    'ma_lo' => 'PN-' . $phieu->id,
                     'ngay_nhap' => now()->toDateString(),
                 ]);
-
-                foreach ($data['chi_tiet'] as $ct) {
-                    // Tính số lượng thực (đã quy đổi về đơn vị cơ bản nếu user nhập theo đơn vị quy đổi)
-                    $soLuongTrongDonVi = (int)($ct['so_luong_san_pham_trong_don_vi'] ?? 1);
-                    $slNhap = (int)$ct['so_luong_nhap'];
-                    $slThuc = $soLuongTrongDonVi > 1
-                        ? (int)($ct['so_luong_thuc'] ?? ($slNhap * $soLuongTrongDonVi))
-                        : $slNhap;
-
-                    // Tính ghi chú cho chi_tiet_phieu (lưu thông tin đơn vị nhập)
-                    $donViNhap = $soLuongTrongDonVi > 1
-                        ? "Nhập {$slNhap} đơn vị quy đổi × {$soLuongTrongDonVi}"
-                        : null;
-
-                    $chiTietLoHang = ChiTietLoHang::create([
-                        'id_lo_hang' => $loHang->id,
-                        'id_san_pham' => $variantMap[$ct['variant_id']] ?? null,
-                        'variant_id' => $ct['variant_id'],
-                        'so_luong_nhap' => $slThuc,
-                        'so_luong_ton' => $slThuc,
-                        'gia_nhap' => $ct['gia_nhap'],
-                        'han_su_dung' => $ct['han_su_dung'],
-                    ]);
-
-                    ChiTietPhieu::create([
-                        'id_phieu' => $phieu->id,
-                        'id_san_pham' => $variantMap[$ct['variant_id']] ?? null,
-                        'variant_id' => $ct['variant_id'],
-                        'id_lo_hang' => $loHang->id,
-                        'id_chi_tiet_lo_hang' => $chiTietLoHang->id,
-                        'so_luong' => $slThuc,
-                        'gia_nhap' => $ct['gia_nhap'],
-                        'han_su_dung' => $ct['han_su_dung'],
-                        'so_luong_con_lai' => $slThuc,
-                        'ghi_chu' => $donViNhap,
-                    ]);
-                }
+                $maLo = $loHang->ma_lo;
             } else {
-                $idLoHang = $data['id_lo_hang'];
-                $variantIds = collect($data['chi_tiet'])->pluck('variant_id')->unique()->all();
-                $variantMap = BienTheSanPham::whereIn('id', $variantIds)
-                    ->pluck('product_id', 'id')
-                    ->toArray();
+                $loHang = LoHang::findOrFail($data['id_lo_hang']);
+                $maLo = $loHang->ma_lo ?: ('L-' . $loHang->id);
+            }
 
-                foreach ($data['chi_tiet'] as $ct) {
-                    $soLuongTrongDonVi = (int)($ct['so_luong_san_pham_trong_don_vi'] ?? 1);
-                    $slNhap = (int)$ct['so_luong_nhap'];
-                    $slThuc = $soLuongTrongDonVi > 1
-                        ? (int)($ct['so_luong_thuc'] ?? ($slNhap * $soLuongTrongDonVi))
-                        : $slNhap;
+            foreach ($data['chi_tiet'] as $ct) {
+                $normalized = $this->normalizeChiTiet($ct, $variants, $unitLookup);
 
-                    $donViNhap = $soLuongTrongDonVi > 1
-                        ? "Nhập {$slNhap} đơn vị quy đổi × {$soLuongTrongDonVi}"
-                        : null;
+                // UPSERT chi_tiet_lo_hang theo (id_lo_hang, variant_id, han_su_dung)
+                // Nếu đã có: cộng dồn số lượng + giá bình quân gia quyền
+                // Nếu chưa: tạo mới với số lượng + giá chuẩn hóa về đơn vị cơ bản
+                $chiTietLoHang = ChiTietLoHang::firstOrNew([
+                    'id_lo_hang' => $loHang->id,
+                    'variant_id' => $normalized['variant_id'],
+                    'han_su_dung' => $ct['han_su_dung'],
+                ]);
 
-                    $chiTietLoHang = ChiTietLoHang::where('id_lo_hang', $idLoHang)
-                        ->where('variant_id', $ct['variant_id'])
-                        ->whereDate('han_su_dung', $ct['han_su_dung'])
-                        ->first();
+                $isExisting = $chiTietLoHang->exists;
 
-                    ChiTietLoHang::create([
-                        'id_lo_hang' => $idLoHang,
-                        'id_san_pham' => $variantMap[$ct['variant_id']] ?? null,
-                        'variant_id' => $ct['variant_id'],
-                        'so_luong_nhap' => $slThuc,
-                        'so_luong_ton' => $slThuc,
-                        'gia_nhap' => $ct['gia_nhap'],
-                        'han_su_dung' => $ct['han_su_dung'],
-                    ]);
+                $chiTietLoHang->id_san_pham = $normalized['product_id'];
 
-                    ChiTietPhieu::create([
-                        'id_phieu' => $phieu->id,
-                        'id_san_pham' => $variantMap[$ct['variant_id']] ?? null,
-                        'variant_id' => $ct['variant_id'],
-                        'id_lo_hang' => $idLoHang,
-                        'id_chi_tiet_lo_hang' => $chiTietLoHang?->id,
-                        'so_luong' => $slThuc,
-                        'gia_nhap' => $ct['gia_nhap'],
-                        'han_su_dung' => $ct['han_su_dung'],
-                        'so_luong_con_lai' => $slThuc,
-                        'ghi_chu' => $donViNhap,
-                    ]);
+                if ($isExisting) {
+                    $oldQty = (int)$chiTietLoHang->so_luong_nhap;
+                    $oldPrice = (float)$chiTietLoHang->gia_nhap;
+                    $newQty = $oldQty + (int)$normalized['so_luong_co_ban'];
+                    $chiTietLoHang->so_luong_nhap = $newQty;
+                    $chiTietLoHang->so_luong_ton += (int)$normalized['so_luong_co_ban'];
+                    $chiTietLoHang->gia_nhap = $newQty > 0
+                        ? round((($oldPrice * $oldQty) + ($normalized['gia_nhap_co_ban'] * $normalized['so_luong_co_ban'])) / $newQty, 2)
+                        : $normalized['gia_nhap_co_ban'];
+                } else {
+                    $chiTietLoHang->so_luong_nhap = (int)$normalized['so_luong_co_ban'];
+                    $chiTietLoHang->so_luong_ton = (int)$normalized['so_luong_co_ban'];
+                    $chiTietLoHang->gia_nhap = $normalized['gia_nhap_co_ban'];
                 }
+
+                $chiTietLoHang->save();
+
+                ChiTietPhieu::create([
+                    'id_phieu' => $phieu->id,
+                    'id_san_pham' => $normalized['product_id'],
+                    'variant_id' => $normalized['variant_id'],
+                    'id_lo_hang' => $loHang->id,
+                    'id_chi_tiet_lo_hang' => $chiTietLoHang->id,
+                    'so_luong' => $normalized['so_luong_co_ban'],
+                    'gia_nhap' => $normalized['gia_nhap_co_ban'],
+                    'ma_lo' => $maLo,
+                    'han_su_dung' => $ct['han_su_dung'],
+                    'so_luong_con_lai' => $normalized['so_luong_co_ban'],
+                    'ghi_chu' => $normalized['ghi_chu'],
+                ]);
             }
 
             // ChiTietLoHangObserver đã tự động đồng bộ tổng tồn
-            // trên bien_the_san_pham.so_luong_ton sau khi ChiTietLoHang::create()
-            // chạy ở các nhánh tao_lo_moi = 1 / 0 phía trên.
+            // trên bien_the_san_pham.so_luong_ton sau khi ChiTietLoHang::save()
+            // (gọi INSERT/UPDATE qua firstOrNew ở trên).
             // Không cần increment thủ công ở đây nữa (trước đây gây double-counting).
 
             return $phieuNhap->load('phieu', 'chiTietPhieu.variant', 'chiTietPhieu.chiTietLoHang');
@@ -233,6 +206,113 @@ class PhieuNhapApiController extends Controller
             'message' => 'Tạo phiếu nhập thành công.',
             'data' => $result,
         ], 201);
+    }
+
+    /**
+     * Xác thực và chuẩn hóa một dòng chi tiết phiếu nhập:
+     *  - Kiểm tra don_vi_id (nếu có) thuộc đúng variant_id
+     *  - Lấy hệ số quy đổi từ hệ thống, BỎ QUA giá trị client gửi lên
+     *  - Quy đổi số lượng & giá về đơn vị cơ bản
+     *  - Trả về cấu trúc dùng chung cho cả nhánh tạo lô mới và lô có sẵn
+     */
+    private function normalizeChiTiet(array $ct, $variants, array $unitLookup): array
+    {
+        $variantId = (int)$ct['variant_id'];
+        $variant = $variants->get($variantId);
+
+        if (!$variant) {
+            throw ValidationException::withMessages([
+                "chi_tiet.{$variantId}.variant_id" => 'Variant không tồn tại.',
+            ]);
+        }
+
+        $donViIdRaw = $ct['don_vi_id'] ?? null;
+        $donViId = ($donViIdRaw === '' || $donViIdRaw === null || $donViIdRaw === '__base__') ? null : (int)$donViIdRaw;
+
+        $heSoQuyDoi = 1;
+        $tenDonViNhap = null;
+
+        if ($donViId !== null) {
+            $unit = $unitLookup[$variantId][$donViId] ?? null;
+            if (!$unit) {
+                throw ValidationException::withMessages([
+                    "chi_tiet.{$variantId}.don_vi_id" => 'Đơn vị quy đổi không thuộc biến thể đã chọn.',
+                ]);
+            }
+            $heSoQuyDoi = (float)$unit->so_luong_san_pham_trong_don_vi;
+            if ($heSoQuyDoi < 1) {
+                throw ValidationException::withMessages([
+                    "chi_tiet.{$variantId}.don_vi_id" => 'Hệ số đơn vị không hợp lệ.',
+                ]);
+            }
+            $tenDonViNhap = $unit->ten_don_vi;
+        }
+
+        $slNhap = (float)$ct['so_luong_nhap'];
+        if ($slNhap <= 0) {
+            throw ValidationException::withMessages([
+                "chi_tiet.{$variantId}.so_luong_nhap" => 'Số lượng nhập phải lớn hơn 0.',
+            ]);
+        }
+
+        $soLuongCoBan = round($slNhap * $heSoQuyDoi, 4);
+
+        $giaNhapNhap = (float)$ct['gia_nhap'];
+        if ($giaNhapNhap < 0) {
+            throw ValidationException::withMessages([
+                "chi_tiet.{$variantId}.gia_nhap" => 'Giá nhập không được âm.',
+            ]);
+        }
+        // Giá nhập luôn lưu theo đơn vị cơ bản; nếu user nhập theo đơn vị quy đổi thì chia cho hệ số
+        $giaNhapCoBan = $heSoQuyDoi > 1
+            ? round($giaNhapNhap / $heSoQuyDoi, 2)
+            : round($giaNhapNhap, 2);
+
+        $ghiChu = null;
+        if ($heSoQuyDoi > 1) {
+            $ghiChu = sprintf(
+                'Nhập %s %s × %s (hệ số) = %s %s',
+                rtrim(rtrim(number_format($slNhap, 2, '.', ''), '0'), '.'),
+                $tenDonViNhap ?: 'đơn vị quy đổi',
+                rtrim(rtrim(number_format($heSoQuyDoi, 2, '.', ''), '0'), '.'),
+                rtrim(rtrim(number_format($soLuongCoBan, 2, '.', ''), '0'), '.'),
+                $variant->ten_don_vi ?: 'đơn vị cơ bản'
+            );
+        }
+
+        return [
+            'variant_id' => $variantId,
+            'product_id' => $variant->product_id,
+            'so_luong_co_ban' => $soLuongCoBan,
+            'gia_nhap_co_ban' => $giaNhapCoBan,
+            'ghi_chu' => $ghiChu,
+        ];
+    }
+
+    /**
+     * Chuẩn bị map: variant_id => don_vi_quy_doi.id => DonViQuyDoi (đã eager load sẵn)
+     * để tra cứu nhanh khi normalize từng dòng.
+     */
+    private function resolveDonViLookup(array $chiTiet, $variants): array
+    {
+        $donViIds = [];
+        foreach ($chiTiet as $ct) {
+            $donViIdRaw = $ct['don_vi_id'] ?? null;
+            if ($donViIdRaw === '' || $donViIdRaw === null || $donViIdRaw === '__base__') {
+                continue;
+            }
+            $donViIds[] = (int)$donViIdRaw;
+        }
+        $donViIds = array_values(array_unique(array_filter($donViIds)));
+
+        $lookup = [];
+        if (!empty($donViIds)) {
+            $units = DonViQuyDoi::whereIn('id', $donViIds)->get();
+            foreach ($units as $unit) {
+                $lookup[$unit->variant_id][$unit->id] = $unit;
+            }
+        }
+        return $lookup;
     }
 
     public function update(Request $request, int $id): JsonResponse
@@ -266,20 +346,53 @@ class PhieuNhapApiController extends Controller
 
     public function destroy(int $id): JsonResponse
     {
-        $phieuNhap = PhieuNhap::with('phieu')->find($id);
+        $phieuNhap = PhieuNhap::with('phieu.chiTietPhieu.chiTietLoHang')->find($id);
+
         if (!$phieuNhap) {
             return response()->json(['success' => false, 'message' => 'Phiếu nhập không tồn tại.'], 404);
         }
 
-        DB::transaction(function () use ($phieuNhap) {
-            ChiTietPhieu::where('id_phieu', $phieuNhap->id_phieu)->delete();
+        $idPhieu = $phieuNhap->id_phieu;
+
+        // Gom tất cả chi_tiet_lo_hang do phiếu này tạo (theo id_chi_tiet_lo_hang đã track trên chi_tiet_phieu)
+        $dsChiTietLoHang = ChiTietLoHang::whereHas('chiTietPhieu', fn($q) => $q->where('id_phieu', $idPhieu))->get();
+
+        // Neu bat ky chi_tiet_lo_hang nao con ton > 0 -> KHONG cho xoa
+        $conTon = $dsChiTietLoHang->where('so_luong_ton', '>', 0);
+        if ($conTon->isNotEmpty()) {
+            $maLoTon = $conTon->map(fn($ct) => $ct->loHang?->ma_lo ?: ('L-' . $ct->id_lo_hang))->unique()->implode(', ');
+            return response()->json([
+                'success' => false,
+                'message' => "Khong the xoa phieu nhap vi cac lo sau dang co ton: {$maLoTon}. Vui long xuat het hang truoc.",
+            ], 422);
+        }
+
+        DB::transaction(function () use ($phieuNhap, $idPhieu, $dsChiTietLoHang) {
+            // 1. Xoa chi_tiet_phieu (ChiTietPhieuObserver da la no-op sau khi sua)
+            ChiTietPhieu::where('id_phieu', $idPhieu)->delete();
+
+            // 2. Xoa chi_tiet_lo_hang (ChiTietLoHangObserver::deleted() se sync tong ton bien_the_san_pham)
+            $chiTietLoIds = $dsChiTietLoHang->pluck('id');
+            if ($chiTietLoIds->isNotEmpty()) {
+                ChiTietLoHang::whereIn('id', $chiTietLoIds)->delete();
+            }
+
+            // 3. Xoa lo_hang (chi xoa neu khong con chi_tiet_lo_hang nao tham chieu)
+            $idLoHang = $dsChiTietLoHang->pluck('id_lo_hang')->unique();
+            foreach ($idLoHang as $idLo) {
+                if (!ChiTietLoHang::where('id_lo_hang', $idLo)->exists()) {
+                    LoHang::where('id', $idLo)->delete();
+                }
+            }
+
+            // 4. Cuoi cung xoa phieu + phieu_nhap
             $phieuNhap->phieu->delete();
             $phieuNhap->delete();
         });
 
         return response()->json([
             'success' => true,
-            'message' => 'Đã xóa phiếu nhập.',
+            'message' => 'Da xoa phieu nhap.',
         ]);
     }
 
@@ -451,24 +564,31 @@ class PhieuNhapApiController extends Controller
 
             $errors = $import->getErrors();
             $rowCount = $import->getRowCount();
+            $insertedCount = $import->getInsertedCount();
 
-            if (!empty($errors) && $rowCount === 0) {
+            // Truong hop 1: Khong co dong nao duoc insert (tat ca loi)
+            if ($insertedCount === 0) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Import thất bại: ' . implode(' | ', array_slice($errors, 0, 5)),
                     'errors' => $errors,
+                    'row_count' => 0,
+                    'inserted_count' => 0,
                 ], 422);
             }
 
-            $msg = "Import thành công $rowCount dòng.";
+            // Truong hop 2: Co it nhat 1 dong insert thanh cong
+            $msg = "Import thành công {$insertedCount}/{$rowCount} dòng.";
             if (!empty($errors)) {
-                $msg .= ' Một số dòng bị lỗi: ' . implode('; ', array_slice($errors, 0, 3));
+                $msg .= ' Bỏ qua ' . count($errors) . ' dòng lỗi: ' . implode('; ', array_slice($errors, 0, 3));
             }
 
             return response()->json([
                 'success' => true,
                 'message' => $msg,
                 'row_count' => $rowCount,
+                'inserted_count' => $insertedCount,
+                'skipped_count' => $rowCount - $insertedCount,
                 'errors' => $errors,
             ]);
         } catch (\Exception $e) {
@@ -479,67 +599,60 @@ class PhieuNhapApiController extends Controller
         }
     }
 
-    public function exportDanhSach(Request $request): StreamedResponse
+    public function exportDanhSach(Request $request)
+    {
+        $filters = $this->parseDateRange($request);
+
+        // Validate loai_nhap neu co
+        if (!empty($filters['loai_nhap'])
+            && !in_array($filters['loai_nhap'], ['mua_hang', 'tra_lai_tu_khach'], true)
+        ) {
+            return response()->json(['success' => false, 'message' => 'loai_nhap khong hop le.'], 422);
+        }
+
+        $fileName = 'phieu-nhap-danh-sach-' . now()->format('Ymd_His') . '.xlsx';
+
+        return Excel::download(new PhieuNhapDanhSachExport($filters), $fileName);
+    }
+
+    /**
+     * Chuan hoa start_date/end_date tu Request.
+     *
+     * - start_date (YYYY-MM-DD) -> 'YYYY-MM-DD 00:00:00' (Carbon::startOfDay)
+     * - end_date   (YYYY-MM-DD) -> 'YYYY-MM-DD 23:59:59' (Carbon::endOfDay)
+     * - Neu end_date < start_date thi tra loi 422.
+     *
+     * Tra ve mang ['tu_ngay' => Carbon|null, 'den_ngay' => Carbon|null, 'loai_nhap' => ...].
+     */
+    private function parseDateRange(Request $request): array
     {
         $filters = [
             'loai_nhap' => $request->query('loai_nhap'),
-            'tu_ngay' => $request->query('tu_ngay'),
-            'den_ngay' => $request->query('den_ngay'),
+            'tu_ngay' => null,
+            'den_ngay' => null,
         ];
 
-        $query = PhieuNhap::with([
-            'phieu' => fn($p) => $p->with('nhaCungCap', 'nguoiDung'),
-            'chiTietPhieu',
-        ])
-            ->whereHas('phieu', fn($p) => $p->where('loai_phieu_enum', 'like', 'nhap%'))
-            ->orderByDesc('id');
+        $tu = $request->query('tu_ngay') ?? $request->query('start_date');
+        $den = $request->query('den_ngay') ?? $request->query('end_date');
 
-        if (!empty($filters['loai_nhap'])) {
-            $query->where('loai_nhap', $filters['loai_nhap']);
-        }
-        if (!empty($filters['tu_ngay'])) {
-            $query->whereDate('created_at', '>=', $filters['tu_ngay']);
-        }
-        if (!empty($filters['den_ngay'])) {
-            $query->whereDate('created_at', '<=', $filters['den_ngay']);
-        }
-
-        $phieuNhaps = $query->get();
-
-        $fileName = 'phieu-nhap-danh-sach-' . now()->format('Ymd_His') . '.csv';
-
-        return response()->stream(function () use ($phieuNhaps) {
-            $output = fopen('php://output', 'w');
-            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM for Excel UTF-8
-
-            fputcsv($output, [
-                'ID', 'Ma_phieu', 'Ngay_tao', 'Loai_nhap', 'Nha_cung_cap',
-                'Nguoi_tao', 'Tong_SP', 'Tong_so_luong', 'Tong_tien', 'Ghi_chu'
-            ], ';');
-
-            foreach ($phieuNhaps as $item) {
-                $chiTiet = $item->chiTietPhieu ?? collect();
-                $tongTien = $chiTiet->sum(fn($ct) => $ct->so_luong * $ct->gia_nhap);
-
-                fputcsv($output, [
-                    $item->id,
-                    'PN' . str_pad($item->id, 5, '0', STR_PAD_LEFT),
-                    $item->created_at->format('d/m/Y H:i'),
-                    $item->loai_nhap === 'mua_hang' ? 'Mua hang' : 'Tra lai tu khach',
-                    $item->phieu->nhaCungCap->ten_nha_cung_cap ?? 'Khong co',
-                    $item->phieu->nguoiDung->ho_ten ?? 'N/A',
-                    $chiTiet->count(),
-                    $chiTiet->sum('so_luong'),
-                    number_format($tongTien, 0, ',', '.'),
-                    $item->ghi_chu ?? '',
-                ], ';');
+        try {
+            if (!empty($tu)) {
+                $filters['tu_ngay'] = \Carbon\Carbon::createFromFormat('Y-m-d', $tu)->startOfDay();
             }
+            if (!empty($den)) {
+                $filters['den_ngay'] = \Carbon\Carbon::createFromFormat('Y-m-d', $den)->endOfDay();
+            }
+        } catch (\Exception $e) {
+            // bo qua, de validator phia xu ly request xu ly neu can
+        }
 
-            fclose($output);
-        }, 200, [
-            'Content-Type' => 'text/csv; charset=utf-8',
-            'Content-Disposition' => "attachment; filename=\"$fileName\"",
-        ]);
+        if ($filters['tu_ngay'] && $filters['den_ngay']
+            && $filters['tu_ngay']->gt($filters['den_ngay'])
+        ) {
+            abort(422, 'Tu ngay phai nho hon hoac bang den ngay.');
+        }
+
+        return $filters;
     }
 
     public function exportChiTiet(int $id): StreamedResponse
@@ -547,6 +660,7 @@ class PhieuNhapApiController extends Controller
         $phieuNhap = PhieuNhap::with([
             'phieu' => fn($p) => $p->with('nhaCungCap', 'nguoiDung'),
             'chiTietPhieu.variant.product',
+            'chiTietPhieu.chiTietLoHang.loHang',
         ])->find($id);
 
         if (!$phieuNhap) {
@@ -571,7 +685,7 @@ class PhieuNhapApiController extends Controller
 
             // Table header
             fputcsv($output, [
-                'STT', 'San_pham', 'Ma_vach', 'So_luong', 'Gia_nhap', 'Thanh_tien', 'Han_su_dung'
+                'STT', 'San_pham', 'Bien_the', 'Ma_vach', 'Lo', 'So_luong', 'Gia_nhap', 'Thanh_tien', 'Han_su_dung'
             ], ';');
 
             // Data rows
@@ -583,11 +697,14 @@ class PhieuNhapApiController extends Controller
                 $tenSp = $ct->variant?->product?->ten_san_pham ?? '';
                 $tenBt = $ct->variant?->ten_bien_the ?? '';
                 $tenFull = $tenSp . ($tenBt ? ' - ' . $tenBt : '');
+                $maLo = $ct->chiTietLoHang?->loHang?->ma_lo ?: ($ct->ma_lo ?: ('L-' . ($ct->id_lo_hang ?? '')));
 
                 fputcsv($output, [
                     $stt++,
-                    $tenFull,
+                    $tenSp,
+                    $tenBt,
                     $ct->variant?->ma_vach ?? '',
+                    $maLo,
                     $ct->so_luong,
                     number_format($ct->gia_nhap, 0, ',', '.'),
                     number_format($thanhTien, 0, ',', '.'),
@@ -597,7 +714,7 @@ class PhieuNhapApiController extends Controller
 
             // Total
             fputcsv($output, [], ';');
-            fputcsv($output, ['', '', '', '', 'TONG CONG:', number_format($tongTien, 0, ',', '.')], ';');
+            fputcsv($output, ['', '', '', '', '', 'TONG CONG:', number_format($tongTien, 0, ',', '.')], ';');
 
             fclose($output);
         }, 200, [
