@@ -10,6 +10,29 @@ class KTVaiTro
 {
     public function handle(Request $request, Closure $next, ?string $permission = null): Response
     {
+        // #region agent log (H5: log middleware auth check + permission check)
+        try {
+            $logFile = '/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-d7dcc7.log';
+            $payload = [
+                'sessionId' => 'd7dcc7',
+                'runId' => 'run1',
+                'hypothesisId' => 'H5',
+                'location' => 'KTVaiTro.php:handle:entry',
+                'message' => 'KTVaiTro middleware entered',
+                'data' => [
+                    'path' => $request->path(),
+                    'method' => $request->method(),
+                    'auth_check' => auth()->check(),
+                    'user_id' => auth()->id(),
+                    'session_id' => $request->session()->getId(),
+                    'permission_required' => $permission,
+                ],
+                'timestamp' => time() * 1000,
+            ];
+            file_put_contents($logFile, json_encode($payload) . PHP_EOL, FILE_APPEND);
+        } catch (\Throwable $e) {}
+        // #endregion
+
         if (!auth()->check()) {
             return redirect()->route('admin.login');
         }

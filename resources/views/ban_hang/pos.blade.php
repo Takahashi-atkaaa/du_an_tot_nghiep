@@ -1190,9 +1190,9 @@ body {
                     <i class="fas fa-university"></i>
                     Chuyển khoản
                 </button>
-                <button class="pay-btn" data-method="card" onclick="selectPayment('card')">
-                    <i class="fas fa-credit-card"></i>
-                    Quẹt thẻ
+                <button class="pay-btn" data-method="payos" onclick="selectPayment('payos')">
+                    <i class="fas fa-qrcode"></i>
+                    PayOS
                 </button>
             </div>
 
@@ -1274,6 +1274,10 @@ function resolveImageUrl(path) {
 
 async function loadProducts() {
     try {
+        // #region agent log (H1/H3: capture URL, status, headers of the AJAX call)
+        fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d7dcc7'},body:JSON.stringify({sessionId:'d7dcc7',runId:'run1',hypothesisId:'H1,H3',location:'ban_hang/pos.blade.php:loadProducts:beforeFetch',message:'About to fetch products',data:{url:productListUrl,currentLocation:window.location.href,currentCookies:document.cookie},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+
         let url = productListUrl;
         const params = new URLSearchParams();
 
@@ -1295,6 +1299,10 @@ async function loadProducts() {
             headers: { 'Accept': 'application/json' }
         });
 
+        // #region agent log (H1/H3/H4: capture response status + content type from server)
+        fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d7dcc7'},body:JSON.stringify({sessionId:'d7dcc7',runId:'run1',hypothesisId:'H1,H3,H4',location:'ban_hang/pos.blade.php:loadProducts:afterFetch',message:'Fetch response received',data:{status:response.status,statusText:response.statusText,contentType:response.headers.get('content-type'),redirected:response.redirected,url:response.url,ok:response.ok},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+
         if (!response.ok) {
             throw new Error('Không thể tải sản phẩm từ server.');
         }
@@ -1303,6 +1311,9 @@ async function loadProducts() {
         renderProducts();
     } catch (error) {
         console.error('Lỗi tải sản phẩm:', error);
+        // #region agent log (H6: capture fetch failure details — typeError usually means CORS/network, other errors may be parse/auth)
+        fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d7dcc7'},body:JSON.stringify({sessionId:'d7dcc7',runId:'run4',hypothesisId:'H6',location:'ban_hang/pos.blade.php:loadProducts:catch',message:'Fetch threw an error',data:{errorName:error.name,errorMessage:error.message,errorCause:error.cause?String(error.cause):null,url:productListUrl,currentLocation:window.location.href,hasCookies:document.cookie.length>0},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         showToast('Không thể tải sản phẩm. Vui lòng kiểm tra đăng nhập hoặc route.', 'error');
     }
 }
@@ -2009,11 +2020,18 @@ const response = await fetch(checkoutUrl, {
             return;
         }
 
+        const hoaDonId = data.hoa_don_id;
+
+        if (data.redirect_to_payos) {
+            showToast('Đang tạo link thanh toán PayOS...', 'success');
+            await redirectToPayOS(hoaDonId);
+            return;
+        }
+
         showToast(
-            'Thanh toán thành công! Mã hóa đơn #' + data.hoa_don_id + ' đang mở bản in.',
+            'Thanh toán thành công! Mã hóa đơn #' + hoaDonId + ' đang mở bản in.',
             'success'
         );
-        const hoaDonId = data.hoa_don_id;
 
 // Đóng tab vừa thanh toán
 closePaidInvoiceTab();
@@ -2026,6 +2044,33 @@ printInvoiceImmediately(hoaDonId);
     } catch (error) {
         console.error(error);
         showToast('Lỗi kết nối máy chủ!', 'error');
+    }
+}
+
+async function redirectToPayOS(hoaDonId) {
+    try {
+        const res = await fetch('{{ route('payos.create') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ hoa_don_id: hoaDonId })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success || !data.checkout_url) {
+            showToast(data.message || 'Không tạo được link PayOS!', 'error');
+            return;
+        }
+
+        closePaidInvoiceTab();
+        loadProducts();
+        window.open(data.checkout_url, '_blank');
+    } catch (error) {
+        console.error(error);
+        showToast('Lỗi khi tạo link PayOS!', 'error');
     }
 }
 

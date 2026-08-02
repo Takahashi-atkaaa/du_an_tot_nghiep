@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BanHang\PayOSController;
 use App\Http\Controllers\admin\AuthController;
 use App\Http\Controllers\ban_hang\NhanVienController;
 use App\Http\Controllers\Admin\DanhMuc\DanhMucSanPhamController;
@@ -430,3 +431,12 @@ Route::middleware([NhanVien::class])->group(function () {
     Route::post('/diem-danh/ket-thuc-ca', [NhanVienDiemDanhController::class, 'ketThucCa'])->name('nhan-vien.diem-danh.ket-thuc-ca');
     Route::post('/ho-so/doi-mat-khau', [NhanVienNhanVienController::class, 'doiMatKhau'])->name('nhan-vien.ho-so.doi-mat-khau');
 });
+
+// PayOS payment routes
+Route::match(['get', 'post'], '/payos/create', [PayOSController::class, 'createPayment'])->name('payos.create');
+Route::get('/payos/return', [PayOSController::class, 'return'])->name('payos.return');
+Route::get('/payos/cancel', [PayOSController::class, 'cancel'])->name('payos.cancel');
+Route::match(['get', 'post'], '/payos/webhook', [PayOSController::class, 'webhook'])
+    ->name('payos.webhook')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrf::class]);
+

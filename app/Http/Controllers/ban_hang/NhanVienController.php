@@ -224,6 +224,35 @@ class NhanVienController extends Controller
     }
     public function laySanPham(Request $request)
     {
+        // #region agent log (H1/H2/H4/H5: investigate why AJAX fails over ngrok)
+        try {
+            $logFile = '/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-d7dcc7.log';
+            $payload = [
+                'sessionId' => 'd7dcc7',
+                'runId' => 'run1',
+                'hypothesisId' => 'H1,H2,H4,H5',
+                'location' => 'ban_hang/NhanVienController.php:laySanPham:entry',
+                'message' => 'laySanPham called',
+                'data' => [
+                    'auth_check' => auth()->check(),
+                    'user_id' => auth()->id(),
+                    'session_id' => session()->getId(),
+                    'session_domain' => config('session.domain'),
+                    'session_secure' => config('session.secure'),
+                    'session_driver' => config('session.driver'),
+                    'request_url' => $request->fullUrl(),
+                    'request_scheme' => $request->getScheme(),
+                    'request_host' => $request->getHost(),
+                    'isSecure' => $request->isSecure(),
+                    'cookie_header' => $request->headers->get('cookie'),
+                    'x_forwarded_proto' => $request->headers->get('x-forwarded-proto'),
+                ],
+                'timestamp' => time() * 1000,
+            ];
+            file_put_contents($logFile, json_encode($payload) . PHP_EOL, FILE_APPEND);
+        } catch (\Throwable $e) {}
+        // #endregion
+
         $query = DB::table('bien_the_san_pham')
             ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
             ->where('san_pham.trang_thai', 1)
@@ -441,9 +470,9 @@ class NhanVienController extends Controller
             $phuongThucMap = [
                 'cash' => 'Tiền mặt',
                 'transfer' => 'Chuyển khoản',
-                'card' => 'Quẹt thẻ',
                 'tien_mat' => 'Tiền mặt',
                 'chuyen_khoan' => 'Chuyển khoản',
+                'payos' => 'PayOS',
             ];
 
             $phuongThucThanhToan = $phuongThucMap[$request->phuong_thuc_thanh_toan]
@@ -459,6 +488,8 @@ class NhanVienController extends Controller
                 ], 422);
             }
 
+            $isPayOS = $request->phuong_thuc_thanh_toan === 'payos';
+
             $hoaDonId = DB::table('hoa_don')->insertGetId([
                 'id_nguoi_dung' => Auth::id(),
                 'id_khach_hang' => $request->id_khach_hang,
@@ -467,47 +498,67 @@ class NhanVienController extends Controller
                 'tong_tien_hang' => $tongTienHang,
                 'tien_giam_gia' => $tienGiamGia,
                 'khach_can_tra' => $khachCanTra,
-                'tien_khach_dua' => $tienKhachDua,
-                'tien_thua' => $tienThua,
+                'tien_khach_dua' => $isPayOS ? $khachCanTra : $tienKhachDua,
+                'tien_thua' => $isPayOS ? 0 : $tienThua,
                 'phuong_thuc_thanh_toan' => $phuongThucThanhToan,
-                'trang_thai' => 'Hoàn thành',
-                'diem_su_dung' => $diemSuDung,
-                'diem_thu_duoc' => $diemThuDuoc,
+                'trang_thai' => $isPayOS ? 'Chờ thanh toán' : 'Hoàn thành',
+                'diem_su_dung' => $isPayOS ? 0 : $diemSuDung,
+                'diem_thu_duoc' => $isPayOS ? 0 : $diemThuDuoc,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
             if ($khachHang) {
-                $diemMoi = $khachHang->diem_tich_luy - $diemSuDung + $diemThuDuoc;
+                if ($isPayOS) {
+                    if ($diemSuDung > 0) {
+                        DB::table('khach_hang')
+                            ->where('id', $khachHang->id)
+                            ->update([
+                                'diem_tich_luy' => $khachHang->diem_tich_luy - $diemSuDung,
+                                'updated_at' => now(),
+                            ]);
 
-                DB::table('khach_hang')
-                    ->where('id', $khachHang->id)
-                    ->update([
-                        'diem_tich_luy' => $diemMoi,
-                        'tong_chi_tieu' => $khachHang->tong_chi_tieu + $khachCanTra,
-                        'updated_at' => now(),
-                    ]);
+                        DB::table('lich_su_tich_diem')->insert([
+                            'id_khach_hang' => $khachHang->id,
+                            'id_hoa_don' => $hoaDonId,
+                            'loai_bien_dong' => 'tru',
+                            'so_diem' => $diemSuDung,
+                            'ly_do' => 'Sử dụng điểm thanh toán (PayOS - đang chờ)',
+                            'created_at' => now(),
+                        ]);
+                    }
+                } else {
+                    $diemMoi = $khachHang->diem_tich_luy - $diemSuDung + $diemThuDuoc;
 
-                if ($diemSuDung > 0) {
-                    DB::table('lich_su_tich_diem')->insert([
-                        'id_khach_hang' => $khachHang->id,
-                        'id_hoa_don' => $hoaDonId,
-                        'loai_bien_dong' => 'tru',
-                        'so_diem' => $diemSuDung,
-                        'ly_do' => 'Sử dụng điểm thanh toán',
-                        'created_at' => now(),
-                    ]);
-                }
+                    DB::table('khach_hang')
+                        ->where('id', $khachHang->id)
+                        ->update([
+                            'diem_tich_luy' => $diemMoi,
+                            'tong_chi_tieu' => $khachHang->tong_chi_tieu + $khachCanTra,
+                            'updated_at' => now(),
+                        ]);
 
-                if ($diemThuDuoc > 0) {
-                    DB::table('lich_su_tich_diem')->insert([
-                        'id_khach_hang' => $khachHang->id,
-                        'id_hoa_don' => $hoaDonId,
-                        'loai_bien_dong' => 'cong',
-                        'so_diem' => $diemThuDuoc,
-                        'ly_do' => 'Tích điểm từ hóa đơn',
-                        'created_at' => now(),
-                    ]);
+                    if ($diemSuDung > 0) {
+                        DB::table('lich_su_tich_diem')->insert([
+                            'id_khach_hang' => $khachHang->id,
+                            'id_hoa_don' => $hoaDonId,
+                            'loai_bien_dong' => 'tru',
+                            'so_diem' => $diemSuDung,
+                            'ly_do' => 'Sử dụng điểm thanh toán',
+                            'created_at' => now(),
+                        ]);
+                    }
+
+                    if ($diemThuDuoc > 0) {
+                        DB::table('lich_su_tich_diem')->insert([
+                            'id_khach_hang' => $khachHang->id,
+                            'id_hoa_don' => $hoaDonId,
+                            'loai_bien_dong' => 'cong',
+                            'so_diem' => $diemThuDuoc,
+                            'ly_do' => 'Tích điểm từ hóa đơn',
+                            'created_at' => now(),
+                        ]);
+                    }
                 }
             }
 
@@ -523,15 +574,18 @@ class NhanVienController extends Controller
                     'updated_at' => now(),
                 ]);
 
-                DB::table('bien_the_san_pham')
-                    ->where('id', $item['bien_the']->id)
-                    ->decrement('so_luong_ton', $item['so_luong']);
+                if (!$isPayOS) {
+                    DB::table('bien_the_san_pham')
+                        ->where('id', $item['bien_the']->id)
+                        ->decrement('so_luong_ton', $item['so_luong']);
+                }
             }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Thanh toán thành công.',
+                'message' => $isPayOS ? 'Đang tạo link thanh toán PayOS.' : 'Thanh toán thành công.',
                 'hoa_don_id' => $hoaDonId,
+                'redirect_to_payos' => $isPayOS,
             ]);
         });
     }
