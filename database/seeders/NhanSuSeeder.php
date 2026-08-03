@@ -10,8 +10,8 @@ class NhanSuSeeder extends Seeder
 {
     public function run(): void
     {
-        // Ca lam viec
-        DB::table('ca_lam_viec')->insert([
+        if (DB::table('ca_lam_viec')->count() === 0) {
+            DB::table('ca_lam_viec')->insert([
             [
                 'ten_ca' => 'Ngay',
                 'gio_bat_dau' => '08:00:00',
@@ -47,9 +47,11 @@ class NhanSuSeeder extends Seeder
             ],
             
         ]);
+        }
 
         // Nhan vien
-        DB::table('nguoi_dung')->insert([
+        if (DB::table('nguoi_dung')->count() === 0) {
+            DB::table('nguoi_dung')->insert([
             [
                 'ho_ten' => 'Nguyễn Tùng Anh',
                 'email' => 'tunganh@smartmart.vn',
@@ -95,6 +97,7 @@ class NhanSuSeeder extends Seeder
                 'updated_at' => now(),
             ],
         ]);
+        }
 
         $nguoiDungIds = DB::table('nguoi_dung')->pluck('id')->toArray();
         $caIds = DB::table('ca_lam_viec')->pluck('id')->toArray();

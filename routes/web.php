@@ -87,6 +87,7 @@ Route::get('/admin/api/nha-cung-cap', [NhaCungCapApiController::class, 'index'])
 Route::post('/admin/api/nha-cung-cap', [NhaCungCapApiController::class, 'store']);
 Route::put('/admin/api/nha-cung-cap/{id}', [NhaCungCapApiController::class, 'update']);
 Route::delete('/admin/api/nha-cung-cap/{id}', [NhaCungCapApiController::class, 'destroy']);
+Route::get('/admin/api/nha-cung-cap/{id}', [NhaCungCapApiController::class, 'show']);
 Route::get('/admin/api/nha-cung-cap/dropdown', [NhaCungCapApiController::class, 'dropdown']);
 
 // Phiếu nhập - Import/Export Excel (đặt TRƯỚC route có {id} để tránh bị nhầm)
