@@ -73,6 +73,7 @@ Route::get('/admin/cai-dat', function () { return view('admin_xem_truoc.cai-dat'
 Route::get('/admin/api/lo-hang', [LoHangApiController::class, 'index']);
 Route::get('/admin/api/lo-hang/nha-cung-cap', [LoHangApiController::class, 'nhaCungCaps']);
 Route::get('/admin/api/lo-hang/ton-kho', [LoHangApiController::class, 'tonKho']);
+Route::get('/admin/api/lo-hang/ton-kho-list', [LoHangApiController::class, 'tonKhoList']);
 Route::get('/admin/api/lo-hang/thong-ke', [LoHangApiController::class, 'thongKe']);
 Route::get('/admin/api/lo-hang/canh-bao', [LoHangApiController::class, 'canhBao']);
 Route::get('/admin/api/lo-hang/ton-kho-tong', [LoHangApiController::class, 'tonKhoTong']);
@@ -116,21 +117,45 @@ Route::put('/admin/api/phieu-xuat/{id}', [PhieuXuatApiController::class, 'update
 Route::delete('/admin/api/phieu-xuat/{id}', [PhieuXuatApiController::class, 'destroy']);
 
 // ===== KIỂM KHO =====
-// Routes phải đặt TRƯỚC route có {id} để tránh bị match nhầm.
-Route::prefix('/admin/api/kiem-kho')->name('admin.api.kiem-kho.')->group(function () {
-    Route::get('/search', [KiemKhoApiController::class, 'searchItems']);
-    Route::get('/draft', [KiemKhoApiController::class, 'getDraft']);
-    Route::post('/draft', [KiemKhoApiController::class, 'storeDraft']);
-    Route::get('/history', [KiemKhoApiController::class, 'history']);
-    Route::post('/{id}/balance', [KiemKhoApiController::class, 'balanceInventory'])->whereNumber('id');
-    Route::post('/{id}/cancel', [KiemKhoApiController::class, 'cancel'])->whereNumber('id');
-    Route::get('/{id}', [KiemKhoApiController::class, 'show'])->whereNumber('id');
-});
+// [TEST MODE] Đã tạm bỏ middleware 'permission:*' để test thử.
+// Sau khi test xong, sẽ khôi phục lại các permission middleware.
+Route::prefix('/admin/api/kiem-kho')->name('admin.api.kiem-kho.')
+    ->middleware([AuthAdmin::class])
+    ->group(function () {
+        Route::get('/search', [KiemKhoApiController::class, 'searchItems']);
+        Route::get('/draft', [KiemKhoApiController::class, 'getDraft']);
+        Route::post('/draft', [KiemKhoApiController::class, 'storeDraft']);
+        Route::post('/import-preview', [KiemKhoApiController::class, 'importPreview']);
+        Route::post('/import-execute', [KiemKhoApiController::class, 'importExecute']);
+        Route::get('/history', [KiemKhoApiController::class, 'history']);
+        Route::get('/trash', [KiemKhoApiController::class, 'trash']);
+        Route::post('/bulk-action', [KiemKhoApiController::class, 'bulkAction']);
+        Route::post('/{id}/balance', [KiemKhoApiController::class, 'balanceInventory'])
+            ->whereNumber('id');
+        Route::post('/{id}/cancel', [KiemKhoApiController::class, 'cancel'])
+            ->whereNumber('id');
+        Route::post('/{id}/restore', [KiemKhoApiController::class, 'restore'])
+            ->whereNumber('id');
+        Route::put('/{id}', [KiemKhoApiController::class, 'updateDraft'])
+            ->whereNumber('id');
+        Route::delete('/{id}/force', [KiemKhoApiController::class, 'forceDelete'])
+            ->whereNumber('id');
+        Route::delete('/{id}', [KiemKhoApiController::class, 'softDelete'])
+            ->whereNumber('id');
+        Route::get('/{id}', [KiemKhoApiController::class, 'show'])
+            ->whereNumber('id');
+    });
 
-// View (Blade)
-Route::get('/admin/kho-hang/kiem-kho', [KiemKhoController::class, 'index'])->name('kiem-kho.create');
-Route::get('/admin/kho-hang/kiem-kho/lich-su', [KiemKhoController::class, 'history'])->name('kiem-kho.history');
-Route::get('/admin/kho-hang/kiem-kho/{id}', [KiemKhoController::class, 'show'])->whereNumber('id')->name('kiem-kho.show');
+// View (Blade) - [TEST MODE] không check permission
+Route::get('/admin/kho-hang/kiem-kho', [KiemKhoController::class, 'index'])
+    ->name('kiem-kho.create');
+Route::get('/admin/kho-hang/kiem-kho/lich-su', [KiemKhoController::class, 'history'])
+    ->name('kiem-kho.history');
+Route::get('/admin/kho-hang/kiem-kho/thung-rac', [KiemKhoController::class, 'trash'])
+    ->name('kiem-kho.trash');
+Route::get('/admin/kho-hang/kiem-kho/{id}', [KiemKhoController::class, 'show'])
+    ->whereNumber('id')
+    ->name('kiem-kho.show');
 
 Route::middleware([KTVaiTro::class])->group(function () {
     // Admin Routes - Preview

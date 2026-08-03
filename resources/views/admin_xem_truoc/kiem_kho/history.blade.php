@@ -109,6 +109,20 @@
     }
     .kkhs-status-chip.active .cnt { background: #e0e7ff; color: #4338ca; }
 
+    /* ===== Bulk action bar (lịch sử) ===== */
+    .kkhs-bulk-bar {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
     /* ===== Page head + CTA ===== */
     .kkhs-page-head {
         display: flex;
@@ -437,6 +451,9 @@
         <a href="{{ route('kiem-kho.create', ['mode' => 'new']) }}" class="kkhs-cta">
             <i class="fas fa-plus"></i> Tạo phiếu kiểm kho
         </a>
+        <a href="{{ route('kiem-kho.trash') }}" class="kkhs-tool-btn" title="Thùng rác">
+            <i class="fas fa-trash-restore"></i> Thùng rác
+        </a>
         <button class="kkhs-tool-btn success" id="btn-xuat-file" title="Xuất Excel">
             <i class="fas fa-file-excel"></i> Xuất Excel
         </button>
@@ -549,10 +566,35 @@
 
         {{-- Bảng --}}
         <div class="kkhs-card">
+            <div class="kkhs-bulk-bar">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="kkhs-select-all">
+                        <label class="form-check-label text-muted" for="kkhs-select-all">Chọn tất cả</label>
+                    </div>
+                    <div id="kkhs-bulk-actions" class="d-none">
+                        <span class="text-muted me-2 small">
+                            <span id="kkhs-selected-count">0</span> đã chọn
+                        </span>
+                        <button type="button" class="btn btn-sm btn-warning"
+                                onclick="kkhsBulkAction('cancel')">
+                            <i class="fas fa-ban me-1"></i>Hủy
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger"
+                                onclick="kkhsBulkAction('delete')">
+                            <i class="fas fa-trash me-1"></i>Xóa
+                        </button>
+                    </div>
+                </div>
+                <div class="text-muted small">
+                    <i class="fas fa-info-circle me-1"></i>Checkbox ở cột đầu mỗi hàng.
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="kkhs-table">
                     <thead>
                         <tr>
+                            <th style="width:40px"></th>
                             <th style="width:40px" class="text-center">#</th>
                             <th>Mã phiếu kiểm</th>
                             <th>Người tạo</th>
@@ -565,7 +607,7 @@
                         </tr>
                     </thead>
                     <tbody id="bang-kiem-kho">
-                        <tr><td colspan="9"><div class="kkhs-empty">
+                        <tr><td colspan="10"><div class="kkhs-empty">
                             <i class="fas fa-spinner fa-spin"></i>
                             <div class="mt-2">Đang tải...</div>
                         </div></td></tr>
@@ -588,8 +630,13 @@ const url = {
     history:   '/admin/api/kiem-kho/history',
     detail:    id => `/admin/api/kiem-kho/${id}`,
     cancel:    id => `/admin/api/kiem-kho/${id}/cancel`,
+    delete:    id => `/admin/api/kiem-kho/${id}`,
+    restore:   id => `/admin/api/kiem-kho/${id}/restore`,
+    force:     id => `/admin/api/kiem-kho/${id}/force`,
     exportOne: id => `/admin/api/kiem-kho/${id}/export`,
     exportAll:    `/admin/api/kiem-kho/history/export`,
+    trash:        '/admin/api/kiem-kho/trash',
+    bulkAction:   '/admin/api/kiem-kho/bulk-action',
 };
 
 let currentPage = 1, lastPage = 1;
@@ -636,7 +683,7 @@ async function load(page = 1) {
         const data = res.data;
         const tbody = document.getElementById('bang-kiem-kho');
         if (!data.data || data.data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="9"><div class="kkhs-empty">
+            tbody.innerHTML = `<tr><td colspan="10"><div class="kkhs-empty">
                 <i class="fas fa-inbox"></i>
                 <div class="mt-2">Chưa có phiếu kiểm kho nào</div>
             </div></td></tr>`;
@@ -668,6 +715,9 @@ async function load(page = 1) {
 
             return `
                 <tr class="kkhs-row" data-id="${p.id}" data-expanded="0" data-status="${p.trang_thai}">
+                    <td onclick="event.stopPropagation()">
+                        <input type="checkbox" class="form-check-input kkhs-row-check" data-id="${p.id}">
+                    </td>
                     <td class="text-center text-muted">${idx + 1}</td>
                     <td><span class="kkhs-ma">${escapeHtml(p.ma_kiem_kho)}</span></td>
                     <td>
@@ -695,7 +745,7 @@ async function load(page = 1) {
                     </td>
                 </tr>
                 <tr class="kkhs-expand" data-expand-for="${p.id}" style="display:none">
-                    <td colspan="9">
+                    <td colspan="10">
                         <div class="kkhs-expand-inner">
                             <div class="kkhs-detail-loading"><i class="fas fa-spinner fa-spin me-2"></i>Đang tải chi tiết...</div>
                         </div>
@@ -703,6 +753,12 @@ async function load(page = 1) {
                 </tr>
             `;
         }).join('');
+
+        // Gắn event cho checkbox từng hàng
+        tbody.querySelectorAll('.kkhs-row-check').forEach(cb => {
+            cb.addEventListener('change', updateKkhsSelectedCount);
+        });
+        updateKkhsSelectedCount();
 
         currentPage = data.current_page;
         lastPage = data.last_page;
@@ -720,7 +776,16 @@ async function load(page = 1) {
         updateCounts(data);
     } catch (e) {
         console.error(e);
-        toastr?.error?.('Lỗi tải lịch sử kiểm kho');
+        const status = e.response?.status;
+        const serverMsg = e.response?.data?.message;
+        let userMsg = 'Lỗi tải lịch sử kiểm kho';
+        if (status === 401 || status === 419) {
+            userMsg = 'Phiên đăng nhập đã hết hạn. Đang tải lại trang...';
+            setTimeout(() => location.reload(), 1500);
+        } else if (serverMsg) {
+            userMsg = serverMsg;
+        }
+        toastr?.error?.(userMsg);
     }
 }
 
@@ -839,6 +904,9 @@ function renderDetail(p) {
                 <div class="d-flex gap-2 flex-wrap">
                     <button class="btn btn-outline-danger btn-sm btn-huy-inline" data-id="${p.id}" ${p.trang_thai !== 'phieu_tam' ? 'disabled' : ''}>
                         <i class="fas fa-trash me-1"></i>Hủy
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm btn-xoa-inline" data-id="${p.id}" ${p.trang_thai === 'hoan_thanh' ? 'disabled' : ''}>
+                        <i class="fas fa-times-circle me-1"></i>Xóa
                     </button>
                     <button class="btn btn-outline-secondary btn-sm">
                         <i class="fas fa-copy me-1"></i>Sao chép
@@ -980,6 +1048,76 @@ document.addEventListener('DOMContentLoaded', () => {
         load(currentPage);
     });
 
+    // ==================================================
+    // Bulk action: chọn nhiều phiếu để hủy / xóa
+    // ==================================================
+    window.updateKkhsSelectedCount = function() {
+        const total = document.querySelectorAll('.kkhs-row-check').length;
+        const checked = document.querySelectorAll('.kkhs-row-check:checked').length;
+        const lbl = document.getElementById('kkhs-selected-count');
+        if (lbl) lbl.textContent = checked;
+        const box = document.getElementById('kkhs-bulk-actions');
+        if (box) {
+            if (checked > 0) box.classList.remove('d-none');
+            else box.classList.add('d-none');
+        }
+        const selAll = document.getElementById('kkhs-select-all');
+        if (selAll) {
+            selAll.checked = total > 0 && checked === total;
+            selAll.indeterminate = checked > 0 && checked < total;
+        }
+    };
+
+    document.getElementById('kkhs-select-all')?.addEventListener('change', (e) => {
+        document.querySelectorAll('.kkhs-row-check').forEach(cb => {
+            cb.checked = e.target.checked;
+        });
+        updateKkhsSelectedCount();
+    });
+
+    window.kkhsBulkAction = function(action) {
+        const ids = Array.from(document.querySelectorAll('.kkhs-row-check:checked'))
+            .map(cb => Number(cb.dataset.id));
+        if (!ids.length) {
+            toastr.warning('Vui lòng chọn ít nhất 1 phiếu.');
+            return;
+        }
+        const labels = {
+            delete: 'XÓA',
+            cancel: 'hủy',
+        };
+        const verb = labels[action] || action;
+        const swalCfg = {
+            icon: action === 'delete' ? 'warning' : 'question',
+            title: `${verb} ${ids.length} phiếu?`,
+            showCancelButton: true,
+            confirmButtonText: `Xác nhận ${verb}`,
+            cancelButtonText: 'Hủy',
+        };
+        if (action === 'delete') {
+            swalCfg.html = 'Phiếu sẽ được chuyển vào <b>Thùng rác</b> và có thể khôi phục lại.';
+            swalCfg.confirmButtonColor = '#dc2626';
+        }
+        Swal.fire(swalCfg).then(async (r) => {
+            if (!r.isConfirmed) return;
+            try {
+                const res = await axios.post('/admin/api/kiem-kho/bulk-action', { action, ids });
+                if (res.data.success) {
+                    toastr.success(res.data.message);
+                    if (res.data.errors?.length) {
+                        toastr.warning(`${res.data.errors.length} lỗi: ${res.data.errors.slice(0,3).join(' | ')}`);
+                    }
+                    detailCache.clear();
+                    load(currentPage);
+                } else {
+                    toastr.error(res.data.message);
+                }
+            } catch (e) {
+                toastr.error(e.response?.data?.message || e.message);
+            }
+        });
+    };
+
     document.getElementById('btn-reset-filter').addEventListener('click', () => {
         document.querySelector('input[name="filter-ngay"][value="hom_nay"]').click();
         document.querySelectorAll('.kkhs-status-chip').forEach(c => {
@@ -1041,6 +1179,29 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!btn) return;
         e.stopPropagation();
         toastr.info('Xuất file Excel đang được phát triển.');
+    });
+
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('.btn-xoa-inline');
+        if (!btn || btn.disabled) return;
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        Swal.fire({
+            icon: 'warning', title: 'Xóa phiếu?',
+            html: 'Phiếu sẽ được chuyển vào <b>Thùng rác</b> và có thể khôi phục lại.',
+            showCancelButton: true, confirmButtonColor: '#dc2626',
+            confirmButtonText: 'Xóa', cancelButtonText: 'Đóng',
+        }).then(async r => {
+            if (!r.isConfirmed) return;
+            try {
+                const res = await axios.delete(url.delete(id));
+                if (res.data.success) {
+                    toastr.success(res.data.message);
+                    detailCache.delete(id);
+                    load(currentPage);
+                } else { toastr.error(res.data.message); }
+            } catch (err) { toastr.error(err.response?.data?.message || err.message); }
+        });
     });
 
     load(1);

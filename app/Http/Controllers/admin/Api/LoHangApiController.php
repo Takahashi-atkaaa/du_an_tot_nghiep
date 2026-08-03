@@ -372,4 +372,65 @@ class LoHangApiController extends Controller
             'data' => $items->toArray(),
         ]);
     }
+
+    /**
+     * GET /admin/api/lo-hang/ton-kho-list?q=&per_page=500
+     * Trả về danh sách ChiTietLoHang còn tồn kho (>0), đính kèm variant + product.
+     * Dùng cho modal "Chọn sản phẩm" trong trang Kiểm kho (Bước 5).
+     */
+    public function tonKhoList(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->query('q', ''));
+        $perPage = (int) $request->query('per_page', 200);
+        $perPage = max(1, min(500, $perPage));
+
+        $query = ChiTietLoHang::with([
+                'loHang:id,ma_lo,id_nha_cung_cap',
+                'loHang.nhaCungCap:id,ten_nha_cung_cap',
+                'variant:id,product_id,ten_bien_the,ma_vach,ma_hang',
+                'variant.product:id,ten_san_pham,ma_san_pham',
+                'product:id,ten_san_pham',
+            ])
+            ->where('so_luong_ton', '>', 0)
+            ->orderBy('han_su_dung', 'asc');
+
+        if ($q !== '') {
+            $query->where(function ($w) use ($q) {
+                $w->whereHas('variant', fn ($v) => $v->where('ma_vach', 'like', "%{$q}%")
+                    ->orWhere('ma_hang', 'like', "%{$q}%")
+                    ->orWhere('ten_bien_the', 'like', "%{$q}%"))
+                    ->orWhereHas('variant.product', fn ($p) => $p->where('ten_san_pham', 'like', "%{$q}%"))
+                    ->orWhereHas('loHang', fn ($l) => $l->where('ma_lo', 'like', "%{$q}%"));
+            });
+        }
+
+        $items = $query->limit($perPage)->get();
+
+        $data = $items->map(function ($row) {
+            $variant = $row->variant;
+            $product = $variant?->product ?? $row->product;
+            $loHang = $row->loHang;
+            return [
+                'id' => $row->id,
+                'id_chi_tiet_lo_hang' => $row->id,
+                'variant_id' => $row->variant_id,
+                'id_san_pham' => $row->id_san_pham,
+                'ma_vach' => $variant?->ma_vach ?? '',
+                'ma_hang' => $variant?->ma_hang ?? '',
+                'ten_san_pham' => $product?->ten_san_pham ?? '',
+                'ten_bien_the' => $variant?->ten_bien_the ?? '',
+                'ten_don_vi' => $variant?->ten_bien_the ?: 'Mặc định',
+                'han_su_dung' => $row->han_su_dung?->format('Y-m-d'),
+                'ma_lo' => $loHang?->ma_lo,
+                'so_luong_ton' => (int) $row->so_luong_ton,
+                'gia_nhap' => (float) $row->gia_nhap,
+            ];
+        })->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+            'total' => $data->count(),
+        ]);
+    }
 }
