@@ -159,6 +159,12 @@
                         {{ session('error') }}
                     </div>
                 @endif
+                <p> tunganh@smartmart.vn  Admin@123</p>
+                <p> thungan@smartmart.vn ThuNgan@123<p>
+                <p> baohang@smartmart.vn  BaoHang@123</p>
+                <p> hong@smartmart.vn  Hong@123</p>
+            
+                   
                 
                 <button type="submit" class="btn btn-primary btn-login">
                     <i class="fas fa-sign-in-alt me-2"></i>Đăng nhập
