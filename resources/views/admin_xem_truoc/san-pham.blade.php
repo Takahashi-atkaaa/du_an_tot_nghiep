@@ -1927,7 +1927,7 @@
                             <th>Lô</th>
                             <th>Giá nhập</th>
                             <th>SL</th>
-                            <th>SL còn lại</th>
+                            <th>SL còn lại của lô</th>
                         </tr>
                     </thead>
                     <tbody>
