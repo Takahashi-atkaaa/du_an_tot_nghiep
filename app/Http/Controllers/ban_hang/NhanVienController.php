@@ -15,6 +15,8 @@ use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\KhachHang;
+use App\Models\CaLamViec;
+use App\Models\ChiTietLoHang;
 
 
 class NhanVienController extends Controller
@@ -534,6 +536,9 @@ class NhanVienController extends Controller
             }
 
             foreach ($items as $item) {
+                $variantId = (int) $item['bien_the']->id;
+                $soLuongBan = (int) $item['so_luong'];
+
                 DB::table('chi_tiet_hoa_don')->insert([
                     'id_hoa_don' => $hoaDonId,
                     'id_san_pham' => $item['bien_the']->product_id,
@@ -546,9 +551,33 @@ class NhanVienController extends Controller
                 ]);
 
                 if (!$isPayOS) {
-                    DB::table('bien_the_san_pham')
-                        ->where('id', $item['bien_the']->id)
-                        ->decrement('so_luong_ton', $item['so_luong']);
+                    // FIFO (FEFO): trừ từ lô có HSD gần nhất trước (sắp hết hạn bán trước),
+                    // đồng thời ưu tiên lô nhập trước (id nhỏ hơn) khi cùng HSD.
+                    // ChiTietLoHangObserver::updated() tự đồng bộ tổng tồn bien_the_san_pham.
+                    $remaining = $soLuongBan;
+                    $loList = ChiTietLoHang::where('variant_id', $variantId)
+                        ->where('so_luong_ton', '>', 0)
+                        ->orderBy('han_su_dung', 'asc')
+                        ->orderBy('id', 'asc')
+                        ->lockForUpdate()
+                        ->get();
+
+                    foreach ($loList as $lo) {
+                        if ($remaining <= 0) {
+                            break;
+                        }
+                        $truTuLo = (int) min($remaining, $lo->so_luong_ton);
+                        $lo->so_luong_ton -= $truTuLo;
+                        $lo->save();
+                        $remaining -= $truTuLo;
+                    }
+
+                    if ($remaining > 0) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Sản phẩm "' . $item['bien_the']->ten_san_pham . '" không đủ tồn kho theo lô.',
+                        ], 422);
+                    }
                 }
             }
 

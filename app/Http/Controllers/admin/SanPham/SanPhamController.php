@@ -867,11 +867,6 @@ class SanPhamController extends Controller
         return new \App\Exports\SanPhamImportTemplateExport;
     }
 
-    public function export(Request $request)
-    {
-        return new \App\Exports\SanPhamExport();
-    }
-
     public function import(ImportSanPhamRequest $request): RedirectResponse
     {
         $file = $request->file('excel_file');
