@@ -236,6 +236,32 @@ class QuyenSeeder extends Seeder
                 'ten_quyen' => 'Bán hàng'
             ],
 
+            // Kiểm kho
+            [
+                'ma_quyen' => 'xem_kiem_kho',
+                'ten_quyen' => 'Xem kiểm kho'
+            ],
+            [
+                'ma_quyen' => 'them_kiem_kho',
+                'ten_quyen' => 'Thêm phiếu kiểm kho'
+            ],
+            [
+                'ma_quyen' => 'sua_kiem_kho',
+                'ten_quyen' => 'Sửa phiếu kiểm kho'
+            ],
+            [
+                'ma_quyen' => 'xoa_kiem_kho',
+                'ten_quyen' => 'Xóa phiếu kiểm kho'
+            ],
+            [
+                'ma_quyen' => 'can_bang_kiem_kho',
+                'ten_quyen' => 'Cân bằng kho kiểm kê'
+            ],
+            [
+                'ma_quyen' => 'huy_kiem_kho',
+                'ten_quyen' => 'Hủy phiếu kiểm kho'
+            ],
+
         ];
 
         foreach ($quyens as $quyen) {

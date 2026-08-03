@@ -344,16 +344,20 @@
 
         <div class="kks-footer-actions">
             <div class="d-flex gap-2 flex-wrap">
+                @if(auth()->user()?->vaiTro?->hasPermission('huy_kiem_kho'))
                 <button class="btn btn-outline-danger btn-sm" id="btn-huy" style="display:none">
                     <i class="fas fa-trash me-1"></i>Hủy
                 </button>
+                @endif
                 <button class="btn btn-outline-secondary btn-sm" id="btn-sao-chep">
                     <i class="fas fa-copy me-1"></i>Sao chép
                 </button>
+                @if(auth()->user()?->vaiTro?->hasPermission('sua_kiem_kho'))
                 <a id="btn-chinh-sua" class="btn btn-outline-primary btn-sm" style="display:none"
                    href="{{ route('kiem-kho.create') }}?edit={{ $id }}">
                     <i class="fas fa-edit me-1"></i>Chỉnh sửa
                 </a>
+                @endif
                 <button class="btn btn-outline-success btn-sm" id="btn-xuat-block">
                     <i class="fas fa-file-excel me-1"></i>Xuất file
                 </button>
@@ -467,8 +471,10 @@ async function loadDetail() {
         gvEl.className = 'value ' + (gvLech > 0 ? 'good' : (gvLech < 0 ? 'bad' : ''));
 
         if (p.trang_thai === 'phieu_tam') {
-            document.getElementById('btn-huy').style.display = 'inline-block';
-            document.getElementById('btn-chinh-sua').style.display = 'inline-block';
+            const btnHuy = document.getElementById('btn-huy');
+            const btnSua = document.getElementById('btn-chinh-sua');
+            if (btnHuy) btnHuy.style.display = 'inline-block';
+            if (btnSua) btnSua.style.display = 'inline-block';
         }
     } catch (e) {
         console.error(e);
@@ -544,7 +550,8 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTable();
     });
 
-    document.getElementById('btn-huy').addEventListener('click', () => {
+    const btnHuy = document.getElementById('btn-huy');
+    if (btnHuy) btnHuy.addEventListener('click', () => {
         Swal.fire({
             icon: 'warning',
             title: 'Hủy phiếu kiểm kho?',
