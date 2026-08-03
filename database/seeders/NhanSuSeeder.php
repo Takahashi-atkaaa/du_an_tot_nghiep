@@ -13,9 +13,9 @@ class NhanSuSeeder extends Seeder
         // Ca lam viec
         DB::table('ca_lam_viec')->insert([
             [
-                'ten_ca' => 'SA1',
-                'gio_bat_dau' => '07:00:00',
-                'gio_ket_thuc' => '12:00:00',
+                'ten_ca' => 'Ngay',
+                'gio_bat_dau' => '08:00:00',
+                'gio_ket_thuc' => '16:00:00',
                 'so_nhan_vien_toi_thieu' => 2,
                 'so_nhan_vien_toi_da' => 4,
                 'so_phut_di_lam_tre_toi_da' => 15,
@@ -24,9 +24,9 @@ class NhanSuSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'ten_ca' => 'CH1',
-                'gio_bat_dau' => '12:00:00',
-                'gio_ket_thuc' => '19:00:00',
+                'ten_ca' => 'Toi',
+                'gio_bat_dau' => '16:00:00',
+                'gio_ket_thuc' => '00:00:00',
                 'so_nhan_vien_toi_thieu' => 2,
                 'so_nhan_vien_toi_da' => 4,
                 'so_phut_di_lam_tre_toi_da' => 15,
@@ -35,9 +35,9 @@ class NhanSuSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'ten_ca' => 'TO1',
-                'gio_bat_dau' => '19:00:00',
-                'gio_ket_thuc' => '01:00:00',
+                'ten_ca' => 'Dem',
+                'gio_bat_dau' => '00:00:00',
+                'gio_ket_thuc' => '08:00:00',
                 'so_nhan_vien_toi_thieu' => 2,
                 'so_nhan_vien_toi_da' => 4,
                 'so_phut_di_lam_tre_toi_da' => 15,
@@ -45,17 +45,7 @@ class NhanSuSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-            [
-                'ten_ca' => 'TO2',
-                'gio_bat_dau' => '01:00:00',
-                'gio_ket_thuc' => '07:00:00',
-                'so_nhan_vien_toi_thieu' => 2,
-                'so_nhan_vien_toi_da' => 4,
-                'so_phut_di_lam_tre_toi_da' => 15,
-                'deleted_at' => null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
+            
         ]);
 
         // Nhan vien
