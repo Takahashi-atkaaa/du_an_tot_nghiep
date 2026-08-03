@@ -217,6 +217,8 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::get('/admin/san-pham', [SanPhamController::class, 'index'])->middleware('permission:quan_ly_san_pham')->name('san-pham.index');
     Route::post('/admin/san-pham', [SanPhamController::class, 'store'])->middleware('permission:quan_ly_san_pham');
     Route::post('/admin/san-pham/bulk-action', [SanPhamController::class, 'bulkAction'])->middleware('permission:sua_san_pham');
+    Route::post('/admin/san-pham/bulk-restore', [SanPhamController::class, 'bulkRestore'])->middleware('permission:quan_ly_san_pham');
+    Route::delete('/admin/san-pham/bulk-force', [SanPhamController::class, 'bulkForceDelete'])->middleware('permission:quan_ly_san_pham');
     Route::get('/admin/san-pham/trash', [SanPhamController::class, 'trash'])->middleware('permission:quan_ly_san_pham')->name('san-pham.trash');
     Route::get('/admin/san-pham/export', [SanPhamController::class, 'export'])->middleware('permission:quan_ly_san_pham');
     Route::get('/admin/san-pham/export-template', [SanPhamController::class, 'exportTemplate'])->middleware('permission:quan_ly_san_pham');
@@ -228,6 +230,18 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::delete('/admin/san-pham/{id}', [SanPhamController::class, 'destroy'])->middleware('permission:quan_ly_san_pham');
     Route::get('/admin/san-pham/{id}', [SanPhamController::class, 'show'])->middleware('permission:quan_ly_san_pham');
 
+    Route::get('/admin/san-pham/trash', [SanPhamController::class, 'trash'])->middleware('permission:xoa_san_pham')->name('san-pham.trash');
+    Route::post('/admin/san-pham/bulk-restore', [SanPhamController::class, 'bulkRestore'])->middleware('permission:xoa_san_pham');
+    Route::delete('/admin/san-pham/bulk-force', [SanPhamController::class, 'bulkForceDelete'])->middleware('permission:xoa_san_pham');
+    Route::get('/admin/san-pham/export', [SanPhamController::class, 'export'])->middleware('permission:xem_san_pham');
+    Route::get('/admin/san-pham/export-template', [SanPhamController::class, 'exportTemplate'])->middleware('permission:xem_san_pham');
+    Route::post('/admin/san-pham/import', [SanPhamController::class, 'import'])->middleware('permission:them_san_pham');
+    Route::post('/admin/san-pham/{id}/restore', [SanPhamController::class, 'restore'])->middleware('permission:xoa_san_pham');
+    Route::delete('/admin/san-pham/{id}/force', [SanPhamController::class, 'forceDelete'])->middleware('permission:xoa_san_pham');
+    Route::get('/admin/san-pham/{id}/edit', [SanPhamController::class, 'edit'])->middleware('permission:sua_san_pham');
+    Route::put('/admin/san-pham/{id}', [SanPhamController::class, 'update'])->middleware('permission:sua_san_pham');
+    Route::delete('/admin/san-pham/{id}', [SanPhamController::class, 'destroy'])->middleware('permission:xoa_san_pham');
+    Route::get('/admin/san-pham/{id}', [SanPhamController::class, 'show'])->middleware('permission:xem_san_pham');
 
     Route::get('/admin/cai-dat/san-pham', [ThietLapSanPhamController::class, 'index']);
     Route::post('/admin/cai-dat/san-pham/don-vi', [ThietLapSanPhamController::class, 'storeDonVi']);
