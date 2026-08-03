@@ -12,7 +12,7 @@ class PhanQuyenSeeder extends Seeder
     {
         $admin = VaiTro::where('ten_vai_tro', 'Admin')->first();
         $truongCa = VaiTro::where('ten_vai_tro', 'Trưởng ca')->first();
-        $nhanVien = VaiTro::where('ten_vai_tro', 'Nhân viên')->first();
+        $banHang = VaiTro::where('ten_vai_tro', 'Bán hàng')->first();
 
         $allQuyens = DB::table('quyen')->pluck('id', 'ma_quyen');
 
@@ -26,15 +26,10 @@ class PhanQuyenSeeder extends Seeder
 
         // Trưởng ca
         $truongCaQuyens = [
-            'xem_danh_muc', 'them_danh_muc', 'sua_danh_muc',
-            'xem_san_pham', 'them_san_pham', 'sua_san_pham',
-            'xem_nha_cung_cap', 'them_nha_cung_cap', 'sua_nha_cung_cap',
-            'xem_lich_su_giao_dich',
-            'xem_ca_lam_viec', 'them_ca_lam_viec', 'sua_ca_lam_viec',
-            'xem_nguoi_dung',
-            'xem_khach_hang', 'them_khach_hang', 'sua_khach_hang',
-            'xem_khuyen_mai', 'them_khuyen_mai', 'sua_khuyen_mai',
-            'xem_chia_ca_lam_viec', 'them_chia_ca_lam_viec', 'sua_chia_ca_lam_viec', 'xoa_chia_ca_lam_viec',
+            'ban_hang',
+            'quan_ly_ca_lam',
+            'quan_ly_hoa_don',
+            'quan_ly_khach_hang',
         ];
         foreach ($truongCaQuyens as $maQuyen) {
             if (isset($allQuyens[$maQuyen])) {
@@ -45,24 +40,20 @@ class PhanQuyenSeeder extends Seeder
             }
         }
 
-        // Nhân viên
-        $nhanVienQuyens = [
-            'xem_danh_muc',
-            'xem_san_pham', 'them_san_pham',
-            'xem_nha_cung_cap',
-            'xem_ca_lam_viec',
-            'xem_nguoi_dung',
-            'xem_khach_hang', 'them_khach_hang', 'sua_khach_hang',
-            'xem_khuyen_mai',
-            'xem_chia_ca_lam_viec',
+        // Bán hàng
+        $banHangQuyens = [
+            'ban_hang',
+            'quan_ly_khach_hang', // nếu được phép thêm/sửa khách hàng khi bán
         ];
-        foreach ($nhanVienQuyens as $maQuyen) {
+
+        foreach ($banHangQuyens as $maQuyen) {
             if (isset($allQuyens[$maQuyen])) {
                 DB::table('quyen_vai_tro')->insert([
-                    'id_vai_tro' => $nhanVien->id,
+                    'id_vai_tro' => $banHang->id,
                     'id_quyen' => $allQuyens[$maQuyen],
                 ]);
             }
         }
+  
     }
 }

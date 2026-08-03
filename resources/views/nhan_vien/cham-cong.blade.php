@@ -87,6 +87,29 @@
 
 
 @section('content')
+@if(session('warning'))
+    <div class="alert alert-warning alert-dismissible fade show">
+        {{ session('warning') }}
+
+        <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert">
+        </button>
+    </div>
+@endif
+
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show">
+        {{ session('error') }}
+
+        <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert">
+        </button>
+    </div>
+@endif
 
 @if(session('success'))
 
@@ -553,51 +576,48 @@ Hôm nay bạn không có ca làm việc.
 
 {{-- Phân trang --}}
 @if(method_exists($lichSuDiemDanh, 'links'))
-<div class="mt-4 d-flex justify-content-center">
-    {{ $lichSuDiemDanh->links() }}
-</div>
+    <div class="mt-4 d-flex justify-content-center">
+        {{ $lichSuDiemDanh->links() }}
+    </div>
 @endif
 
 @endsection
 
 @section('scripts')
-
 <script>
-
 document.addEventListener("DOMContentLoaded", function () {
 
     const btnVaoCa = document.querySelector(".btn-success.btn-lg");
-
     const btnRaCa = document.querySelector(".btn-danger.btn-lg");
 
-    if(btnVaoCa){
+    if (btnVaoCa) {
+        const formVaoCa = btnVaoCa.closest("form");
 
-        btnVaoCa.addEventListener("click",function(){
-
-            this.disabled = true;
-
-            this.innerHTML =
-                '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
-
-        });
-
+        if (formVaoCa) {
+            formVaoCa.addEventListener("submit", function () {
+                setTimeout(function () {
+                    btnVaoCa.disabled = true;
+                    btnVaoCa.innerHTML =
+                        '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+                }, 0);
+            });
+        }
     }
 
-    if(btnRaCa){
+    if (btnRaCa) {
+        const formRaCa = btnRaCa.closest("form");
 
-        btnRaCa.addEventListener("click",function(){
-
-            this.disabled = true;
-
-            this.innerHTML =
-                '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
-
-        });
-
+        if (formRaCa) {
+            formRaCa.addEventListener("submit", function () {
+                setTimeout(function () {
+                    btnRaCa.disabled = true;
+                    btnRaCa.innerHTML =
+                        '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+                }, 0);
+            });
+        }
     }
 
 });
-
 </script>
-
 @endsection
