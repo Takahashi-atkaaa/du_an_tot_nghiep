@@ -15,19 +15,111 @@ use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\KhachHang;
+use App\Models\CaLamViec;
 
 
 class NhanVienController extends Controller
 {
+    private function timCaLamViecHienTai(): ?CaLamViec
+{
+    $bayGio = Carbon::now();
+
+    $danhSachCa = CaLamViec::query()
+        ->whereNull('deleted_at')
+        ->get();
+
+    foreach ($danhSachCa as $ca) {
+        $ngayHomNay = $bayGio->toDateString();
+
+        $gioBatDauHomNay = Carbon::parse(
+            $ngayHomNay . ' ' . $ca->gio_bat_dau
+        );
+
+        $gioKetThucHomNay = Carbon::parse(
+            $ngayHomNay . ' ' . $ca->gio_ket_thuc
+        );
+
+        /*
+         * Ca trong cùng ngày:
+         * SA1: 07:00 - 12:00
+         * CH1: 12:00 - 19:00
+         * TO2: 01:00 - 07:00
+         */
+        if ($gioKetThucHomNay->greaterThan($gioBatDauHomNay)) {
+            if (
+                $bayGio->greaterThanOrEqualTo($gioBatDauHomNay)
+                && $bayGio->lessThan($gioKetThucHomNay)
+            ) {
+                return $ca;
+            }
+
+            continue;
+        }
+
+        /*
+         * Ca qua đêm:
+         * TO1: 19:00 hôm nay - 01:00 ngày mai
+         */
+
+        $batDauHomNay = $gioBatDauHomNay->copy();
+
+        $ketThucNgayMai = $gioKetThucHomNay
+            ->copy()
+            ->addDay();
+
+        if (
+            $bayGio->greaterThanOrEqualTo($batDauHomNay)
+            && $bayGio->lessThan($ketThucNgayMai)
+        ) {
+            return $ca;
+        }
+
+        /*
+         * Trường hợp sau 00:00:
+         * 19:00 hôm qua - 01:00 hôm nay
+         */
+        $batDauHomQua = $gioBatDauHomNay
+            ->copy()
+            ->subDay();
+
+        $ketThucHomNay = $gioKetThucHomNay->copy();
+
+        if (
+            $bayGio->greaterThanOrEqualTo($batDauHomQua)
+            && $bayGio->lessThan($ketThucHomNay)
+        ) {
+            return $ca;
+        }
+    }
+
+    return null;
+}
     public function index()
     {
         return view('ban_hang.dashboard');
     }
 
-    public function banHang()
-    {
-        return view('ban_hang.pos');
+   public function banHang()
+{
+    $nguoiDung = Auth::user();
+
+    if (!$nguoiDung) {
+        return redirect()
+            ->route('admin.login')
+            ->with('error', 'Vui lòng đăng nhập.');
     }
+
+    /*
+     * Không kiểm tra chấm công nữa.
+     * Chỉ xác định ca làm việc theo thời gian hiện tại.
+     */
+    $caHienTai = $this->timCaLamViecHienTai();
+
+    return view(
+        'ban_hang.pos',
+        compact('caHienTai')
+    );
+}
 
     public function hoaDon(Request $request)
     {
@@ -36,11 +128,13 @@ class NhanVienController extends Controller
             ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
             ->leftJoin('ca_lam_viec', 'hoa_don.id_ca_lam_viec', '=', 'ca_lam_viec.id')
             ->select(
-                'hoa_don.*',
-                'khach_hang.ten_khach_hang',
-                'nguoi_dung.ho_ten as ten_nhan_vien',
-                'ca_lam_viec.ten_ca'
-            )
+    'hoa_don.*',
+    'khach_hang.ten_khach_hang',
+    'nguoi_dung.ho_ten as ten_nhan_vien',
+    'ca_lam_viec.ten_ca',
+    'ca_lam_viec.gio_bat_dau',
+    'ca_lam_viec.gio_ket_thuc'
+)
             ->orderByDesc('hoa_don.id');
 
         if ($request->filled('q')) {
@@ -300,10 +394,21 @@ class NhanVienController extends Controller
             'id_khuyen_mai' => 'nullable|integer|exists:khuyen_mai,id',
             'diem_su_dung' => 'nullable|integer|min:0',
         ]);
+    
 
         return DB::transaction(function () use ($request) {
-            $tongTienHang = 0;
-            $items = [];
+
+    $caHienTai = $this->timCaLamViecHienTai();
+
+    if (!$caHienTai) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Không xác định được ca làm việc hiện tại.'
+        ], 422);
+    }
+
+    $tongTienHang = 0;
+    $items = [];
 
             foreach ($request->cart as $item) {
                 $bienThe = DB::table('bien_the_san_pham')
@@ -464,7 +569,7 @@ class NhanVienController extends Controller
             $hoaDonId = DB::table('hoa_don')->insertGetId([
                 'id_nguoi_dung' => Auth::id(),
                 'id_khach_hang' => $request->id_khach_hang,
-                'id_ca_lam_viec' => session('id_ca_lam_viec') ?? null,
+                'id_ca_lam_viec' => $caHienTai->id,
                 'id_khuyen_mai' => $request->id_khuyen_mai,
                 'tong_tien_hang' => $tongTienHang,
                 'tien_giam_gia' => $tienGiamGia,
