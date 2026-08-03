@@ -25,8 +25,8 @@
             <td style="text-align: left; border: 1px solid black;">{{ $item['ten_san_pham'] }}</td>
             <td style="text-align: left; border: 1px solid black;">{{ $item['ten_bien_the'] }}</td>
             <td style="text-align: center; border: 1px solid black;">{{ $item['so_luong'] }}</td>
-            <td style="text-align: right; border: 1px solid black;">{{ $item['don_gia'] }}</td>
-            <td style="text-align: right; border: 1px solid black;">{{ $item['thanh_tien'] }}</td>
+            <td style="text-align: right; border: 1px solid black; mso-number-format:&quot;\@&quot;;">&nbsp;{{ $item['don_gia'] }}</td>
+            <td style="text-align: right; border: 1px solid black; mso-number-format:&quot;\@&quot;;">&nbsp;{{ $item['thanh_tien'] }}</td>
             <td style="text-align: center; border: 1px solid black;">{{ $item['han_su_dung'] }}</td>
             <td style="text-align: center; border: 1px solid black;">{{ $item['ma_lo'] }}</td>
             <td style="text-align: left; border: 1px solid black;">{{ $item['ghi_chu'] }}</td>
@@ -38,7 +38,7 @@
         @endforelse
         <tr style="font-weight: bold; background-color: #f0f0f0;">
             <td colspan="8" style="text-align: right; border: 1px solid black;">TỔNG CỘNG:</td>
-            <td style="text-align: right; border: 1px solid black;">{{ $tongTien }}</td>
+            <td style="text-align: right; border: 1px solid black; mso-number-format:&quot;\@&quot;;">&nbsp;{{ $tongTien }}</td>
             <td colspan="3" style="border: 1px solid black;"></td>
         </tr>
     </tbody>
