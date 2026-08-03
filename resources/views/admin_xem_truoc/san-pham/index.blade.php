@@ -138,7 +138,11 @@
                             $rows = $sp->flattenedRows;
                             $hasMoreThanOneRow = $rows->count() > 1;
                             $firstRow = $rows->first();
+                        @endphp
 
+                        @continue(!$rows->isNotEmpty())
+
+                        @php
                             // ============================================================
                             // FIX: Chọn variant đại diện cho đơn vị cơ bản (dòng chính).
                             // Trước đây: $firstRow = $rows->first() → có thể là variant
@@ -149,7 +153,7 @@
                             // nhưng variant cũ có ten_don_vi trùng quy đổi → dropdown trống.
                             // ============================================================
                             $masterVariant = $sp->firstMasterVariant;
-                            $firstVariantId = $masterVariant?->id ?? $firstRow->variant?->id;
+                            $firstVariantId = $masterVariant?->id ?? $firstRow?->variant?->id;
 
                             // Phân loại cho UI mới:
                             //   - $variantRows (loai_dong='goc' AND có thuộc tính) -> hiển thị thành <tr> riêng
@@ -165,7 +169,7 @@
                             // Đơn vị cơ bản (CHA): lấy từ master variant
                             $baseUnitName = $masterVariant?->ten_don_vi ?: '—';
                             // Biến thể CHA + data gốc (để JS tính toán khi chọn đơn vị)
-                            $baseVariant   = $masterVariant ?? $firstRow->variant ?? null;
+                            $baseVariant   = $masterVariant ?? $firstRow?->variant ?? null;
                             $baseUnitId    = $baseVariant?->id ?? '';
                             $baseGiaBanGoc = $baseVariant?->gia_ban ?? 0;
                             $baseTonKhoGoc = $baseVariant?->so_luong_ton ?? 0;
@@ -173,7 +177,6 @@
                             $baseMaVach    = $baseVariant?->ma_vach ?? '';
                         @endphp
 
-                        @if($rows->isNotEmpty())
                         {{-- DÒNG CHÍNH (dòng đầu tiên) --}}
                         <tr class="product-parent-row {{ !$firstRow->trang_thai ? 'table-secondary opacity-50' : '' }}"
                             style="cursor:pointer;"
@@ -326,7 +329,6 @@
                                 @endif
                             </td>
                         </tr>
-                        @endif
 
                         @if($variantAttrRows->count() > 0)
                         {{-- CÁC DÒNG CON: CHỈ cho Biến thể thuộc tính (màu/size).
