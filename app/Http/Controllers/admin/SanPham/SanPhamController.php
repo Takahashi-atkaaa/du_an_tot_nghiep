@@ -860,6 +860,11 @@ class SanPhamController extends Controller
         ]);
     }
 
+    public function export()
+    {
+        return new \App\Exports\SanPhamExport();
+    }
+
     public function exportTemplate()
     {
         return new \App\Exports\SanPhamImportTemplateExport;

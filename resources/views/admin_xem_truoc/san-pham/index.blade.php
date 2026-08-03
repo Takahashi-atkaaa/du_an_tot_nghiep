@@ -135,7 +135,14 @@
                 <tbody id="productTableBody">
                     @foreach($sanPhams as $sp)
                         @php
+                            // Bỏ qua sản phẩm không có variant / đơn vị quy đổi nào
+                            // (flatenedRows rỗng). Tránh truy cập $firstRow->variant khi null.
                             $rows = $sp->flattenedRows;
+                        @endphp
+                        @if($rows->isEmpty())
+                            @continue
+                        @endif
+                        @php
                             $hasMoreThanOneRow = $rows->count() > 1;
                             $firstRow = $rows->first();
 
