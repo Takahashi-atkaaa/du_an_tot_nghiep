@@ -41,7 +41,7 @@
 
 <div class="card table-admin mb-4">
     <div class="card-body">
-        <form action="{{ url('admin/san-pham') }}" method="GET">
+        <form id="searchProductForm" action="{{ url('admin/san-pham') }}" method="GET">
             <div class="row g-3">
                 <div class="col-md-4">
                     <div class="input-group">
@@ -82,7 +82,13 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div id="qrScanner" style="width:100%; min-height:400px;"></div>
+                <div id="qrScanner" style="width:100%; min-height:300px; background:#000; border-radius:6px; position:relative;">
+                    <div id="qrScannerLoading" class="text-center text-white py-5" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column;">
+                        <div class="spinner-border text-light mb-2" role="status"></div>
+                        <div>Đang khởi động camera...</div>
+                    </div>
+                </div>
+                <div id="qrScannerError" class="alert alert-danger mt-2 d-none" role="alert"></div>
                 <div class="mt-3 text-center">
                     <button type="button" class="btn btn-secondary" id="stopQrScanBtn">Dừng quét</button>
                 </div>
@@ -677,7 +683,7 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
 @endsection
 
 @section('page_scripts')
-<script src="https://unpkg.com/html5-qrcode@2.3.7/minified/html5-qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.7/minified/html5-qrcode.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.7/minified/html5-qrcode.min.js'"></script>
 <script src="https://unpkg.com/vue@3.4.27/dist/vue.global.prod.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 @php

@@ -77,60 +77,128 @@ function toggleSection(headerEl) {
     var stopQrScanBtn = document.getElementById('stopQrScanBtn');
     var qrScannerModal = document.getElementById('qrScannerModal');
     var searchKeywordInput = document.getElementById('searchKeywordInput');
+    var searchProductForm = document.getElementById('searchProductForm');
+    var qrScannerLoading = document.getElementById('qrScannerLoading');
+    var qrScannerError = document.getElementById('qrScannerError');
     var qrScannerElementId = 'qrScanner';
     var html5QrCode = null;
     var qrScannerActive = false;
+    var lastScanned = '';
+    var lastScannedAt = 0;
+
+    function showScannerError(msg) {
+        if (qrScannerLoading) qrScannerLoading.classList.add('d-none');
+        if (qrScannerError) {
+            qrScannerError.textContent = msg;
+            qrScannerError.classList.remove('d-none');
+        }
+    }
+
+    function hideScannerError() {
+        if (qrScannerError) qrScannerError.classList.add('d-none');
+        if (qrScannerLoading) qrScannerLoading.classList.remove('d-none');
+    }
 
     window.startQrScanner = function() {
         if (qrScannerActive) return;
 
-        html5QrCode = new Html5Qrcode(qrScannerElementId);
-        var config = { fps: 10, qrbox: 250 };
+        hideScannerError();
+
+        if (typeof Html5Qrcode === 'undefined') {
+            console.error('[QR Scanner] Html5Qrcode is not defined. CDN may have failed to load.');
+            showScannerError('Chưa tải được thư viện quét mã vạch. Vui lòng kiểm tra kết nối mạng và tải lại trang.');
+            return;
+        }
+
+        try {
+            html5QrCode = new Html5Qrcode(qrScannerElementId);
+        } catch (err) {
+            console.error('[QR Scanner] Cannot init Html5Qrcode', err);
+            showScannerError('Không thể khởi tạo scanner: ' + (err && err.message ? err.message : err));
+            return;
+        }
+
+        var config = { fps: 10, qrbox: { width: 250, height: 150 } };
 
         Html5Qrcode.getCameras().then(function(cameras) {
-            if (cameras && cameras.length) {
-                var cameraId = cameras[0].id;
-                html5QrCode.start(cameraId, config, function(qrCodeMessage) {
+            if (!cameras || !cameras.length) {
+                showScannerError('Không tìm thấy camera phù hợp để quét mã vạch.');
+                return;
+            }
+            var cameraId = cameras[0].id;
+            html5QrCode.start(
+                cameraId,
+                config,
+                function(qrCodeMessage) {
+                    var now = Date.now();
+                    if (qrCodeMessage === lastScanned && (now - lastScannedAt) < 1500) {
+                        return;
+                    }
+                    lastScanned = qrCodeMessage;
+                    lastScannedAt = now;
+                    console.log('[QR Scanner] Detected:', qrCodeMessage);
+
                     if (searchKeywordInput) {
                         searchKeywordInput.value = qrCodeMessage;
                     }
                     var modalInstance = bootstrap.Modal.getInstance(qrScannerModal);
                     if (modalInstance) modalInstance.hide();
                     window.stopQrScanner();
-                    var form = document.querySelector('form[action*="admin/san-pham"]');
-                    if (form) form.submit();
-                }, function(errorMessage) {
-                    console.debug('QR scan error', errorMessage);
-                }).then(function() {
-                    qrScannerActive = true;
-                }).catch(function(err) {
-                    console.error('Không thể khởi động QR scanner', err);
-                    alert('Không thể khởi động camera để quét mã vạch. Vui lòng kiểm tra quyền truy cập camera.');
-                });
-            } else {
-                alert('Không tìm thấy camera phù hợp để quét mã vạch.');
-            }
+                    if (searchProductForm) {
+                        searchProductForm.submit();
+                    } else {
+                        var fallback = document.querySelector('form[action*="admin/san-pham"]');
+                        if (fallback) fallback.submit();
+                    }
+                },
+                function(errorMessage) {
+                    console.debug('[QR Scanner] scan error', errorMessage);
+                }
+            ).then(function() {
+                qrScannerActive = true;
+                if (qrScannerLoading) qrScannerLoading.classList.add('d-none');
+                console.log('[QR Scanner] Camera started successfully');
+            }).catch(function(err) {
+                console.error('[QR Scanner] Cannot start camera', err);
+                showScannerError('Không thể khởi động camera. Vui lòng cấp quyền truy cập camera cho trình duyệt rồi thử lại.');
+            });
         }).catch(function(err) {
-            console.error('Lỗi lấy camera', err);
-            alert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập thiết bị.');
+            console.error('[QR Scanner] getCameras failed', err);
+            showScannerError('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập thiết bị (và dùng trang HTTPS hoặc localhost).');
         });
     };
 
     window.stopQrScanner = function() {
-        if (!qrScannerActive || !html5QrCode) return;
-        html5QrCode.stop().then(function() {
-            html5QrCode.clear();
-            qrScannerActive = false;
+        if (!html5QrCode) return;
+        var instance = html5QrCode;
+        html5QrCode = null;
+        qrScannerActive = false;
+        instance.stop().then(function() {
+            return instance.clear();
         }).catch(function(err) {
-            console.error('Lỗi dừng QR scanner', err);
+            console.warn('[QR Scanner] Lỗi dừng scanner (bỏ qua):', err);
+            try { instance.clear(); } catch (e) {}
         });
     };
 
     if (startQrScanBtn) {
         startQrScanBtn.addEventListener('click', function() {
-            var modal = new bootstrap.Modal(qrScannerModal);
+            var modal = bootstrap.Modal.getOrCreateInstance(qrScannerModal);
             modal.show();
+            // Reset scanner state so user can re-open after a previous error
+            lastScanned = '';
+            lastScannedAt = 0;
+            qrScannerActive = false;
+            html5QrCode = null;
+        });
+    }
+
+    if (qrScannerModal) {
+        qrScannerModal.addEventListener('shown.bs.modal', function() {
             window.startQrScanner();
+        });
+        qrScannerModal.addEventListener('hidden.bs.modal', function() {
+            window.stopQrScanner();
         });
     }
 
@@ -138,13 +206,6 @@ function toggleSection(headerEl) {
         stopQrScanBtn.addEventListener('click', function() {
             var modal = bootstrap.Modal.getInstance(qrScannerModal);
             if (modal) modal.hide();
-            window.stopQrScanner();
-        });
-    }
-
-    if (qrScannerModal) {
-        qrScannerModal.addEventListener('hidden.bs.modal', function() {
-            window.stopQrScanner();
         });
     }
 })();
