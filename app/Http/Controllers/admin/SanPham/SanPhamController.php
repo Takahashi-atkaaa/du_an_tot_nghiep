@@ -862,7 +862,7 @@ class SanPhamController extends Controller
         ]);
     }
 
-    public function export()
+    public function export(Request $request)
     {
         return new \App\Exports\SanPhamExport();
     }
@@ -870,11 +870,6 @@ class SanPhamController extends Controller
     public function exportTemplate()
     {
         return new \App\Exports\SanPhamImportTemplateExport;
-    }
-
-    public function export(Request $request)
-    {
-        return new \App\Exports\SanPhamExport();
     }
 
     public function import(ImportSanPhamRequest $request): RedirectResponse
