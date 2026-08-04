@@ -1299,6 +1299,11 @@ class SanPhamController extends Controller
      */
     protected function resolveThuocTinhIdsWithNew(array $bienThe, array $newAttrMap): array
     {
+        // Load all parent attributes to build group name -> id lookup
+        $allParents = ThuocTinhSanPham::whereNull('thuoc_tinh_cha_id')
+            ->pluck('id', 'ten_thuoc_tinh')
+            ->toArray();
+
         foreach ($bienThe as &$variant) {
             $rawIds = $variant['thuoc_tinh_ids'] ?? null;
             if (blank($rawIds)) continue;
@@ -1310,8 +1315,34 @@ class SanPhamController extends Controller
                 $idStr = trim($idStr);
                 if ($idStr === '' || $idStr === 'null') continue;
 
+                // Case 1: numeric ID (existing attribute from DB) - use directly
                 if (is_numeric($idStr)) {
                     $resolved[] = (int) $idStr;
+                    continue;
+                }
+
+                // Case 2: synthetic ID from JS like "id_Màu sắc_Đỏ" (new attribute)
+                // Parse to extract group name and label
+                if (str_starts_with($idStr, 'id_')) {
+                    $parts = explode('_', $idStr, 3); // ["id", "Màu sắc", "Đỏ"]
+                    if (count($parts) === 3) {
+                        $groupName = $parts[1];
+                        $label = $parts[2];
+                        $parentId = $allParents[$groupName] ?? null;
+
+                        // Look up in newAttrMap: "groupName|label" => id
+                        $key = $groupName . '|' . $label;
+                        if (isset($newAttrMap[$key])) {
+                            $resolved[] = (int) $newAttrMap[$key];
+                        } else {
+                            // Fallback: create/find in DB directly
+                            $created = ThuocTinhSanPham::firstOrCreate(
+                                ['ten_thuoc_tinh' => $label, 'thuoc_tinh_cha_id' => $parentId],
+                                ['trang_thai' => true]
+                            );
+                            $resolved[] = $created->id;
+                        }
+                    }
                 }
             }
 

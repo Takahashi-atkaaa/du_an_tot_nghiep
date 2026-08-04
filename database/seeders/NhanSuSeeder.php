@@ -45,7 +45,28 @@ class NhanSuSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-            
+            [
+                'ten_ca' => 'Sang',
+                'gio_bat_dau' => '06:00:00',
+                'gio_ket_thuc' => '14:00:00',
+                'so_nhan_vien_toi_thieu' => 3,
+                'so_nhan_vien_toi_da' => 5,
+                'so_phut_di_lam_tre_toi_da' => 15,
+                'deleted_at' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'ten_ca' => 'Chieu',
+                'gio_bat_dau' => '14:00:00',
+                'gio_ket_thuc' => '22:00:00',
+                'so_nhan_vien_toi_thieu' => 3,
+                'so_nhan_vien_toi_da' => 5,
+                'so_phut_di_lam_tre_toi_da' => 15,
+                'deleted_at' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
         }
 

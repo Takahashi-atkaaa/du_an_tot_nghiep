@@ -2270,7 +2270,7 @@ function tinhTienGiam(subtotal) {
         .trim()
         .toLowerCase();
 
-    const minOrder = Number(selectedPromotion.don_hang_toi_thieu || 0) * 1000;
+    const minOrder = Number(selectedPromotion.don_hang_toi_thieu || 0);
     const minQty = Number(selectedPromotion.so_luong_sp_toi_thieu || 0);
     const totalQty = cart.reduce((s, i) => s + Number(i.qty || 0), 0);
 
@@ -2309,8 +2309,7 @@ function tinhTienGiam(subtotal) {
 }
 
     // Giảm tiền trực tiếp
-    // Giảm tiền trực tiếp
-const discount = Number(selectedPromotion.gia_tri_giam || 0) * 1000;
+    const discount = Number(selectedPromotion.gia_tri_giam || 0);
 return Math.min(discount, subtotal);
 }
 function applyPromotion() {

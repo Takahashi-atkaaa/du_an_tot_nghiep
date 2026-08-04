@@ -219,14 +219,14 @@ type="hidden"
 name="id_diem_danh"
 value="{{ $caHomNay->diemDanh->id }}">
 
-<button
+{{-- <button
 class="btn btn-danger btn-lg mt-2">
 
 <i class="fas fa-sign-out-alt me-2"></i>
 
 Kết thúc ca
 
-</button>
+</button> --}}
 
 </form>
 
