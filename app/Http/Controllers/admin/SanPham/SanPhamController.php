@@ -36,10 +36,12 @@ class SanPhamController extends Controller
 
         $sanPhams = Product::with(['danhMuc', 'variants.units'])
             ->whereNull('deleted_at')
+            ->whereHas('variants', fn($q) => $q->whereNull('deleted_at'))
             ->when($keyword, fn($q) => $q
                 ->where(fn($inner) => $inner
                     ->whereRaw('LOWER(ten_san_pham) LIKE ?', ["%".mb_strtolower($keyword)."%"])
                     ->orWhereHas('variants', fn($v) => $v
+                        ->whereNull('deleted_at')
                         ->whereRaw('LOWER(ma_vach) LIKE ?', ["%".mb_strtolower($keyword)."%"])
                         ->orWhereRaw('LOWER(ma_hang) LIKE ?', ["%".mb_strtolower($keyword)."%"])
                         ->orWhereRaw('LOWER(ten_bien_the) LIKE ?', ["%".mb_strtolower($keyword)."%"])
@@ -858,6 +860,11 @@ class SanPhamController extends Controller
             'trashed' => $trashed,
             'keyword' => $keyword,
         ]);
+    }
+
+    public function export()
+    {
+        return new \App\Exports\SanPhamExport();
     }
 
     public function exportTemplate()
