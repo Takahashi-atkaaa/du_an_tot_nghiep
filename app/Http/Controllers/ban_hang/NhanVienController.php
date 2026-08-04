@@ -122,7 +122,79 @@ class NhanVienController extends Controller
     );
 }
 
-    public function hoaDon(Request $request)
+public function donChoThanhToan(Request $request): \Illuminate\Http\JsonResponse
+{
+    // Lấy tất cả hoá đơn đang chờ thanh toán, kèm giao dịch PayOS còn `cho_xac_nhan`
+    $hoaDons = DB::table('hoa_don')
+        ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
+        ->where('hoa_don.trang_thai', 'Chờ thanh toán')
+        ->select(
+            'hoa_don.id',
+            'hoa_don.khach_can_tra',
+            'hoa_don.created_at',
+            'khach_hang.ten_khach_hang',
+            'khach_hang.so_dien_thoai'
+        )
+        ->orderByDesc('hoa_don.id')
+        ->limit(50)
+        ->get();
+
+    $ids = $hoaDons->pluck('id')->all();
+
+    // Map id_hoa_don => giao dịch PayOS mới nhất còn `cho_xac_nhan`
+    $gdMap = [];
+    if (!empty($ids)) {
+        $gds = DB::table('giao_dich')
+            ->whereIn('id_hoa_don', $ids)
+            ->where('phuong_thuc', 'payos')
+            ->where('trang_thai', 'cho_xac_nhan')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        foreach ($gds as $gd) {
+            $dl = is_string($gd->du_lieu_phan_hoi)
+                ? json_decode($gd->du_lieu_phan_hoi, true)
+                : (array) $gd->du_lieu_phan_hoi;
+            if (!isset($gdMap[$gd->id_hoa_don])) {
+                $gdMap[$gd->id_hoa_don] = [
+                    'giao_dich_id' => $gd->id,
+                    'ma_tham_chieu' => $gd->ma_tham_chieu,
+                    'checkout_url' => $dl['checkout_url'] ?? null,
+                    'qr_code' => $dl['qr_code'] ?? null,
+                    'so_tien' => $gd->so_tien,
+                ];
+            }
+        }
+    }
+
+    $data = $hoaDons->map(function ($hd) use ($gdMap) {
+        $gd = $gdMap[$hd->id] ?? null;
+        return [
+            'hoa_don_id' => (int) $hd->id,
+            'ma_hoa_don' => '#' . $hd->id,
+            'khach_can_tra' => (float) $hd->khach_can_tra,
+            'created_at' => $hd->created_at,
+            'ten_khach_hang' => $hd->ten_khach_hang,
+            'so_dien_thoai' => $hd->so_dien_thoai,
+            'has_payos' => (bool) $gd,
+            'checkout_url' => $gd['checkout_url'] ?? null,
+            'qr_code' => $gd['qr_code'] ?? null,
+            'giao_dich_id' => $gd['giao_dich_id'] ?? null,
+            'ma_tham_chieu' => $gd['ma_tham_chieu'] ?? null,
+        ];
+    });
+
+    // #region agent log
+    // instrumentation removed after successful verification
+    // #endregion agent log
+
+    return response()->json([
+        'success' => true,
+        'data' => $data,
+    ]);
+}
+
+public function hoaDon(Request $request)
     {
         $query = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')

@@ -387,6 +387,7 @@ Route::middleware([KTVaiTro::class])->group(function () {
     //   ->name('nhan-vien.hoa-don.huy');
     Route::get('/ban-hang/khach-hang', [NhanVienController::class, 'layKhachHang'])->name('nhan-vien.ban-hang.khach-hang')->middleware('permission:ban_hang');
     Route::get('/ban-hang/khuyen-mai', [NhanVienController::class, 'layKhuyenMai'])->name('nhan-vien.ban-hang.khuyen-mai')->middleware('permission:ban_hang');
+    Route::get('/ban-hang/don-cho-thanh-toan', [NhanVienController::class, 'donChoThanhToan'])->name('nhan-vien.ban-hang.don-cho-thanh-toan')->middleware('permission:ban_hang');
 
     Route::get('/khach-hang', [NhanVienKhachHangController::class, 'index'])->name('nhan-vien.khach-hang.index')->middleware('permission:ban_hang');
     Route::get('/khach-hang/create', [NhanVienKhachHangController::class, 'create'])->name('nhan-vien.khach-hang.create')->middleware('permission:ban_hang');

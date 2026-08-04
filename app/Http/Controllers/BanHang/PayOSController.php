@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\BanHang;
 
 use App\Http\Controllers\Controller;
+use App\Models\ChiTietLoHang;
 use App\Models\GiaoDich;
 use App\Services\PayOSService;
 use Illuminate\Http\JsonResponse;
@@ -301,9 +302,29 @@ class PayOSController extends Controller
 
             foreach ($chiTiets as $ct) {
                 if ($ct->id_chi_tiet_phieu) {
-                    DB::table('bien_the_san_pham')
-                        ->where('id', $ct->id_chi_tiet_phieu)
-                        ->decrement('so_luong_ton', $ct->so_luong);
+                    $variantId = (int) $ct->id_chi_tiet_phieu;
+                    $soLuongBan = (int) $ct->so_luong;
+
+                    // Giống tiền mặt: trừ từ chi_tiet_lo_hang theo FIFO (HSD gần nhất trước),
+                    // id nhỏ trước nếu cùng HSD. Observer ChiTietLoHang sẽ tự đồng bộ
+                    // bien_the_san_pham.so_luong_ton = sum(so_luong_ton các lô của variant).
+                    $remaining = $soLuongBan;
+                    $loList = ChiTietLoHang::where('variant_id', $variantId)
+                        ->where('so_luong_ton', '>', 0)
+                        ->orderBy('han_su_dung', 'asc')
+                        ->orderBy('id', 'asc')
+                        ->lockForUpdate()
+                        ->get();
+
+                    foreach ($loList as $lo) {
+                        if ($remaining <= 0) {
+                            break;
+                        }
+                        $truTuLo = (int) min($remaining, $lo->so_luong_ton);
+                        $lo->so_luong_ton -= $truTuLo;
+                        $lo->save();
+                        $remaining -= $truTuLo;
+                    }
                 } elseif ($ct->id_san_pham) {
                     DB::table('san_pham')
                         ->where('id', $ct->id_san_pham)

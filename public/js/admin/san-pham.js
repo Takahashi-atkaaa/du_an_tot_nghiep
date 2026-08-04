@@ -446,7 +446,7 @@ function toggleSection(headerEl) {
                                 '<th>Lô</th>' +
                                 '<th class="text-end">Giá nhập</th>' +
                                 '<th class="text-center">SL</th>' +
-                                '<th class="text-center">SL còn lại</th>' +
+                                '<th class="text-center">SL còn lại của lô</th>' +
                             '</tr>' +
                         '</thead>' +
                         '<tbody>';

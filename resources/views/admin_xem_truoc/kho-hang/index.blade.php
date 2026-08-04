@@ -659,7 +659,7 @@
                     <input type="hidden" id="px-id">
                     <div class="alert alert-warning mb-3 py-2 small">
                         <i class="fas fa-info-circle me-1"></i>
-                        Hệ thống sẽ tự động trừ kho theo nguyên tắc <strong>FEFO</strong> — ưu tiên lô có HSD gần nhất.
+                        Hệ thống  <strong></strong>
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
@@ -684,9 +684,26 @@
                         </div>
                     </div>
                     <hr>
+                    {{-- Search product form --}}
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-5">
+                            <input type="text" id="px-sp-search" class="form-control" placeholder="Tìm mã vạch, tên sản phẩm...">
+                        </div>
+                        <div class="col-md-4">
+                            <select id="px-sp-danh-muc" class="form-select">
+                                <option value="">-- Tất cả danh mục --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="px-sp-clear"><i class="fas fa-times me-1"></i>Xóa</button>
+                        </div>
+                    </div>
+                    <div id="px-sp-results" class="mb-3" style="max-height:200px;overflow-y:auto;border:1px solid #dee2e6;border-radius:4px;padding:8px;">
+                        <div class="text-center text-muted py-4"><i class="fas fa-search fs-4 mb-2 d-block"></i>Nhập tên hoặc mã vạch để tìm sản phẩm</div>
+                    </div>
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="mb-0 small">Chi tiết sản phẩm</h6>
-                        <button type="button" class="btn btn-sm btn-outline-primary" id="px-btn-them-sp"><i class="fas fa-plus me-1"></i>Thêm</button>
+                        <h6 class="mb-0 small">Chi tiết sản phẩm (hoặc bấm "Thêm" để chọn thủ công)</h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="px-btn-them-sp"><i class="fas fa-plus me-1"></i>Thêm thủ công</button>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-sm table-bordered mb-0">
@@ -694,12 +711,14 @@
                                 <tr>
                                     <th style="width:35%">Sản phẩm</th>
                                     <th class="text-center" style="width:100px">SL tồn</th>
-                                    <th style="width:30%">Lô hàng (FEFO)</th>
+                                    <th style="width:30%">Lô hàng </th>
                                     <th class="text-center" style="width:110px">SL xuất</th>
                                     <th class="text-center" style="width:60px"></th>
                                 </tr>
                             </thead>
-                            <tbody id="px-ds-sp"></tbody>
+                            <tbody id="px-ds-sp">
+                                <tr id="px-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td></tr>
+                            </tbody>
                         </table>
                     </div>
                     <div class="mt-2 text-end">
@@ -908,7 +927,7 @@
 @endsection
 
 @section('scripts')
-<script src="{{ asset('js/admin/kho-hang.js') }}"></script>
+<script src="{{ asset('js/admin/kho-hang.js') }}?v={{ filemtime(public_path('js/admin/kho-hang.js')) }}"></script>
 @endsection
 
 @section('styles')
