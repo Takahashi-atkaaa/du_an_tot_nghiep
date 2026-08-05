@@ -248,6 +248,7 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::delete('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'destroy'])->name('ca-lam-viec.destroy')->middleware('permission:quan_ly_ca_lam');
 
     Route::get('/admin/hoa-don', [HoaDonController::class, 'index'])->name('admin.hoa-don.index');
+    Route::get('/admin/hoa-don/{id}/modal', [HoaDonController::class, 'showModal'])->name('admin.hoa-don.modal');
 
 
     // Đổi trả hàng

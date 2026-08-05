@@ -92,7 +92,51 @@ class HoaDonController extends Controller
             ->where('chi_tiet_hoa_don.id_hoa_don', $id)
             ->get();
 
-        return view('admin_xem_truoc.hoa-don-chi-tiet', compact('hoaDon', 'chiTiet'));
+        $diemTichDiems = DB::table('lich_su_tich_diem')
+            ->where('id_hoa_don', $id)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        return view('admin_xem_truoc.hoa-don-chi-tiet', compact('hoaDon', 'chiTiet', 'diemTichDiems'));
+    }
+
+    public function showModal($id)
+    {
+        $hoaDon = DB::table('hoa_don')
+            ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
+            ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
+            ->leftJoin('khuyen_mai', 'hoa_don.id_khuyen_mai', '=', 'khuyen_mai.id')
+            ->select(
+                'hoa_don.*',
+                'khach_hang.ten_khach_hang',
+                'khach_hang.so_dien_thoai',
+                'nguoi_dung.ho_ten as ten_nhan_vien',
+                'khuyen_mai.ten_chuong_trinh as ten_khuyen_mai'
+            )
+            ->where('hoa_don.id', $id)
+            ->first();
+
+        abort_if(!$hoaDon, 404);
+
+        $chiTiet = DB::table('chi_tiet_hoa_don')
+            ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
+            ->leftJoin('bien_the_san_pham', 'chi_tiet_hoa_don.id_chi_tiet_phieu', '=', 'bien_the_san_pham.id')
+            ->select(
+                'chi_tiet_hoa_don.*',
+                'san_pham.ten_san_pham',
+                'bien_the_san_pham.ten_bien_the',
+                'bien_the_san_pham.ten_don_vi',
+                'bien_the_san_pham.ma_vach'
+            )
+            ->where('chi_tiet_hoa_don.id_hoa_don', $id)
+            ->get();
+
+        $diemTichDiems = DB::table('lich_su_tich_diem')
+            ->where('id_hoa_don', $id)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        return view('admin_xem_truoc.partials.hoa-don-modal-content', compact('hoaDon', 'chiTiet', 'diemTichDiems'));
     }
     public function huy($id)
     {
