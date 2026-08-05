@@ -251,7 +251,7 @@
             <li class="nav-item">
                 <a href="{{ url('admin/dashboard') }}" class="nav-link {{ request()->is('admin/dashboard') ? 'active' : '' }}">
                     <i class="fas fa-tachometer-alt"></i>
-                    <span>Dashboard</span>
+                    <span>Thống kê</span>
                 </a>
             </li>
             <li class="nav-item">
