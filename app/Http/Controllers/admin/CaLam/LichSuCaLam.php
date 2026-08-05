@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\CaLamViec;
 use App\Models\ChiaCaLamViec;
 use App\Models\ChiTietHoaDon;
-use App\Models\DiemDanh;
 use App\Models\GiaoCa;
 use App\Models\HoaDon;
 use App\Models\NguoiDung;
@@ -74,8 +73,7 @@ class LichSuCaLam extends Controller
             ->where('id_ca_lam_viec', $id_ca)
             ->count('id');
 
-        $danhSachDiemDanh = DiemDanh::pluck('id_chia_ca_lam_viec')
-            ->toArray();
+        $danhSachDiemDanh = [];
 
         $danhSachTrongCaTrongCa = ChiaCaLamViec::whereDate('ngay', $ngay)
             ->where('id_ca_lam_viec', $id_ca)

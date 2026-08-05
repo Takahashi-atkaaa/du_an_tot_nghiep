@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\CaLamViec;
 use App\Models\ChiaCaLamViec;
 use App\Models\ChiTietHoaDon;
-use App\Models\DiemDanh;
 use App\Models\HoaDon;
 use Illuminate\Http\Request;
 
@@ -52,8 +51,7 @@ public function index()
         ->count('id');
 
     $nhan_vien = ChiaCaLamViec::with([
-        'nguoiDung',
-        'diemDanh'])
+        'nguoiDung'])
          ->where('ngay', $ngay_hien_tai)
          ->where('id_ca_lam_viec', $ca_hien_tai->id)
          ->get();

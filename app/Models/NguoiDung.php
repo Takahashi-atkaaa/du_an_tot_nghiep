@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 // Su dung trait Authenticatable de ho tro xac thuc
 
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -96,15 +95,5 @@ public function setMatKhauAttribute($value)
     public function chiaCaLamViecs(): HasMany
     {
         return $this->hasMany(ChiaCaLamViec::class, 'id_nguoi_dung');
-    }
-
-    public function diemDanhs(): HasManyThrough
-    {
-        return $this->hasManyThrough(
-            DiemDanh::class,
-            ChiaCaLamViec::class,
-            'id_nguoi_dung',
-            'id_chia_ca_lam_viec'
-        );
     }
 }

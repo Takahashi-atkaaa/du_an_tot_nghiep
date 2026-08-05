@@ -182,12 +182,6 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ url('cham-cong') }}" class="nav-link {{ request()->is('cham-cong') ? 'active' : '' }}">
-                    <i class="fas fa-clock"></i>
-                    <span>Chấm công</span>
-                </a>
-            </li>
-            <li class="nav-item mt-3">
                 <a href="{{ url('ho-so') }}" class="nav-link {{ request()->is('nhan-vien/ho-so') ? 'active' : '' }}">
                     <i class="fas fa-user"></i>
                     <span>Hồ sơ cá nhân</span>

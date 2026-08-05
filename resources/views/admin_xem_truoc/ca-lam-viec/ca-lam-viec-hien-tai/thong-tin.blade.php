@@ -294,8 +294,6 @@
                                 <th>Tên nhân viên</th>
                                 <th>SĐT</th>
                                 <th>Vai trò</th>
-                                <th>Điểm danh</th>
-                             
                             </tr>
                         </thead>
 
@@ -316,26 +314,6 @@
                                 <td>
                                     {{ $nv->vai_tro_trong_ca }}
                                 </td>
-
-                                <td>
-
-                                    @if ($nv->diemDanh)
-
-                                        <span class="badge bg-success">
-                                            {{ $nv->diemDanh->trang_thai_vao_lam }}
-                                        </span>
-
-                                    @else
-
-                                        <span class="badge bg-danger">
-                                            Chưa điểm danh
-                                        </span>
-
-                                    @endif
-
-                                </td>
-
-                        
 
                             </tr>
 

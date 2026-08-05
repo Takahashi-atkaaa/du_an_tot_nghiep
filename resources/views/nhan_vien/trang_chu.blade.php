@@ -30,19 +30,6 @@
         <div class="col-md-4">
             <div class="card shadow-sm border-0">
                 <div class="card-body text-center">
-                    <i class="fas fa-clock fa-3x text-primary mb-3"></i>
-                    <h5>Chấm công</h5>
-                    <p class="text-muted">Thực hiện chấm công vào ca làm việc.</p>
-                    <a href="{{ url('cham-cong') }}" class="btn btn-primary">
-                        Chấm công
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-body text-center">
                     <i class="fas fa-user fa-3x text-warning mb-3"></i>
                     <h5>Hồ sơ cá nhân</h5>
                     <p class="text-muted">Cập nhật thông tin cá nhân của bạn.</p>
@@ -65,7 +52,6 @@
         <div class="card-body">
             <ul class="mb-0">
                 <li>📌 Kiểm tra lịch làm việc mỗi ngày.</li>
-                <li>📌 Chấm công đúng giờ khi bắt đầu ca làm.</li>
                 <li>📌 Liên hệ quản lý nếu cần đổi ca hoặc nghỉ phép.</li>
             </ul>
         </div>

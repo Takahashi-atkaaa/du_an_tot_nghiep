@@ -426,8 +426,6 @@
                                 <th>Tên nhân viên</th>
                                 <th>SĐT</th>
                                 <th>Vai trò</th>
-                                <th>Điểm danh</th>
-                                <th>Hành động</th>
                             </tr>
                         </thead>
 
@@ -447,69 +445,6 @@
                                     <td>
                                         {{ $nv->vai_tro_trong_ca }}
                                     </td>
-
-                                    <td>
-
-                                        @if ($nv->diemDanh)
-                                            <span class="badge bg-success">
-                                                {{ $nv->diemDanh->trang_thai_vao_lam }}
-                                            </span>
-                                        @else
-                                            <span class="badge bg-danger">
-                                                Chưa điểm danh
-                                            </span>
-                                        @endif
-
-                                    </td>
-
-                                    <td>
-                                        @if (auth()->user()->id_vai_tro == 1)
-
-                                            @if (in_array($nv->id, $danhSachDiemDanh))
-                                                <a href="{{ route('lich-su-ca-lam.chi_tiet_diem_danh', [
-                                                    'id_chia_ca_lam_viec' => $nv->id,
-                                                    'id_nv' => $nv->id_nguoi_dung,
-                                                ]) }}"
-                                                    class="btn btn-warning">
-                                                    Chi tiết
-                                                </a>
-                                            @else
-                                                <a href="{{ route('lich-su-ca-lam.tao-diem-danh-bu', [
-                                                    'id_chia_ca_lam_viec' => $nv->id,
-                                                    'id_nv' => $nv->id_nguoi_dung,
-                                                ]) }}"
-                                                    class="btn btn-primary">
-                                                    Chấm công bù
-                                                </a>
-                                            @endif
-                                        @else
-                                            {{-- nếu không phải admin thì phải kiểm tra id của trưởng ca kia có nằm trong có đó hay không --}}
-                                            @foreach ($danhSachTrongCaTrongCa as $truong_ca)
-                                                @if ($truong_ca->id_nguoi_dung == Auth::id())
-                                                    @if (in_array($nv->id, $danhSachDiemDanh))
-                                                        <a href="{{ route('lich-su-ca-lam.chi_tiet_diem_danh', [
-                                                            'id_chia_ca_lam_viec' => $nv->id,
-                                                            'id_nv' => $nv->id_nguoi_dung,
-                                                        ]) }}"
-                                                            class="btn btn-warning">
-                                                            Chi tiết
-                                                        </a>
-                                                    @else
-                                                        <a href="{{ route('lich-su-ca-lam.tao-diem-danh-bu', [
-                                                            'id_chia_ca_lam_viec' => $nv->id,
-                                                            'id_nv' => $nv->id_nguoi_dung,
-                                                        ]) }}"
-                                                            class="btn btn-primary">
-                                                            Chấm công bù
-                                                        </a>
-                                                    @endif
-                                                    @break
-                                                @endif
-                                            @endforeach
-                                        @endif
-
-                                    </td>
-
 
                                 </tr>
                             @endforeach

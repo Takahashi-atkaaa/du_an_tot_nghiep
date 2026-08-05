@@ -35,10 +35,6 @@ class QuyenSeeder extends Seeder
             'ten_quyen' => 'Quản lý khuyến mãi'
         ],
         [
-            'ma_quyen' => 'quan_ly_luong',
-            'ten_quyen' => 'Quản lý lương'
-        ],
-        [
             'ma_quyen' => 'quan_ly_hoa_don',
             'ten_quyen' => 'Quản lý hóa đơn'
         ],
