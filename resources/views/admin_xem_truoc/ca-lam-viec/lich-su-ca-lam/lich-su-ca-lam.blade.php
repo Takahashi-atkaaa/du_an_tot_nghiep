@@ -51,9 +51,38 @@
 
 <h4>LỊCH SỬ CA LÀM </h4>
 
+{{-- bộ lọc --}}
+<div class="card mb-4">
+    <div class="card-body">
+
+    <form action="{{ route('lich-su-ca-lam-viec.index') }}" method="GET" class="row mb-4">
+
+        <div class="col-md-4">
+            <input type="date"
+                name="ngay"
+                class="form-control"
+                value="{{ request('ngay') }}">
+        </div>
+
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100">
+                Tìm kiếm
+            </button>
+        </div>
+
+        <div class="col-md-2">
+            <a href="{{ route('lich-su-ca-lam-viec.index') }}"
+            class="btn btn-secondary w-100">
+                Làm mới
+            </a>
+        </div>
+
+    </form>
+
+
     <div class="thung_chua">
         @foreach($ngay2 as $n)
-            <a href="{{ route('lich-su-ngay-lam-viec.cac-ca-lam', ['ngay'=> $n->ngay])}}" class="vien">
+            <a href="{{ route('lich-su-ngay-lam-viec.cac-ca-lam', ['ngay'=> $n->ngay, 'id_ca'=> null])}}" class="vien">
                 <label class="ngay">📅 Ngày: {{ $n->ngay->format('Y-m-d') }}</label>
             </a>
         @endforeach

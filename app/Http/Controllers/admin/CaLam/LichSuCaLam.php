@@ -15,41 +15,48 @@ use Illuminate\Http\Request;
 class LichSuCaLam extends Controller
 {
     // hiển thị các ca <= ngày hiện tại
-    public function index(){
+    public function index(Request $request)
+    {
         $ngayHienTai = now()->format('Y-m-d');
 
-        $ngay2 = ChiaCaLamViec::select('ngay')
-            ->where('ngay','<=',$ngayHienTai)
+        $query = ChiaCaLamViec::select('ngay')
+            ->where('ngay', '<=', $ngayHienTai);
+
+        // Nếu có chọn ngày thì chỉ lấy ngày đó
+        if ($request->filled('ngay')) {
+            $query->whereDate('ngay', $request->ngay);
+        }
+
+        $ngay2 = $query
             ->distinct()
             ->orderByDesc('ngay')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
-        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.lich-su-ca-lam', compact('ngay2'));
+        return view(
+            'admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.lich-su-ca-lam',
+            compact('ngay2')
+        );
     }
 
 
     //các ca trong ngày
-    public function cacCa($ngay){
-        $caLam2 = ChiaCaLamViec::with('caLamViec')
+    public function cacCa($ngay, $id_ca = null){
+        // Lấy danh sách các ca làm việc trong ngày
+        $caLam = ChiaCaLamViec::with('caLamViec')
             ->where('ngay', $ngay)
             ->select('id_ca_lam_viec')
             ->distinct()
             ->get();
-        $ngay = $ngay;
 
-        $tongDoanhThuNgay =HoaDon::whereDate('created_at', $ngay)
-            ->sum('khach_can_tra');
-
-        $tongSoHoaDonNgay =HoaDon::whereDate('created_at', $ngay)
-            ->count('id');
-             
-        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.cac-ca-lam', compact('caLam2', 'ngay', 'tongDoanhThuNgay', 'tongSoHoaDonNgay'));
-    }
+        if ($id_ca == null) {
+            $id_ca = $caLam->first()?->id_ca_lam_viec;
+        }
 
 
-    // chi tiết lịch sử của ca 
-    public function chi_tiet_ca($id_ca, $ngay){
-        $ca = CaLamViec::findOrfail($id_ca);
+        /////////////////////////////////chi tiết từng ca
+        // $caChiTiet = CaLamViec::findOrFail($id_ca);
+        $caDangChon = CaLamViec::findOrFail($id_ca);
 
         $danhSachHoaDon = HoaDon::whereDate('created_at', $ngay)
            ->where('id_ca_lam_viec', $id_ca)
@@ -88,26 +95,31 @@ class LichSuCaLam extends Controller
             ->where('id_ca_lam_viec', $id_ca)
             ->sum('khach_can_tra');
 
-        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.chi-tiet-ca-lam', 
-            compact('ca', 'danhSachHoaDon', 'danhSachNhanVienTrongCa', 'tongDoanhThuCuaCa', 
-                    'tongNhanVienTrongCa', 'tongHoaDoncuaCa', 'ngay', 'danhSachDiemDanh','danhSachTrongCaTrongCa',
-                    'giaoCa', 'tongTienMatCuaCa'));
+        $ngay = $ngay;
+
+        $tongDoanhThuNgay =HoaDon::whereDate('created_at', $ngay)
+            ->sum('khach_can_tra');
+
+        $tongSoHoaDonNgay =HoaDon::whereDate('created_at', $ngay)
+            ->count('id');
+
+        //trả dữ liệu về view
+        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.cac-ca-lam',compact(
+            'caLam','ngay','tongDoanhThuNgay','tongSoHoaDonNgay','caDangChon',
+            'danhSachHoaDon', 'tongDoanhThuCuaCa','tongHoaDoncuaCa','danhSachNhanVienTrongCa',
+            'tongNhanVienTrongCa', 'danhSachDiemDanh', 'danhSachTrongCaTrongCa','giaoCa', 'tongTienMatCuaCa'
+            )
+        );
     }
 
-    //chi tiết hóa đơn trong lịch sử ca làm
-    public function chi_tiet_hoa_don($id_hoadon, $ngay){
-        $hoaDon = HoaDon::with(['nguoiDung', 'caLamViec'])
-            ->findOrfail($id_hoadon);
-
-        $chiTietHoaDon = ChiTietHoaDon::with(['sanPham', 'chiTietPhieu'])
-            ->where('id_hoa_don', $id_hoadon)
-            ->get();
-        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.chi-tiet-hoa-don', compact('chiTietHoaDon', 'hoaDon', 'ngay'));
-    }
 
     //giao ca
     public function tao_giao_ca($id_ca, $ngay){
         $ca = CaLamViec::findOrfail($id_ca);
+
+        $tongTienMatCuaCa = HoaDon::whereDate('created_at', $ngay)
+            ->where('id_ca_lam_viec', $id_ca)
+            ->sum('khach_can_tra');
 
         $danhSachNhanVienTrongCa = ChiaCaLamViec::with('nguoiDung')
             ->whereDate('ngay', $ngay)
@@ -125,7 +137,7 @@ class LichSuCaLam extends Controller
 
 
 
-        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.tao-giao-ca', compact('ca', 'danhSachNhanVienTrongCa', 'danhSachTrongCaTrongCa', 'ngay','danhSachTruongCa','caLamViecs'));
+        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.tao-giao-ca', compact('ca', 'tongTienMatCuaCa', 'danhSachNhanVienTrongCa', 'danhSachTrongCaTrongCa', 'ngay','danhSachTruongCa','caLamViecs'));
     }
 
 
@@ -155,7 +167,7 @@ class LichSuCaLam extends Controller
             'tien_mat_dau_ca' => $request->tien_mat_dau_ca,
             'tien_mat_cuoi_ca' => $request->tien_mat_cuoi_ca,
 
-            'chenh_lech' => $request->tien_cuoi_ca - $request->tien_dau_ca,
+            'chenh_lech' => -($request->chenh_lech),
 
             'thoi_gian_bat_dau_ca' => $request->thoi_gian_bat_dau_ca,
             'thoi_gian_ket_thuc_ca' => $request->thoi_gian_ket_thuc_ca,
