@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\KhuyenMai;
 use Carbon\Carbon;
-
+use Illuminate\Support\Facades\DB;
 class KhuyenMaiController extends Controller
 {
     // Danh sách khuyến mãi
@@ -67,34 +67,86 @@ class KhuyenMaiController extends Controller
         $ended = KhuyenMai::where('ngay_ket_thuc', '<', $now)
             ->orWhere('trang_thai', false)
             ->count();
-
+    $sanPhams = DB::table('san_pham')
+    ->whereNull('deleted_at')
+    ->orderBy('ten_san_pham')
+    ->select(
+        'id',
+        'ten_san_pham'
+    )
+    ->get();
         return view(
             'admin_xem_truoc.khuyen-mai',
-            compact('items', 'total', 'active', 'upcoming', 'ended')
+             compact(
+        'items',
+        'total',
+        'active',
+        'upcoming',
+        'ended',
+        'sanPhams'
+    )
         );
     }
 
     // Thêm khuyến mãi
     public function store(Request $request)
-    {
-        $data = $request->validate([
-            'ten_chuong_trinh' => 'required|string|max:255',
-            'loai_giam_gia' => 'required|string|max:50',
-            'gia_tri_giam' => 'required|numeric',
-            'giam_toi_da' => 'nullable|numeric',
-            'so_luong_sp_toi_thieu' => 'nullable|integer',
-            'don_hang_toi_thieu' => 'nullable|numeric',
-            'ngay_bat_dau' => 'nullable|date',
-            'ngay_ket_thuc' => 'nullable|date|after_or_equal:ngay_bat_dau',
-            'trang_thai' => 'sometimes|boolean',
-            'ghi_chu' => 'nullable|string',
-        ]);
+{
+    $data = $request->validate([
+        'ten_chuong_trinh' => 'required|string|max:255',
+        'loai_giam_gia' => 'required|string|max:50',
+        'gia_tri_giam' => 'required|numeric|min:0',
+        'giam_toi_da' => 'nullable|numeric|min:0',
+        'so_luong_sp_toi_thieu' => 'nullable|integer|min:0',
+        'don_hang_toi_thieu' => 'nullable|numeric|min:0',
+        'ngay_bat_dau' => 'nullable|date',
+        'ngay_ket_thuc' => 'nullable|date|after_or_equal:ngay_bat_dau',
+        'trang_thai' => 'sometimes|boolean',
+        'ghi_chu' => 'nullable|string',
 
-        KhuyenMai::create($data);
+        'id_san_phams' => [
+            'required',
+            'array',
+            'min:1',
+        ],
 
-        return redirect()->back()
-            ->with('success', 'Tạo chương trình khuyến mãi thành công');
-    }
+        'id_san_phams.*' => [
+            'integer',
+            'exists:san_pham,id',
+        ],
+    ]);
+
+    $idSanPhams = $data['id_san_phams'];
+
+    unset($data['id_san_phams']);
+
+    $data['trang_thai'] = $request->boolean('trang_thai');
+
+    DB::transaction(function () use ($data, $idSanPhams) {
+        $khuyenMai = KhuyenMai::create($data);
+
+        $rows = collect($idSanPhams)
+            ->unique()
+            ->map(function ($idSanPham) use ($khuyenMai) {
+                return [
+                    'id_khuyen_mai' => $khuyenMai->id,
+                    'id_san_pham' => $idSanPham,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            })
+            ->values()
+            ->all();
+
+        DB::table('khuyen_mai_san_pham')->insert($rows);
+    });
+
+    return redirect()
+        ->back()
+        ->with(
+            'success',
+            'Tạo chương trình khuyến mãi thành công'
+        );
+}
 
     // Xóa mềm khuyến mãi
     public function destroy($id)
@@ -111,38 +163,104 @@ class KhuyenMaiController extends Controller
     }
 
     // Form sửa khuyến mãi
-    public function edit($id)
-    {
-        $promo = KhuyenMai::findOrFail($id);
+  public function edit($id)
+{
+    $promo = KhuyenMai::findOrFail($id);
 
-        return view('admin_xem_truoc.khuyen-mai-edit', compact('promo'));
-    }
+    $sanPhams = DB::table('san_pham')
+        ->whereNull('deleted_at')
+        ->orderBy('ten_san_pham')
+        ->select(
+            'id',
+            'ten_san_pham'
+        )
+        ->get();
+
+    $idSanPhamsDaChon = DB::table('khuyen_mai_san_pham')
+        ->where('id_khuyen_mai', $promo->id)
+        ->pluck('id_san_pham')
+        ->map(fn ($id) => (int) $id)
+        ->all();
+
+    return view(
+        'admin_xem_truoc.khuyen-mai-edit',
+        compact(
+            'promo',
+            'sanPhams',
+            'idSanPhamsDaChon'
+        )
+    );
+}
 
     // Cập nhật khuyến mãi
     public function update(Request $request, $id)
-    {
-        $promo = KhuyenMai::findOrFail($id);
+{
+    $promo = KhuyenMai::findOrFail($id);
 
-        $data = $request->validate([
-            'ten_chuong_trinh' => 'required|string|max:255',
-            'loai_giam_gia' => 'required|string|max:50',
-            'gia_tri_giam' => 'required|numeric',
-            'giam_toi_da' => 'nullable|numeric',
-            'so_luong_sp_toi_thieu' => 'nullable|integer',
-            'don_hang_toi_thieu' => 'nullable|numeric',
-            'ngay_bat_dau' => 'nullable|date',
-            'ngay_ket_thuc' => 'nullable|date|after_or_equal:ngay_bat_dau',
-            'trang_thai' => 'sometimes|boolean',
-            'ghi_chu' => 'nullable|string',
-        ]);
+    $data = $request->validate([
+        'ten_chuong_trinh' => 'required|string|max:255',
+        'loai_giam_gia' => 'required|string|max:50',
+        'gia_tri_giam' => 'required|numeric|min:0',
+        'giam_toi_da' => 'nullable|numeric|min:0',
+        'so_luong_sp_toi_thieu' => 'nullable|integer|min:0',
+        'don_hang_toi_thieu' => 'nullable|numeric|min:0',
+        'ngay_bat_dau' => 'nullable|date',
+        'ngay_ket_thuc' => 'nullable|date|after_or_equal:ngay_bat_dau',
+        'trang_thai' => 'sometimes|boolean',
+        'ghi_chu' => 'nullable|string',
 
+        'id_san_phams' => [
+            'required',
+            'array',
+            'min:1',
+        ],
+
+        'id_san_phams.*' => [
+            'integer',
+            'exists:san_pham,id',
+        ],
+    ]);
+
+    $idSanPhams = $data['id_san_phams'];
+
+    unset($data['id_san_phams']);
+
+    $data['trang_thai'] = $request->boolean('trang_thai');
+
+    DB::transaction(function () use (
+        $promo,
+        $data,
+        $idSanPhams
+    ) {
         $promo->update($data);
 
-        return redirect()
-            ->route('khuyen-mai.edit', $promo->id)
-            ->with('success', 'Cập nhật chương trình khuyến mãi thành công');
-    }
+        DB::table('khuyen_mai_san_pham')
+            ->where('id_khuyen_mai', $promo->id)
+            ->delete();
 
+        $rows = collect($idSanPhams)
+            ->unique()
+            ->map(function ($idSanPham) use ($promo) {
+                return [
+                    'id_khuyen_mai' => $promo->id,
+                    'id_san_pham' => $idSanPham,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            })
+            ->values()
+            ->all();
+
+        DB::table('khuyen_mai_san_pham')->insert($rows);
+    });
+
+    return redirect()
+        ->route('khuyen-mai.edit', $promo->id)
+        ->with(
+            'success',
+            'Cập nhật chương trình khuyến mãi thành công'
+        );
+}
     // Bật / Tắt khuyến mãi
     public function toggle($id)
     {
