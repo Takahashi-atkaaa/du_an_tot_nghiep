@@ -15,8 +15,6 @@ use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\KhachHang;
-use App\Models\CaLamViec;
-use App\Models\ChiTietLoHang;
 
 
 class NhanVienController extends Controller
@@ -389,15 +387,15 @@ public function hoaDon(Request $request)
     {
         return Str::of((string) $vaiTro)->lower()->ascii()->value() === 'admin';
     }
-    public function laySanPham(Request $request)
-    {
-        $query = DB::table('bien_the_san_pham')
-            ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
-            ->where('san_pham.trang_thai', 1)
-            ->where('bien_the_san_pham.trang_thai', 1)
-            ->whereNull('san_pham.deleted_at')
-            ->whereNull('bien_the_san_pham.deleted_at')
-            ->where('bien_the_san_pham.so_luong_ton', '>', 0);
+ public function laySanPham(Request $request)
+{
+    $query = DB::table('bien_the_san_pham')
+        ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
+        ->where('san_pham.trang_thai', 1)
+        ->where('bien_the_san_pham.trang_thai', 1)
+        ->whereNull('san_pham.deleted_at')
+        ->whereNull('bien_the_san_pham.deleted_at')
+        ->where('bien_the_san_pham.so_luong_ton', '>', 0);
 
         if ($request->filled('id_danh_muc') && $request->id_danh_muc !== 'all') {
             $query->where('san_pham.id_danh_muc', $request->id_danh_muc);
@@ -467,7 +465,6 @@ public function hoaDon(Request $request)
             'id_khuyen_mai' => 'nullable|integer|exists:khuyen_mai,id',
             'diem_su_dung' => 'nullable|integer|min:0',
         ]);
-    
 
         return DB::transaction(function () use ($request) {
 
@@ -483,43 +480,43 @@ public function hoaDon(Request $request)
     $tongTienHang = 0;
     $items = [];
 
-            foreach ($request->cart as $item) {
-                $bienThe = DB::table('bien_the_san_pham')
-                    ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
-                    ->where('bien_the_san_pham.id', $item['id'])
-                    ->whereNull('bien_the_san_pham.deleted_at')
-                    ->whereNull('san_pham.deleted_at')
-                    ->select(
-                        'bien_the_san_pham.*',
-                        'san_pham.ten_san_pham'
-                    )
-                    ->lockForUpdate()
-                    ->first();
+        foreach ($request->cart as $item) {
+            $bienThe = DB::table('bien_the_san_pham')
+                ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
+                ->where('bien_the_san_pham.id', $item['id'])
+                ->whereNull('bien_the_san_pham.deleted_at')
+                ->whereNull('san_pham.deleted_at')
+                ->select(
+                    'bien_the_san_pham.*',
+                    'san_pham.ten_san_pham'
+                )
+                ->lockForUpdate()
+                ->first();
 
-                if (!$bienThe) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Không tìm thấy sản phẩm.'
-                    ], 422);
-                }
-
-                if ((int)$bienThe->so_luong_ton < (int)$item['qty']) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Sản phẩm "' . $bienThe->ten_san_pham . '" không đủ tồn kho.'
-                    ], 422);
-                }
-
-                $thanhTien = $bienThe->gia_ban * $item['qty'];
-                $tongTienHang += $thanhTien;
-
-                $items[] = [
-                    'bien_the' => $bienThe,
-                    'so_luong' => (int)$item['qty'],
-                    'gia_ban' => $bienThe->gia_ban,
-                    'thanh_tien' => $thanhTien,
-                ];
+            if (!$bienThe) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không tìm thấy sản phẩm.'
+                ], 422);
             }
+
+            if ((int)$bienThe->so_luong_ton < (int)$item['qty']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Sản phẩm "' . $bienThe->ten_san_pham . '" không đủ tồn kho.'
+                ], 422);
+            }
+
+            $thanhTien = $bienThe->gia_ban * $item['qty'];
+            $tongTienHang += $thanhTien;
+
+            $items[] = [
+                'bien_the' => $bienThe,
+                'so_luong' => (int)$item['qty'],
+                'gia_ban' => $bienThe->gia_ban,
+                'thanh_tien' => $thanhTien,
+            ];
+        }
 
             $tienGiamGia = 0;
             $diemSuDung = (int)($request->diem_su_dung ?? 0);

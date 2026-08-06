@@ -1507,6 +1507,7 @@ let selectedPromotion = null;
 let discountAmount = 0;
 const productListUrl = '{{ route('nhan-vien.ban-hang.san-pham') }}';
 const categoryListUrl = '{{ route('nhan-vien.ban-hang.danh-muc') }}';
+const scanBarcodeUrl = '{{ route('nhan-vien.ban-hang.scan-barcode') }}';
 const customerListUrl = '{{ route('nhan-vien.ban-hang.khach-hang') }}';
 const promotionListUrl = '{{ route('nhan-vien.ban-hang.khuyen-mai') }}';
 const checkoutUrl = '{{ route('nhan-vien.ban-hang.thanh-toan') }}';
@@ -1936,8 +1937,26 @@ function filterProducts() {
 // ─────────────────────────────────────────────
 // Add to Cart
 // ─────────────────────────────────────────────
+function buildCartItemFromProduct(product) {
+    const variantId = Number(product.id ?? product.bien_the_id ?? 0);
+
+    return {
+        row_key: 'variant_' + variantId,
+        id: variantId,
+        unit_id: null,
+        product_id: product.id_san_pham || product.product_id || null,
+        ten_san_pham: product.ten_san_pham || product.ten_bien_the || '',
+        ten_don_vi: product.ten_don_vi || product.don_vi_tinh_hien_thi || '',
+        gia_ban: Number(product.gia_ban || product.gia_ban_hien_thi || 0),
+        gia_von: Number(product.gia_von || 0),
+        hinh_anh: product.hinh_anh,
+        available_qty: Number(product.so_luong_ton_kho || product.so_luong_ton || 0),
+        ty_le_quy_doi: 1,
+    };
+}
+
 function addToCart(id) {
-    const product = products.find(p => p.id === id);
+    const product = products.find(p => String(p.id) === String(id));
     if (!product) return;
 
     const cart = getCurrentCart();
@@ -1970,7 +1989,6 @@ function addToCart(id) {
     }
 
     renderCart();
-    showToast(`Đã thêm "${product.ten_san_pham}" vào giỏ hàng`);
 }
 
 // ─────────────────────────────────────────────
@@ -2002,6 +2020,7 @@ function renderCart() {
         const ten = item.ten_san_pham ?? 'Chưa có tên';
         const gia = Number(item.gia_ban ?? 0);
         const hinh = resolveImageUrl(item.hinh_anh);
+        const donVi = item.ten_don_vi ? ` <span class="item-unit">(${item.ten_don_vi})</span>` : '';
 
         return `
             <div class="cart-item">
@@ -2100,23 +2119,30 @@ function calculateTotal() {
 // ─────────────────────────────────────────────
 // Update Quantity
 // ─────────────────────────────────────────────
-function updateQuantity(id, change) {
+function updateQuantity(rowKey, change) {
     const cart = getCurrentCart();
-    const item = cart.find(i => i.id === id);
+    const item = cart.find(i => i.row_key === rowKey);
     if (!item) return;
+
     item.qty += change;
     if (item.qty <= 0) {
-        removeFromCart(id);
+        removeFromCart(rowKey);
         return;
     }
+
+    if (item.qty > Number(item.available_qty || 0)) {
+        item.qty = Number(item.available_qty || 0);
+        showToast('Số lượng vượt quá tồn kho!', 'error');
+    }
+
     renderCart();
 }
 
 // ─────────────────────────────────────────────
 // Remove from Cart
 // ─────────────────────────────────────────────
-function removeFromCart(id) {
-    invoiceTabs[currentTab].cart = getCurrentCart().filter(i => i.id !== id);
+function removeFromCart(rowKey) {
+    invoiceTabs[currentTab].cart = getCurrentCart().filter(i => i.row_key !== rowKey);
     renderCart();
 }
 
@@ -2711,7 +2737,6 @@ function applyPromotion() {
     calculateChange();
 } 
 
-// hàm tìm kiếm sản phẩm theo mã vạch khi nhấn Enter
 async function handleSearchEnter(event) {
     if (event.key !== 'Enter') return;
 
@@ -2721,39 +2746,110 @@ async function handleSearchEnter(event) {
     if (!keyword) return;
 
     try {
-        const response = await fetch(productListUrl + '?q=' + encodeURIComponent(keyword), {
-            headers: { 'Accept': 'application/json' }
+        const response = await fetch(scanBarcodeUrl, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            },
+            body: JSON.stringify({ barcode: keyword })
         });
-
-        if (!response.ok) {
-            throw new Error('Không thể tìm sản phẩm.');
-        }
 
         const data = await response.json();
 
-        const product = data.find(p =>
-            String(p.ma_vach || '').toLowerCase() === keyword.toLowerCase()
-        ) || data[0];
-
-        if (!product) {
-            showToast('Không tìm thấy sản phẩm phù hợp!', 'error');
+        if (response.ok && data.success) {
+            addOrUpdateCartItem(data.item);
+            event.target.value = '';
+            renderCart();
+            setTimeout(() => event.target.focus(), 100);
             return;
         }
 
-        products = data;
-        addToCart(product.id);
+        const localProduct = Array.isArray(products)
+            ? products.find(p => {
+                const barcode = String(p.ma_vach || '').toLowerCase();
+                const code = String(p.ma_hang || '').toLowerCase();
+                const name = String(p.ten_san_pham || '').toLowerCase();
+                const search = keyword.toLowerCase();
+                return barcode === search || code === search || name.includes(search);
+            })
+            : null;
+
+        if (localProduct) {
+            addOrUpdateCartItem(buildCartItemFromProduct(localProduct));
+            event.target.value = '';
+            renderCart();
+            setTimeout(() => event.target.focus(), 100);
+            return;
+        }
+
+        const searchResponse = await fetch(productListUrl + '?q=' + encodeURIComponent(keyword), {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!searchResponse.ok) {
+            throw new Error(data.message || 'Không tìm thấy sản phẩm.');
+        }
+
+        const searchData = await searchResponse.json();
+        const product = Array.isArray(searchData)
+            ? (searchData.find(p => String(p.ma_vach || '').toLowerCase() === keyword.toLowerCase()) || searchData[0])
+            : null;
+
+        if (!product) {
+            showToast(data.message || 'Không tìm thấy sản phẩm.', 'error');
+            event.target.value = '';
+            event.target.focus();
+            return;
+        }
+
+        products = Array.isArray(searchData) ? searchData : products;
+        addOrUpdateCartItem(buildCartItemFromProduct(product));
 
         event.target.value = '';
         renderProducts(products, '');
-
-        setTimeout(() => {
-            event.target.focus();
-        }, 100);
-
+        renderCart();
+        setTimeout(() => event.target.focus(), 100);
     } catch (error) {
         console.error(error);
-        showToast('Lỗi quét mã vạch!', 'error');
+        showToast('Lỗi xử lý tìm sản phẩm!', 'error');
     }
+}
+
+function addOrUpdateCartItem(item) {
+    const cart = getCurrentCart();
+    const existing = cart.find(i => i.row_key === item.row_key);
+
+    if (existing) {
+        if (existing.qty + 1 > Number(item.available_qty || 0)) {
+            showToast('Số lượng vượt quá tồn kho!', 'error');
+            return;
+        }
+        existing.qty += 1;
+        existing.thanh_tien = existing.gia_ban * existing.qty;
+    } else {
+        cart.push({
+            row_key: item.row_key,
+            id: item.id,
+            unit_id: item.unit_id || null,
+            product_id: item.product_id,
+            ten_san_pham: item.ten_san_pham,
+            ten_don_vi: item.ten_don_vi,
+            gia_ban: item.gia_ban,
+            gia_von: item.gia_von,
+            hinh_anh: item.hinh_anh,
+            qty: 1,
+            available_qty: item.available_qty,
+            ty_le_quy_doi: item.ty_le_quy_doi,
+            thanh_tien: item.gia_ban,
+        });
+    }
+
+    renderCart();
+    calculateTotal();
+    calculateChange();
+    showToast(`Đã thêm "${item.ten_san_pham}" vào giỏ hàng`);
 }
 
 function capNhatDiem() {
