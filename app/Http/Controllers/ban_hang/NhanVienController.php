@@ -955,23 +955,27 @@ public function hoaDon(Request $request)
         );
     }
     public function layKhuyenMai()
-    {
-        return response()->json(
-            DB::table('khuyen_mai')
-                ->where('trang_thai', 1)
-                ->where('ngay_bat_dau', '<=', now())
-                ->where('ngay_ket_thuc', '>=', now())
-                ->select(
-                    'id',
-                    'ten_chuong_trinh',
-                    'loai_giam_gia',
-                    'gia_tri_giam',
-                    'giam_toi_da',
-                    'so_luong_sp_toi_thieu',
-                    'don_hang_toi_thieu'
+{
+    $khuyenMais = DB::table('khuyen_mai')
+        ->where('trang_thai', 1)
+        ->whereDate('ngay_bat_dau', '<=', today())
+        ->whereDate('ngay_ket_thuc', '>=', today())
+        ->whereNull('deleted_at')
+        ->get();
+
+    foreach ($khuyenMais as $khuyenMai) {
+        $khuyenMai->id_san_phams =
+            DB::table('khuyen_mai_san_pham')
+                ->where(
+                    'id_khuyen_mai',
+                    $khuyenMai->id
                 )
-                ->orderByDesc('id')
-                ->get()
-        );
+                ->pluck('id_san_pham')
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->all();
     }
+
+    return response()->json($khuyenMais);
+}
 }
