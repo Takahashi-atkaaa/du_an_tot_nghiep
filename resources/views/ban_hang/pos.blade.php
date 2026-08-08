@@ -1389,6 +1389,14 @@ body {
         </div>
         <div class="cart-bottom">
         <div class="cart-promotion">
+            <label class="form-label mb-1">
+                <i class="fas fa-user-tie me-1"></i>Người bán
+            </label>
+            <select id="sellerSelect" class="form-select form-select-sm" onchange="applySeller()">
+                <option value="">-- Chọn người bán --</option>
+            </select>
+        </div>
+        <div class="cart-promotion">
             <label class="form-label mb-1">Khuyến mãi</label>
             <select id="promotionSelect" class="form-select form-select-sm" onchange="applyPromotion()">
                <option value="">Không áp dụng</option>
@@ -1511,6 +1519,7 @@ const categoryListUrl = '{{ route('nhan-vien.ban-hang.danh-muc') }}';
 const customerListUrl = '{{ route('nhan-vien.ban-hang.khach-hang') }}';
 const promotionListUrl = '{{ route('nhan-vien.ban-hang.khuyen-mai') }}';
 const checkoutUrl = '{{ route('nhan-vien.ban-hang.thanh-toan') }}';
+const sellerListUrl = '{{ route('nhan-vien.ban-hang.nhan-vien') }}';
 const invoiceListUrl = '{{ url('/hoa-don') }}';
 
 function resolveImageUrl(path) {
@@ -1594,7 +1603,8 @@ let invoiceTabs = [
         promotion: null,
         payment: 'cash',
         usePoint: 0,
-        customerMoney: ''
+        customerMoney: '',
+        sellerId: null,
     }
 ];
 
@@ -1614,6 +1624,9 @@ function closePaidInvoiceTab() {
         // Nếu hết tab thì tạo hóa đơn mới trống
         tabIndex++;
 
+        // Tab mới KHÔNG reset sellerId — copy từ lựa chọn phiên hiện tại
+        // (đã lưu trong localStorage khi người dùng chọn người bán).
+        const rememberedSellerId = getRememberedSellerId();
         invoiceTabs.push({
             id: tabIndex,
             name: 'HD' + tabIndex,
@@ -1622,7 +1635,8 @@ function closePaidInvoiceTab() {
             promotion: null,
             payment: 'cash',
             usePoint: 0,
-            customerMoney: ''
+            customerMoney: '',
+            sellerId: rememberedSellerId,
         });
 
         currentTab = 0;
@@ -1697,6 +1711,7 @@ function loadCurrentInvoiceForm() {
     }
 
     document.getElementById('promotionSelect').value = selectedPromotion ? selectedPromotion.id : '';
+    document.getElementById('sellerSelect').value = invoice.sellerId ? String(invoice.sellerId) : '';
 
     document.querySelectorAll('.pay-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.method === selectedPayment);
@@ -1714,19 +1729,31 @@ function createInvoice() {
 
     tabIndex++;
 
+    // Tab mới sẽ lấy sellerId từ phiên hiện tại (đã được lưu trong localStorage).
+    // Ưu tiên: sellerId của tab hiện tại → fallback rememberedSellerId.
+    const prevSellerId = invoiceTabs[currentTab] ? invoiceTabs[currentTab].sellerId : null;
+    const rememberedSellerId = getRememberedSellerId();
+    const newInvoiceSellerId = prevSellerId ?? rememberedSellerId;
+
     invoiceTabs.push({
-    id: tabIndex,
-    name: 'HD' + tabIndex,
-    cart: [],
-    customer: null,
-    promotion: null,
-    payment: 'cash',
-    usePoint: 0,
-    customerMoney: ''
-});
+        id: tabIndex,
+        name: 'HD' + tabIndex,
+        cart: [],
+        customer: null,
+        promotion: null,
+        payment: 'cash',
+        usePoint: 0,
+        customerMoney: '',
+        sellerId: newInvoiceSellerId,
+    });
 
     currentTab = invoiceTabs.length - 1;
     renderInvoiceTabs();
+    // Đồng bộ dropdown người bán với sellerId của tab mới
+    const select = document.getElementById('sellerSelect');
+    if (select && newInvoiceSellerId) {
+        select.value = String(newInvoiceSellerId);
+    }
 }
 
 function closeInvoiceTab(index) {
@@ -2326,9 +2353,10 @@ const response = await fetch(checkoutUrl, {
         qty: item.qty
     })),
     id_khach_hang: selectedCustomer ? selectedCustomer.id : null,
+    id_nguoi_ban: (getCurrentInvoice().sellerId ?? null),
     id_khuyen_mai: selectedPromotion ? selectedPromotion.id : null,
     tien_khach_dua: parseInt(
-    document.getElementById('customerMoney')
+        document.getElementById('customerMoney')
         .value
         .replace(/\D/g, '')
 ) || 0,
@@ -2572,6 +2600,121 @@ async function loadPromotions() {
             </option>
         `;
     });
+}
+
+/**
+ * Lấy danh sách nhân viên/người bán hàng từ API và đổ vào dropdown Người bán.
+ * - Vai trò bất kỳ (Admin, Nhân viên, Trưởng ca, ...) — Admin lúc nào cũng có.
+ */
+let sellers = [];
+const SELLER_STORAGE_KEY = 'pos_last_seller_id_user_' + ({{ Auth::id() ?? 'null' }});
+
+/**
+ * Đọc sellerId đã lưu trong localStorage (theo user đang đăng nhập).
+ * Trả về null nếu chưa có / giá trị cũ không còn hợp lệ.
+ */
+function getRememberedSellerId() {
+    try {
+        const raw = localStorage.getItem(SELLER_STORAGE_KEY);
+        if (!raw) return null;
+        const id = Number(raw);
+        if (!Number.isFinite(id) || id <= 0) return null;
+        return id;
+    } catch (e) {
+        return null;
+    }
+}
+
+function setRememberedSellerId(id) {
+    try {
+        if (id && Number.isFinite(Number(id)) && Number(id) > 0) {
+            localStorage.setItem(SELLER_STORAGE_KEY, String(Number(id)));
+        }
+    } catch (e) {
+        /* localStorage không khả dụng - bỏ qua */
+    }
+}
+
+function clearRememberedSellerId() {
+    try {
+        localStorage.removeItem(SELLER_STORAGE_KEY);
+    } catch (e) {
+        /* bỏ qua */
+    }
+}
+
+async function loadSellers() {
+    try {
+        const response = await fetch(sellerListUrl, {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!response.ok) {
+            throw new Error('Không thể tải danh sách người bán.');
+        }
+
+        sellers = await response.json();
+
+        const select = document.getElementById('sellerSelect');
+        select.innerHTML = '<option value="">-- Chọn người bán --</option>';
+
+        sellers.forEach(nv => {
+            const tenVaiTro = nv.ten_vai_tro ? ` (${nv.ten_vai_tro})` : '';
+            select.innerHTML += `
+                <option value="${nv.id}">
+                    ${nv.ho_ten}${tenVaiTro}
+                </option>
+            `;
+        });
+
+        // Ưu tiên lựa chọn người bán cho hóa đơn hiện tại:
+        // 1. Nếu tab hiện tại đã có sellerId hợp lệ (do người dùng chọn trước đó) → giữ nguyên
+        // 2. Nếu chưa có → dùng sellerId đã lưu trong localStorage (phiên đăng nhập này)
+        // 3. Cuối cùng mới fallback về người đang đăng nhập
+        const currentInvoice = getCurrentInvoice();
+        const currentUserId = {{ Auth::id() ?? 'null' }};
+        let sellerToApply = null;
+
+        if (currentInvoice.sellerId && sellers.some(nv => Number(nv.id) === Number(currentInvoice.sellerId))) {
+            sellerToApply = currentInvoice.sellerId;
+        } else {
+            const remembered = getRememberedSellerId();
+            if (remembered && sellers.some(nv => Number(nv.id) === Number(remembered))) {
+                sellerToApply = remembered;
+                currentInvoice.sellerId = remembered;
+            } else if (currentUserId && sellers.some(nv => Number(nv.id) === Number(currentUserId))) {
+                sellerToApply = currentUserId;
+                currentInvoice.sellerId = currentUserId;
+                setRememberedSellerId(currentUserId);
+            }
+        }
+
+        if (sellerToApply) {
+            select.value = String(sellerToApply);
+            // Đồng bộ dropdown cho tất cả tab đang mở để tránh hiển thị trống khi switch
+            invoiceTabs.forEach(tab => {
+                if (!tab.sellerId && sellers.some(nv => Number(nv.id) === Number(sellerToApply))) {
+                    tab.sellerId = sellerToApply;
+                }
+            });
+        }
+    } catch (err) {
+        console.error('Lỗi loadSellers:', err);
+    }
+}
+
+function applySeller() {
+    const select = document.getElementById('sellerSelect');
+    const id = select && select.value ? Number(select.value) : null;
+    const invoice = getCurrentInvoice();
+    invoice.sellerId = id;
+
+    // Lưu lựa chọn vào localStorage để giữ cho các tab sau / lần mở POS tiếp theo.
+    // Khi id === null (chọn "-- Chọn người bán --") → KHÔNG xóa lưu nhớ,
+    // vì đây chỉ là chưa chọn trong tab hiện tại, không phải ý muốn reset phiên.
+    if (id !== null) {
+        setRememberedSellerId(id);
+    }
 }
 function tinhTienGiam() {
     const cart = getCurrentCart();
@@ -3032,6 +3175,7 @@ async function reopenPayOSQR(hoaDonId, maHoaDon) {
 loadCategories();
 loadProducts();
 loadPromotions();
+loadSellers();
 renderInvoiceTabs();
 </script>
 <div class="modal fade" id="qrPaymentModal" tabindex="-1">
