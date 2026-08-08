@@ -38,7 +38,7 @@ class ChiaCaController extends Controller
             ->with('vaiTro')
             ->where('trang_thai', 1)
             ->whereHas('vaiTro', function ($query) {
-                $query->whereIn('ten_vai_tro', ['Nhân viên', 'Trưởng ca']);
+                $query->whereIn('ten_vai_tro', ['Nhân viên', 'Trưởng ca', 'Bán hàng']);
             })
             ->when($keyword !== '', function ($query) use ($keyword) {
                 $query->where('ho_ten', 'like', '%' . $keyword . '%');
@@ -66,7 +66,7 @@ class ChiaCaController extends Controller
             ->with(['nguoiDung.vaiTro', 'caLamViec'])
             ->whereHas('nguoiDung', function ($query) {
                 $query->whereHas('vaiTro', function ($roleQuery) {
-                    $roleQuery->whereIn('ten_vai_tro', ['Nhân viên', 'Trưởng ca']);
+                    $roleQuery->whereIn('ten_vai_tro', ['Nhân viên', 'Trưởng ca', 'Bán hàng']);
                 });
             })
             ->whereBetween('ngay', [
@@ -359,7 +359,7 @@ class ChiaCaController extends Controller
             ->with('vaiTro')
             ->where('trang_thai', 1)
             ->whereHas('vaiTro', function ($query) {
-                $query->whereIn('ten_vai_tro', ['Nhân viên', 'Trưởng ca']);
+                $query->whereIn('ten_vai_tro', ['Nhân viên', 'Trưởng ca', 'Bán hàng']);
             })
             ->orderBy('ho_ten')
             ->get(['id', 'ho_ten', 'id_vai_tro']);
@@ -689,7 +689,7 @@ class ChiaCaController extends Controller
             ->with('vaiTro')
             ->where('trang_thai', 1)
             ->whereHas('vaiTro', function ($query) {
-                $query->whereIn('ten_vai_tro', ['Nhân viên', 'Trưởng ca']);
+                $query->whereIn('ten_vai_tro', ['Nhân viên', 'Trưởng ca', 'Bán hàng']);
             })
             ->get(['id', 'ho_ten', 'id_vai_tro'])
             ->keyBy('id');
@@ -1076,9 +1076,17 @@ class ChiaCaController extends Controller
 
     private function defaultShiftRoleFromUserRole(string $vaiTro): string
     {
-        return $this->normalizeName($vaiTro) === 'truong ca' || $this->normalizeName($vaiTro) === 'truong_ca' || $this->normalizeName($vaiTro) === 'truongca'
-            ? 'truong_ca'
-            : 'nhan_vien';
+        $normalized = $this->normalizeName($vaiTro);
+
+        if (in_array($normalized, ['truong ca', 'truong_ca', 'truongca'], true)) {
+            return 'truong_ca';
+        }
+
+        if (in_array($normalized, ['ban hang', 'ban_hang', 'banhang'], true)) {
+            return 'ban_hang';
+        }
+
+        return 'nhan_vien';
     }
 
     private function displayUserRole(NguoiDung $nguoiDung): string
@@ -1090,8 +1098,14 @@ class ChiaCaController extends Controller
     {
         $normalized = $this->normalizeName($vaiTroTrongCa);
 
-        return in_array($normalized, ['truong ca', 'truong_ca', 'truongca'], true)
-            ? 'truong_ca'
-            : 'nhan_vien';
+        if (in_array($normalized, ['truong ca', 'truong_ca', 'truongca'], true)) {
+            return 'truong_ca';
+        }
+
+        if (in_array($normalized, ['ban hang', 'ban_hang', 'banhang'], true)) {
+            return 'ban_hang';
+        }
+
+        return 'nhan_vien';
     }
 }

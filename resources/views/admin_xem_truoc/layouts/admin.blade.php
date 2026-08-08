@@ -343,8 +343,15 @@
 
                         <li class="nav-item">
                             <a href="{{ route('lich-su-ca-lam-viec.index') }}"
-                            class="nav-link">
+                            class="nav-link {{ request()->is('admin/lich-su-ca-lam-viec*') ? 'active' : '' }}">
                                 Lịch sử ca làm
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a href="{{ route('chia-ca-lam-viec.index') }}"
+                            class="nav-link {{ request()->is('admin/chia-ca-lam-viec*') ? 'active' : '' }}">
+                                Chia ca làm việc
                             </a>
                         </li>
 

@@ -312,7 +312,7 @@
                                 </td>
 
                                 <td>
-                                    {{ $nv->vai_tro_trong_ca }}
+                                    {{ match($nv->vai_tro_trong_ca ?? 'nhan_vien') { 'truong_ca' => 'Trưởng ca', 'ban_hang' => 'Bán hàng', default => 'Nhân viên' } }}
                                 </td>
 
                             </tr>
