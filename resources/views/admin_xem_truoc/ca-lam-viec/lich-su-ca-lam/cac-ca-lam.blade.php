@@ -372,51 +372,6 @@ h3,h4,h5{
                 </div>
             </div>
 
-
-            <div class="col-md-3">
-                <div class="card info-card">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="icon-box icon-danger me-3">
-                            <i class="bi bi-receipt-cutoff"></i>
-                        </div>
-
-                        <div>
-                            <div class="text-muted">Số hóa đơn hủy</div>
-                            <h4 class="mb-0 text-danger">
-                                {{ $cacHoaDonBiHuyTrongCa }}
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3">
-                <div class="card info-card">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="icon-box icon-danger me-3">
-                            <i class="bi bi-cash-stack"></i>
-                        </div>
-
-                        <div>
-                            <div class="text-muted">
-                                Doanh thu ca
-                            </div>
-
-                            <h5 class="mb-0 text-danger">
-                                {{ number_format($tongDoanhThuCuaCa) }}  VND
-                            </h5>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
-        </div>
-
-
-        {{-- Thống kê --}}
-        <div class="row g-4 mb-4">
-
             <div class="col-md-3">
                 <div class="card info-card">
                     <div class="card-body d-flex align-items-center">
@@ -442,18 +397,65 @@ h3,h4,h5{
             <div class="col-md-3">
                 <div class="card info-card">
                     <div class="card-body d-flex align-items-center">
+                        <div class="icon-box icon-danger me-3">
+                            <i class="bi bi-receipt-cutoff"></i>
+                        </div>
 
-                        <div class="icon-box icon-primary me-3">
-                            <i class="bi bi-people-fill"></i>
+                        <div>
+                            <div class="text-muted">Số hóa đơn hủy</div>
+                            <h4 class="mb-0 text-danger">
+                                {{ $cacHoaDonBiHuyTrongCa }}
+                            </h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+
+
+        {{-- Thống kê --}}
+        <div class="row g-4 mb-4">
+
+
+            <div class="col-md-3">
+                <div class="card info-card">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="icon-box icon-danger me-3">
+                            <i class="bi bi-cash-stack"></i>
                         </div>
 
                         <div>
                             <div class="text-muted">
-                                Tổng nhân viên
+                                Doanh thu ca
+                            </div>
+
+                            <h5 class="mb-0 text-danger">
+                                {{ number_format($tongDoanhThuCuaCa) }}  VND
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+           
+
+            <div class="col-md-3">
+                <div class="card info-card">
+                    <div class="card-body d-flex align-items-center">
+
+                        <div class="icon-box icon-primary me-3">
+                            <i class="bi bi-credit-card-2-front-fill"></i>
+                        </div>
+
+                        <div>
+                            <div class="text-muted">
+                                Doanh thu chuyển khoản trong ca
                             </div>
 
                             <h3 class="mb-0">
-                                {{ $tongNhanVienTrongCa }}
+                                {{ number_format($doanhThuChuyenKhoan, 0, ',', '.') }} VND
                             </h3>
                         </div>
 
@@ -477,7 +479,7 @@ h3,h4,h5{
                             </h6>
 
                             <h4 class="fw-bold text-success mb-0">
-                                {{ number_format($tongTienMatCuaCa, 0, ',', '.') }} VND
+                                {{ number_format($doanhThuTienMatCuaCa, 0, ',', '.') }} VND
                             </h4>
 
                         </div>

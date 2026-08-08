@@ -40,11 +40,28 @@ public function index()
             ->with('warning', 'Hiện tại không có ca làm việc.');
     }
 
-    $tong_doanh_thu_cua_ca = HoaDon::where(
+    $tong_doanh_thu_tien_mat_cua_ca = HoaDon::where(
         'id_ca_lam_viec', $ca_hien_tai->id
         )
         ->whereDate('created_at', $ngay_hien_tai)
+        ->where('phuong_thuc_thanh_toan', 'tien_mat')
+        ->where('trang_thai', 'Hoàn Thành')
         ->sum('khach_can_tra');    
+
+    $tong_doanh_thu_chuyen_khoan_cua_ca = HoaDon::where(
+        'id_ca_lam_viec', $ca_hien_tai->id
+        )
+        ->whereDate('created_at', $ngay_hien_tai)
+        ->where('phuong_thuc_thanh_toan', 'payos')
+        ->where('trang_thai', 'Hoàn Thành')
+        ->sum('khach_can_tra');
+
+    $tong_doanh_thu_cua_ca = $tong_doanh_thu_tien_mat_cua_ca + $tong_doanh_thu_chuyen_khoan_cua_ca;
+
+    $cac_hoa_don_bi_huy_trong_ca = HoaDon::whereDate('created_at', $ngay_hien_tai)
+            ->where('id_ca_lam_viec', $ca_hien_tai->id)
+            ->where('trang_thai','Hủy')
+            ->count();
 
     $tong_nhan_vien_cua_ca = ChiaCaLamViec::where('id_ca_lam_viec', $ca_hien_tai->id)
         ->where('ngay', $ngay_hien_tai)
@@ -68,7 +85,10 @@ public function index()
             'ngay_hien_tai',
             'gio_hien_tai',
             'ca_hien_tai',
+            'tong_doanh_thu_tien_mat_cua_ca',
+            'tong_doanh_thu_chuyen_khoan_cua_ca',
             'tong_doanh_thu_cua_ca',
+            'cac_hoa_don_bi_huy_trong_ca',
             'tong_nhan_vien_cua_ca',
             'danh_sach_hoa_don_cua_ca',
             'nhan_vien'

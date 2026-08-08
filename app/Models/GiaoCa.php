@@ -18,6 +18,7 @@ class GiaoCa extends Model
         'chenh_lech',
         'thoi_gian_bat_dau_ca',
         'thoi_gian_ket_thuc_ca',
+        'doanh_thu_chuyen_khoan',
         'trang_thai',
         'ghi_chu',
     ];

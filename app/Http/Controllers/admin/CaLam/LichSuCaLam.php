@@ -62,9 +62,19 @@ class LichSuCaLam extends Controller
            ->where('id_ca_lam_viec', $id_ca)
            ->get();
 
-        $tongDoanhThuCuaCa = HoaDon::whereDate('created_at', $ngay)
+        $doanhThuTienMatCuaCa = HoaDon::whereDate('created_at', $ngay)
            ->where('id_ca_lam_viec', $id_ca)
+           ->where('phuong_thuc_thanh_toan', 'tien_mat')
+           ->where('trang_thai', 'Hoàn Thành')
            ->sum('khach_can_tra');
+
+        $doanhThuChuyenKhoan = HoaDon::whereDate('created_at', $ngay)
+           ->where('id_ca_lam_viec', $id_ca)
+           ->where('phuong_thuc_thanh_toan', 'payos')
+           ->where('trang_thai', 'Hoàn Thành')
+           ->sum('khach_can_tra');
+
+        $tongDoanhThuCuaCa = $doanhThuTienMatCuaCa + $doanhThuChuyenKhoan;
 
         $tongHoaDoncuaCa = HoaDon::whereDate('created_at', $ngay)
            ->where('id_ca_lam_viec', $id_ca)
@@ -91,10 +101,6 @@ class LichSuCaLam extends Controller
             ->whereDate('thoi_gian_bat_dau_ca', $ngay)
             ->first();
 
-        $tongTienMatCuaCa = HoaDon::whereDate('created_at', $ngay)
-            ->where('id_ca_lam_viec', $id_ca)
-            ->sum('khach_can_tra');
-
         $ngay = $ngay;
 
         $tongDoanhThuNgay =HoaDon::whereDate('created_at', $ngay)
@@ -113,7 +119,7 @@ class LichSuCaLam extends Controller
             'caLam','ngay','tongDoanhThuNgay','tongSoHoaDonNgay','caDangChon',
             'danhSachHoaDon', 'tongDoanhThuCuaCa','tongHoaDoncuaCa','danhSachNhanVienTrongCa',
             'tongNhanVienTrongCa', 'danhSachDiemDanh', 'danhSachTrongCaTrongCa','giaoCa', 
-            'tongTienMatCuaCa', 'cacHoaDonBiHuyTrongCa'
+            'cacHoaDonBiHuyTrongCa', 'doanhThuTienMatCuaCa', 'doanhThuChuyenKhoan'
             )
         );
     }
@@ -125,6 +131,11 @@ class LichSuCaLam extends Controller
 
         $tongTienMatCuaCa = HoaDon::whereDate('created_at', $ngay)
             ->where('id_ca_lam_viec', $id_ca)
+            ->sum('khach_can_tra');
+
+        $tongTienChuyenKhoan = HoaDon::whereDate('created_at', $ngay)
+            ->where('id_ca_lam_viec', $id_ca)
+            ->where('phuong_thuc_thanh_toan', 'payos')
             ->sum('khach_can_tra');
 
         $danhSachNhanVienTrongCa = ChiaCaLamViec::with('nguoiDung')
@@ -143,7 +154,7 @@ class LichSuCaLam extends Controller
 
 
 
-        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.tao-giao-ca', compact('ca', 'tongTienMatCuaCa', 'danhSachNhanVienTrongCa', 'danhSachTrongCaTrongCa', 'ngay','danhSachTruongCa','caLamViecs'));
+        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.tao-giao-ca', compact('ca', 'tongTienMatCuaCa', 'tongTienChuyenKhoan', 'danhSachNhanVienTrongCa', 'danhSachTrongCaTrongCa', 'ngay','danhSachTruongCa','caLamViecs'));
     }
 
 
@@ -156,6 +167,7 @@ class LichSuCaLam extends Controller
 
             'tien_mat_dau_ca' => 'required|numeric|min:0',
             'tien_mat_cuoi_ca' => 'required|numeric|min:0',
+            'doanh_thu_chuyen_khoan' => 'numeric|min:0',
 
             'thoi_gian_bat_dau_ca' => 'required|date',
             'thoi_gian_ket_thuc_ca' => 'required|date|after:thoi_gian_bat_dau_ca',
@@ -167,19 +179,19 @@ class LichSuCaLam extends Controller
 
         GiaoCa::create([
             'id_truong_ca_ban_giao' => $request->id_truong_ca_ban_giao,
-            'id_truong_ca_nhan_ca' => $request->id_truong_ca_nhan_ca,
-            'id_ca_lam_viec' => $request->id_ca_lam_viec,
+            'id_truong_ca_nhan_ca'  => $request->id_truong_ca_nhan_ca,
+            'id_ca_lam_viec'        => $request->id_ca_lam_viec,
 
-            'tien_mat_dau_ca' => $request->tien_mat_dau_ca,
+            'tien_mat_dau_ca'  => $request->tien_mat_dau_ca,
             'tien_mat_cuoi_ca' => $request->tien_mat_cuoi_ca,
+            'doanh_thu_chuyen_khoan' => $request->doanh_thu_chuyen_khoan,
+            'chenh_lech'       => -($request->chenh_lech),
 
-            'chenh_lech' => -($request->chenh_lech),
-
-            'thoi_gian_bat_dau_ca' => $request->thoi_gian_bat_dau_ca,
+            'thoi_gian_bat_dau_ca'  => $request->thoi_gian_bat_dau_ca,
             'thoi_gian_ket_thuc_ca' => $request->thoi_gian_ket_thuc_ca,
 
             'trang_thai' => $request->trang_thai,
-            'ghi_chu' => $request->ghi_chu,
+            'ghi_chu'    => $request->ghi_chu,
         ]);
 
         return redirect()->back()
