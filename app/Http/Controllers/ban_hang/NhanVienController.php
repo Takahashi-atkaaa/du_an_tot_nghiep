@@ -8,6 +8,7 @@ use App\Models\ChiaCaLamViec;
 use App\Models\NguoiDung;
 use App\Models\SanPham;
 use App\Models\CaLamViec;
+use App\Models\ChiTietLoHang;
 use App\Models\DanhMucSanPham;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -463,11 +464,34 @@ public function hoaDon(Request $request)
             'tien_khach_dua' => 'required|numeric|min:0',
             'phuong_thuc_thanh_toan' => 'required|string',
             'id_khach_hang' => 'nullable|integer|exists:khach_hang,id',
+            // Người bán: id_nguoi_ban phải tồn tại trong bảng nguoi_dung (đang hoạt động, không xoá mềm).
+            // Nếu không gửi, mặc định dùng người đang đăng nhập (Auth::id()).
+            'id_nguoi_ban' => 'nullable|integer|exists:nguoi_dung,id',
             'id_khuyen_mai' => 'nullable|integer|exists:khuyen_mai,id',
             'diem_su_dung' => 'nullable|integer|min:0',
         ]);
 
-        return DB::transaction(function () use ($request) {
+        // Xác định id người bán:
+        //  - Ưu tiên id_nguoi_ban từ request (do dropdown POS chọn)
+        //  - Nếu không có, fallback về người đang đăng nhập
+        $idNguoiBan = $request->input('id_nguoi_ban') ?: Auth::id();
+
+        // Đảm bảo người bán tồn tại, đang hoạt động và không bị xoá mềm
+        // (rule 'exists' của Laravel chỉ kiểm tra id tồn tại, không lọc theo trang_thai/deleted_at)
+        $nguoiBanHopLe = DB::table('nguoi_dung')
+            ->whereNull('deleted_at')
+            ->where('trang_thai', 1)
+            ->where('id', $idNguoiBan)
+            ->exists();
+
+        if (!$nguoiBanHopLe) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Người bán không hợp lệ hoặc đã ngừng hoạt động.',
+            ], 422);
+        }
+
+        return DB::transaction(function () use ($request, $idNguoiBan) {
 
     $caHienTai = $this->timCaLamViecHienTai();
 
@@ -638,7 +662,7 @@ public function hoaDon(Request $request)
             $isPayOS = $request->phuong_thuc_thanh_toan === 'payos';
 
             $hoaDonId = DB::table('hoa_don')->insertGetId([
-                'id_nguoi_dung' => Auth::id(),
+                'id_nguoi_dung' => $idNguoiBan,
                 'id_khach_hang' => $request->id_khach_hang,
                 'id_ca_lam_viec' => $caHienTai->id,
                 'id_khuyen_mai' => $request->id_khuyen_mai,
@@ -951,6 +975,30 @@ public function hoaDon(Request $request)
                 ->limit(10)
                 ->get()
         );
+    }
+
+    /**
+     * Lấy danh sách người bán cho dropdown ở POS.
+     * - Là NguoiDung có thông tin nhân sự (trang_thai = 1, không bị xoá mềm)
+     * - Vai trò bất kỳ (Admin, Nhân viên, Trưởng ca, Bán hàng, ...)
+     *   → Admin luôn xuất hiện, không cần phân ca
+     */
+    public function layNhanVienBanHang(): \Illuminate\Http\JsonResponse
+    {
+        $ds = DB::table('nguoi_dung')
+            ->join('vai_tro', 'nguoi_dung.id_vai_tro', '=', 'vai_tro.id')
+            ->whereNull('nguoi_dung.deleted_at')
+            ->where('nguoi_dung.trang_thai', 1)
+            ->orderBy('nguoi_dung.ho_ten')
+            ->select(
+                'nguoi_dung.id',
+                'nguoi_dung.ho_ten',
+                'nguoi_dung.email',
+                'vai_tro.ten_vai_tro'
+            )
+            ->get();
+
+        return response()->json($ds);
     }
     public function layKhuyenMai()
 {
