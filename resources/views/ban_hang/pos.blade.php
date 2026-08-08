@@ -1638,9 +1638,6 @@ function closePaidInvoiceTab() {
             customerMoney: '',
             sellerId: rememberedSellerId,
         });
-        // #region agent log
-        fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e10557'},body:JSON.stringify({sessionId:'e10557',location:'pos.blade.php:closePaidInvoiceTab',message:'new empty invoice created',data:{newInvoiceId:tabIndex,sellerId:rememberedSellerId,remembered:getRememberedSellerId()},hypothesisId:'H3',runId:'post-fix',timestamp:Date.now()})}).catch(()=>{});
-        // #endregion agent log
 
         currentTab = 0;
     }
@@ -1737,9 +1734,6 @@ function createInvoice() {
     const prevSellerId = invoiceTabs[currentTab] ? invoiceTabs[currentTab].sellerId : null;
     const rememberedSellerId = getRememberedSellerId();
     const newInvoiceSellerId = prevSellerId ?? rememberedSellerId;
-    // #region agent log
-    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e10557'},body:JSON.stringify({sessionId:'e10557',location:'pos.blade.php:createInvoice',message:'new tab created',data:{newInvoiceId:tabIndex,prevSellerId,rememberedSellerId,newInvoiceSellerId,currentTabBefore:currentTab},hypothesisId:'H4',runId:'post-fix',timestamp:Date.now()})}).catch(()=>{});
-    // #endregion agent log
 
     invoiceTabs.push({
         id: tabIndex,
@@ -2704,9 +2698,6 @@ async function loadSellers() {
                 }
             });
         }
-        // #region agent log
-        fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e10557'},body:JSON.stringify({sessionId:'e10557',location:'pos.blade.php:loadSellers',message:'loadSellers end',data:{sellersCount:sellers.length,appliedSellerId:sellerToApply,remembered:getRememberedSellerId(),invoiceSellerIds:invoiceTabs.map(t=>t.sellerId)},hypothesisId:'H1',runId:'post-fix',timestamp:Date.now()})}).catch(()=>{});
-        // #endregion agent log
     } catch (err) {
         console.error('Lỗi loadSellers:', err);
     }
@@ -2724,9 +2715,6 @@ function applySeller() {
     if (id !== null) {
         setRememberedSellerId(id);
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e10557'},body:JSON.stringify({sessionId:'e10557',location:'pos.blade.php:applySeller',message:'applySeller',data:{newSellerId:id,currentTab,invoiceId:invoice.id,invoiceName:invoice.name,remembered:getRememberedSellerId()},hypothesisId:'H2',runId:'post-fix',timestamp:Date.now()})}).catch(()=>{});
-    // #endregion agent log
 }
 function tinhTienGiam() {
     const cart = getCurrentCart();
