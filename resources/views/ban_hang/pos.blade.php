@@ -1507,7 +1507,7 @@ let selectedPromotion = null;
 let discountAmount = 0;
 const productListUrl = '{{ route('nhan-vien.ban-hang.san-pham') }}';
 const categoryListUrl = '{{ route('nhan-vien.ban-hang.danh-muc') }}';
-const scanBarcodeUrl = '{{ route('nhan-vien.ban-hang.scan-barcode') }}';
+
 const customerListUrl = '{{ route('nhan-vien.ban-hang.khach-hang') }}';
 const promotionListUrl = '{{ route('nhan-vien.ban-hang.khuyen-mai') }}';
 const checkoutUrl = '{{ route('nhan-vien.ban-hang.thanh-toan') }}';
