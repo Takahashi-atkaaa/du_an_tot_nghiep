@@ -389,13 +389,6 @@
                             </a>
                         </li>
 
-                        <li class="nav-item">
-                            <a href="{{ route('nguoi-dung.phan-quyen', ['id_vai_tro' => 3]) }}"
-                            class="nav-link {{ request()->is('nguoi-dung/phan-quyen/3') ? 'active' : '' }}">
-                                Nhân viên
-                            </a>
-                        </li>
-
                     </ul>
                 </div>
             </li>

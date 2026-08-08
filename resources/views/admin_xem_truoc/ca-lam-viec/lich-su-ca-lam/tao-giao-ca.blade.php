@@ -122,7 +122,7 @@
 
                     <div class="row">
 
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
 
                             <label class="form-label">
                                 Trưởng ca bàn giao
@@ -149,7 +149,13 @@
 
                         </div>
 
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
+
+                            {{-- id ca --}}
+                            input
+                            <input type="hidden" name="id_ca_lam_viec" value="{{ $ca->id }}">
+
+                            {{-- ngày --}}
 
                             <label class="form-label">
                                 Trưởng ca nhận
@@ -176,38 +182,7 @@
 
                         </div>
 
-                    </div>
-
-                    <div class="row">
-
-                        <div class="col-md-6">
-
-                            <label class="form-label">
-                                Ca làm việc
-                            </label>
-
-                            <select name="id_ca_lam_viec" class="form-select">
-
-                                <option value="">
-                                    -- Chọn ca --
-                                </option>
-
-                                @foreach ($caLamViecs as $ca)
-
-                                    <option value="{{ $ca->id }}"
-                                        {{ old('id_ca_lam_viec') == $ca->id ? 'selected' : '' }}>
-
-                                        {{ $ca->ten_ca }}
-
-                                    </option>
-
-                                @endforeach
-
-                            </select>
-
-                        </div>
-
-                        <div class="col-md-6">
+                         <div class="col-md-4">
 
                             <label class="form-label">
                                 Trạng thái
@@ -224,6 +199,7 @@
                         </div>
 
                     </div>
+
 
                 </div>
 
@@ -247,7 +223,8 @@
                                 type="datetime-local"
                                 class="form-control"
                                 name="thoi_gian_bat_dau_ca"
-                                value="{{ old('thoi_gian_bat_dau_ca') }}">
+                                value="{{ \Carbon\Carbon::parse($ca->gio_bat_dau)->format('Y-m-d\TH:i') }}">
+                                
 
                         </div>
 
@@ -261,7 +238,7 @@
                                 type="datetime-local"
                                 class="form-control"
                                 name="thoi_gian_ket_thuc_ca"
-                                value="{{ old('thoi_gian_ket_thuc_ca') }}">
+                                value="{{ \Carbon\Carbon::parse($ca->gio_ket_thuc)->format('Y-m-d\TH:i') }}">
 
                         </div>
 
@@ -276,52 +253,57 @@
                 </div>
 
                 <div class="info-box">
-
                     <div class="row">
 
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <label class="form-label">
+                                Doanh thu tiền mặt của ca
+                            </label>
 
+                            <input
+                                type="text"
+                                class="form-control"
+                                value="{{ number_format($tongTienMatCuaCa, 0, ',', '.') }}"
+                                disabled>
+                        </div>
+
+                        <div class="col-md-3">
                             <label class="form-label">
                                 Tiền đầu ca
                             </label>
 
                             <input
-                                type="number"
-                                class="form-control"
+                                type="text"
+                                class="form-control money"
                                 name="tien_mat_dau_ca"
                                 value="{{ old('tien_mat_dau_ca') }}">
-
                         </div>
 
-                        <div class="col-md-4">
-
+                        <div class="col-md-3">
                             <label class="form-label">
                                 Tiền cuối ca
                             </label>
 
                             <input
-                                type="number"
-                                class="form-control"
-                                name="tien_mat_cuoi_ca">
-
+                                type="text"
+                                class="form-control money"
+                                name="tien_mat_cuoi_ca"
+                                value="{{ old('tien_mat_cuoi_ca') }}">
                         </div>
 
-                        <div class="col-md-4">
-
+                        <div class="col-md-3">
                             <label class="form-label">
-                                Chênh lệch
+                                Số tiền chênh lệch so với DT tiền mặt
                             </label>
 
                             <input
-                                type="number"
-                                class="form-control"
+                                type="text"
+                                class="form-control money"
                                 name="chenh_lech"
                                 value="{{ old('chenh_lech') }}">
-
                         </div>
 
                     </div>
-
                 </div>
 
                 {{-- Ghi chú --}}
@@ -333,7 +315,7 @@
                 <div class="info-box">
 
                     <textarea
-                        class="form-control"
+                        class="form-control money"
                         rows="5"
                         name="ghi_chu">{{ old('ghi_chu') }}</textarea>
 
@@ -354,5 +336,50 @@
     </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
 
+    const moneyInputs = document.querySelectorAll('.money');
+
+    moneyInputs.forEach(function(input) {
+
+        // Khi rời khỏi ô input -> format
+        input.addEventListener('blur', function () {
+
+            let value = this.value.replace(/\D/g, '');
+
+            if (value === '') {
+                this.value = '';
+                return;
+            }
+
+            this.value = Number(value).toLocaleString('vi-VN');
+
+        });
+
+
+        // Khi click vào nhập lại -> bỏ format để nhập dễ hơn
+        input.addEventListener('focus', function () {
+
+            this.value = this.value.replace(/\./g, '');
+
+        });
+
+
+    });
+
+
+    // Submit -> bỏ dấu chấm gửi về Laravel
+    document.querySelector('form').addEventListener('submit', function () {
+
+        moneyInputs.forEach(function(input){
+
+            input.value = input.value.replace(/\./g, '');
+
+        });
+
+    });
+
+});
+</script>
 @endsection
