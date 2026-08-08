@@ -20,9 +20,6 @@
         <a href="{{ route('ca-lam-viec.create') }}" class="btn btn-primary">
             <i class="fas fa-plus me-2"></i>Thêm ca làm việc
         </a>
-        <a href="{{ route('chia-ca-lam-viec.index') }}" class="btn btn-outline-primary">
-            <i class="fas fa-calendar-alt me-2"></i>Chia ca làm việc
-        </a>
     </div>
 </div>
 
