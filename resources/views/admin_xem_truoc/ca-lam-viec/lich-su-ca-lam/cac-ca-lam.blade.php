@@ -267,6 +267,14 @@ h3,h4,h5{
     box-shadow:0 10px 25px rgba(13,110,253,.35);
 }
 
+.icon-danger {
+    background-color: #ffe5e5;
+    color: #dc3545;
+}
+
+.icon-danger i {
+    font-size: 22px;
+}
 }
 
 </style>
@@ -285,7 +293,7 @@ h3,h4,h5{
         <div class="icon">💰</div>
 
         <div>
-            <div class="tieu-de">Tổng doanh thu</div>
+            <div class="tieu-de">Tổng doanh thu ngày</div>
             <div class="gia-tri">
                 {{ number_format($tongDoanhThuNgay) }} đ
             </div>
@@ -296,35 +304,35 @@ h3,h4,h5{
         <div class="icon">🧾</div>
 
         <div>
-            <div class="tieu-de">Tổng số hóa đơn</div>
+            <div class="tieu-de">Tổng số hóa đơn ngày</div>
             <div class="gia-tri">
                 {{ $tongSoHoaDonNgay }}
             </div>
         </div>
     </div>
 
+    <div class="the-thong-ke ca">
+        <select class="form-select ca-select"
+                onchange="if (this.value) window.location.href = this.value;">
+
+            <option value="" disabled>-- Chọn ca làm --</option>
+
+            @foreach ($caLam as $ca)
+                <option
+                    value="{{ route('lich-su-ngay-lam-viec.cac-ca-lam', [
+                        'ngay' => $ngay,
+                        'id_ca' => $ca->id_ca_lam_viec
+                    ]) }}"
+                    {{ $caDangChon->id == $ca->id_ca_lam_viec ? 'selected' : '' }}
+                 >
+                    {{ $ca->caLamViec->ten_ca }}
+                </option>
+            @endforeach
+
+        </select>
+    </div>
+
 </div>
-
-<div class="ca-container">
-    @foreach($caLam as $ca)
-
-        <a href="{{ route('lich-su-ngay-lam-viec.cac-ca-lam', [
-            'ngay' => $ngay,
-            'id_ca' => $ca->id_ca_lam_viec
-        ]) }}"
-        class="ca-card {{ $caDangChon->id == $ca->id_ca_lam_viec ? 'ca-active' : '' }}">
-
-            <div class="ca-icon">🕒</div>
-
-            <div class="ca-name">
-                {{ $ca->caLamViec->ten_ca }}
-            </div>
-
-        </a>
-
-    @endforeach
-</div>
-
 
     {{-- dữ liệu chi tiết của ca --}}
         <div class="container-fluid py-4">
@@ -368,14 +376,14 @@ h3,h4,h5{
             <div class="col-md-3">
                 <div class="card info-card">
                     <div class="card-body d-flex align-items-center">
-                        <div class="icon-box icon-warning me-3">
-                            <i class="bi bi-alarm-fill"></i>
+                        <div class="icon-box icon-danger me-3">
+                            <i class="bi bi-receipt-cutoff"></i>
                         </div>
 
                         <div>
-                            <div class="text-muted">Tên ca</div>
-                            <h4 class="mb-0">
-                                {{ $caDangChon->ten_ca }}
+                            <div class="text-muted">Số hóa đơn hủy</div>
+                            <h4 class="mb-0 text-danger">
+                                {{ $cacHoaDonBiHuyTrongCa }}
                             </h4>
                         </div>
                     </div>

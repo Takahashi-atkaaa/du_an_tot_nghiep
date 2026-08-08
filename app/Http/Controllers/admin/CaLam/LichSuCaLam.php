@@ -103,11 +103,17 @@ class LichSuCaLam extends Controller
         $tongSoHoaDonNgay =HoaDon::whereDate('created_at', $ngay)
             ->count('id');
 
+        $cacHoaDonBiHuyTrongCa = HoaDon::whereDate('created_at', $ngay)
+            ->where('id_ca_lam_viec', $id_ca)
+            ->where('trang_thai','Hủy')
+            ->count();
+
         //trả dữ liệu về view
         return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.cac-ca-lam',compact(
             'caLam','ngay','tongDoanhThuNgay','tongSoHoaDonNgay','caDangChon',
             'danhSachHoaDon', 'tongDoanhThuCuaCa','tongHoaDoncuaCa','danhSachNhanVienTrongCa',
-            'tongNhanVienTrongCa', 'danhSachDiemDanh', 'danhSachTrongCaTrongCa','giaoCa', 'tongTienMatCuaCa'
+            'tongNhanVienTrongCa', 'danhSachDiemDanh', 'danhSachTrongCaTrongCa','giaoCa', 
+            'tongTienMatCuaCa', 'cacHoaDonBiHuyTrongCa'
             )
         );
     }
