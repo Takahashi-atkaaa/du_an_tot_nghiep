@@ -97,7 +97,21 @@ class HoaDonController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
 
-        return view('admin_xem_truoc.hoa-don-chi-tiet', compact('hoaDon', 'chiTiet', 'diemTichDiems'));
+        $return_invoice_id = session('return_invoice_id');
+        $phieuDoiTra = null;
+        if ($return_invoice_id) {
+            $phieuDoiTra = DB::table('phieu')->where('id', $return_invoice_id)->first();
+            if ($phieuDoiTra) {
+                $phieuDoiTra->chi_tiet = DB::table('chi_tiet_phieu')
+                    ->join('san_pham', 'chi_tiet_phieu.id_san_pham', '=', 'san_pham.id')
+                    ->leftJoin('bien_the_san_pham', 'chi_tiet_phieu.variant_id', '=', 'bien_the_san_pham.id')
+                    ->select('chi_tiet_phieu.*', 'san_pham.ten_san_pham', 'bien_the_san_pham.ten_bien_the', 'bien_the_san_pham.ten_don_vi')
+                    ->where('id_phieu', $return_invoice_id)
+                    ->get();
+            }
+        }
+
+        return view('admin_xem_truoc.hoa-don-chi-tiet', compact('hoaDon', 'chiTiet', 'diemTichDiems', 'phieuDoiTra'));
     }
 
     public function showModal($id)
@@ -441,7 +455,8 @@ class HoaDonController extends Controller
             ]);
 
             return redirect()->route('admin.hoa-don.show', $id)
-                ->with('success', 'Đã xử lý Giao dịch Đổi/Trả hàng. Chênh lệch: ' . number_format($tienChenhLech, 0, ',', '.') . 'đ');
+                ->with('success', 'Đã xử lý Giao dịch Đổi/Trả hàng. Chênh lệch: ' . number_format($tienChenhLech, 0, ',', '.') . 'đ')
+                ->with('return_invoice_id', $phieuId);
         });
     }
 }
