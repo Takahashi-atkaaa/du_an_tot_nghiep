@@ -145,25 +145,32 @@
                         <tbody>
                             @forelse($lichSuTichDiems as $lichSu)
                                 @php
-                                    $isTăng = str_contains(mb_strtolower($lichSu->loai_bien_dong), 'tăng') || $lichSu->so_diem >= 0;
+                                    $loaiBienDong = mb_strtolower(trim($lichSu->loai_bien_dong ?? ''));
+                                    $isCong = in_array($loaiBienDong, ['cong', 'tang', 'tăng']) || ($loaiBienDong === '' && $lichSu->so_diem >= 0);
+                                    if (in_array($loaiBienDong, ['tru', 'thu'])) {
+                                        $isCong = false;
+                                    }
+                                    $labelBienDong = $isCong ? 'Tăng điểm' : 'Giảm điểm';
                                 @endphp
                                 <tr>
                                     <td>{{ optional($lichSu->created_at)->format('d/m/Y H:i') }}</td>
                                     <td>
                                         @if($lichSu->hoaDon)
-                                            <strong>#HD{{ str_pad((string) $lichSu->hoaDon->id, 4, '0', STR_PAD_LEFT) }}</strong>
+                                            <button type="button" class="btn btn-link p-0 text-decoration-none text-primary hoa-don-modal-button" data-id="{{ $lichSu->hoaDon->id }}">
+                                                <strong>#HD{{ str_pad((string) $lichSu->hoaDon->id, 4, '0', STR_PAD_LEFT) }}</strong>
+                                            </button>
                                         @else
                                             -
                                         @endif
                                     </td>
                                     <td>
-                                        <span class="badge {{ $isTăng ? 'bg-success' : 'bg-danger' }} px-3 py-2">
-                                            {{ $lichSu->loai_bien_dong }}
+                                        <span class="badge {{ $isCong ? 'bg-success' : 'bg-danger' }} px-3 py-2">
+                                            {{ $labelBienDong }}
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="fw-bold {{ $isTăng ? 'text-success' : 'text-danger' }}">
-                                            {{ $isTăng ? '+' : '-' }}{{ number_format(abs($lichSu->so_diem)) }}
+                                        <span class="fw-bold {{ $isCong ? 'text-success' : 'text-danger' }}">
+                                            {{ $isCong ? '+' : '-' }}{{ number_format(abs($lichSu->so_diem)) }}
                                         </span>
                                     </td>
                                     <td class="text-muted">{{ $lichSu->ly_do ?: '-' }}</td>
@@ -216,4 +223,57 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="hoaDonModal" tabindex="-1" aria-labelledby="hoaDonModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" id="hoa-don-modal-content">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Đang tải...</span>
+                </div>
+                <p class="mt-3 mb-0">Đang tải chi tiết hóa đơn...</p>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+
+@section('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const modalEl = document.getElementById('hoaDonModal');
+        const modalBody = document.getElementById('hoa-don-modal-content');
+        const hoaDonModal = new bootstrap.Modal(modalEl, {
+            backdrop: 'static',
+            keyboard: false,
+        });
+
+        document.querySelectorAll('.hoa-don-modal-button').forEach(function(button) {
+            button.addEventListener('click', function () {
+                const hoaDonId = this.dataset.id;
+                if (!hoaDonId) {
+                    return;
+                }
+
+                modalBody.innerHTML = '<div class="modal-body text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Đang tải...</span></div><p class="mt-3 mb-0">Đang tải chi tiết hóa đơn...</p></div>';
+                hoaDonModal.show();
+
+                fetch(`{{ url('admin/hoa-don') }}/${hoaDonId}/modal`)
+                    .then(function(response) {
+                        if (!response.ok) {
+                            throw new Error('Lỗi khi tải chi tiết hóa đơn.');
+                        }
+                        return response.text();
+                    })
+                    .then(function(html) {
+                        modalBody.innerHTML = html;
+                    })
+                    .catch(function(error) {
+                        modalBody.innerHTML = '<div class="modal-body"><div class="alert alert-danger" role="alert">Không thể tải chi tiết hóa đơn. Vui lòng thử lại.</div></div>';
+                        console.error(error);
+                    });
+            });
+        });
+    });
+</script>
 @endsection

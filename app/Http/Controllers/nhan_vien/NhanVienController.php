@@ -177,11 +177,6 @@ class NhanVienController extends Controller
         ]);
     }
 
-    public function chamCong()
-    {
-        return view('nhan_vien_view.cham-cong');
-    }
-
     public function hoSo()
     {
         $nguoiDung = auth()->user();

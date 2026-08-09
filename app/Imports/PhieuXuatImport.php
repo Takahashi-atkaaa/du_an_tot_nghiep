@@ -151,8 +151,8 @@ class PhieuXuatImport implements ToCollection
 
             $ctLo->decrement('so_luong_ton', $soLuongXuatTuLo);
 
-            BienTheSanPham::where('id', $data['variant_id'])
-                ->decrement('so_luong_ton', $soLuongXuatTuLo);
+            // ChiTietLoHangObserver đã tự đồng bộ tổng tồn
+            // bien_the_san_pham.so_luong_ton sau dòng decrement() phía trên.
 
             ChiTietPhieu::create([
                 'id_phieu' => $phieuId,

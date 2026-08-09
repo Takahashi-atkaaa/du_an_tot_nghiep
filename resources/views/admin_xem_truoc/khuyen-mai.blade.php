@@ -358,6 +358,48 @@
                                 <span class="input-group-text">đ</span>
                             </div>
                         </div>
+                        <div class="col-12">
+    <label class="form-label">
+        Sản phẩm áp dụng
+        <span class="text-danger">*</span>
+    </label>
+
+    <input
+        type="text"
+        id="searchPromotionProduct"
+        class="form-control mb-2"
+        placeholder="Tìm tên sản phẩm..."
+        oninput="filterPromotionProducts()"
+    >
+
+    <div
+        id="promotionProductList"
+        class="border rounded p-2"
+        style="max-height: 220px; overflow-y: auto;"
+    >
+        @foreach($sanPhams as $sanPham)
+            <label
+                class="promotion-product-item d-flex align-items-center gap-2 p-2 border-bottom"
+                data-name="{{ mb_strtolower($sanPham->ten_san_pham) }}"
+            >
+                <input
+                    type="checkbox"
+                    name="id_san_phams[]"
+                    value="{{ $sanPham->id }}"
+                    class="form-check-input m-0"
+                >
+
+                <span>
+                    {{ $sanPham->ten_san_pham }}
+                </span>
+            </label>
+        @endforeach
+    </div>
+
+    <small class="text-muted">
+        Chọn ít nhất một sản phẩm áp dụng khuyến mãi.
+    </small>
+</div>
 
                         <div class="col-12">
                             <label class="form-label">Mô tả</label>
@@ -385,5 +427,31 @@
         </div>
     </div>
 </div>
+<script>
+function filterPromotionProducts() {
+    const input = document.getElementById(
+        'searchPromotionProduct'
+    );
 
+    if (!input) {
+        return;
+    }
+
+    const keyword = input.value
+        .trim()
+        .toLowerCase();
+
+    document
+        .querySelectorAll('.promotion-product-item')
+        .forEach(item => {
+            const productName =
+                item.dataset.name || '';
+
+            item.style.display =
+                productName.includes(keyword)
+                    ? 'flex'
+                    : 'none';
+        });
+}
+</script>
 @endsection

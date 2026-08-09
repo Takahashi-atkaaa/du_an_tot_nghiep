@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Exports\PhieuXuatDanhSachExport;
 use App\Models\Phieu;
 use App\Models\PhieuXuat;
 use App\Models\ChiTietLoHang;
@@ -12,6 +13,7 @@ use App\Models\DonViQuyDoi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PhieuXuatApiController extends Controller
@@ -442,8 +444,8 @@ class PhieuXuatApiController extends Controller
                         'so_luong_con_lai' => $soLuongTonSauKhiXuat,
                     ]);
 
-                    BienTheSanPham::where('id', $ct['variant_id'])
-                        ->decrement('so_luong_ton', $soLuongCanXuat);
+                    // ChiTietLoHangObserver đã tự đồng bộ tổng tồn
+                    // bien_the_san_pham.so_luong_ton từ dòng decrement() phía trên.
 
                     $successCount++;
                 }
@@ -469,65 +471,50 @@ class PhieuXuatApiController extends Controller
         }
     }
 
-    public function exportDanhSach(Request $request): StreamedResponse
+    public function exportDanhSach(Request $request)
+    {
+        $filters = $this->parseDateRange($request);
+
+        if (!empty($filters['loai_xuat'])
+            && !in_array($filters['loai_xuat'], ['tieu_huy', 'tra_hang_nha_cung_cap'], true)
+        ) {
+            return response()->json(['success' => false, 'message' => 'loai_xuat khong hop le.'], 422);
+        }
+
+        $fileName = 'phieu-xuat-danh-sach-' . now()->format('Ymd_His') . '.xlsx';
+
+        return Excel::download(new PhieuXuatDanhSachExport($filters), $fileName);
+    }
+
+    private function parseDateRange(Request $request): array
     {
         $filters = [
             'loai_xuat' => $request->query('loai_xuat'),
-            'tu_ngay' => $request->query('tu_ngay'),
-            'den_ngay' => $request->query('den_ngay'),
+            'tu_ngay' => null,
+            'den_ngay' => null,
         ];
 
-        $query = PhieuXuat::with([
-            'phieu',
-            'chiTietPhieu',
-        ])
-            ->whereHas('phieu', fn($p) => $p->where('loai_phieu_enum', 'like', 'xuat%'))
-            ->orderByDesc('id');
+        $tu = $request->query('tu_ngay') ?? $request->query('start_date');
+        $den = $request->query('den_ngay') ?? $request->query('end_date');
 
-        if (!empty($filters['loai_xuat'])) {
-            $query->where('loai_xuat', $filters['loai_xuat']);
-        }
-        if (!empty($filters['tu_ngay'])) {
-            $query->whereDate('created_at', '>=', $filters['tu_ngay']);
-        }
-        if (!empty($filters['den_ngay'])) {
-            $query->whereDate('created_at', '<=', $filters['den_ngay']);
-        }
-
-        $phieuXuats = $query->get();
-
-        $fileName = 'phieu-xuat-danh-sach-' . now()->format('Ymd_His') . '.csv';
-
-        return response()->stream(function () use ($phieuXuats) {
-            $output = fopen('php://output', 'w');
-            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM for Excel UTF-8
-
-            fputcsv($output, [
-                'ID', 'Ma_phieu', 'Ngay_tao', 'Loai_xuat', 'Nha_cung_cap',
-                'Ly_do', 'Nguoi_tao', 'Tong_so_luong', 'Ghi_chu'
-            ], ';');
-
-            foreach ($phieuXuats as $item) {
-                $chiTiet = $item->chiTietPhieu ?? collect();
-
-                fputcsv($output, [
-                    $item->id,
-                    'PX' . str_pad($item->id, 5, '0', STR_PAD_LEFT),
-                    $item->created_at->format('d/m/Y H:i'),
-                    $item->loai_xuat === 'tra_hang_nha_cung_cap' ? 'Tra hang NCC' : 'Tieu huy',
-                    $item->phieu->nha_cung_cap ?? 'N/A',
-                    $item->ly_do ?? '',
-                    $item->phieu->nguoiDung->ho_ten ?? 'N/A',
-                    $chiTiet->sum('so_luong'),
-                    $item->ghi_chu ?? '',
-                ], ';');
+        try {
+            if (!empty($tu)) {
+                $filters['tu_ngay'] = \Carbon\Carbon::createFromFormat('Y-m-d', $tu)->startOfDay();
             }
+            if (!empty($den)) {
+                $filters['den_ngay'] = \Carbon\Carbon::createFromFormat('Y-m-d', $den)->endOfDay();
+            }
+        } catch (\Exception $e) {
+            // bo qua, validator phia sau xu ly
+        }
 
-            fclose($output);
-        }, 200, [
-            'Content-Type' => 'text/csv; charset=utf-8',
-            'Content-Disposition' => "attachment; filename=\"$fileName\"",
-        ]);
+        if ($filters['tu_ngay'] && $filters['den_ngay']
+            && $filters['tu_ngay']->gt($filters['den_ngay'])
+        ) {
+            abort(422, 'Tu ngay phai nho hon hoac bang den ngay.');
+        }
+
+        return $filters;
     }
 
     public function exportChiTiet(int $id): StreamedResponse

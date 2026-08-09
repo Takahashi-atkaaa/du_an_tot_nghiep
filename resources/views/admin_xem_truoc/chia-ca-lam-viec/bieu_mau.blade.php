@@ -66,6 +66,9 @@
             <option value="truong_ca" @selected(old('vai_tro_trong_ca', $chiaCaLamViec->vai_tro_trong_ca ?? '') === 'truong_ca')>
                 Trưởng ca
             </option>
+            <option value="ban_hang" @selected(old('vai_tro_trong_ca', $chiaCaLamViec->vai_tro_trong_ca ?? '') === 'ban_hang')>
+                Bán hàng
+            </option>
         </select>
         @error('vai_tro_trong_ca')
             <div class="invalid-feedback">{{ $message }}</div>

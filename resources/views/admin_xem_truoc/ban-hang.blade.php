@@ -191,7 +191,6 @@
                     <div class="btn-group w-100">
                         <button class="btn btn-outline-primary active">Tiền mặt</button>
                         <button class="btn btn-outline-primary">Chuyển khoản</button>
-                        <button class="btn btn-outline-primary">Quẹt thẻ</button>
                     </div>
                 </div>
                 

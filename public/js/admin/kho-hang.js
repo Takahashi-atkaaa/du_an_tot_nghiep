@@ -6,6 +6,7 @@ let sanPhamAll = [];
 let pnIdx = 0, pxIdx = 0, loIdx = 0;
 let tkPage = 1, lhPage = 1, pnPage = 1, pxPage = 1, nccPage = 1;
 let selectedPnProducts = new Set();
+let selectedPxProducts = new Set();
 
 // Helpers for HTML escaping (tránh lỗi quote khi tên có dấu nháy)
 function escapeHtml(s) {
@@ -50,10 +51,18 @@ $(function () {
         $('#pn-sp-danh-muc').val('');
     });
 
+    $('#modal-tao-px').on('shown.bs.modal', function () {
+        loadDanhMucXuat();
+        $('#px-sp-search').focus();
+    });
     $('#modal-tao-px').on('hidden.bs.modal', function () {
         pxIdx = 0;
+        selectedPxProducts.clear();
         $('#form-tao-px')[0].reset();
-        $('#px-ds-sp').html('');
+        $('#px-ds-sp').html('<tr id="px-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td></tr>');
+        $('#px-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-search fs-4 mb-2 d-block"></i>Nhập tên hoặc mã vạch để tìm sản phẩm</div>');
+        $('#px-sp-search').val('');
+        $('#px-sp-danh-muc').val('');
     });
 
     $('#modal-tao-lo').on('hidden.bs.modal', function () {
@@ -64,7 +73,16 @@ $(function () {
 
     // Modal triggers
     $('#pn-btn-tao').click(() => new bootstrap.Modal(document.getElementById('modal-tao-pn')).show());
-    $('#px-btn-tao').click(() => { pxIdx = 0; $('#px-ds-sp').html(''); $('#form-tao-px')[0].reset(); new bootstrap.Modal(document.getElementById('modal-tao-px')).show(); });
+    $('#px-btn-tao').click(() => {
+        pxIdx = 0;
+        selectedPxProducts.clear();
+        $('#px-ds-sp').html('<tr id="px-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td></tr>');
+        $('#px-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-search fs-4 mb-2 d-block"></i>Nhập tên hoặc mã vạch để tìm sản phẩm</div>');
+        $('#px-sp-search').val('');
+        $('#px-sp-danh-muc').val('');
+        $('#form-tao-px')[0].reset();
+        new bootstrap.Modal(document.getElementById('modal-tao-px')).show();
+    });
     $('#lh-btn-tao').click(() => {
         pnIdx = 0;
         selectedPnProducts.clear();
@@ -281,7 +299,8 @@ function searchProductsNhap(q, danhMuc) {
                             data-ten="${sp.ten_san_pham}${attrs ? ' - ' + bt.ten_bien_the : ''}"
                             data-gia="${bt.gia_ban || 0}"
                             data-variant="1"
-                            data-base-name="${escapeAttr(bt.ten_bien_the || '')}"
+                            data-base-name="${escapeAttr(bt.ten_bien_the || bt.ten_don_vi || 'Cơ bản')}"
+                            data-base-unit="${escapeAttr(bt.ten_don_vi || '')}"
                             data-units='${unitsJson}'
                             ${btDisabled}>
                             <i class="fas ${btBtnIcon}"></i> ${btBtnText}
@@ -306,7 +325,8 @@ function searchProductsNhap(q, danhMuc) {
                             data-id="${parentVariantId}"
                             data-ten="${sp.ten_san_pham}"
                             data-gia="${variants[0]?.gia_ban || 0}"
-                            data-base-name="${escapeAttr(variants[0]?.ten_bien_the || '')}"
+                            data-base-name="${escapeAttr(variants[0]?.ten_bien_the || variants[0]?.ten_don_vi || 'Cơ bản')}"
+                            data-base-unit="${escapeAttr(variants[0]?.ten_don_vi || '')}"
                             data-units='${JSON.stringify(variants[0]?.units || []).replace(/'/g, '&#39;')}'
                             ${parentDisabled}>
                             <i class="fas ${parentBtnIcon}"></i> ${parentBtnText}
@@ -352,62 +372,76 @@ $(document).on('click', '.btn-chon-sp-nhap', function () {
     const gia = $(this).data('gia');
     // Lấy thêm danh sách đơn vị quy đổi (nếu có) từ nút bấm
     const units = $(this).data('units') || [];
-    const variantBaseName = $(this).data('base-name') || '';
+    const variantBaseName = $(this).data('base-name') || 'Cơ bản';
+    const baseUnitLabel = $(this).data('base-unit') || variantBaseName || 'đơn vị cơ bản';
     const idx = pnIdx++;
     $('#pn-empty-row').remove();
 
-    // Build option đơn vị: đơn vị cơ bản (ty_le=1) + đơn vị quy đổi
-    const baseOpt = `<option value="__base__" data-tyle="1" data-ten="${escapeAttr(variantBaseName)}" selected>${escapeHtml(variantBaseName || 'Cơ bản')}</option>`;
-    const unitOpts = units.map(u => `<option value="${u.id}" data-tyle="${u.ty_le_quy_doi || 1}" data-ten="${escapeAttr(u.ten_don_vi)}">${escapeHtml(u.ten_don_vi)} (x${u.ty_le_quy_doi || 1})</option>`).join('');
+    // Build option đơn vị: đơn vị cơ bản (he_so=1) + đơn vị quy đổi
+    const baseOpt = `<option value="__base__" data-he-so="1" data-ten="${escapeAttr(baseUnitLabel)}" data-don-vi-id="" selected>${escapeHtml(variantBaseName)} (đơn vị cơ bản)</option>`;
+    const unitOpts = units.map(u => `<option value="${u.id}" data-he-so="${u.so_luong_san_pham_trong_don_vi || 1}" data-ten="${escapeAttr(u.ten_don_vi)}" data-don-vi-id="${u.id}">${escapeHtml(u.ten_don_vi)} (×${u.so_luong_san_pham_trong_don_vi || 1})</option>`).join('');
     const donViSelect = `<select class="form-select form-select-sm pn-don-vi-select" name="chi_tiet[${idx}][don_vi_id]" data-idx="${idx}">${baseOpt}${unitOpts}</select>`;
 
     // Ghi chú nhỏ hiển thị quy đổi khi user chọn đơn vị
     const quyDoiHint = units.length
-        ? `<small class="text-muted pn-quy-doi-hint d-block mt-1">Chọn "Cơ bản" nếu nhập theo đơn vị cơ bản.</small>`
+        ? `<small class="text-muted pn-quy-doi-hint d-block mt-1">Mặc định nhập theo đơn vị cơ bản. Đổi sang "Thùng", "Hộp"... nếu mua theo đơn vị quy đổi.</small>`
         : '';
 
     $('#pn-ds-sp').append(`<tr data-sp-id="${id}">
         <td>
             <div class="fw-semibold small">${ten}</div>
             <input type="hidden" name="chi_tiet[${idx}][variant_id]" value="${id}">
-            <input type="hidden" name="chi_tiet[${idx}][ty_le_quy_doi]" value="1" class="pn-ty-le-hidden">
+            <input type="hidden" name="chi_tiet[${idx}][so_luong_san_pham_trong_don_vi]" value="1" class="pn-he-so-hidden">
             ${units.length ? `<div class="mt-1 d-flex align-items-center gap-1">${donViSelect}${quyDoiHint}</div>` : ''}
         </td>
         <td>
-            <input type="number" class="form-control form-control-sm pn-sl-input" name="chi_tiet[${idx}][so_luong_nhap]" value="1" min="1" data-idx="${idx}">
-            ${units.length ? `<small class="text-muted pn-sl-display d-block mt-1" data-idx="${idx}">= 1 đơn vị cơ bản</small>` : ''}
+            <input type="number" class="form-control form-control-sm pn-sl-input" name="chi_tiet[${idx}][so_luong_nhap]" value="1" min="0.0001" step="0.0001" data-idx="${idx}">
+            ${units.length ? `<small class="text-muted pn-sl-display d-block mt-1" data-idx="${idx}">= 1 ${escapeHtml(baseUnitLabel)}</small>` : ''}
         </td>
-        <td><input type="number" class="form-control form-control-sm" name="chi_tiet[${idx}][gia_nhap]" value="${gia}" min="0" step="100"></td>
+        <td>
+            <input type="number" class="form-control form-control-sm pn-gia-input" name="chi_tiet[${idx}][gia_nhap]" value="${gia}" min="0" step="100">
+            ${units.length ? `<small class="text-muted pn-gia-display d-block mt-1" data-idx="${idx}">đơn giá / ${escapeHtml(baseUnitLabel)}</small>` : `<small class="text-muted d-block mt-1">đơn giá / ${escapeHtml(baseUnitLabel)}</small>`}
+        </td>
         <td><input type="date" class="form-control form-control-sm" name="chi_tiet[${idx}][han_su_dung]" value=""></td>
         <td><button type="button" class="btn btn-sm btn-outline-danger btn-remove-pn-row" data-id="${id}"><i class="fas fa-times"></i></button></td>
     </tr>`);
     $(this).prop('disabled', true).removeClass('btn-primary btn-success').addClass('btn-secondary').html('<i class="fas fa-check"></i> Đã chọn');
 });
 
-// Tính số lượng quy đổi realtime khi user đổi đơn vị hoặc số lượng
-$(document).on('input change', '.pn-sl-input, .pn-don-vi-select', function () {
+// Tính số lượng quy đổi realtime khi user đổi đơn vị hoặc số lượng / giá
+$(document).on('input change', '.pn-sl-input, .pn-gia-input, .pn-don-vi-select', function () {
     const $row = $(this).closest('tr');
     const $slInput = $row.find('.pn-sl-input');
+    const $giaInput = $row.find('.pn-gia-input');
     const $donViSelect = $row.find('.pn-don-vi-select');
-    const $tyLeHidden = $row.find('.pn-ty-le-hidden');
+    const $heSoHidden = $row.find('.pn-he-so-hidden');
     const $display = $row.find('.pn-sl-display');
+    const $giaDisplay = $row.find('.pn-gia-display');
 
     const sl = parseFloat($slInput.val()) || 0;
-    let tyLe = 1;
-    let tenDonVi = '';
+    const gia = parseFloat($giaInput.val()) || 0;
+    let heSo = 1;
+    let tenDonViNhap = '';
+    let tenDonViCoBan = '';
     if ($donViSelect.length) {
         const opt = $donViSelect.find('option:selected');
-        tyLe = parseInt(opt.data('tyle')) || 1;
-        tenDonVi = opt.data('ten') || opt.text();
+        heSo = parseFloat(opt.data('he-so')) || 1;
+        tenDonViNhap = opt.data('ten') || opt.text();
+        const baseOpt = $donViSelect.find('option[value="__base__"]');
+        tenDonViCoBan = baseOpt.data('ten') || '';
     }
-    $tyLeHidden.val(tyLe);
+    $heSoHidden.val(heSo);
 
     if ($display.length) {
-        if (tyLe === 1) {
-            $display.text(`= ${sl} ${tenDonVi || 'đơn vị cơ bản'}`);
+        if (heSo === 1) {
+            $display.html(`= <strong>${sl.toLocaleString()}</strong> ${escapeHtml(tenDonViCoBan || 'đơn vị cơ bản')}`);
         } else {
-            const tong = sl * tyLe;
-            $display.html(`= <strong class="text-primary">${tong}</strong> ${tenDonVi ? 'chai/đơn vị cơ bản (1 ' + tenDonVi + ' = ' + tyLe + ' đơn vị cơ bản)' : 'đơn vị cơ bản'}`);
+            const tong = sl * heSo;
+            const donGiaCoBan = gia / heSo;
+            $display.html(`= <strong class="text-primary">${tong.toLocaleString()}</strong> ${escapeHtml(tenDonViCoBan || 'đơn vị cơ bản')} <span class="text-muted">(1 ${escapeHtml(tenDonViNhap)} = ${heSo} ${escapeHtml(tenDonViCoBan || 'đơn vị cơ bản')})</span>`);
+            if ($giaDisplay.length) {
+                $giaDisplay.html(`đơn giá / ${escapeHtml(tenDonViNhap)} → <strong class="text-info">${donGiaCoBan.toLocaleString(undefined, {maximumFractionDigits: 2})}</strong> / ${escapeHtml(tenDonViCoBan || 'đơn vị cơ bản')}`);
+            }
         }
     }
 });
@@ -423,6 +457,198 @@ $(document).on('click', '.btn-remove-pn-row', function () {
     const btn = $(`.btn-chon-sp-nhap[data-id="${spId}"]`);
     btn.prop('disabled', false).removeClass('btn-secondary').addClass(btn.data('variant') ? 'btn-success' : 'btn-primary').html(`<i class="fas fa-plus"></i> Chon`);
 });
+
+// ─── PRODUCT SEARCH (PX Modal) ─────────────────────────────────────
+
+let pxSearchTimer = 0;
+$('#px-sp-search').on('input', function () {
+    clearTimeout(pxSearchTimer);
+    pxSearchTimer = setTimeout(() => {
+        searchProductsXuat($('#px-sp-search').val(), $('#px-sp-danh-muc').val());
+    }, 300);
+});
+
+$('#px-sp-danh-muc').on('change', () => {
+    searchProductsXuat($('#px-sp-search').val(), $('#px-sp-danh-muc').val());
+});
+
+$('#px-sp-clear').click(() => {
+    $('#px-sp-search').val('');
+    $('#px-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-search fs-4 mb-2 d-block"></i>Nhập tên hoặc mã vạch để tìm sản phẩm</div>');
+});
+
+function loadDanhMucXuat() {
+    // Tận dụng API đã có (đã được gọi ở loadDanhMucNhap); chỉ cần clone options.
+    const opts = $('#pn-sp-danh-muc option').clone();
+    if (!opts.length) {
+        $.get('/admin/api/san-pham', { q: '', danh_muc: '' }, res => {
+            if (!res.danh_muc_list) return;
+            $('#px-sp-danh-muc').html('<option value="">Tất cả danh mục</option>' +
+                res.danh_muc_list.map(dm => `<option value="${dm.id}">${dm.ten_danh_muc}</option>`).join(''));
+        });
+    } else {
+        $('#px-sp-danh-muc').html('<option value="">Tất cả danh mục</option>' + opts.not('[value=""]').clone().get().map(o => o.outerHTML).join(''));
+    }
+}
+
+function searchProductsXuat(q, danhMuc) {
+    // #region agent log
+    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b085c7'},body:JSON.stringify({sessionId:'b085c7',location:'kho-hang.js:searchProductsXuat',message:'PX search fired',data:{q,danhMuc,emptyQ:!q,emptyDm:!danhMuc},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    if (!q && !danhMuc) {
+        $('#px-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-search fs-4 mb-2 d-block"></i>Nhập tên hoặc mã vạch để tìm sản phẩm</div>');
+        return;
+    }
+    $('#px-sp-results').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-muted fs-4"></i></div>');
+    $.get('/admin/api/san-pham', { q: q || '', danh_muc: danhMuc || '' }, res => {
+        // #region agent log
+        fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b085c7'},body:JSON.stringify({sessionId:'b085c7',location:'kho-hang.js:searchProductsXuat.onSuccess',message:'PX search response',data:{success:res.success,productsLen:res.data?.length,hasDanhMucList:!!res.danh_muc_list},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        if (!res.success || !res.data.length) {
+            $('#px-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-box-open fs-4 mb-2 d-block text-secondary"></i>Không tìm thấy sản phẩm nào.</div>');
+            return;
+        }
+        const rows = res.data.map(sp => {
+            const variants = sp.bien_the || [];
+            const hasVariants = variants.length > 1;
+            const totalTon = variants.reduce((sum, bt) => sum + (bt.chi_tiet_lo_hang_ton || 0), 0);
+            const tonClass = totalTon === 0 ? 'text-danger' : totalTon < 10 ? 'text-warning' : 'text-success';
+            const img = sp.hinh_anh
+                ? `<img src="/${sp.hinh_anh}" width="38" height="38" class="rounded" style="object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                   <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width:38px;height:38px;display:none"><i class="fas fa-box text-secondary"></i></div>`
+                : `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="width:38px;height:38px"><i class="fas fa-box text-secondary"></i></div>`;
+            const danhMucName = sp.danh_muc?.ten_danh_muc || '';
+            const parentVariantId = variants[0]?.id;
+            const isParentSelected = parentVariantId ? selectedPxProducts.has(parentVariantId) : false;
+            const expandBtn = hasVariants ? `<button class="btn btn-sm btn-light border btn-px-toggle-variants" data-parent="${sp.id}" title="Mở rộng biến thể"><i class="fas fa-chevron-down"></i></button>` : '';
+            const parentBtnClass = isParentSelected ? 'btn-secondary' : 'btn-primary';
+            const parentBtnIcon = isParentSelected ? 'fa-check' : 'fa-plus';
+            const parentBtnText = isParentSelected ? 'Đã chọn' : 'Chọn';
+            const parentDisabled = isParentSelected ? 'disabled' : '';
+            const variantRows = variants.map(bt => {
+                const btTon = bt.chi_tiet_lo_hang_ton || 0;
+                const btTonClass = btTon === 0 ? 'text-danger' : btTon < 10 ? 'text-warning' : 'text-success';
+                const isBtSelected = selectedPxProducts.has(bt.id);
+                const btBtnClass = isBtSelected ? 'btn-secondary' : 'btn-success';
+                const btBtnIcon = isBtSelected ? 'fa-check' : 'fa-plus';
+                const btBtnText = isBtSelected ? 'Đã chọn' : 'Chọn';
+                const btDisabled = isBtSelected ? 'disabled' : '';
+                const attrs = (bt.thuoc_tinh_labels || []).map(tt =>
+                    `<span class="badge variant-chip" style="background:#e9ecef;color:#495057;border:1px solid #dee2e6">${tt}</span>`
+                ).join(' ');
+                return `<tr class="variant-sub-row-px" data-parent="${sp.id}" style="display:none">
+                    <td class="text-center align-middle"><div class="vr" style="width:2px;height:30px;opacity:0.4"></div></td>
+                    <td class="align-middle ps-1">
+                        <div class="small"><span class="text-muted">\\</span> ${attrs || '<span class="text-muted small">Không có thuộc tính</span>'}</div>
+                    </td>
+                    <td class="align-middle"><code class="small">${bt.ma_vach || '--'}</code></td>
+                    <td class="text-end align-middle small">${Number(bt.gia_ban || 0).toLocaleString()} d</td>
+                    <td class="text-center align-middle"><span class="fw-semibold ${btTonClass}">${btTon.toLocaleString()}</span></td>
+                    <td class="text-center align-middle">
+                        <button class="btn btn-sm ${btBtnClass} btn-chon-sp-xuat"
+                            data-id="${bt.id}"
+                            data-ten-sp="${escapeAttr(sp.ten_san_pham)}"
+                            data-ten-bt="${escapeAttr(bt.ten_bien_the || '')}"
+                            data-vach="${escapeAttr(bt.ma_vach || '')}"
+                            data-attrs="${escapeAttr((bt.thuoc_tinh_labels || []).join(', '))}"
+                            data-ton="${bt.chi_tiet_lo_hang_ton || 0}"
+                            data-variant="1"
+                            ${btDisabled}>
+                            <i class="fas ${btBtnIcon}"></i> ${btBtnText}
+                        </button>
+                    </td>
+                </tr>`;
+            });
+            return [
+                `<tr class="parent-row-px" data-id="${sp.id}">
+                    <td class="text-center align-middle">${img}</td>
+                    <td class="align-middle">
+                        <div class="fw-semibold small">${sp.ten_san_pham}</div>
+                        <div class="small text-muted">${danhMucName}</div>
+                        ${hasVariants ? `<div class="mt-1"><span class="badge bg-secondary" style="font-size:0.68rem">${variants.length} bien the</span></div>` : ''}
+                    </td>
+                    <td class="align-middle"><code class="small">${variants[0]?.ma_vach || '--'}</code></td>
+                    <td class="text-end align-middle small">${Number(variants[0]?.gia_ban || 0).toLocaleString()} d</td>
+                    <td class="text-center align-middle"><span class="fw-semibold ${tonClass}">${totalTon.toLocaleString()}</span></td>
+                    <td class="text-center align-middle">
+                        ${expandBtn}
+                        <button class="btn btn-sm ${parentBtnClass} btn-chon-sp-xuat"
+                            data-id="${parentVariantId}"
+                            data-ten-sp="${escapeAttr(sp.ten_san_pham)}"
+                            data-ten-bt="${escapeAttr(variants[0]?.ten_bien_the || '')}"
+                            data-vach="${escapeAttr(variants[0]?.ma_vach || '')}"
+                            data-attrs="${escapeAttr((variants[0]?.thuoc_tinh_labels || []).join(', '))}"
+                            data-ton="${variants[0]?.chi_tiet_lo_hang_ton || 0}"
+                            data-variant="0"
+                            ${parentDisabled}>
+                            <i class="fas ${parentBtnIcon}"></i> ${parentBtnText}
+                        </button>
+                    </td>
+                </tr>`,
+                ...variantRows
+            ];
+        });
+        const tableHtml = `<table class="table table-sm table-hover mb-0">
+            <thead class="table-light"><tr>
+                <th style="width:50px"></th>
+                <th>Sản phẩm</th>
+                <th style="width:110px">Mã vạch</th>
+                <th style="width:110px" class="text-end">Giá bán</th>
+                <th style="width:80px" class="text-center">Tồn kho</th>
+                <th style="width:120px" class="text-center">Chon</th>
+            </tr></thead>
+            <tbody>${rows.join('')}</tbody>
+        </table>`;
+        $('#px-sp-results').html(tableHtml);
+    });
+}
+
+$(document).on('click', '.btn-px-toggle-variants', function () {
+    const parentId = $(this).data('parent');
+    const icon = $(this).find('i');
+    const isExpanded = icon.hasClass('fa-chevron-down');
+    if (isExpanded) {
+        $(`.variant-sub-row-px[data-parent="${parentId}"]`).hide();
+        icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+    } else {
+        $(`.variant-sub-row-px[data-parent="${parentId}"]`).show();
+        icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+    }
+});
+
+$(document).on('click', '.btn-chon-sp-xuat', function () {
+    const $btn = $(this);
+    // Dùng .attr() thay vì .data() để tránh jQuery tự động parse chuỗi số ("333" -> 333).
+    const id = parseInt($btn.attr('data-id'));
+    const readStr = name => $btn.attr(name) || '';
+    const displayInfo = {
+        tenSp: readStr('data-ten-sp'),
+        tenBt: readStr('data-ten-bt'),
+        attrs: readStr('data-attrs'),
+        vach: readStr('data-vach'),
+        ton: parseInt($btn.attr('data-ton')) || 0,
+    };
+    // #region agent log
+    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b085c7'},body:JSON.stringify({sessionId:'b085c7',location:'kho-hang.js:btn-chon-sp-xuat.click',message:'PX select click',data:{id,alreadyInSet:selectedPxProducts.has(id),displayInfo,displayInfoTypes:{tenSp:typeof displayInfo.tenSp,tenBt:typeof displayInfo.tenBt,attrs:typeof displayInfo.attrs,vach:typeof displayInfo.vach,ton:typeof displayInfo.ton},sanPhamAllIncludes:sanPhamAll.find(x=>x.id==id)?.id||null},timestamp:Date.now(),hypothesisId:'F'})}).catch(()=>{});
+    // #endregion
+    if (!id) return;
+    if (selectedPxProducts.has(id)) return;
+    selectedPxProducts.add(id);
+    $btn.prop('disabled', true).removeClass('btn-primary btn-success').addClass('btn-secondary').html('<i class="fas fa-check"></i> Đã chọn');
+    addPxRow(id, 1, displayInfo);
+});
+
+$(document).on('click', '.btn-remove-px-row', function () {
+    removePxRow(this);
+});
+
+// Cập nhật tổng SL khi đổi số lượng xuất
+$(document).on('input change', '.px-sl-input', function () {
+    updatePxTongSl();
+});
+
+// Cập nhật tổng SL khi thêm row thủ công (gọi từ addPxRow)
+// (Đã được tích hợp vào addPxRow)
 
 function loadTonKho(page = 1) {
     tkPage = page;
@@ -708,7 +934,7 @@ function renderAlertGroup(type, title, cls, items, badgeCls) {
                 <div>
                     <div class="fw-semibold">${product.ten_san_pham || variant.ten_bien_the || item.id_san_pham || item.variant_id || 'Không xác định'}</div>
                     <div class="small text-muted">
-                        Lô: ${lo.ma_lo || item.id_lo_hang} | Tồn: ${item.so_luong_ton} | HSD: ${hsdRaw.split('T')[0]}
+                        Lô: ${lo.ma_lo || (item.id_lo_hang ? 'L-' + item.id_lo_hang : '--')} | Tồn: ${item.so_luong_ton} | HSD: ${hsdRaw.split('T')[0]}
                         ${diff < 0 ? '<span class="text-danger ms-1">Đã hết HSD</span>' : `<span class="text-warning ms-1">Còn ${diff} ngày</span>`}
                     </div>
                 </div>
@@ -1074,14 +1300,27 @@ function spOptions(existingId) {
     ).join('');
 }
 
-function addPxRow(id, sl) {
+function addPxRow(id, sl, displayInfo) {
+    // #region agent log
+    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b085c7'},body:JSON.stringify({sessionId:'b085c7',location:'kho-hang.js:addPxRow',message:'addPxRow start',data:{id,sl,hasDisplayInfo:!!displayInfo,sanPhamAllLen:sanPhamAll.length,foundSp:!!sanPhamAll.find(x=>x.id==id),displayInfo},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     const idx = pxIdx++;
-    const opts = sanPhamAll.map(sp =>
-        `<option value="${sp.id}" data-ton="${sp.chi_tiet_lo_hang_ton_sum_so_luong_ton || 0}" ${sp.id == id ? 'selected' : ''}>${spDisplayText(sp)}</option>`
-    ).join('');
-    $('#px-ds-sp').append(`<tr>
+    let opts;
+    let selectTon = 0;
+    if (displayInfo && id) {
+        // Được gọi từ search: dựng option đúng với sản phẩm user vừa chọn (tránh dùng sanPhamAll có LIMIT 50)
+        const label = buildPxLabel(displayInfo.tenSp, displayInfo.tenBt, displayInfo.attrs, displayInfo.vach);
+        selectTon = displayInfo.ton || 0;
+        opts = `<option value="${id}" data-ton="${selectTon}" selected>${label}</option>`;
+    } else {
+        opts = sanPhamAll.map(sp =>
+            `<option value="${sp.id}" data-ton="${sp.chi_tiet_lo_hang_ton_sum_so_luong_ton || 0}" ${sp.id == id ? 'selected' : ''}>${spDisplayText(sp)}</option>`
+        ).join('');
+    }
+    $('#px-empty-row').remove();
+    $('#px-ds-sp').append(`<tr data-sp-id="${id || ''}">
         <td><select class="form-select form-select-sm px-sp-select" name="chi_tiet[${idx}][variant_id]">${opts || '<option value="">-- Chon --</option>'}</select></td>
-        <td class="text-center text-muted ton-cell small">--</td>
+        <td class="text-center text-muted ton-cell small">${selectTon ? 'Tồn: ' + selectTon.toLocaleString() : '--'}</td>
         <td>
             <select class="form-select form-select-sm px-lo-select" name="chi_tiet[${idx}][id_chi_tiet_lo_hang]" disabled>
                 <option value="">-- Chon lo --</option>
@@ -1089,10 +1328,60 @@ function addPxRow(id, sl) {
             <small class="text-muted px-lo-info d-block mt-1">--</small>
         </td>
         <td><input type="number" class="form-control form-control-sm px-sl-input" name="chi_tiet[${idx}][so_luong]" value="${sl || 1}" min="1"></td>
-        <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removePxRow(this)"><i class="fas fa-times"></i></button></td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger btn-remove-px-row" data-id="${id || ''}"><i class="fas fa-times"></i></button></td>
     </tr>`);
-    updateTonCell($('#px-ds-sp tr:last .px-sp-select'));
-    if (id) loadLoOptions($('#px-ds-sp tr:last'), id);
+    if (id) {
+        if (!displayInfo) updateTonCell($('#px-ds-sp tr:last .px-sp-select'));
+        loadLoOptions($('#px-ds-sp tr:last'), id);
+    } else {
+        updateTonCell($('#px-ds-sp tr:last .px-sp-select'));
+    }
+    updatePxTongSl();
+}
+
+function buildPxLabel(tenSp, tenBt, attrs, vach) {
+    let label = tenSp || '';
+    const variantPart = (tenBt && tenBt !== tenSp) ? tenBt : '';
+    const attrsPart = attrs ? attrs : '';
+    const tail = [variantPart, attrsPart].filter(Boolean).join(' - ');
+    if (tail) label += ' - ' + tail;
+    const code = vach || '';
+    if (code) label += ` (${code})`;
+    return label;
+}
+
+function removePxRow(btn) {
+    const $tr = $(btn).closest('tr');
+    const spId = parseInt($tr.attr('data-sp-id'));
+    if (spId) selectedPxProducts.delete(spId);
+    $tr.remove();
+    if (!$('#px-ds-sp tr').length || $('#px-ds-sp tr').length === 1 && $('#px-ds-sp tr').attr('id') === 'px-empty-row') {
+        $('#px-ds-sp').html('<tr id="px-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td></tr>');
+    } else {
+        // Nếu không còn row thật nào thì thêm empty
+        const hasReal = $('#px-ds-sp tr').toArray().some(r => r.id !== 'px-empty-row');
+        if (!hasReal) {
+            $('#px-ds-sp').html('<tr id="px-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td></tr>');
+        }
+    }
+    // Bật lại nút "Chọn" trong bảng kết quả search
+    if (spId) {
+        const sel = `.btn-chon-sp-xuat[data-id="${spId}"]`;
+        const $btnSel = $(sel);
+        const isVariant = $btnSel.data('variant') == 1;
+        $btnSel.prop('disabled', false).removeClass('btn-secondary').addClass(isVariant ? 'btn-success' : 'btn-primary').html('<i class="fas fa-plus"></i> Chọn');
+    }
+    updatePxTongSl();
+}
+
+function updatePxTongSl() {
+    let total = 0;
+    $('#px-ds-sp tr').each(function () {
+        if (this.id === 'px-empty-row') return;
+        const v = parseInt($(this).find('.px-sl-input').val());
+        if (!isNaN(v)) total += v;
+    });
+    $('#px-tong-sl').text(total.toLocaleString());
 }
 
 function addLoRow(id, sl, gia, hsd) {
@@ -1107,7 +1396,6 @@ function addLoRow(id, sl, gia, hsd) {
     </tr>`);
 }
 
-function removePxRow(btn) { if ($('#px-ds-sp tr').length > 1) $(btn).closest('tr').remove(); }
 function removeLoRow(btn) { if ($('#lo-ds-sp tr').length > 1) $(btn).closest('tr').remove(); }
 
 $(document).on('change', '.px-sp-select', function () {
@@ -1122,6 +1410,9 @@ $(document).on('change', '.px-lo-select', function () {
 });
 
 function loadLoOptions(row, idSp) {
+    // #region agent log
+    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b085c7'},body:JSON.stringify({sessionId:'b085c7',location:'kho-hang.js:loadLoOptions',message:'loadLoOptions called from PX',data:{idSp},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     const loSelect = row.find('.px-lo-select');
     const info = row.find('.px-lo-info');
     if (!idSp) {
@@ -1240,20 +1531,10 @@ function buildChiTiet(tableId, prefix) {
             const m = name.match(new RegExp('chi_tiet\\[\\d+\\]\\[(.+)\\]'));
             if (m) row[m[1]] = $(this).val();
         });
+        // Đổi '__base__' về rỗng để backend hiểu là đơn vị cơ bản
+        if (row.don_vi_id === '__base__') row.don_vi_id = '';
         if (Object.keys(row).length) rows.push(row);
     });
-    // Prefix-specific: tính so_luong_thuc = so_luong_nhap * ty_le_quy_doi cho phiếu nhập
-    if (prefix === 'pn') {
-        rows.forEach(r => {
-            const tyLe = parseInt(r.ty_le_quy_doi) || 1;
-            const slNhap = parseInt(r.so_luong_nhap) || 0;
-            if (tyLe > 1) {
-                r.so_luong_thuc = slNhap * tyLe;
-            } else {
-                r.so_luong_thuc = slNhap;
-            }
-        });
-    }
     return rows;
 }
 
@@ -1287,6 +1568,10 @@ function submitPhieuNhap() {
 }
 
 function submitPhieuXuat() {
+    // #region agent log
+    const rowsLog = $('#px-ds-sp tr').toArray().map(r => ({id:r.id,dataset:r.dataset.spId||null,isEmpty:r.id==='px-empty-row'}));
+    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b085c7'},body:JSON.stringify({sessionId:'b085c7',location:'kho-hang.js:submitPhieuXuat',message:'PX submit start',data:{rowsLog},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     const chiTiet = [];
     let hasError = false;
     $('#px-ds-sp tr').each(function () {
@@ -1382,18 +1667,64 @@ function gopx(p) { loadPhieuXuat(p); }
 // ─── IMPORT/EXPORT EXCEL - PHIẾU NHẬP ─────────────────────────────────
 let importPnFile = null;
 
-// Nút Export Excel - Phiếu nhập
+// Nút Export Excel - Phiếu nhập: mở modal để chọn khoảng thời gian
 $('#pn-btn-export').click(function () {
-    const loai = $('#pn-filter-loai').val();
     const tu = $('#pn-filter-tu').val();
     const den = $('#pn-filter-den').val();
+    if (tu) $('#xuat-pn-tu').val(tu);
+    if (den) $('#xuat-pn-den').val(den);
+    new bootstrap.Modal(document.getElementById('modal-xuat-pn')).show();
+});
+
+// Helper preset ngày (dùng chung cho cả pn & px)
+function fillDateRange(tuSel, denSel, preset) {
+    const today = new Date();
+    const fmt = (d) => d.toISOString().slice(0, 10);
+    let tu = '', den = '';
+    if (preset === 'today') {
+        tu = den = fmt(today);
+    } else if (preset === '7days') {
+        const start = new Date(today);
+        start.setDate(start.getDate() - 6);
+        tu = fmt(start); den = fmt(today);
+    } else if (preset === 'this_month') {
+        const first = new Date(today.getFullYear(), today.getMonth(), 1);
+        tu = fmt(first); den = fmt(today);
+    } else if (preset === 'last_month') {
+        const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const last = new Date(today.getFullYear(), today.getMonth(), 0);
+        tu = fmt(first); den = fmt(last);
+    }
+    $(tuSel).val(tu);
+    $(denSel).val(den);
+}
+
+$(document).on('click', '.pn-preset', function () {
+    fillDateRange('#xuat-pn-tu', '#xuat-pn-den', $(this).data('preset'));
+});
+
+$(document).on('click', '.px-preset', function () {
+    fillDateRange('#xuat-px-tu', '#xuat-px-den', $(this).data('preset'));
+});
+
+$('#form-xuat-pn').submit(function (e) {
+    e.preventDefault();
+    const loai = $('#xuat-pn-loai').val();
+    const tu = $('#xuat-pn-tu').val();
+    const den = $('#xuat-pn-den').val();
+    if (tu && den && tu > den) {
+        hienBao('warning', 'Từ ngày phải nhỏ hơn hoặc bằng đến ngày.');
+        return;
+    }
+    const params = new URLSearchParams();
+    if (loai) params.set('loai_nhap', loai);
+    if (tu) params.set('tu_ngay', tu);
+    if (den) params.set('den_ngay', den);
     let url = '/admin/api/phieu-nhap/export';
-    const params = [];
-    if (loai) params.push('loai_nhap=' + loai);
-    if (tu) params.push('tu_ngay=' + tu);
-    if (den) params.push('den_ngay=' + den);
-    if (params.length) url += '?' + params.join('&');
-    window.open(url, '_blank');
+    const qs = params.toString();
+    if (qs) url += '?' + qs;
+    bootstrap.Modal.getInstance(document.getElementById('modal-xuat-pn')).hide();
+    window.location.href = url;
 });
 
 // Nút Import Excel - Phiếu nhập
@@ -1478,11 +1809,18 @@ $('#form-import-pn').submit(function (e) {
         success: function (res) {
             if (res.success) {
                 bootstrap.Modal.getInstance(document.getElementById('modal-import-pn')).hide();
-                hienBao('success', res.message);
+
+                // Neu co dong loi (partial success) -> hien thi modal warning
+                if (res.errors && res.errors.length > 0) {
+                    showImportPnResultModal(res);
+                } else {
+                    hienBao('success', res.message);
+                }
                 loadPhieuNhap(1);
                 importPnFile = null;
             } else {
-                hienBao('danger', res.message);
+                // That bai hoan toan
+                showImportPnResultModal(res);
             }
         },
         error: function (x) {
@@ -1494,21 +1832,101 @@ $('#form-import-pn').submit(function (e) {
     });
 });
 
+// Hien thi modal ket qua import (ca thanh cong co loi lan that bai)
+function showImportPnResultModal(res) {
+    // Tao modal neu chua co
+    let $modal = $('#modal-import-pn-result');
+    if ($modal.length === 0) {
+        const html = `
+            <div class="modal fade" id="modal-import-pn-result" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Kết quả Import Phiếu Nhập</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body" id="import-pn-result-body"></div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        $('body').append(html);
+        $modal = $('#modal-import-pn-result');
+    }
+
+    const $body = $('#import-pn-result-body');
+    const success = res.success;
+    const insertedCount = res.inserted_count ?? res.row_count ?? 0;
+    const rowCount = res.row_count ?? 0;
+    const errors = res.errors ?? [];
+
+    let html = '';
+    if (success) {
+        html += `<div class="alert alert-success">
+            <i class="fas fa-check-circle me-2"></i><strong>${res.message}</strong>
+        </div>`;
+        if (insertedCount < rowCount) {
+            html += `<div class="alert alert-warning mt-2">
+                <i class="fas fa-info-circle me-2"></i>
+                Đã import <strong>${insertedCount}/${rowCount}</strong> dòng. Bỏ qua <strong>${rowCount - insertedCount}</strong> dòng bị lỗi.
+            </div>`;
+        }
+    } else {
+        html += `<div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i><strong>${res.message}</strong>
+        </div>`;
+    }
+
+    if (errors.length > 0) {
+        html += '<h6 class="mt-3">Chi tiết các dòng bị lỗi:</h6>';
+        html += '<div class="table-responsive"><table class="table table-sm table-bordered">';
+        html += '<thead><tr><th style="width:80px">Dòng</th><th>Lỗi</th></tr></thead><tbody>';
+        errors.slice(0, 50).forEach(err => {
+            html += `<tr><td class="text-danger">${err.replace(/^Dong (\d+): /, '$1')}</td><td>${err.replace(/^Dong \d+: /, '')}</td></tr>`;
+        });
+        html += '</tbody></table></div>';
+        if (errors.length > 50) {
+            html += `<p class="text-muted small">... và ${errors.length - 50} lỗi khác</p>`;
+        }
+    }
+
+    $body.html(html);
+    new bootstrap.Modal($modal[0]).show();
+}
+
 // ─── IMPORT/EXPORT EXCEL - PHIẾU XUẤT ─────────────────────────────────
 let importPxFile = null;
 
-// Nút Export Excel - Phiếu xuất
+// Nút Export Excel - Phiếu xuất: mở modal
 $('#px-btn-export').click(function () {
-    const loai = $('#px-filter-loai').val();
     const tu = $('#px-filter-tu').val();
     const den = $('#px-filter-den').val();
+    if (tu) $('#xuat-px-tu').val(tu);
+    if (den) $('#xuat-px-den').val(den);
+    new bootstrap.Modal(document.getElementById('modal-xuat-px')).show();
+});
+
+$('#form-xuat-px').submit(function (e) {
+    e.preventDefault();
+    const loai = $('#xuat-px-loai').val();
+    const tu = $('#xuat-px-tu').val();
+    const den = $('#xuat-px-den').val();
+    if (tu && den && tu > den) {
+        hienBao('warning', 'Từ ngày phải nhỏ hơn hoặc bằng đến ngày.');
+        return;
+    }
+    const params = new URLSearchParams();
+    if (loai) params.set('loai_xuat', loai);
+    if (tu) params.set('tu_ngay', tu);
+    if (den) params.set('den_ngay', den);
     let url = '/admin/api/phieu-xuat/export';
-    const params = [];
-    if (loai) params.push('loai_xuat=' + loai);
-    if (tu) params.push('tu_ngay=' + tu);
-    if (den) params.push('den_ngay=' + den);
-    if (params.length) url += '?' + params.join('&');
-    window.open(url, '_blank');
+    const qs = params.toString();
+    if (qs) url += '?' + qs;
+    bootstrap.Modal.getInstance(document.getElementById('modal-xuat-px')).hide();
+    window.location.href = url;
 });
 
 // Nút Import Excel - Phiếu xuất
@@ -1594,11 +2012,16 @@ $('#form-import-px').submit(function (e) {
         success: function (res) {
             if (res.success) {
                 bootstrap.Modal.getInstance(document.getElementById('modal-import-px')).hide();
-                hienBao('success', res.message);
+
+                if (res.errors && res.errors.length > 0) {
+                    showImportPxResultModal(res);
+                } else {
+                    hienBao('success', res.message);
+                }
                 loadPhieuXuat(1);
                 importPxFile = null;
             } else {
-                hienBao('danger', res.message);
+                showImportPxResultModal(res);
             }
         },
         error: function (x) {
@@ -1609,6 +2032,70 @@ $('#form-import-px').submit(function (e) {
         }
     });
 });
+
+// Hien thi modal ket qua import PX
+function showImportPxResultModal(res) {
+    let $modal = $('#modal-import-px-result');
+    if ($modal.length === 0) {
+        const html = `
+            <div class="modal fade" id="modal-import-px-result" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Kết quả Import Phiếu Xuất</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body" id="import-px-result-body"></div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        $('body').append(html);
+        $modal = $('#modal-import-px-result');
+    }
+
+    const $body = $('#import-px-result-body');
+    const success = res.success;
+    const insertedCount = res.inserted_count ?? res.row_count ?? 0;
+    const rowCount = res.row_count ?? 0;
+    const errors = res.errors ?? [];
+
+    let html = '';
+    if (success) {
+        html += `<div class="alert alert-success">
+            <i class="fas fa-check-circle me-2"></i><strong>${res.message}</strong>
+        </div>`;
+        if (insertedCount < rowCount) {
+            html += `<div class="alert alert-warning mt-2">
+                <i class="fas fa-info-circle me-2"></i>
+                Đã import <strong>${insertedCount}/${rowCount}</strong> dòng. Bỏ qua <strong>${rowCount - insertedCount}</strong> dòng bị lỗi.
+            </div>`;
+        }
+    } else {
+        html += `<div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i><strong>${res.message}</strong>
+        </div>`;
+    }
+
+    if (errors.length > 0) {
+        html += '<h6 class="mt-3">Chi tiết các dòng bị lỗi:</h6>';
+        html += '<div class="table-responsive"><table class="table table-sm table-bordered">';
+        html += '<thead><tr><th style="width:80px">Dòng</th><th>Lỗi</th></tr></thead><tbody>';
+        errors.slice(0, 50).forEach(err => {
+            html += `<tr><td class="text-danger">${err.replace(/^Dong (\d+): /, '$1')}</td><td>${err.replace(/^Dong \d+: /, '')}</td></tr>`;
+        });
+        html += '</tbody></table></div>';
+        if (errors.length > 50) {
+            html += `<p class="text-muted small">... và ${errors.length - 50} lỗi khác</p>`;
+        }
+    }
+
+    $body.html(html);
+    new bootstrap.Modal($modal[0]).show();
+}
 
 // ─── ALERTS ──────────────────────────────────────────────
 function hienBao(type, message) {

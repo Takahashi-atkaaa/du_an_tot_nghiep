@@ -8,9 +8,10 @@
  * - Creatable Combobox cho thuộc tính: chọn từ DB hoặc gõ tạo mới
  */
 (function () {
-    const { createApp, reactive, ref, watch, computed, onMounted } = Vue;
+    const { createApp, reactive, ref, watch, computed, onMounted, nextTick } = Vue;
     const DATA = window.__CREATE_PRODUCT_DATA__ || { danhMucs: [], csrfToken: '' };
     const uid = () => 'id_' + Math.random().toString(36).slice(2, 10);
+    const asArray = value => Array.isArray(value) ? value : [];
 
     // ============ APP ============
     const app = createApp({
@@ -73,6 +74,7 @@
             const submitting = ref(false);
             const submitHadError = ref(false);
             const formLoaded = ref(false);
+            let isInitializing = true; // Chặn watch tự sinh lại grid khi khôi phục dữ liệu Edit
 
             const hasImage = computed(() => basicInfo.image instanceof File);
 
@@ -115,14 +117,20 @@
                 if (gridData.value.length < 2) return false;
 
                 // Trích xuất "Attribute Signature" từ mỗi dòng
-                // Signature = chuỗi các attrValueIds đã sort
+                // Signature = chuỗi (attrValueIds đã sort) + '__' + (ten_don_vi hoặc ty_le)
+                // FIX: trước đây chỉ gom attrValueIds, làm 2 dòng cùng thuộc tính
+                // nhưng khác đơn vị (VD: Đen-38 ở "cái" và Đen-38 ở "Bao 6") bị
+                // tính là trùng. Giờ thêm ten_don_vi / ty_le vào key để phân biệt.
                 const signatures = gridData.value.map(row => {
                     if (!row.attrValueIds || row.attrValueIds.length === 0) {
                         return ''; // Dòng không có thuộc tính
                     }
                     // Clone và sort để đảm bảo "M-Đỏ" = "Đỏ-M"
                     const sortedIds = [...row.attrValueIds].map(id => String(id)).sort();
-                    return sortedIds.join('-');
+                    const attrPart = sortedIds.join('-');
+                    // Phân biệt đơn vị: ten_don_vi (unitName) hoặc tyLe
+                    const donViPart = row.unitName || (row.tyLe != null ? String(row.tyLe) : '');
+                    return `${attrPart}__${donViPart}`;
                 });
 
                 // So sánh độ dài: nếu có trùng lặp thì unique sẽ ngắn hơn
@@ -149,7 +157,14 @@
                 const signatures = gridData.value.map((row, idx) => ({
                     idx: idx,
                     sig: row.attrValueIds && row.attrValueIds.length > 0
-                        ? [...row.attrValueIds].map(id => String(id)).sort().join('-')
+                        ? (() => {
+                            const sortedIds = [...row.attrValueIds].map(id => String(id)).sort();
+                            const attrPart = sortedIds.join('-');
+                            // FIX: thêm ten_don_vi / ty_le vào key để phân biệt
+                            // đơn vị, tránh báo trùng sai khi kết hợp thuộc tính + đơn vị quy đổi
+                            const donViPart = row.unitName || (row.tyLe != null ? String(row.tyLe) : '');
+                            return `${attrPart}__${donViPart}`;
+                        })()
                         : ''
                 }));
 
@@ -195,96 +210,200 @@
                     basicInfo.defaultMinStock = prod.basicInfo?.defaultMinStock ?? 0;
                     basicInfo.imagePreview = prod.basicInfo?.imagePreview ?? '';
 
-                    unitConfig.baseUnit = prod.unitConfig?.baseUnit ?? '';
-                    unitConfig.basePrice = prod.unitConfig?.basePrice ?? (prod.basicInfo?.defaultPrice ?? 0);
-                    unitConfig.conversionUnits = (prod.unitConfig?.conversionUnits || []).map(u => ({
+// SAFETY: Nếu unitConfig.baseUnit rỗng (có thể do toEditVueData phân loại nhầm base),
+                    // fallback về biến thể gốc đầu tiên có ten_don_vi.
+                    // Đảm bảo buildPayload không gửi chuỗi rỗng "" làm ten_don_vi.
+                    const allVariantsForBase = asArray(prod.variants).length > 0
+                        ? asArray(prod.variants)
+                        : asArray(prod.bien_the);
+                    const baseVariant = allVariantsForBase.find(v => !v.la_don_vi && v.ten_don_vi)
+                        || allVariantsForBase.find(v => v.ten_don_vi)
+                        || null;
+
+                    // Ưu tiên unitConfig.baseUnit từ API; fallback về biến thể gốc đầu tiên.
+                    const apiBaseUnit = prod.unitConfig?.baseUnit ?? '';
+                    if (apiBaseUnit) {
+                        unitConfig.baseUnit = apiBaseUnit;
+                    } else if (baseVariant && baseVariant.ten_don_vi) {
+                        unitConfig.baseUnit = baseVariant.ten_don_vi;
+                    } else {
+                        unitConfig.baseUnit = '';
+                    }
+
+                    unitConfig.basePrice = prod.unitConfig?.basePrice
+                        ?? (baseVariant?.gia_ban ? parseFloat(baseVariant.gia_ban) : 0)
+                        ?? (prod.basicInfo?.defaultPrice ?? 0);
+                    // Loại bỏ conversion trùng tên với đơn vị cơ bản để tránh grid sinh ra 2 dòng cùng tên.
+                    const safeBase = (prod.unitConfig?.baseUnit ?? '').trim().toLowerCase();
+                    // Gom các đơn vị quy đổi: ưu tiên prod.unitConfig.conversionUnits;
+                    // fallback: gom từ TẤT CẢ variants (kết hợp don_vi_quy_doi + units) để đảm bảo
+                    // đơn vị quy đổi hiện có trong DB luôn xuất hiện lại trong dropdown khi Edit,
+                    // kể cả khi variant đầu tiên là variant "Thùng" (không có DonViQuyDoi gắn vào).
+                    const allVariants = asArray(prod.variants).length > 0
+                        ? asArray(prod.variants)
+                        : asArray(prod.bien_the);
+                    const fallbackConversion = [];
+                    const seenNames = new Set();
+                    allVariants.forEach(v => {
+                        const sources = [
+                            ...asArray(v.don_vi_quy_doi),
+                            ...asArray(v.units)
+                        ];
+                        sources.forEach(u => {
+                            const key = (u.ten_don_vi || u.name || '').trim().toLowerCase();
+                            if (!key || seenNames.has(key)) return;
+                            seenNames.add(key);
+                            fallbackConversion.push(u);
+                        });
+                    });
+                    const conversionSource = asArray(prod.unitConfig?.conversionUnits).length > 0
+                        ? asArray(prod.unitConfig?.conversionUnits)
+                        : fallbackConversion;
+                    unitConfig.conversionUnits = asArray(conversionSource)
+                        .filter(u => safeBase === '' || String(u.ten_don_vi || u.name || '').trim().toLowerCase() !== safeBase)
+                        .map(u => ({
                         id: u.id || uid(),
-                        name: u.name || '',
+                        name: u.ten_don_vi || u.name || '',
                         rate: u.ty_le_quy_doi ?? u.so_luong_san_pham_trong_don_vi ?? u.rate ?? 1,
                         price: u.gia_ban_quy_doi ?? u.price ?? 0,
                         // Giữ lại các trường DB để dùng trong payload
                         _dbId: u.id || null,
                         _giaVonQuyDoi: u.gia_von_quy_doi ?? 0,
                         _giaBanQuyDoi: u.gia_ban_quy_doi ?? 0,
-                        _maHang: u.ma_hang ?? '',
-                        _maVach: u.ma_vach ?? '',
+                        _maHang: u.ma_hang ?? u.maHang ?? '',
+                        _maVach: u.ma_vach ?? u.maVach ?? '',
                         // Gán don_vi_chuan_id dựa trên matching với availableUnits
                         don_vi_chuan_id: (() => {
                             const found = availableUnits.value.find(a =>
-                                a.name === (u.name || u.ten_don_vi || '') &&
+                                a.name === (u.ten_don_vi || u.name || '') &&
                                 a.qty === (u.so_luong_san_pham_trong_don_vi || u.ty_le_quy_doi || u.rate || 1)
                             );
                             return found ? found.id : null;
                         })()
                     }));
 
-                    attributesConfig.groups = (prod.attributesConfig?.groups || []).map(g => ({
-                        id: g.id || uid(),
-                        name: g.name || '',
-                        values: (g.values || []).map(v => ({
-                            id: v.id ?? (g.id + '_' + (v.label || v)),
-                            label: v.label ?? v,
-                            _isNew: !!v._isNew
-                        })),
-                        valueInput: '',
-                        _dropdownOpen: false,
-                        _highlightedIdx: -1
-                    }));
+                    const attrGroupByValueId = new Map();
+                    asArray(availableAttributes.value).forEach(group => {
+                        asArray(group.values).forEach(value => {
+                            attrGroupByValueId.set(String(value.id), {
+                                id: group.id,
+                                name: group.name
+                            });
+                        });
+                    });
+
+                    const rawAttributeGroups = prod.attributesConfig?.groups || [];
+                    const productVariants = asArray(prod.variants).length > 0
+                        ? asArray(prod.variants)
+                        : asArray(prod.bien_the);
+                    const restoredGroups = new Map();
+                    asArray(rawAttributeGroups).forEach(group => {
+                        asArray(group.values).forEach(rawValue => {
+                            const value = typeof rawValue === 'object'
+                                ? rawValue
+                                : { id: null, label: rawValue };
+                            const availableGroup = attrGroupByValueId.get(String(value.id));
+                            const groupName = availableGroup?.name || group.name || 'Thuộc tính';
+                            const groupId = availableGroup?.id || group.id || uid();
+                            const key = String(groupId);
+
+                            if (!restoredGroups.has(key)) {
+                                restoredGroups.set(key, {
+                                    id: groupId,
+                                    name: groupName,
+                                    values: [],
+                                    valueInput: '',
+                                    _dropdownOpen: false,
+                                    _highlightedIdx: -1
+                                });
+                            }
+
+                            const restoredGroup = restoredGroups.get(key);
+                            if (!restoredGroup.values.some(v => String(v.id) === String(value.id))) {
+                                restoredGroup.values.push({
+                                    id: value.id ?? null,
+                                    label: value.label ?? value.ten_thuoc_tinh ?? '',
+                                    _isNew: !!value._isNew
+                                });
+                            }
+                        });
+                    });
+
+                    // Nếu API không gửi groups, dựng lại nhóm từ toàn bộ ID thuộc tính của variants.
+                    if (restoredGroups.size === 0) {
+                        const variantAttrIds = new Set();
+                        productVariants.forEach(variant => {
+                            const ids = Array.isArray(variant.thuoc_tinh_ids)
+                                ? variant.thuoc_tinh_ids
+                                : String(variant.thuoc_tinh_ids || '').split(',').filter(Boolean);
+                            ids.forEach(id => variantAttrIds.add(String(id)));
+                        });
+                        asArray(availableAttributes.value).forEach(group => {
+                            const values = asArray(group.values)
+                                .filter(value => variantAttrIds.has(String(value.id)))
+                                .map(value => ({ id: value.id, label: value.label, _isNew: false }));
+                            if (values.length > 0) {
+                                restoredGroups.set(String(group.id), {
+                                    id: group.id,
+                                    name: group.name,
+                                    values,
+                                    valueInput: '',
+                                    _dropdownOpen: false,
+                                    _highlightedIdx: -1
+                                });
+                            }
+                        });
+                    }
+                    attributesConfig.groups = [...restoredGroups.values()];
 
                     const attrLabelMap = {};
                     attributesConfig.groups.forEach(g => {
                         g.values.forEach(v => {
-                            attrLabelMap[v.id] = { groupName: g.name, label: v.label };
+                            attrLabelMap[String(v.id)] = { groupName: g.name, label: v.label };
                         });
                     });
 
-                    // Grid: mỗi row = 1 variant từ DB
-                    gridData.value = (prod.bien_the || []).map(bt => {
+                    // Grid: khôi phục toàn bộ dòng gốc và dòng quy đổi từ API.
+                    const mappedRows = [];
+                    gridData.value = [];
+                    productVariants.forEach(bt => {
                         const attrValueIds = Array.isArray(bt.thuoc_tinh_ids)
                             ? bt.thuoc_tinh_ids
-                            : (bt.thuoc_tinh_ids ? String(bt.thuoc_tinh_ids).split(',').map(x => x.trim()).filter(Boolean) : []);
+                            : String(bt.thuoc_tinh_ids || '').split(',').map(x => x.trim()).filter(Boolean);
                         const attrLabels = {};
                         attrValueIds.forEach(id => {
-                            const found = attrLabelMap[id];
+                            const found = attrLabelMap[String(id)];
                             if (found) attrLabels[found.groupName] = found.label;
                         });
-
-                        const rowUnitName = bt.ten_bien_the || prod.unitConfig?.baseUnit || '';
-                        const unitKey = rowUnitName === prod.unitConfig?.baseUnit
-                            ? 'base'
-                            : ('cv_' + (bt.units && bt.units.length > 0 ? (bt.units[0].id || uid()) : uid()));
-
-                        // conversionUnits: units người dùng đang chỉnh sửa (reactive, dùng cho payload)
-                        // beingEdited: mark units as "being edited" vs "unchanged"
-                        const rowConversionUnits = (bt.units || []).map(u => ({
-                            id: u.id,
-                            _dbId: u.id ?? null,
-                            don_vi_chuan_id: u.don_vi_chuan_id ?? null,
-                            ten_don_vi: u.ten_don_vi,
-                            so_luong_san_pham_trong_don_vi: u.so_luong_san_pham_trong_don_vi,
-                            ty_le_quy_doi: u.ty_le_quy_doi,
-                            gia_von_quy_doi: u.gia_von_quy_doi,
-                            gia_ban_quy_doi: u.gia_ban_quy_doi,
-                            ma_hang: u.ma_hang,
-                            ma_vach: u.ma_vach,
-                            hinh_anh: u.hinh_anh || '',
-                            // Map fields theo format buildPayload expects
-                            name: u.ten_don_vi,
-                            rate: u.so_luong_san_pham_trong_don_vi ?? u.ty_le_quy_doi ?? 1,
-                            // Flag: true = tồn tại trong DB, false = mới thêm
-                            _fromDb: true
+                        const conversionSource = asArray(bt.don_vi_quy_doi).length > 0
+                            ? asArray(bt.don_vi_quy_doi)
+                            : asArray(bt.units);
+                        const conversionUnits = conversionSource.map(u => ({
+                            id: u.id || uid(),
+                            name: u.ten_don_vi || u.name || '',
+                            rate: u.so_luong_san_pham_trong_don_vi ?? u.ty_le_quy_doi ?? u.rate ?? 1,
+                            price: u.gia_ban_quy_doi ?? u.price ?? u.gia_ban ?? 0,
+                            _dbId: u.id || null,
+                            _giaVonQuyDoi: u.gia_von_quy_doi ?? u.gia_von ?? 0,
+                            _giaBanQuyDoi: u.gia_ban_quy_doi ?? u.gia_ban ?? 0,
+                            gia_von_quy_doi: u.gia_von_quy_doi ?? u.gia_von ?? 0,
+                            gia_ban_quy_doi: u.gia_ban_quy_doi ?? u.gia_ban ?? 0,
+                            ma_hang: u.ma_hang ?? u.maHang ?? '',
+                            ma_vach: u.ma_vach ?? u.maVach ?? '',
+                            _maHang: u.ma_hang ?? u.maHang ?? '',
+                            _maVach: u.ma_vach ?? u.maVach ?? '',
+                            don_vi_chuan_id: u.don_vi_chuan_id || null
                         }));
 
-                        return {
-                            key: buildRowKey(attrLabels, { key: unitKey, name: rowUnitName }),
+                        const baseRow = {
                             existingId: bt.id ?? null,
-                            _dbId: bt.id ?? null, // Preserve original ID for safety
-                            attrLabels: attrLabels,
-                            attrValueIds: attrValueIds,
-                            unitKey: unitKey,
-                            unitName: rowUnitName,
+                            _dbId: bt.id ?? null,
+                            attrLabels: { ...attrLabels },
+                            attrValueIds: [...attrValueIds],
+                            unitKey: 'base',
+                            unitName: bt.ten_don_vi || prod.unitConfig?.baseUnit || '',
                             tyLe: 1,
-                            isBase: rowUnitName === prod.unitConfig?.baseUnit,
+                            isBase: true,
                             tenBienThe: bt.ten_bien_the ?? '',
                             maHang: bt.ma_hang ?? '',
                             maVach: bt.ma_vach ?? '',
@@ -293,12 +412,49 @@
                             dinhMucToiThieu: bt.dinh_muc_toi_thieu ?? 0,
                             soLuong: bt.so_luong_ton ?? 0,
                             touched: {},
-                            // conversionUnits: dùng cho payload (reactive, user edits)
-                            conversionUnits: rowConversionUnits,
-                            // savedUnits: bản sao gốc từ DB (fallback safety)
-                            savedUnits: rowConversionUnits.map(u => ({ ...u }))
+                            conversionUnits,
+                            savedUnits: conversionSource.map(u => ({ ...u })),
+                            // Ảnh biến thể: support cả snake_case (API) và camelCase
+                            hinhAnh: bt.hinh_anh || bt.hinhAnh || '',
+                            fileHinhAnh: null
                         };
+                        mappedRows.push(baseRow);
+
+                        conversionSource.forEach((u, idx) => {
+                            const convUnitName = u.ten_don_vi || u.name || '';
+                            if (!convUnitName) return;
+                            mappedRows.push({
+                                existingId: u.id ?? null,
+                                _dbId: u.id ?? null,
+                                attrLabels: { ...attrLabels },
+                                attrValueIds: [...attrValueIds],
+                                unitKey: 'cv_' + (u.id || idx),
+                                unitName: convUnitName,
+                                tyLe: parseFloat(u.so_luong_san_pham_trong_don_vi ?? u.ty_le_quy_doi ?? u.rate) || 1,
+                                isBase: false,
+                                tenBienThe: bt.ten_bien_the ?? '',
+                                maHang: u.ma_hang ?? u.maHang ?? '',
+                                maVach: u.ma_vach ?? u.maVach ?? '',
+                                giaVon: parseFloat(u.gia_von_quy_doi ?? u.gia_von) || parseFloat(bt.gia_von) || 0,
+                                giaBan: parseFloat(u.gia_ban_quy_doi ?? u.gia_ban) || parseFloat(bt.gia_ban) || 0,
+                                dinhMucToiThieu: 0,
+                                soLuong: 0,
+                                touched: {},
+                                conversionUnits: [],
+                                savedUnits: [],
+                                // Ảnh biến thể: ưu tiên ảnh riêng của DonViQuyDoi, fallback về variant cha
+                                hinhAnh: u.hinh_anh || u.hinhAnh || bt.hinh_anh || bt.hinhAnh || '',
+                                fileHinhAnh: null
+                            });
+                        });
                     });
+
+                    // Gán key cho mỗi row
+                    mappedRows.forEach(row => {
+                        row.key = buildRowKey(row.attrLabels, { key: row.unitKey, name: row.unitName });
+                    });
+
+                    gridData.value = mappedRows;
 
                     // Populate _variantIdMap for regenerateGrid to preserve IDs
                     _variantIdMap = new Map();
@@ -308,7 +464,7 @@
                     });
 
                     _initDone = true;
-                    regenerateGrid(); // Tái sinh grid để hiển thị đúng số dòng variant
+                    // Không regenerate tại đây: mappedRows đã chứa đầy đủ base + conversion từ API.
                 } catch (e) {
                     console.error('initFromProduct failed', e);
                 }
@@ -353,13 +509,16 @@
             // ------- COMPUTED: đơn vị thực tế -------
             const effectiveUnits = computed(() => {
                 const list = [];
-                if (unitConfig.baseUnit.trim()) {
-                    list.push({ key: 'base', name: unitConfig.baseUnit.trim(), tyLe: 1,
+                const baseName = unitConfig.baseUnit.trim();
+                if (baseName) {
+                    list.push({ key: 'base', name: baseName, tyLe: 1,
                         price: parseFloat(unitConfig.basePrice) || parseFloat(basicInfo.defaultPrice) || 0, isBase: true });
                 }
                 unitConfig.conversionUnits.forEach((u, i) => {
                     if (!u.name.trim()) return;
-                    list.push({ key: 'cv_' + u.id, name: u.name.trim(), tyLe: parseInt(u.rate) || 1,
+                    // Bỏ qua conversion trùng tên đơn vị cơ bản để grid không nhân đôi.
+                    if (baseName && u.name.trim().toLowerCase() === baseName.toLowerCase()) return;
+                    list.push({ key: 'cv_' + u.id, name: u.name.trim(), tyLe: parseFloat(u.rate) || 1,
                         price: parseFloat(u.price) || 0, isBase: false });
                 });
                 return list;
@@ -413,8 +572,14 @@
 
             // ------- REGENERATE GRID -------
             function regenerateGrid() {
+                // Lưu bản chụp (snapshot) của gridData hiện tại để dò tìm sau.
+                // Vì ngay sau dòng `gridData.value = newRows` ở cuối hàm, _variantIdMap
+                // cũng đã được rebuild → oldGrid.find bằng tenBienThe + unitName là cách
+                // duy nhất đảm bảo khôi phục ảnh khi key format giữa initFromProduct và
+                // regenerateGrid không trùng nhau.
+                const oldGrid = gridData.value.slice();
+
                 // Build lookup map by attrValueIds + unitName to preserve existingId/_dbId
-                // This fixes the key format mismatch issue between initFromProduct and regenerateGrid
                 const lookupMap = new Map();
                 if (typeof _variantIdMap !== 'undefined') {
                     _variantIdMap.forEach((row, id) => {
@@ -427,6 +592,7 @@
 
                 const attrGroups = effectiveAttrGroups.value;
                 const units = effectiveUnits.value;
+                const baseNameLC = unitConfig.baseUnit.trim().toLowerCase();
                 const attrCombos = cartesian(attrGroups);
                 const baseRatio = (() => {
                     const bu = units.find(x => x.isBase);
@@ -457,15 +623,34 @@
                             .filter(k => !k.startsWith('__')).map(k => combo[k]).join(' - ');
                         const tenBienThe = attrPart || '';
 
-                        newRows.push({
-                            key: buildRowKey(combo, u),
-                            attrLabels: Object.keys(combo).filter(k => !k.startsWith('__'))
-                                .reduce((o, k) => { o[k] = combo[k]; return o; }, {}),
-                            attrValueIds: combo.__ids || [],
-                            unitKey: u.key,
-                            unitName: u.name,
-                            tyLe: u.tyLe,
-                            isBase: u.isBase,
+                        // BỌC THÉP TÌM KIẾM: nếu lookupMap (attrIds + unitName) miss
+                        // (thường do key format giữa initFromProduct và regen khác nhau),
+                        // tìm dự phòng trực tiếp trong oldGrid bằng ten_bien_the + unitName.
+                        // Đây là cách duy nhất chống mất ảnh khi regen lần đầu sau khi load Edit.
+                        if (!old && tenBienThe) {
+                            old = oldGrid.find(r => {
+                                const oldTen = r.tenBienThe || r.ten_bien_the || '';
+                                const oldUnit = r.unitName || r.ten_don_vi || '';
+                                return String(oldTen).trim() === String(tenBienThe).trim()
+                                    && String(oldUnit).trim() === String(u.name || '').trim();
+                            });
+                        }
+
+// Nếu dòng cũ trong lookup có unitName trùng đơn vị cơ bản hiện tại nhưng
+                    // isBase = false (do lưu trước có đơn vị cơ bản khác), ép về isBase = true
+                    // để tránh sinh 2 dòng cùng tên với cờ trái nhau.
+                    const shouldBeBase = (u.isBase)
+                        || (baseNameLC && String(old?.unitName || '').trim().toLowerCase() === baseNameLC);
+
+                    newRows.push({
+                        key: buildRowKey(combo, u),
+                        attrLabels: Object.keys(combo).filter(k => !k.startsWith('__'))
+                            .reduce((o, k) => { o[k] = combo[k]; return o; }, {}),
+                        attrValueIds: combo.__ids || [],
+                        unitKey: u.key,
+                        unitName: u.name,
+                        tyLe: u.tyLe,
+                        isBase: shouldBeBase,
                             existingId: old?.existingId ?? old?._dbId ?? null,
                             _dbId: old?._dbId ?? null,
                             tenBienThe: tenBienThe,
@@ -475,7 +660,10 @@
                             giaBan: old?.giaBan ?? (u.price || parseFloat(basicInfo.defaultPrice) || 0),
                             dinhMucToiThieu: old?.dinhMucToiThieu ?? (parseInt(basicInfo.defaultMinStock) || 0),
                             conversionUnits: old?.conversionUnits ? [...old.conversionUnits] : [],
-                            savedUnits: old?.savedUnits ? [...old.savedUnits] : []
+                            savedUnits: old?.savedUnits ? [...old.savedUnits] : [],
+                            // Ảnh biến thể: lấy từ old (đã lookup bằng key hoặc tenBienThe+unitName)
+                            hinhAnh: old?.hinhAnh || old?.hinh_anh || '',
+                            fileHinhAnh: old?.fileHinhAnh ?? null
                         });
                     });
                 });
@@ -493,14 +681,71 @@
             // ------- WATCH: tái sinh grid khi cấu hình thay đổi -------
             let watchTimer = null;
             function debouncedRegen() {
-                if (!_initDone) return;
+                if (isInitializing || !_initDone) return;
                 clearTimeout(watchTimer);
                 watchTimer = setTimeout(regenerateGrid, 50);
             }
-            watch(() => unitConfig.baseUnit, debouncedRegen);
+            watch(() => unitConfig.baseUnit, (newBase, oldBase) => {
+                handleBaseUnitChange(newBase, oldBase);
+                debouncedRegen();
+            });
             watch(() => unitConfig.basePrice, debouncedRegen);
             watch(() => unitConfig.conversionUnits, debouncedRegen, { deep: true });
             watch(() => attributesConfig.groups, debouncedRegen, { deep: true });
+
+            // ------- BASE UNIT SWAP -------
+            // Khi user đổi Đơn vị cơ bản sang một tên đang có trong conversionUnits,
+            // tự động đảo: đẩy base cũ vào conversionUnits với rate = 1/old_rate.
+            function handleBaseUnitChange(newBase, oldBase) {
+                if (isInitializing || !_initDone) return;
+                const newName = String(newBase || '').trim();
+                const oldName = String(oldBase || '').trim();
+                if (!newName || newName === oldName) return;
+
+                // Tìm conversion đang có tên = newName
+                const idx = unitConfig.conversionUnits.findIndex(u =>
+                    String(u.name || '').trim().toLowerCase() === newName.toLowerCase()
+                );
+                if (idx === -1) return; // Không có trong conversion → đổi base bình thường, không cần xử lý
+
+                const cv = unitConfig.conversionUnits[idx];
+                const oldRate = parseFloat(cv.rate) || 1;
+                if (oldRate <= 0 || oldRate === 1) {
+                    // Rate = 1 hoặc không hợp lệ → không đảo, chỉ xóa khỏi conversion
+                    unitConfig.conversionUnits.splice(idx, 1);
+                    return;
+                }
+
+                const confirmMsg =
+                    `“${newName}” đang là đơn vị quy đổi với tỷ lệ ${oldRate} (1 ${newName} = ${oldRate} ${oldName || 'đv cơ bản'}).\n\n` +
+                    `Nếu đổi “${newName}” thành đơn vị cơ bản, “${oldName || 'đv cơ bản cũ'}” sẽ trở thành đơn vị quy đổi với tỷ lệ mới = 1/${oldRate} ≈ ${(1 / oldRate).toFixed(4)}.\n\n` +
+                    `Bạn có chắc muốn đổi không?`;
+                if (!window.confirm(confirmMsg)) {
+                    // User cancel → khôi phục baseUnit cũ
+                    unitConfig.baseUnit = oldBase;
+                    return;
+                }
+
+                // Đảo: thêm oldName vào conversionUnits với rate = 1/oldRate
+                const newRate = 1 / oldRate;
+                unitConfig.conversionUnits.splice(idx, 1); // Xóa entry đang chọn
+                if (oldName) {
+                    unitConfig.conversionUnits.push({
+                        id: uid(),
+                        name: oldName,
+                        rate: newRate,
+                        price: 0,
+                        _dbId: null,
+                        _giaVonQuyDoi: 0,
+                        _giaBanQuyDoi: 0,
+                        _maHang: '',
+                        _maVach: '',
+                        ma_hang: '',
+                        ma_vach: '',
+                        don_vi_chuan_id: null
+                    });
+                }
+            }
 
             // ------- IMAGE -------
             function onImageSelect(e) {
@@ -522,6 +767,45 @@
                 row.touched[field] = true;
             }
 
+            // ------- VARIANT IMAGE (ảnh riêng cho từng biến thể) -------
+            const _variantImageInputRefs = new Map();
+
+            function setVariantImageInputRef(key, el) {
+                if (el) _variantImageInputRefs.set(key, el);
+                else _variantImageInputRefs.delete(key);
+            }
+
+            function onVariantImageChange(row, e) {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                row.fileHinhAnh = file;
+                // Khi upload file mới, xóa ảnh cũ để backend biết đây là thay thế
+                row.hinhAnh = '';
+            }
+
+            function clearVariantImage(row) {
+                row.fileHinhAnh = null;
+                row.hinhAnh = '';
+                const inputEl = _variantImageInputRefs.get(row.key);
+                if (inputEl) inputEl.value = '';
+            }
+
+            function getRowImagePreview(row) {
+                if (row.fileHinhAnh) {
+                    return URL.createObjectURL(row.fileHinhAnh);
+                }
+                return '';
+            }
+
+            function getExistingImageUrl(path) {
+                if (!path) return '';
+                if (path.startsWith('http')) return path;
+                // Path DB dạng "uploads/san-pham/xxx.jpg" -> browser tự resolve theo origin hiện tại
+                // (đảm bảo hoạt động ở cả subpath / laragon public/admin/... và domain thuần)
+                const cleanPath = path.replace(/^\/+/, '');
+                return '/' + cleanPath;
+            }
+
             // ------- ADD/REMOVE CONVERSION UNIT -------
             function addConversion() {
                 unitConfig.conversionUnits.push({ id: uid(), name: '', rate: 1, price: 0,
@@ -535,6 +819,7 @@
 
             // Khi user chọn đơn vị từ dropdown → tự điền name + rate
             watch(() => unitConfig.conversionUnits.map(u => u.don_vi_chuan_id), (newIds) => {
+                if (isInitializing) return;
                 unitConfig.conversionUnits.forEach((u) => {
                     if (u.don_vi_chuan_id) {
                         const found = availableUnits.value.find(a => a.id === u.don_vi_chuan_id);
@@ -547,8 +832,10 @@
             }, { deep: false });
 
             function onConversionRateInput(unit, val) {
-                const n = parseInt(val);
-                unit.rate = isNaN(n) || n < 1 ? 1 : n;
+                const n = parseFloat(val);
+                // Cho phép rate >= 0 (số thập phân). Nếu < 1, giữ nguyên giá trị user nhập
+                // để tránh mất dữ liệu khi đảo đơn vị cơ bản (rate = 1/24 ≈ 0.0417).
+                unit.rate = isNaN(n) || n <= 0 ? 1 : n;
             }
 
             // ------- ADD/REMOVE ATTRIBUTE GROUP -------
@@ -652,6 +939,9 @@
             // ====== buildPayload: tạo payload cho request ======
             // FIX: dùng conversionUnits (reactive, user đang sửa) thay vì savedUnits
             function buildPayload() {
+                // Khai báo biến kiểm tra xem sản phẩm có thuộc tính hay không
+                const hasAttr = effectiveAttrGroups.value && effectiveAttrGroups.value.length > 0;
+
                 // Thu thập thuộc tính MỚI (user gõ tay, chưa có trong DB)
                 const newAttributes = [];
                 effectiveAttrGroups.value.forEach(g => {
@@ -676,14 +966,16 @@
                     const existingId = row.existingId || row._dbId;
 
                     // Dùng conversionUnits (reactive, chứa cả đơn vị mới thêm bởi user)
+                    // Lọc bỏ rate = 0 (không hợp lệ); giữ rate < 1 để hỗ trợ đảo đơn vị cơ bản
+                    // (ví dụ: 1 Cái = 1/24 Thùng ≈ 0.0417)
                     const unitsPayload = (row.conversionUnits || [])
-                        .filter(u => (parseInt(u.rate) || 1) > 1)
+                        .filter(u => (parseFloat(u.rate) || 0) > 0)
                         .map(u => {
                             return {
                                 id: u._dbId || null, // DB ID (null cho đơn vị mới)
                                 don_vi_chuan_id: u.don_vi_chuan_id || null,
                                 ten_don_vi: u.name || u.ten_don_vi || '',
-                                so_luong_san_pham_trong_don_vi: parseInt(u.rate) || 1,
+                                so_luong_san_pham_trong_don_vi: parseFloat(u.rate) || 1,
                                 gia_von_quy_doi: parseFloat(u.gia_von_quy_doi) || 0,
                                 gia_ban_quy_doi: parseFloat(u.gia_ban_quy_doi) || 0,
                                 ma_hang: u.ma_hang || '',
@@ -693,18 +985,19 @@
 
                     console.log(`[buildPayload] row[${i}] unitsPayload.length=${unitsPayload.length}`);
 
-                    // Xác định loại biến thể: đơn vị hay thuộc tính
-                    // Nếu có thuộc tính → la_don_vi = false, ten_don_vi = null
-                    // Nếu không có thuộc tính (chỉ có đơn vị) → la_don_vi = true, ten_don_vi = tên đơn vị cơ bản
-                    const hasAttr = effectiveAttrGroups.value.length > 0;
-                    const isLaDonVi = !hasAttr && unitConfig.baseUnit;
-                    const tenDonViPayload = isLaDonVi ? unitConfig.baseUnit : null;
-
+                    // Xác định loại biến thể: dựa vào row.isBase thay vì hasAttr
+                    // Sửa ten_don_vi: ưu tiên row.unitName (giá trị user thấy trên grid)
+                    // trước khi fall back về unitConfig.baseUnit, tránh gửi rỗng "" khi
+                    // unitConfig.baseUnit chưa được gán kịp lúc load sản phẩm phức tạp.
                     return {
                         id: existingId ?? null,
+                        is_base: row.isBase ? 1 : 0,
                         ten_bien_the: row.tenBienThe || row.unitName,
-                        la_don_vi: isLaDonVi ? 1 : 0,
-                        ten_don_vi: tenDonViPayload,
+                        la_don_vi: row.isBase && !hasAttr ? 1 : 0,
+                        ten_don_vi: row.isBase
+                            ? (row.unitName || unitConfig.baseUnit || row.ten_don_vi || '')
+                            : (row.unitName || row.ten_don_vi || ''),
+                        ty_le: row.tyLe || 1,
                         ma_hang: row.maHang,
                         ma_vach: row.maVach,
                         gia_von: parseFloat(row.giaVon) || 0,
@@ -713,6 +1006,7 @@
                         dinh_muc_toi_thieu: parseInt(row.dinhMucToiThieu) || 0,
                         thuoc_tinh_ids: Array.isArray(row.attrValueIds)
                             ? row.attrValueIds.join(',') : (row.attrValueIds || ''),
+                        ten_don_vi_bien_the: row.unitName || '',
                         units: unitsPayload
                     };
                 });
@@ -800,10 +1094,17 @@
                                 if (u[uk] !== undefined && u[uk] !== null) fd.append(`bien_the[${i}][units][${j}][${uk}]`, u[uk]);
                             });
                         });
+                        // Append file ảnh riêng cho biến thể (nếu user đã chọn)
+                        const row = gridData.value[i];
+                        if (row && row.fileHinhAnh instanceof File) {
+                            fd.append(`bien_the[${i}][hinh_anh]`, row.fileHinhAnh, row.fileHinhAnh.name);
+                        }
                     });
+                    // Ảnh chính của sản phẩm (nếu user vừa upload)
                     fd.append('hinh_anh', basicInfo.image);
                     body = fd;
                 } else {
+                    // Vẫn phải gửi FormData để multipart parse được → mới đọc được file bien_the
                     const fd = new FormData();
                     fd.append('_method', 'PUT');
                     ['ten_san_pham', 'id_danh_muc', 'thuong_hieu', 'mo_ta', 'trang_thai'].forEach(k => {
@@ -819,6 +1120,11 @@
                                 if (u[uk] !== undefined && u[uk] !== null) fd.append(`bien_the[${i}][units][${j}][${uk}]`, u[uk]);
                             });
                         });
+                        // Append file ảnh riêng cho biến thể (nếu user đã chọn)
+                        const row = gridData.value[i];
+                        if (row && row.fileHinhAnh instanceof File) {
+                            fd.append(`bien_the[${i}][hinh_anh]`, row.fileHinhAnh, row.fileHinhAnh.name);
+                        }
                     });
                     body = fd;
                 }
@@ -862,19 +1168,20 @@
                         return;
                     }
 
-                    // Các lỗi khác
+                    // Các lỗi khác (500, 400, etc.)
                     const msg = (data && (data.message || data.error || data))
                         ? (typeof data === 'object' ? JSON.stringify(data) : data)
                         : ('HTTP ' + res.status);
-                    generalError.value = msg;
+                    generalError.value = 'Lỗi từ server: ' + msg;
                     submitHadError.value = true;
-                    alert('Lỗi khi lưu sản phẩm: ' + msg);
                 } catch (err) {
+                    // BẮT BUỘC tắt spinner khi có lỗi
+                    submitting.value = false;
                     const msg = (err && err.message ? err.message : String(err));
-                    generalError.value = 'Lỗi mạng: ' + msg;
+                    generalError.value = 'Lỗi kết nối: ' + msg;
                     submitHadError.value = true;
-                    alert('Lỗi kết nối: ' + msg);
                 } finally {
+                    // Đảm bảo spinner luôn được tắt sau khi xử lý xong
                     submitting.value = false;
                 }
             }
@@ -951,9 +1258,29 @@
                 if (isEditMode && DATA.productData) {
                     initFromProduct(DATA.productData);
                     _initDone = true;
-                    regenerateGrid();
                 }
+                // Chờ Vue hoàn tất các watcher phát sinh từ việc gán state API rồi mới mở khóa.
+                nextTick(() => {
+                    isInitializing = false;
+                });
                 formLoaded.value = true;
+
+                // Bổ sung đơn vị dự phòng cho cả base unit VÀ các conversion unit hiện có,
+                // để dropdown hiển thị đúng thay vì tự nhảy sang option khác.
+                const ensureUnitInList = (u) => {
+                    if (!u) return;
+                    const n = String(u.name || u.ten_don_vi || '').trim();
+                    if (!n) return;
+                    if (!availableUnits.value.find(x => x.name === n)) {
+                        availableUnits.value.push({
+                            id: 'temp_custom_' + n,
+                            name: n,
+                            qty: parseInt(u.so_luong_san_pham_trong_don_vi || u.qty || 1) || 1
+                        });
+                    }
+                };
+                ensureUnitInList({ name: unitConfig.baseUnit });
+                unitConfig.conversionUnits.forEach(ensureUnitInList);
 
                 const btn = document.getElementById('btnLuuSanPham');
                 if (btn) { btn.disabled = false; btn.classList.remove('disabled'); }
@@ -988,6 +1315,9 @@
                 onAttrValueKey, toggleDropdown, closeDropdown,
                 getDropdownValues, getFilteredDropdown, selectFromDropdown,
                 onImageSelect, clearImage, onGridInput,
+                // Ảnh biến thể
+                setVariantImageInputRef, onVariantImageChange, clearVariantImage,
+                getRowImagePreview, getExistingImageUrl,
                 handleSubmit, buildPayload,
                 // ============================================================
                 // YÊU CẦU 2: EXPOSE COMPUTED PROPERTIES CHO UI
@@ -1141,7 +1471,7 @@
                                         </td>
                                         <td class="p-2">
                                             <div class="flex items-center gap-1">
-                                                <input :value="u.rate" @input="onConversionRateInput(u, $event.target.value)" type="number" min="1"
+                                                <input :value="u.rate" @input="onConversionRateInput(u, $event.target.value)" type="number" min="0" step="any"
                                                     class="w-16 rounded border border-slate-300 px-2 py-1.5 text-sm text-right focus:ring-2 focus:ring-indigo-500 outline-none">
                                                 <span class="text-xs text-slate-500">{{ unitConfig.baseUnit || 'đv cơ bản' }}</span>
                                             </div>
@@ -1314,6 +1644,7 @@
                                     <th class="px-2 py-2 text-left font-medium" v-for="g in effectiveAttrGroups" :key="g.id">
                                         {{ g.name }}
                                     </th>
+                                    <th class="px-2 py-2 text-left font-medium">Ảnh</th>
                                     <th class="px-2 py-2 text-left font-medium">Đơn vị</th>
                                     <th class="px-2 py-2 text-left font-medium">Tỷ lệ</th>
                                     <th class="px-2 py-2 text-left font-medium">Mã hàng</th>
@@ -1326,6 +1657,29 @@
                                 <tr v-for="row in gridData" :key="row.key" class="border-t border-slate-100 hover:bg-slate-50/50">
                                     <td v-for="g in effectiveAttrGroups" :key="g.id" class="px-2 py-1.5 text-slate-700">
                                         {{ row.attrLabels[g.name] || '-' }}
+                                    </td>
+                                    <td class="px-2 py-1.5">
+                                        <div class="flex items-center gap-2">
+                                            <div class="relative w-12 h-12 rounded border border-slate-300 overflow-hidden bg-slate-50 flex items-center justify-center">
+                                                <img v-if="row.fileHinhAnh"
+                                                    :src="getRowImagePreview(row)"
+                                                    alt="Ảnh biến thể"
+                                                    class="w-full h-full object-cover">
+                                                <img v-else-if="row.hinhAnh"
+                                                    :src="getExistingImageUrl(row.hinhAnh)"
+                                                    alt="Ảnh biến thể"
+                                                    class="w-full h-full object-cover">
+                                                <span v-else class="text-slate-400 text-[10px]">—</span>
+                                                <input type="file" accept="image/*"
+                                                    :ref="el => setVariantImageInputRef(row.key, el)"
+                                                    @change="onVariantImageChange(row, $event)"
+                                                    class="absolute inset-0 opacity-0 cursor-pointer"
+                                                    title="Chọn ảnh cho biến thể">
+                                            </div>
+                                            <button v-if="row.fileHinhAnh || row.hinhAnh" type="button"
+                                                @click="clearVariantImage(row)"
+                                                class="text-[10px] text-red-600 hover:underline whitespace-nowrap">Xóa</button>
+                                        </div>
                                     </td>
                                     <td class="px-2 py-1.5">
                                         <span class="px-2 py-0.5 rounded text-xs" :class="row.isBase ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'">

@@ -620,7 +620,7 @@
                                 $tenCa = $caChinh->caLamViec?->ten_ca ?? 'Ca làm việc';
                                 $gioBatDau = $caChinh->caLamViec ? \Illuminate\Support\Carbon::parse($caChinh->caLamViec->gio_bat_dau)->format('H:i') : '--:--';
                                 $gioKetThuc = $caChinh->caLamViec ? \Illuminate\Support\Carbon::parse($caChinh->caLamViec->gio_ket_thuc)->format('H:i') : '--:--';
-                                $vaiTroTrongCa = ($caChinh->vai_tro_trong_ca ?? 'nhan_vien') === 'truong_ca' ? 'Trưởng ca' : 'Nhân viên';
+                                $vaiTroTrongCa = match($caChinh->vai_tro_trong_ca ?? 'nhan_vien') { 'truong_ca' => 'Trưởng ca', 'ban_hang' => 'Bán hàng', default => 'Nhân viên' };
                                 $modalId = 'modalShiftsDay' . $date->format('Ymd');
                             @endphp
 
@@ -677,7 +677,7 @@
                                                             $tenCaModal = $caModal->caLamViec?->ten_ca ?? 'Ca làm việc';
                                                             $gioBatDauModal = $caModal->caLamViec ? \Illuminate\Support\Carbon::parse($caModal->caLamViec->gio_bat_dau)->format('H:i') : '--:--';
                                                             $gioKetThucModal = $caModal->caLamViec ? \Illuminate\Support\Carbon::parse($caModal->caLamViec->gio_ket_thuc)->format('H:i') : '--:--';
-                                                            $vaiTroCaModal = ($caModal->vai_tro_trong_ca ?? 'nhan_vien') === 'truong_ca' ? 'Trưởng ca' : 'Nhân viên';
+                                                            $vaiTroCaModal = match($caModal->vai_tro_trong_ca ?? 'nhan_vien') { 'truong_ca' => 'Trưởng ca', 'ban_hang' => 'Bán hàng', default => 'Nhân viên' };
                                                         @endphp
                                                         <div class="modal-shift-item">
                                                             <div class="modal-shift-item-head">

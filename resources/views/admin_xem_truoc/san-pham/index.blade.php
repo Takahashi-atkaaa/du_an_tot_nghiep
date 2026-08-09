@@ -143,43 +143,67 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                         <th style="width:40px;"></th>
                         <th style="width:60px;">Ảnh</th>
                         <th>Tên sản phẩm</th>
-                        <th style="width:130px;">Danh mục</th>
-                        <th style="width:160px;">Đơn vị</th>
-                        <th style="width:140px;">Biến thể</th>
-                        <th style="width:140px;">Giá bán</th>
-                        <th style="width:90px;">Tồn kho</th>
-                        <th style="width:110px;">Trạng thái</th>
+                        <th>Danh mục</th>
+                        <th style="width:200px;">Biến thể / Đơn vị</th>
+                        <th style="width:110px;">Giá bán</th>
+                        <th style="width:80px;">Tồn kho</th>
+                        <th style="width:100px;">Trạng thái</th>
                     </tr>
                 </thead>
                 <tbody id="productTableBody">
                     @foreach($sanPhams as $sp)
                         @php
-                            // Danh sách biến thể (mỗi variant = 1 dòng con trong ERP)
-                            $variants = $sp->variants;
-                            $variantCount = $variants->count();
-                            $hasManyVariants = ($variantCount > 1);
-
-                            // Tổng tồn kho của tất cả biến thể
-                            $tongTonKho = $variants->sum(function($v) { return (int)($v->so_luong_ton ?? 0); });
-
-                            // Khoảng giá bán (min-max) giữa các biến thể
-                            $allPrices = $variants->map(function($v) { return (float)($v->gia_ban ?? 0); })->all();
-                            $minPrice = !empty($allPrices) ? min($allPrices) : 0;
-                            $maxPrice = !empty($allPrices) ? max($allPrices) : 0;
-
-                            // Trạng thái tổng: dựa vào tổng tồn kho + trạng thái sp
-                            $trangThaiSP = $sp->trang_thai ?? true;
-                            $firstVariant = $variants->first();
+                            // Bỏ qua sản phẩm không có variant / đơn vị quy đổi nào
+                            // (flatenedRows rỗng). Tránh truy cập $firstRow->variant khi null.
+                            $rows = $sp->flattenedRows;
+                        @endphp
+                        @if($rows->isEmpty())
+                            @continue
+                        @endif
+                        @php
+                            $hasMoreThanOneRow = $rows->count() > 1;
+                            $firstRow = $rows->first();
                         @endphp
 
-                        @if($variantCount > 0)
-                        {{-- ============================================================
-                        DÒNG CHA (PARENT ROW) - DUY NHẤT 1 dòng cho mỗi sản phẩm
-                        Hiển thị thông tin tổng: tên SP, danh mục, tổng tồn kho, khoảng giá
-                        Cột Đơn vị: để trống (-) nếu có nhiều biến thể,
-                                     hoặc tên ĐVCB + Badge trigger Dropdown nếu chỉ có 1
-                        ============================================================ --}}
-                        <tr class="product-parent-row {{ !$trangThaiSP ? 'table-secondary opacity-50' : '' }}"
+                        @continue(!$rows->isNotEmpty())
+
+                        @php
+                            // ============================================================
+                            // FIX: Chọn variant đại diện cho đơn vị cơ bản (dòng chính).
+                            // Trước đây: $firstRow = $rows->first() → có thể là variant
+                            // không phải đơn vị cơ bản (variant có ten_don_vi trùng với
+                            // đơn vị quy đổi, do dữ liệu cũ bị ghi đè nhầm).
+                            // Sau khi lưu, variant mới "Cái" có ID lớn hơn được sort
+                            // xuống dưới, khiến $firstRow luôn lấy variant cũ "Lon"
+                            // nhưng variant cũ có ten_don_vi trùng quy đổi → dropdown trống.
+                            // ============================================================
+                            $masterVariant = $sp->firstMasterVariant;
+                            $firstVariantId = $masterVariant?->id ?? $firstRow?->variant?->id;
+
+                            // Phân loại cho UI mới:
+                            //   - $variantRows (loai_dong='goc' AND có thuộc tính) -> hiển thị thành <tr> riêng
+                            //   - $conversionRows (loai_dong='quy_doi') -> gộp vào Dropdown tại dòng chính
+                            $variantAttrRows = $rows->where('loai_dong', 'goc')
+                                ->filter(fn($r) => !empty($r->ten_bien_the_display));
+                            // Lọc conversion rows theo variant CHA (chỉ conversion thuộc về dòng chính)
+                            $conversionRows = $rows->where('loai_dong', 'quy_doi')
+                                ->filter(fn($r) => $r->variant?->id === $firstVariantId);
+                            $countQuyDoi = $conversionRows->count();
+                            $isDonViOnly = $variantAttrRows->count() === 0 && $countQuyDoi > 0;
+
+                            // Đơn vị cơ bản (CHA): lấy từ master variant
+                            $baseUnitName = $masterVariant?->ten_don_vi ?: '—';
+                            // Biến thể CHA + data gốc (để JS tính toán khi chọn đơn vị)
+                            $baseVariant   = $masterVariant ?? $firstRow?->variant ?? null;
+                            $baseUnitId    = $baseVariant?->id ?? '';
+                            $baseGiaBanGoc = $baseVariant?->gia_ban ?? 0;
+                            $baseTonKhoGoc = $baseVariant?->so_luong_ton ?? 0;
+                            $baseMaHang    = $baseVariant?->ma_hang ?? '';
+                            $baseMaVach    = $baseVariant?->ma_vach ?? '';
+                        @endphp
+
+                        {{-- DÒNG CHÍNH (dòng đầu tiên) --}}
+                        <tr class="product-parent-row {{ !$firstRow->trang_thai ? 'table-secondary opacity-50' : '' }}"
                             style="cursor:pointer;"
                             data-id="{{ $sp->id }}"
                             data-variant-id="{{ $firstVariant?->id ?? '' }}"
@@ -187,19 +211,14 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                             data-product-id="{{ $sp->id }}"
                             data-target-id="{{ $sp->id }}"
                             data-row-type="goc"
-                            data-base-donvi="{{ $firstVariant?->ten_don_vi ?? '' }}"
-                            data-base-gia="{{ $firstVariant?->gia_ban ?? 0 }}"
-                            data-base-giavon="{{ $firstVariant?->gia_von ?? 0 }}"
-                            data-base-tonkho="{{ $firstVariant?->so_luong_ton ?? 0 }}"
-                            data-base-mahang="{{ $firstVariant?->ma_hang ?? '' }}"
-                            data-base-mavach="{{ $firstVariant?->ma_vach ?? '' }}"
-                            data-base-trangthai="{{ $trangThaiSP ? '1' : '0' }}"
-                            data-base-dinhmuc="{{ $firstVariant?->dinh_muc_toi_thieu ?? 0 }}">
+                            data-is-master="{{ $variantAttrRows->count() > 0 ? '1' : '0' }}"
+                            data-gia-ban-goc="{{ $baseGiaBanGoc }}"
+                            data-ton-kho-goc="{{ $baseTonKhoGoc }}">
 
                             {{-- Toggle expand --}}
                             <td onclick="event.stopPropagation();">
                                 <div class="d-flex align-items-center gap-1">
-                                    @if($hasManyVariants)
+                                    @if($variantAttrRows->count() > 0)
                                         <button class="btn btn-sm btn-light p-0 border-0 expand-btn"
                                                 id="expandBtn{{ $sp->id }}"
                                                 onclick="event.stopPropagation(); window.toggleVariants && window.toggleVariants({{ $sp->id }})"
@@ -240,10 +259,10 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                                     @if(!empty($sp->thuong_hieu))
                                         <div class="small text-muted">{{ $sp->thuong_hieu }}</div>
                                     @endif
-                                    @if($hasManyVariants)
+                                    @if($variantAttrRows->count() > 0)
                                         <div class="mt-1">
                                             <span class="badge bg-light text-dark border" style="font-size:0.68rem;">
-                                                <i class="fas fa-layer-group me-1"></i>{{ $variantCount }} biến thể
+                                                <i class="fas fa-layer-group me-1"></i>{{ $variantAttrRows->count() }} biến thể
                                             </span>
                                         </div>
                                     @endif
@@ -255,120 +274,55 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                                 <span class="text-muted small">{{ $sp->danhMuc?->ten_danh_muc ?? '-' }}</span>
                             </td>
 
-                            {{-- Đơn vị --}}
+                            {{-- Biến thể + Đơn vị: hiển thị badge biến thể (thuộc tính), badge đơn vị (đơn vị), hoặc "—" (không có gì) --}}
                             <td>
-                                @if($hasManyVariants)
-                                    {{-- Nhiều biến thể: ĐỂ TRỐNG dấu "-" --}}
-                                    <span class="text-muted small">—</span>
-                                @else
-                                    {{-- Chỉ có 1 biến thể: hiển thị tên đơn vị cơ bản + Badge trigger Dropdown --}}
-                                    @php
-                                        $onlyVariant = $firstVariant;
-                                        $laDonVi = $onlyVariant?->la_don_vi ?? false;
-                                        $tenDonViCoBan = $laDonVi ? ($onlyVariant?->ten_don_vi ?? '') : ($onlyVariant?->ten_bien_the ?? '');
-                                        $units = $onlyVariant?->units ?? collect();
-                                        $unitsCount = $units->count();
-                                        $unitsJson = $units->map(function($u) {
-                                            return [
-                                                'id' => $u->id,
-                                                'ten_don_vi' => $u->ten_don_vi,
-                                                'ty_le' => (int)($u->so_luong_san_pham_trong_don_vi ?: 1),
-                                                'ty_le_quy_doi' => (int)($u->so_luong_san_pham_trong_don_vi ?: 1),
-                                                'gia_ban' => (float)($u->gia_ban_quy_doi ?? 0),
-                                                'gia_ban_quy_doi' => (float)($u->gia_ban_quy_doi ?? 0),
-                                                'gia_von' => (float)($u->gia_von_quy_doi ?? 0),
-                                                'gia_von_quy_doi' => (float)($u->gia_von_quy_doi ?? 0),
-                                                'ma_hang' => $u->ma_hang ?? '',
-                                                'ma_vach' => $u->ma_vach ?? '',
-                                                'hinh_anh' => $u->hinh_anh ?? '',
-                                            ];
-                                        })->values()->toJson();
-                                    @endphp
-                                    <div class="d-flex align-items-center gap-1 flex-wrap">
-                                        <span class="small fw-medium js-donvi">{{ $tenDonViCoBan ?: '—' }}</span>
-                                        @if($unitsCount > 0)
-                                            <div class="unit-dropdown-container position-relative d-inline-block">
-                                                <button type="button"
-                                                        class="unit-dropdown-toggle badge bg-info text-white border-0"
-                                                        style="font-size:0.65rem; cursor:pointer;"
-                                                        data-product-id="{{ $sp->id }}"
-                                                        data-variant-id="{{ $onlyVariant->id }}"
-                                                        data-units="{{ $unitsJson }}"
-                                                        data-row-selector="product-parent-row"
-                                                        onclick="event.stopPropagation(); window.toggleUnitDropdown(this);">
-                                                    +{{ $unitsCount }} ĐVT <i class="fas fa-caret-down ms-1"></i>
-                                                </button>
-                                                <ul class="unit-dropdown-menu unit-popover-list" style="display:none; position:absolute; top:100%; left:0; z-index:1055; min-width:220px; max-width:280px; background:#fff; border:1px solid #dee2e6; border-radius:8px; box-shadow:0 4px 18px rgba(0,0,0,0.15); padding:4px 0; margin:0; list-style:none;">
-                                                    <li class="is-base" style="padding:8px 12px; cursor:pointer; background:#e7f5ff; font-weight:600; border-bottom:1px solid #f1f3f5;" onclick="event.stopPropagation(); window.selectBaseUnit(this);">
-                                                        <span class="unit-name">Đơn vị cơ bản</span>
-                                                        <span class="unit-ratio" style="font-size:0.7rem; padding:2px 7px; border-radius:10px; background:#0d6efd; color:#fff; font-weight:600; margin-left:8px;">×1</span>
-                                                    </li>
-                                                    @foreach($units as $u)
-                                                        @php
-                                                            $unitObj = [
-                                                                'id' => $u->id,
-                                                                'ten_don_vi' => $u->ten_don_vi,
-                                                                'ty_le' => (int)($u->so_luong_san_pham_trong_don_vi ?: 1),
-                                                                'ty_le_quy_doi' => (int)($u->so_luong_san_pham_trong_don_vi ?: 1),
-                                                                'gia_ban' => (float)($u->gia_ban_quy_doi ?? 0),
-                                                                'gia_ban_quy_doi' => (float)($u->gia_ban_quy_doi ?? 0),
-                                                                'gia_von' => (float)($u->gia_von_quy_doi ?? 0),
-                                                                'gia_von_quy_doi' => (float)($u->gia_von_quy_doi ?? 0),
-                                                                'ma_hang' => $u->ma_hang ?? '',
-                                                                'ma_vach' => $u->ma_vach ?? '',
-                                                                'hinh_anh' => $u->hinh_anh ?? '',
-                                                            ];
-                                                        @endphp
-                                                        <li data-unit-obj='{{ json_encode($unitObj, JSON_UNESCAPED_UNICODE) }}'
-                                                            style="padding:8px 12px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid #f1f3f5;"
-                                                            onclick="event.stopPropagation(); window.selectUnitFromDropdown(this);">
-                                                            <span class="unit-name">{{ $u->ten_don_vi }}</span>
-                                                            <span class="unit-ratio" style="font-size:0.7rem; padding:2px 7px; border-radius:10px; background:#e9ecef; color:#495057; font-weight:600;">×{{ (int)($u->so_luong_san_pham_trong_don_vi ?: 1) }}</span>
-                                                            <span class="unit-price" style="font-size:0.72rem; color:#6c757d; margin-left:auto;">{{ number_format((float)($u->gia_ban_quy_doi ?? 0), 0, ',', '.') }} d</span>
-                                                        </li>
-                                                    @endforeach
-                                                </ul>
-                                            </div>
-                                        @endif
-                                    </div>
-                                @endif
-                            </td>
-
-                            {{-- Biến thể (cột tóm tắt cho dòng cha) --}}
-                            <td>
-                                @if($hasManyVariants)
-                                    <span class="text-muted small">{{ $variantCount }} loại</span>
-                                @else
-                                    @php
-                                        $fv = $firstVariant;
-                                        $fvLaDonVi = $fv?->la_don_vi ?? false;
-                                    @endphp
-                                    @if(!$fvLaDonVi && !empty($fv?->ten_bien_the))
-                                        <span class="small">{{ $fv->ten_bien_the }}</span>
-                                    @else
-                                        <span class="text-muted small">—</span>
-                                    @endif
-                                @endif
-                            </td>
-
-                            {{-- Giá bán (khoảng min-max nếu nhiều biến thể) --}}
-                            <td>
-                                @if($variantCount > 0)
-                                    @if($hasManyVariants)
-                                        @if($minPrice == $maxPrice)
-                                            <span class="fw-bold text-primary" style="font-size:0.88rem;">
-                                                {{ number_format($minPrice, 0, ',', '.') }} d
-                                            </span>
-                                        @else
-                                            <span class="fw-bold text-primary" style="font-size:0.88rem;">
-                                                {{ number_format($minPrice, 0, ',', '.') }} - {{ number_format($maxPrice, 0, ',', '.') }} d
-                                            </span>
-                                        @endif
-                                    @else
-                                        <span class="fw-bold text-primary js-giaban" style="font-size:0.88rem;">
-                                            {{ number_format((float)($firstVariant?->gia_ban ?? 0), 0, ',', '.') }} d
+                                @if($variantAttrRows->count() > 0)
+                                    <span class="badge bg-light text-dark border" style="font-size:0.7rem;">
+                                        <i class="fas fa-layer-group me-1"></i>{{ $variantAttrRows->count() }} biến thể
+                                    </span>
+                                @elseif($isDonViOnly)
+                                    <div class="unit-dropdown-container" style="position:relative;display:inline-block;">
+                                        <span class="badge bg-light text-dark border js-donvi" style="font-size:0.7rem;cursor:pointer;"
+                                              onclick="event.stopPropagation(); window.toggleUnitDropdown(this);">
+                                            <i class="fas fa-balance-scale me-1"></i>{{ $baseUnitName }} ▾
                                         </span>
-                                    @endif
+                                        <div class="unit-popover-list hidden"
+                                             style="position:absolute;top:100%;left:0;z-index:1050;
+                                                    min-width:220px;margin-top:4px;
+                                                    background:#fff;border:1px solid #e0e0e0;border-radius:6px;
+                                                    box-shadow:0 4px 12px rgba(0,0,0,0.12);padding:6px 0;">
+                                            <ul class="list-unstyled mb-0">
+                                                <li class="dropdown-item cursor-pointer fw-bold text-primary px-3 py-1"
+                                                    style="font-size:0.85rem;"
+                                                    onmouseover="this.style.background='#f5f5f5'"
+                                                    onmouseout="this.style.background='transparent'"
+                                                    onclick="event.stopPropagation(); window.selectUnitView(this.closest('tr'), { id: '{{ $baseUnitId }}', type: 'base', ten_don_vi: '{{ $baseUnitName }}', ty_le: 1, gia_ban: {{ (float)$baseGiaBanGoc }}, ma_hang: '{{ $baseMaHang }}', ma_vach: '{{ $baseMaVach }}' }); window.toggleUnitDropdown(this);">
+                                                    <i class="fas fa-check text-success me-1"></i>
+                                                    {{ $baseUnitName }} <span class="text-muted">(x1)</span>
+                                                </li>
+                                                <li><hr class="dropdown-divider my-1"></li>
+                                                @foreach($conversionRows as $cv)
+                                                    @php
+                                                        $cvUnit   = $cv->unit ?? null;
+                                                        $cvId     = $cvUnit?->id ?? '';
+                                                        $cvName   = $cv->ten_don_vi ?? '';
+                                                        $cvTyLe   = (int)($cvUnit?->so_luong_san_pham_trong_don_vi ?? 1);
+                                                        $cvGiaBan = (float)($cvUnit?->gia_ban_quy_doi ?? 0);
+                                                        $cvMaHang = $cvUnit?->ma_hang ?? '';
+                                                        $cvMaVach = $cvUnit?->ma_vach ?? '';
+                                                    @endphp
+                                                    <li class="dropdown-item cursor-pointer px-3 py-1"
+                                                        style="font-size:0.85rem;"
+                                                        onmouseover="this.style.background='#f5f5f5'"
+                                                        onmouseout="this.style.background='transparent'"
+                                                        onclick="event.stopPropagation(); window.selectUnitView(this.closest('tr'), { id: '{{ $cvId }}', type: 'unit', ten_don_vi: '{{ $cvName }}', ty_le: {{ $cvTyLe }}, gia_ban: {{ $cvGiaBan }}, ma_hang: '{{ $cvMaHang }}', ma_vach: '{{ $cvMaVach }}' }); window.toggleUnitDropdown(this);">
+                                                        <i class="fas fa-cube text-info me-1"></i>
+                                                        {{ $cvName }} <span class="text-muted">(x{{ $cvTyLe }})</span>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    </div>
                                 @else
                                     <span class="text-muted small">—</span>
                                 @endif
@@ -376,10 +330,28 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
 
                             {{-- Tồn kho (tổng các variants) --}}
                             <td>
-                                @if($hasManyVariants)
-                                    <span class="{{ $tongTonKho <= 0 ? 'text-danger' : ($tongTonKho <= 10 ? 'text-warning' : 'text-muted') }} small fw-medium">
-                                        {{ $tongTonKho }}
-                                    </span>
+                                <span class="js-giaban fw-bold text-primary" style="font-size:0.88rem;"
+                                      data-gia-ban="{{ (float)$baseGiaBanGoc }}">
+                                    {{ number_format((float)$baseGiaBanGoc, 0, ',', '.') }} d
+                                </span>
+                            </td>
+
+                            {{-- Tồn kho (dòng đầu) --}}
+                            <td>
+                                <span class="js-tonkho {{ $baseTonKhoGoc <= 0 ? 'text-danger' : ($baseTonKhoGoc <= 10 ? 'text-warning' : 'text-muted') }} small"
+                                      data-base-tonkho="{{ (int)$baseTonKhoGoc }}">
+                                    {{ (int)$baseTonKhoGoc }}
+                                </span>
+                            </td>
+
+                            {{-- Trạng thái (dòng đầu) --}}
+                            <td>
+                                @if(!$firstRow->trang_thai)
+                                    <span class="badge bg-danger">Ngừng bán</span>
+                                @elseif($baseTonKhoGoc <= 0)
+                                    <span class="badge bg-secondary">Hết hàng</span>
+                                @elseif($baseTonKhoGoc <= 10)
+                                    <span class="badge bg-warning text-dark">Sắp hết</span>
                                 @else
                                     <span class="js-tonkho {{ ($firstVariant?->so_luong_ton ?? 0) <= 0 ? 'text-danger' : (($firstVariant?->so_luong_ton ?? 0) <= 10 ? 'text-warning' : 'text-muted') }} small fw-medium">
                                         {{ $firstVariant?->so_luong_ton ?? 0 }}
@@ -415,37 +387,27 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                             </td>
                         </tr>
 
-                        {{-- ============================================================
-                        DÒNG CON (VARIANT CHILD ROW) - Mỗi variant 1 dòng
-                        Chỉ hiển thị khi user click expand (toggleVariants)
-                        Cột Đơn vị: tên đơn vị cơ bản + Badge trigger Dropdown đơn vị quy đổi
-                        ============================================================ --}}
-                        @foreach($variants as $vIndex => $variant)
+                        @if($variantAttrRows->count() > 0)
+                        {{-- CÁC DÒNG CON: CHỈ cho Biến thể thuộc tính (màu/size).
+                             TUYỆT ĐỐI KHÔNG lặp don_vi_quy_doi để tạo <tr>. --}}
+                        @foreach($variantAttrRows as $rowIndex => $row)
                             @php
-                                $laDonVi = $variant->la_don_vi ?? false;
-                                $tenDonViCoBan = $laDonVi ? ($variant->ten_don_vi ?? '') : ($variant->ten_bien_the ?? '');
-                                $units = $variant->units;
-                                $unitsCount = $units->count();
-                                $unitsJson = $units->map(function($u) {
-                                    return [
-                                        'id' => $u->id,
-                                        'ten_don_vi' => $u->ten_don_vi,
-                                        'ty_le' => (int)($u->so_luong_san_pham_trong_don_vi ?: 1),
-                                        'ty_le_quy_doi' => (int)($u->so_luong_san_pham_trong_don_vi ?: 1),
-                                        'gia_ban' => (float)($u->gia_ban_quy_doi ?? 0),
-                                        'gia_ban_quy_doi' => (float)($u->gia_ban_quy_doi ?? 0),
-                                        'gia_von' => (float)($u->gia_von_quy_doi ?? 0),
-                                        'gia_von_quy_doi' => (float)($u->gia_von_quy_doi ?? 0),
-                                        'ma_hang' => $u->ma_hang ?? '',
-                                        'ma_vach' => $u->ma_vach ?? '',
-                                        'hinh_anh' => $u->hinh_anh ?? '',
-                                    ];
-                                })->values()->toJson();
-                                $tonKhoV = (int)($variant->so_luong_ton ?? 0);
-                                $trangThaiV = $variant->trang_thai ?? true;
+                                // Lấy conversion rows RIÊNG của variant CHA này (Cam-Thùng, Dâu-Thùng)
+                                $rowVariantId = $row->variant?->id;
+                                $rowConversionRows = $rows->where('loai_dong', 'quy_doi')
+                                    ->filter(fn($r) => $r->variant?->id === $rowVariantId);
+                                $rowCountQuyDoi = $rowConversionRows->count();
+                                // Đơn vị cơ bản của variant này
+                                $rowBaseUnitName = $row->ten_don_vi ?: '—';
+                                $rowBaseVariant  = $row->variant ?? null;
+                                $rowBaseUnitId   = $rowBaseVariant?->id ?? '';
+                                $rowBaseGiaBan   = $rowBaseVariant?->gia_ban ?? 0;
+                                $rowBaseTonKho   = $rowBaseVariant?->so_luong_ton ?? 0;
+                                $rowBaseMaHang   = $rowBaseVariant?->ma_hang ?? '';
+                                $rowBaseMaVach   = $rowBaseVariant?->ma_vach ?? '';
+                                $rowBaseTenBienThe = $row->ten_bien_the_display ?: '';
                             @endphp
-
-                            <tr id="variantRow{{ $sp->id }}_{{ $vIndex }}"
+                            <tr id="variantRow{{ $sp->id }}_{{ $rowIndex }}"
                                 class="variant-child-row"
                                 style="display:none; background:#fafafa; cursor:pointer;"
                                 data-id="{{ $variant->id }}"
@@ -481,14 +443,17 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                                         </div>
                                     @endif
                                 </td>
-
-                                {{-- Tên biến thể --}}
-                                <td style="padding-left: 2rem !important;">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <i class="fas fa-arrow-turn-down-right text-muted" style="font-size:0.55rem;"></i>
-                                        <span class="fw-semibold" style="font-size:0.85rem;">
-                                            {{ $variant->ten_bien_the ?? $sp->ten_san_pham }}
-                                        </span>
+                                <td style="padding-left: 2.5rem !important;">
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-arrow-turn-down-right text-muted" style="font-size:0.55rem;"></i>
+                                            <span class="fw-semibold" style="font-size:0.85rem;">
+                                                {{ $rowBaseTenBienThe ?: $rowBaseUnitName }}
+                                            </span>
+                                        </div>
+                                        @if(!empty($rowBaseMaVach))
+                                            <div class="small text-muted" style="padding-left: 1.1rem;">#{{ $rowBaseMaVach }}</div>
+                                        @endif
                                     </div>
                                     @if(!empty($variant->ma_vach))
                                         <div class="small text-muted js-mavach" style="padding-left: 1.1rem; font-size:0.7rem;">#{{ $variant->ma_vach }}</div>
@@ -505,49 +470,49 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                                 {{-- Danh mục (placeholder) --}}
                                 <td><span class="text-muted small">—</span></td>
 
-                                {{-- Đơn vị: tên đơn vị cơ bản + Badge trigger Dropdown --}}
+                                {{-- Biến thể + Dropdown đơn vị (Hộp/Thùng) --}}
                                 <td>
-                                    <div class="d-flex align-items-center gap-1 flex-wrap">
-                                        <span class="small fw-medium js-donvi">{{ $tenDonViCoBan ?: '—' }}</span>
-                                        @if($unitsCount > 0)
-                                            <div class="unit-dropdown-container position-relative d-inline-block">
-                                                <button type="button"
-                                                        class="unit-dropdown-toggle badge bg-info text-white border-0"
-                                                        style="font-size:0.65rem; cursor:pointer;"
-                                                        data-product-id="{{ $sp->id }}"
-                                                        data-variant-id="{{ $variant->id }}"
-                                                        data-units="{{ $unitsJson }}"
-                                                        data-row-selector="variant-child-row"
-                                                        onclick="event.stopPropagation(); window.toggleUnitDropdown(this);">
-                                                    +{{ $unitsCount }} ĐVT <i class="fas fa-caret-down ms-1"></i>
-                                                </button>
-                                                <ul class="unit-dropdown-menu unit-popover-list" style="display:none; position:absolute; top:100%; left:0; z-index:1055; min-width:220px; max-width:280px; background:#fff; border:1px solid #dee2e6; border-radius:8px; box-shadow:0 4px 18px rgba(0,0,0,0.15); padding:4px 0; margin:0; list-style:none;">
-                                                    <li class="is-base" style="padding:8px 12px; cursor:pointer; background:#e7f5ff; font-weight:600; border-bottom:1px solid #f1f3f5;" onclick="event.stopPropagation(); window.selectBaseUnit(this);">
-                                                        <span class="unit-name">Đơn vị cơ bản</span>
-                                                        <span class="unit-ratio" style="font-size:0.7rem; padding:2px 7px; border-radius:10px; background:#0d6efd; color:#fff; font-weight:600; margin-left:8px;">×1</span>
+                                    <div class="unit-dropdown-container" style="position: relative; display: inline-block;">
+                                        <span class="js-donvi badge bg-light text-dark border" style="font-size:0.7rem; cursor:pointer;"
+                                              onclick="event.stopPropagation(); window.toggleUnitDropdown(this);">
+                                            {{ $rowBaseUnitName }} @if($rowCountQuyDoi > 0) ▾ @endif
+                                        </span>
+
+                                        @if($rowCountQuyDoi > 0)
+                                            <div class="unit-popover-list hidden"
+                                                 style="position: absolute; top: 100%; left: 0; z-index: 1050;
+                                                        min-width: 220px; margin-top: 4px;
+                                                        background: #fff; border: 1px solid #e0e0e0; border-radius: 6px;
+                                                        box-shadow: 0 4px 12px rgba(0,0,0,0.12); padding: 6px 0;">
+                                                <ul class="list-unstyled mb-0">
+                                                    {{-- Đơn vị cơ bản (CHA) của variant này --}}
+                                                    <li class="dropdown-item cursor-pointer fw-bold text-primary px-3 py-1"
+                                                        style="font-size: 0.85rem;"
+                                                        onmouseover="this.style.background='#f5f5f5'"
+                                                        onmouseout="this.style.background='transparent'"
+                                                        onclick="event.stopPropagation(); window.selectUnitView(this.closest('tr'), { id: '{{ $rowBaseUnitId }}', type: 'base', ten_don_vi: '{{ $rowBaseUnitName }}', ty_le: 1, gia_ban: {{ (float)$rowBaseGiaBan }}, ma_hang: '{{ $rowBaseMaHang }}', ma_vach: '{{ $rowBaseMaVach }}' }); window.toggleUnitDropdown(this);">
+                                                        <i class="fas fa-check text-success me-1"></i>
+                                                        {{ $rowBaseUnitName }} <span class="text-muted">(x1)</span>
                                                     </li>
-                                                    @foreach($units as $u)
+                                                    <li><hr class="dropdown-divider my-1"></li>
+                                                    {{-- Các đơn vị quy đổi riêng của variant này --}}
+                                                    @foreach($rowConversionRows as $cv)
                                                         @php
-                                                            $unitObj = [
-                                                                'id' => $u->id,
-                                                                'ten_don_vi' => $u->ten_don_vi,
-                                                                'ty_le' => (int)($u->so_luong_san_pham_trong_don_vi ?: 1),
-                                                                'ty_le_quy_doi' => (int)($u->so_luong_san_pham_trong_don_vi ?: 1),
-                                                                'gia_ban' => (float)($u->gia_ban_quy_doi ?? 0),
-                                                                'gia_ban_quy_doi' => (float)($u->gia_ban_quy_doi ?? 0),
-                                                                'gia_von' => (float)($u->gia_von_quy_doi ?? 0),
-                                                                'gia_von_quy_doi' => (float)($u->gia_von_quy_doi ?? 0),
-                                                                'ma_hang' => $u->ma_hang ?? '',
-                                                                'ma_vach' => $u->ma_vach ?? '',
-                                                                'hinh_anh' => $u->hinh_anh ?? '',
-                                                            ];
+                                                            $cvUnit   = $cv->unit ?? null;
+                                                            $cvId     = $cvUnit?->id ?? '';
+                                                            $cvName   = $cv->ten_don_vi ?? '';
+                                                            $cvTyLe   = (int)($cvUnit?->so_luong_san_pham_trong_don_vi ?? 1);
+                                                            $cvGiaBan = (float)($cvUnit?->gia_ban_quy_doi ?? 0);
+                                                            $cvMaHang = $cvUnit?->ma_hang ?? '';
+                                                            $cvMaVach = $cvUnit?->ma_vach ?? '';
                                                         @endphp
-                                                        <li data-unit-obj='{{ json_encode($unitObj, JSON_UNESCAPED_UNICODE) }}'
-                                                            style="padding:8px 12px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid #f1f3f5;"
-                                                            onclick="event.stopPropagation(); window.selectUnitFromDropdown(this);">
-                                                            <span class="unit-name">{{ $u->ten_don_vi }}</span>
-                                                            <span class="unit-ratio" style="font-size:0.7rem; padding:2px 7px; border-radius:10px; background:#e9ecef; color:#495057; font-weight:600;">×{{ (int)($u->so_luong_san_pham_trong_don_vi ?: 1) }}</span>
-                                                            <span class="unit-price" style="font-size:0.72rem; color:#6c757d; margin-left:auto;">{{ number_format((float)($u->gia_ban_quy_doi ?? 0), 0, ',', '.') }} d</span>
+                                                        <li class="dropdown-item cursor-pointer px-3 py-1"
+                                                            style="font-size: 0.85rem;"
+                                                            onmouseover="this.style.background='#f5f5f5'"
+                                                            onmouseout="this.style.background='transparent'"
+                                                            onclick="event.stopPropagation(); window.selectUnitView(this.closest('tr'), { id: '{{ $cvId }}', type: 'unit', ten_don_vi: '{{ $cvName }}', ty_le: {{ $cvTyLe }}, gia_ban: {{ $cvGiaBan }}, ma_hang: '{{ $cvMaHang }}', ma_vach: '{{ $cvMaVach }}' }); window.toggleUnitDropdown(this);">
+                                                            <i class="fas fa-cube text-info me-1"></i>
+                                                            {{ $cvName }} <span class="text-muted">(x{{ $cvTyLe }})</span>
                                                         </li>
                                                     @endforeach
                                                 </ul>
@@ -556,42 +521,33 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                                     </div>
                                 </td>
 
-                                {{-- Biến thể --}}
-                                <td>
-                                    @if(!$laDonVi && !empty($variant->ten_bien_the))
-                                        <span class="small">{{ $variant->ten_bien_the }}</span>
-                                    @else
-                                        <span class="text-muted small">—</span>
-                                    @endif
-                                </td>
-
                                 {{-- Giá bán (của variant này) --}}
                                 <td>
-                                    <span class="fw-bold text-primary js-giaban" style="font-size:0.85rem;">
-                                        {{ number_format((float)$variant->gia_ban, 0, ',', '.') }} d
+                                    <span class="js-giaban fw-bold text-primary" style="font-size:0.85rem;"
+                                          data-gia-ban="{{ (float)$rowBaseGiaBan }}">
+                                        {{ number_format((float)$rowBaseGiaBan, 0, ',', '.') }} d
                                     </span>
                                 </td>
 
                                 {{-- Tồn kho (của variant này) --}}
                                 <td>
-                                    <span class="js-tonkho {{ $tonKhoV <= 0 ? 'text-danger' : ($tonKhoV <= 3 ? 'text-warning' : 'text-muted') }} small">
-                                        {{ $tonKhoV }}
+                                    <span class="js-tonkho {{ $rowBaseTonKho <= 0 ? 'text-danger' : ($rowBaseTonKho <= 3 ? 'text-warning' : 'text-muted') }} small"
+                                          data-base-tonkho="{{ (int)$rowBaseTonKho }}">
+                                        {{ (int)$rowBaseTonKho }}
                                     </span>
                                 </td>
 
                                 {{-- Trạng thái --}}
                                 <td>
-                                    <span class="js-trangthai">
-                                        @if(!$trangThaiV)
-                                            <span class="badge bg-danger">Ngừng</span>
-                                        @elseif($tonKhoV <= 0)
-                                            <span class="badge bg-secondary">Hết</span>
-                                        @elseif($tonKhoV <= 3)
-                                            <span class="badge bg-warning text-dark">Sắp hết</span>
-                                        @else
-                                            <span class="badge bg-success">Còn</span>
-                                        @endif
-                                    </span>
+                                    @if(!$row->trang_thai)
+                                        <span class="badge bg-danger">Ngừng</span>
+                                    @elseif($rowBaseTonKho <= 0)
+                                        <span class="badge bg-secondary">Hết</span>
+                                    @elseif($rowBaseTonKho <= 3)
+                                        <span class="badge bg-warning text-dark">Sắp hết</span>
+                                    @else
+                                        <span class="badge bg-success">Còn hàng</span>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
@@ -616,6 +572,122 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
         </div>
     </div>
 </div>
+
+{{-- ===================== INLINE JS: DROPDOWN ĐƠN VỊ TÍNH ===================== --}}
+<script>
+(function () {
+    // Format tiền VNĐ: 336000 -> "336.000"
+    function formatMoneyVND(amount) {
+        var n = parseFloat(amount) || 0;
+        return n.toLocaleString('vi-VN') + ' đ';
+    }
+
+    // Toggle ẩn/hiện popover các đơn vị quy đổi
+    window.toggleUnitDropdown = function (triggerEl) {
+        if (!triggerEl) return;
+        var container = triggerEl.closest('.unit-dropdown-container');
+        if (!container) return;
+        var popover = container.querySelector('.unit-popover-list');
+        if (!popover) return;
+
+        // Đóng tất cả các popover khác trước
+        document.querySelectorAll('.unit-popover-list').forEach(function (p) {
+            if (p !== popover) p.classList.add('hidden');
+        });
+
+        popover.classList.toggle('hidden');
+    };
+
+    // Click bên ngoài sẽ đóng popover
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.unit-dropdown-container')) {
+            document.querySelectorAll('.unit-popover-list').forEach(function (p) {
+                p.classList.add('hidden');
+            });
+        }
+    });
+
+    // ------------------------------------------------------------
+    // Hàm recalcRow: cập nhật DOM (Tên ĐVT, Giá bán, Tồn kho)
+    // ------------------------------------------------------------
+    function recalcRow(row, unitObj) {
+        if (!row || !unitObj) return;
+
+        // 1. Cập nhật Tên Đơn vị (giữ lại dấu ▾ nếu có)
+        var elDonVi = row.querySelector('.js-donvi');
+        if (elDonVi && unitObj.ten_don_vi) {
+            var hasArrow = elDonVi.textContent.indexOf('▾') >= 0;
+            elDonVi.textContent = unitObj.ten_don_vi + (hasArrow ? ' ▾' : '');
+        }
+
+        // 2. Cập nhật Giá bán (Format tiền VNĐ)
+        var elGiaBan = row.querySelector('.js-giaban');
+        if (elGiaBan) {
+            var gia = parseFloat(unitObj.gia_ban) || 0;
+            elGiaBan.textContent = formatMoneyVND(gia);
+            elGiaBan.setAttribute('data-gia-ban', gia);
+        }
+
+        // 3. Cập nhật Tồn kho (Chia theo tỷ lệ so với tồn kho gốc)
+        var elTonKho = row.querySelector('.js-tonkho');
+        if (elTonKho) {
+            var baseTonKho = parseFloat(elTonKho.getAttribute('data-base-tonkho') || 0);
+            var tyLe = parseFloat(unitObj.ty_le) || 1;
+            var tonKhoMoi = tyLe > 0 ? Math.floor(baseTonKho / tyLe) : 0;
+            elTonKho.textContent = tonKhoMoi;
+
+            // Cập nhật class màu theo ngưỡng
+            elTonKho.classList.remove('text-danger', 'text-warning', 'text-muted');
+            if (tonKhoMoi <= 0) {
+                elTonKho.classList.add('text-danger');
+            } else if (tonKhoMoi <= 3) {
+                elTonKho.classList.add('text-warning');
+            } else {
+                elTonKho.classList.add('text-muted');
+            }
+        }
+
+        // 4. Highlight dòng đang xem đơn vị quy đổi
+        if (unitObj.type !== 'base') {
+            row.classList.add('table-warning');
+        } else {
+            row.classList.remove('table-warning');
+        }
+    }
+    // Expose để file JS khác (nếu cần) cũng có thể gọi
+    window.recalcRow = recalcRow;
+
+    // ------------------------------------------------------------
+    // Chọn 1 đơn vị (base hoặc quy đổi):
+    //   - Cập nhật data-* cho row để mở drawer đúng biến thể
+    //   - Gọi recalcRow để cập nhật DOM ngay trên lưới
+    // ------------------------------------------------------------
+    window.selectUnitView = function (rowEl, unitData) {
+        if (!rowEl || !unitData) return;
+
+        // Chuẩn hóa: chấp nhận cả key cũ (name/qty/isBase) và key mới (ten_don_vi/ty_le/type)
+        var normalized = {
+            id:         unitData.id || '',
+            type:       unitData.type || (unitData.isBase ? 'base' : 'unit'),
+            ten_don_vi: unitData.ten_don_vi || unitData.name || '',
+            ty_le:      unitData.ty_le || unitData.qty || 1,
+            gia_ban:    unitData.gia_ban || 0,
+            ma_hang:    unitData.ma_hang || '',
+            ma_vach:    unitData.ma_vach || ''
+        };
+
+        // 1. Cập nhật data-* cho row để drawer mở đúng biến thể
+        if (normalized.id) {
+            rowEl.setAttribute('data-unit-id', normalized.id);
+        }
+        rowEl.setAttribute('data-row-type', normalized.type === 'base' ? 'goc' : 'quy_doi');
+        rowEl.setAttribute('data-target-id', rowEl.getAttribute('data-variant-id') || rowEl.getAttribute('data-id'));
+
+        // 2. Cập nhật DOM trên lưới (Tên ĐVT + Giá bán + Tồn kho)
+        recalcRow(rowEl, normalized);
+    };
+})();
+</script>
 
 <div class="offcanvas offcanvas-end" tabindex="-1" id="productDetailDrawer" style="width:680px;">
     <div class="offcanvas-header border-bottom">

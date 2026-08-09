@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\CaLamViec;
 use App\Models\ChiaCaLamViec;
 use App\Models\ChiTietHoaDon;
-use App\Models\DiemDanh;
 use App\Models\HoaDon;
 use Illuminate\Http\Request;
 
@@ -19,9 +18,21 @@ public function index()
     $ngay_hien_tai = now()->format('Y-m-d');
     $gio_hien_tai = now()->format('H:i:s');
 
-    $ca_hien_tai = CaLamViec::where('gio_bat_dau', '<=', $gio_hien_tai)
-        ->where('gio_ket_thuc', '>=', $gio_hien_tai)
-        ->first();
+    $ca_hien_tai = CaLamViec::where(function ($query) use ($gio_hien_tai) {
+        $query->where(function ($q) use ($gio_hien_tai) {
+            // Ca không qua 00:00
+            $q->whereColumn('gio_bat_dau', '<', 'gio_ket_thuc')
+            ->where('gio_bat_dau', '<=', $gio_hien_tai)
+            ->where('gio_ket_thuc', '>', $gio_hien_tai);
+        })->orWhere(function ($q) use ($gio_hien_tai) {
+            // Ca qua mốc 00:00 (ví dụ: 16:00 -> 00:00)
+            $q->whereColumn('gio_bat_dau', '>', 'gio_ket_thuc')
+            ->where(function ($sub) use ($gio_hien_tai) {
+                $sub->where('gio_bat_dau', '<=', $gio_hien_tai)
+                    ->orWhere('gio_ket_thuc', '>', $gio_hien_tai);
+            });
+        });
+    })->first();
 
     if (!$ca_hien_tai) {
         return redirect()
@@ -40,8 +51,7 @@ public function index()
         ->count('id');
 
     $nhan_vien = ChiaCaLamViec::with([
-        'nguoiDung',
-        'diemDanh'])
+        'nguoiDung'])
          ->where('ngay', $ngay_hien_tai)
          ->where('id_ca_lam_viec', $ca_hien_tai->id)
          ->get();

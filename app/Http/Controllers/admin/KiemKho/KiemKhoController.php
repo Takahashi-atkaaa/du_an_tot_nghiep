@@ -30,6 +30,15 @@ class KiemKhoController extends Controller
     }
 
     /**
+     * GET /admin/kho-hang/kiem-kho/thung-rac
+     * Trang thùng rác - liệt kê các phiếu đã soft delete
+     */
+    public function trash(Request $request)
+    {
+        return view('admin_xem_truoc.kiem_kho.thung-rac');
+    }
+
+    /**
      * GET /admin/kho-hang/kiem-kho/{id}
      * Chi tiết 1 phiếu (read-only)
      */

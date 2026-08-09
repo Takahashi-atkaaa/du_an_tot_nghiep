@@ -335,7 +335,9 @@
                                             @endif
                                             <div class="shift-meta shift-meta--role">
                                                 <span class="shift-meta-icon"><i class="fas fa-user"></i></span>
-                                                <span>{{ ($lich->vai_tro_trong_ca ?? 'nhan_vien') === 'truong_ca' ? 'Trưởng ca' : 'Nhân viên' }}</span>
+                                                <span class="{{ ($lich->vai_tro_trong_ca ?? 'nhan_vien') === 'ban_hang' ? 'text-primary fw-bold' : (($lich->vai_tro_trong_ca ?? 'nhan_vien') === 'truong_ca' ? 'text-danger fw-bold' : '') }}">
+                                                    {{ match($lich->vai_tro_trong_ca ?? 'nhan_vien') { 'truong_ca' => 'Trưởng ca', 'ban_hang' => 'Bán hàng', default => 'Nhân viên' } }}
+                                                </span>
                                             </div>
                                         </div>
                                         <div class="shift-actions">
@@ -384,7 +386,9 @@
                                                     @endif
                                                     <div class="shift-meta shift-meta--role">
                                                         <span class="shift-meta-icon"><i class="fas fa-user"></i></span>
-                                                        <span>{{ ($lichDaiDien->vai_tro_trong_ca ?? 'nhan_vien') === 'truong_ca' ? 'Trưởng ca' : 'Nhân viên' }}</span>
+                                                        <span class="{{ ($lichDaiDien->vai_tro_trong_ca ?? 'nhan_vien') === 'ban_hang' ? 'text-primary fw-bold' : (($lichDaiDien->vai_tro_trong_ca ?? 'nhan_vien') === 'truong_ca' ? 'text-danger fw-bold' : '') }}">
+                                                            {{ match($lichDaiDien->vai_tro_trong_ca ?? 'nhan_vien') { 'truong_ca' => 'Trưởng ca', 'ban_hang' => 'Bán hàng', default => 'Nhân viên' } }}
+                                                        </span>
                                                     </div>
                                                 </div>
                                                 <div class="shift-actions">
@@ -443,7 +447,9 @@
                                                             @endif
                                                             <div class="shift-meta shift-meta--role">
                                                                 <span class="shift-meta-icon"><i class="fas fa-user"></i></span>
-                                                                <span>{{ ($lich->vai_tro_trong_ca ?? 'nhan_vien') === 'truong_ca' ? 'Trưởng ca' : 'Nhân viên' }}</span>
+                                                                <span class="{{ ($lich->vai_tro_trong_ca ?? 'nhan_vien') === 'ban_hang' ? 'text-primary fw-bold' : (($lich->vai_tro_trong_ca ?? 'nhan_vien') === 'truong_ca' ? 'text-danger fw-bold' : '') }}">
+                                                                    {{ match($lich->vai_tro_trong_ca ?? 'nhan_vien') { 'truong_ca' => 'Trưởng ca', 'ban_hang' => 'Bán hàng', default => 'Nhân viên' } }}
+                                                                </span>
                                                             </div>
                                                         </div>
                                                         <div class="shift-overlay-actions">

@@ -251,7 +251,7 @@
             <li class="nav-item">
                 <a href="{{ url('admin/dashboard') }}" class="nav-link {{ request()->is('admin/dashboard') ? 'active' : '' }}">
                     <i class="fas fa-tachometer-alt"></i>
-                    <span>Dashboard</span>
+                    <span>Thống kê</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -308,29 +308,6 @@
                     <span>Nhân sự</span>
                 </a>
             </li>
-            <li class="nav-item dropdown">
-                <a href="#" class="nav-link dropdown-toggle {{ request()->is('admin/thiet-lap-luong*', 'admin/bang-luong*', 'admin/phieu-luong*') ? 'active' : '' }}" data-bs-toggle="dropdown">
-                    <i class="fas fa-money-bill-wave"></i>
-                    <span>Lương</span>
-                </a>
-                <ul class="dropdown-menu">
-                    <li>
-                        <a href="{{ route('thiet-lap-luong.index') }}" class="dropdown-item {{ request()->is('admin/thiet-lap-luong*') ? 'active' : '' }}">
-                            <i class="fas fa-cog me-2"></i>Thiết lập lương
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('bang-luong.index') }}" class="dropdown-item {{ request()->is('admin/bang-luong*') ? 'active' : '' }}">
-                            <i class="fas fa-file-invoice-dollar me-2"></i>Bảng lương
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('phieu-luong.index') }}" class="dropdown-item {{ request()->is('admin/phieu-luong*') ? 'active' : '' }}">
-                            <i class="fas fa-receipt me-2"></i>Phiếu lương
-                        </a>
-                    </li>
-                </ul>
-            </li>
 
 
             {{-- Quản lý ca làm --}}
@@ -366,15 +343,15 @@
 
                         <li class="nav-item">
                             <a href="{{ route('lich-su-ca-lam-viec.index') }}"
-                            class="nav-link">
+                            class="nav-link {{ request()->is('admin/lich-su-ca-lam-viec*') ? 'active' : '' }}">
                                 Lịch sử ca làm
                             </a>
                         </li>
 
                         <li class="nav-item">
-                            <a href="{{ route('diem-danh.index') }}"
-                            class="nav-link {{ request()->is('admin/diem-danh*') ? 'active' : '' }}">
-                                Điểm danh
+                            <a href="{{ route('chia-ca-lam-viec.index') }}"
+                            class="nav-link {{ request()->is('admin/chia-ca-lam-viec*') ? 'active' : '' }}">
+                                Chia ca làm việc
                             </a>
                         </li>
 
@@ -409,13 +386,6 @@
                             <a href="{{ route('nguoi-dung.phan-quyen', ['id_vai_tro' => 4]) }}"
                             class="nav-link {{ request()->is('nguoi-dung/phan-quyen/4') ? 'active' : '' }}">
                                 Bán hàng
-                            </a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a href="{{ route('nguoi-dung.phan-quyen', ['id_vai_tro' => 3]) }}"
-                            class="nav-link {{ request()->is('nguoi-dung/phan-quyen/3') ? 'active' : '' }}">
-                                Nhân viên
                             </a>
                         </li>
 

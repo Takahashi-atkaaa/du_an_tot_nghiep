@@ -18,7 +18,7 @@ class PhanCongCaLamViecRequest extends FormRequest
             'id_nguoi_dung' => ['required', 'integer', 'exists:nguoi_dung,id'],
             'id_ca_lam_viec' => ['required', 'integer', 'exists:ca_lam_viec,id'],
             'ngay' => ['required', 'date'],
-            'vai_tro_trong_ca' => ['required', 'in:truong_ca,nhan_vien'],
+            'vai_tro_trong_ca' => ['required', 'in:truong_ca,nhan_vien,ban_hang'],
         ];
     }
 

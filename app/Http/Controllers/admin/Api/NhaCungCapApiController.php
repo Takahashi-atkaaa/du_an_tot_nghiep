@@ -64,6 +64,23 @@ class NhaCungCapApiController extends Controller
         ], 201);
     }
 
+    // GET /admin/api/nha-cung-cap/{id}
+    public function show($id)
+    {
+        $item = NhaCungCap::find($id);
+        if (!$item) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy nhà cung cấp.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'item'    => $item,
+        ]);
+    }
+
     // PUT /admin/api/nha-cung-cap/{id}
     public function update(Request $request, $id)
     {

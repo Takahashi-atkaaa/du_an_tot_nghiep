@@ -270,7 +270,7 @@ window.SanPhamCreate = (function() {
                     units: state.units.map(function(u) {
                         return {
                             ten_don_vi: u.name || '',
-                            ty_le_quy_doi: parseInt(u.rate) || 1,
+                            so_luong_san_pham_trong_don_vi: parseInt(u.rate) || 1,
                             gia_von_quy_doi: 0,
                             gia_ban_quy_doi: parseFloat(u.price) || 0,
                             ma_vach: u.barcode || null
@@ -676,7 +676,7 @@ window.SanPhamCreate = (function() {
             // Units lồng trong variant
             (bt.units || []).forEach(function(u, j) {
                 addHidden('bien_the[' + i + '][units][' + j + '][ten_don_vi]', u.ten_don_vi || '');
-                addHidden('bien_the[' + i + '][units][' + j + '][ty_le_quy_doi]', u.ty_le_quy_doi || 1);
+                addHidden('bien_the[' + i + '][units][' + j + '][so_luong_san_pham_trong_don_vi]', u.so_luong_san_pham_trong_don_vi || u.ty_le_quy_doi || 1);
                 addHidden('bien_the[' + i + '][units][' + j + '][gia_ban_quy_doi]', u.gia_ban_quy_doi || 0);
                 addHidden('bien_the[' + i + '][units][' + j + '][ma_vach]', u.ma_vach || '');
             });

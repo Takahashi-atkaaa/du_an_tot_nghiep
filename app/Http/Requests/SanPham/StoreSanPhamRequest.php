@@ -41,12 +41,16 @@ class StoreSanPhamRequest extends FormRequest
             // Biến thể đơn vị (la_don_vi = true khi sp chỉ có đơn vị)
             'bien_the.*.la_don_vi' => 'nullable|boolean',
             'bien_the.*.ten_don_vi' => 'nullable|string|max:255',
+            // FIX Gom-nhom: ty_le + ten_don_vi_bien_the dùng để Backend gom nhóm
+            // các dòng cùng thuộc tính thành 1 biến thể CHA + N đơn vị quy đổi
+            'bien_the.*.ty_le' => 'nullable|numeric|min:0.0001',
+            'bien_the.*.ten_don_vi_bien_the' => 'nullable|string|max:255',
 
             // Đơn vị quy đổi (nested trong bien_the)
             'bien_the.*.units' => 'sometimes|array',
             'bien_the.*.units.*.id' => 'nullable|integer|exists:don_vi_quy_doi,id',
             'bien_the.*.units.*.ten_don_vi' => 'present|string|max:255',
-            'bien_the.*.units.*.so_luong_san_pham_trong_don_vi' => 'present|integer|min:1',
+            'bien_the.*.units.*.so_luong_san_pham_trong_don_vi' => 'present|numeric|min:0.0001',
             'bien_the.*.units.*.gia_von_quy_doi' => 'nullable|numeric|min:0',
             'bien_the.*.units.*.gia_ban_quy_doi' => 'present|numeric|min:0',
             'bien_the.*.units.*.gia_ban_si' => 'nullable|numeric|min:0',
