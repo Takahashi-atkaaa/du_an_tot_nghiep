@@ -77,60 +77,128 @@ function toggleSection(headerEl) {
     var stopQrScanBtn = document.getElementById('stopQrScanBtn');
     var qrScannerModal = document.getElementById('qrScannerModal');
     var searchKeywordInput = document.getElementById('searchKeywordInput');
+    var searchProductForm = document.getElementById('searchProductForm');
+    var qrScannerLoading = document.getElementById('qrScannerLoading');
+    var qrScannerError = document.getElementById('qrScannerError');
     var qrScannerElementId = 'qrScanner';
     var html5QrCode = null;
     var qrScannerActive = false;
+    var lastScanned = '';
+    var lastScannedAt = 0;
+
+    function showScannerError(msg) {
+        if (qrScannerLoading) qrScannerLoading.classList.add('d-none');
+        if (qrScannerError) {
+            qrScannerError.textContent = msg;
+            qrScannerError.classList.remove('d-none');
+        }
+    }
+
+    function hideScannerError() {
+        if (qrScannerError) qrScannerError.classList.add('d-none');
+        if (qrScannerLoading) qrScannerLoading.classList.remove('d-none');
+    }
 
     window.startQrScanner = function() {
         if (qrScannerActive) return;
 
-        html5QrCode = new Html5Qrcode(qrScannerElementId);
-        var config = { fps: 10, qrbox: 250 };
+        hideScannerError();
+
+        if (typeof Html5Qrcode === 'undefined') {
+            console.error('[QR Scanner] Html5Qrcode is not defined. CDN may have failed to load.');
+            showScannerError('Chưa tải được thư viện quét mã vạch. Vui lòng kiểm tra kết nối mạng và tải lại trang.');
+            return;
+        }
+
+        try {
+            html5QrCode = new Html5Qrcode(qrScannerElementId);
+        } catch (err) {
+            console.error('[QR Scanner] Cannot init Html5Qrcode', err);
+            showScannerError('Không thể khởi tạo scanner: ' + (err && err.message ? err.message : err));
+            return;
+        }
+
+        var config = { fps: 10, qrbox: { width: 250, height: 150 } };
 
         Html5Qrcode.getCameras().then(function(cameras) {
-            if (cameras && cameras.length) {
-                var cameraId = cameras[0].id;
-                html5QrCode.start(cameraId, config, function(qrCodeMessage) {
+            if (!cameras || !cameras.length) {
+                showScannerError('Không tìm thấy camera phù hợp để quét mã vạch.');
+                return;
+            }
+            var cameraId = cameras[0].id;
+            html5QrCode.start(
+                cameraId,
+                config,
+                function(qrCodeMessage) {
+                    var now = Date.now();
+                    if (qrCodeMessage === lastScanned && (now - lastScannedAt) < 1500) {
+                        return;
+                    }
+                    lastScanned = qrCodeMessage;
+                    lastScannedAt = now;
+                    console.log('[QR Scanner] Detected:', qrCodeMessage);
+
                     if (searchKeywordInput) {
                         searchKeywordInput.value = qrCodeMessage;
                     }
                     var modalInstance = bootstrap.Modal.getInstance(qrScannerModal);
                     if (modalInstance) modalInstance.hide();
                     window.stopQrScanner();
-                    var form = document.querySelector('form[action*="admin/san-pham"]');
-                    if (form) form.submit();
-                }, function(errorMessage) {
-                    console.debug('QR scan error', errorMessage);
-                }).then(function() {
-                    qrScannerActive = true;
-                }).catch(function(err) {
-                    console.error('Không thể khởi động QR scanner', err);
-                    alert('Không thể khởi động camera để quét mã vạch. Vui lòng kiểm tra quyền truy cập camera.');
-                });
-            } else {
-                alert('Không tìm thấy camera phù hợp để quét mã vạch.');
-            }
+                    if (searchProductForm) {
+                        searchProductForm.submit();
+                    } else {
+                        var fallback = document.querySelector('form[action*="admin/san-pham"]');
+                        if (fallback) fallback.submit();
+                    }
+                },
+                function(errorMessage) {
+                    console.debug('[QR Scanner] scan error', errorMessage);
+                }
+            ).then(function() {
+                qrScannerActive = true;
+                if (qrScannerLoading) qrScannerLoading.classList.add('d-none');
+                console.log('[QR Scanner] Camera started successfully');
+            }).catch(function(err) {
+                console.error('[QR Scanner] Cannot start camera', err);
+                showScannerError('Không thể khởi động camera. Vui lòng cấp quyền truy cập camera cho trình duyệt rồi thử lại.');
+            });
         }).catch(function(err) {
-            console.error('Lỗi lấy camera', err);
-            alert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập thiết bị.');
+            console.error('[QR Scanner] getCameras failed', err);
+            showScannerError('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập thiết bị (và dùng trang HTTPS hoặc localhost).');
         });
     };
 
     window.stopQrScanner = function() {
-        if (!qrScannerActive || !html5QrCode) return;
-        html5QrCode.stop().then(function() {
-            html5QrCode.clear();
-            qrScannerActive = false;
+        if (!html5QrCode) return;
+        var instance = html5QrCode;
+        html5QrCode = null;
+        qrScannerActive = false;
+        instance.stop().then(function() {
+            return instance.clear();
         }).catch(function(err) {
-            console.error('Lỗi dừng QR scanner', err);
+            console.warn('[QR Scanner] Lỗi dừng scanner (bỏ qua):', err);
+            try { instance.clear(); } catch (e) {}
         });
     };
 
     if (startQrScanBtn) {
         startQrScanBtn.addEventListener('click', function() {
-            var modal = new bootstrap.Modal(qrScannerModal);
+            var modal = bootstrap.Modal.getOrCreateInstance(qrScannerModal);
             modal.show();
+            // Reset scanner state so user can re-open after a previous error
+            lastScanned = '';
+            lastScannedAt = 0;
+            qrScannerActive = false;
+            html5QrCode = null;
+        });
+    }
+
+    if (qrScannerModal) {
+        qrScannerModal.addEventListener('shown.bs.modal', function() {
             window.startQrScanner();
+        });
+        qrScannerModal.addEventListener('hidden.bs.modal', function() {
+            window.stopQrScanner();
         });
     }
 
@@ -138,13 +206,6 @@ function toggleSection(headerEl) {
         stopQrScanBtn.addEventListener('click', function() {
             var modal = bootstrap.Modal.getInstance(qrScannerModal);
             if (modal) modal.hide();
-            window.stopQrScanner();
-        });
-    }
-
-    if (qrScannerModal) {
-        qrScannerModal.addEventListener('hidden.bs.modal', function() {
-            window.stopQrScanner();
         });
     }
 })();
@@ -289,6 +350,39 @@ function toggleSection(headerEl) {
         var masterSummary = data.masterSummary || null;
         var isMaster = data.isMaster || false;
 
+        // === Helper: resolve URL ảnh (xử lý path lưu trong DB) ===
+        function resolveImageUrl(imgPath) {
+            if (!imgPath) return '';
+            var s = String(imgPath).trim();
+            if (!s) return '';
+            // Đã là URL tuyệt đối (http/https/data:) thì giữ nguyên
+            if (/^(https?:|data:)/i.test(s)) return s;
+            // Bỏ leading slash nếu có để chuẩn hóa
+            var clean = s.replace(/^\/+/, '');
+            // Path lưu dạng "uploads/..." hoặc "public/uploads/..."
+            // Laravel public_path() đã strip "public/", nên DB lưu "uploads/..."
+            // Ảnh thực tế nằm trong public/uploads/... → URL là /uploads/...
+            if (clean.indexOf('public/') === 0) clean = clean.substring(7);
+            return '/' + clean;
+        }
+
+        // === Helper: lấy ảnh đang hiển thị (ưu tiên unit > variant > product) ===
+        function getActiveImage() {
+            // Ưu tiên 0: ảnh của unit đang active (khi user switch đơn vị từ Grid)
+            if (window.currentDrawerActiveUnit && window.currentDrawerActiveUnit.hinh_anh) {
+                return resolveImageUrl(window.currentDrawerActiveUnit.hinh_anh);
+            }
+            // Ưu tiên 1: ảnh variant (sau khi eager load)
+            if (displayVariant && displayVariant.hinh_anh) {
+                return resolveImageUrl(displayVariant.hinh_anh);
+            }
+            // Ưu tiên 2: ảnh product
+            if (sp && sp.hinh_anh) {
+                return resolveImageUrl(sp.hinh_anh);
+            }
+            return '';
+        }
+
         // === Tìm đúng variant để hiển thị trên Header ===
         var displayVariant = variant;
 
@@ -331,6 +425,10 @@ function toggleSection(headerEl) {
         if (rowType === 'quy_doi' && displayUnit) {
             tenDonViHienThi = displayUnit.ten_don_vi;
             selectedUnitBadge = '<span class="badge bg-info ms-2" style="font-size:0.65rem;"><i class="fas fa-cube me-1"></i>Đơn vị quy đổi</span>';
+        } else if (window.currentDrawerActiveUnit && window.currentDrawerActiveUnit.id) {
+            // Đang switch đơn vị từ Grid → set tên đơn vị + badge
+            tenDonViHienThi = window.currentDrawerActiveUnit.ten_don_vi || tenDonViHienThi;
+            selectedUnitBadge = '<span class="badge bg-info ms-2" style="font-size:0.65rem;"><i class="fas fa-cube me-1"></i>Đơn vị quy đổi (Grid)</span>';
         }
 
         // === Xác định giá trị hiển thị dựa trên isMaster ===
@@ -939,4 +1037,161 @@ window.deleteVariant = async function(variantId, productId) {
             editEl.classList.add('d-none');
         }
     };
+})();
+
+// ============================================================
+// UNIT CONVERSION DROPDOWN (san-pham index) - Dynamic Switch
+// ============================================================
+(function() {
+    window.activeUnits = window.activeUnits || {};
+
+    function formatMoneyVN(num) {
+        if (num === null || num === undefined || num === '') return '0';
+        return Number(num).toLocaleString('vi-VN');
+    }
+
+    function recalcRow(row, unitObj) {
+        if (!row) return;
+        var isChild = row.classList.contains('variant-child-row');
+        var baseDonvi = row.getAttribute('data-base-donvi') || '';
+        var baseGia = parseFloat(row.getAttribute('data-base-gia')) || 0;
+        var baseTonKho = parseFloat(row.getAttribute('data-base-tonkho')) || 0;
+        var baseMaHang = row.getAttribute('data-base-mahang') || '';
+        var baseMaVach = row.getAttribute('data-base-mavach') || '';
+        var baseTrangThai = row.getAttribute('data-base-trangthai') === '1';
+
+        var showDonvi, showGia, showTonKho, showMaHang, showMaVach, showTrangThai;
+        if (!unitObj) {
+            showDonvi = baseDonvi || '—';
+            showGia = baseGia;
+            showTonKho = baseTonKho;
+            showMaHang = baseMaHang || '—';
+            showMaVach = baseMaVach || '—';
+            showTrangThai = baseTrangThai;
+        } else {
+            var tyLe = parseFloat(unitObj.ty_le) || 1;
+            showDonvi = unitObj.ten_don_vi || '—';
+            showGia = parseFloat(unitObj.gia_ban) || 0;
+            showTonKho = Math.floor(baseTonKho / tyLe);
+            showMaHang = unitObj.ma_hang || '—';
+            showMaVach = unitObj.ma_vach || '—';
+            showTrangThai = baseTrangThai;
+        }
+
+        var elDonvi = row.querySelector('.js-donvi');
+        if (elDonvi) elDonvi.textContent = showDonvi;
+
+        var elGia = row.querySelector('.js-giaban');
+        if (elGia) elGia.textContent = formatMoneyVN(showGia) + ' d';
+
+        var elTonKho = row.querySelector('.js-tonkho');
+        if (elTonKho) {
+            elTonKho.textContent = showTonKho;
+            var tonKhoClass = 'js-tonkho small ';
+            if (showTonKho <= 0) tonKhoClass += 'text-danger';
+            else if (showTonKho <= (isChild ? 3 : 10)) tonKhoClass += 'text-warning';
+            else tonKhoClass += 'text-muted';
+            elTonKho.className = tonKhoClass;
+        }
+
+        var elMaHang = row.querySelector('.js-mahang');
+        if (elMaHang) elMaHang.textContent = 'MH: ' + (showMaHang || '—');
+
+        var elMaVach = row.querySelector('.js-mavach');
+        if (elMaVach) elMaVach.textContent = showMaVach && showMaVach !== '—' ? '#' + showMaVach : '—';
+
+        var elTrangThai = row.querySelector('.js-trangthai');
+        if (elTrangThai) {
+            var badge = '';
+            if (!showTrangThai) badge = '<span class="badge bg-danger">Ngừng kinh doanh</span>';
+            else if (showTonKho <= 0) badge = '<span class="badge bg-secondary">Hết hàng</span>';
+            else if (showTonKho <= (isChild ? 3 : 10)) badge = '<span class="badge bg-warning text-dark">Sắp hết</span>';
+            else badge = '<span class="badge bg-success">Còn hàng</span>';
+            elTrangThai.innerHTML = badge;
+        }
+
+        if (unitObj) row.classList.add('is-unit-switched');
+        else row.classList.remove('is-unit-switched');
+    }
+
+    window.selectUnitView = function(row, unitObj) {
+        if (!row || !unitObj) return;
+        var targetId = row.dataset.variantId || row.dataset.productId || row.getAttribute('data-id') || row.id;
+        if (!targetId) return;
+        window.activeUnits[targetId] = unitObj;
+        recalcRow(row, unitObj);
+    };
+
+    window.resetUnitView = function(row) {
+        if (!row) return;
+        var targetId = row.dataset.variantId || row.dataset.productId || row.getAttribute('data-id') || row.id;
+        if (targetId) delete window.activeUnits[targetId];
+        recalcRow(row, null);
+    };
+
+    window.getActiveUnitView = function(row) {
+        if (!row) return null;
+        var targetId = row.dataset.variantId || row.dataset.productId || row.getAttribute('data-id') || row.id;
+        if (!targetId) return null;
+        return window.activeUnits[targetId] || null;
+    };
+
+    window.toggleUnitDropdown = function(element) {
+        if (!element) return;
+        var container = element.closest('.unit-dropdown-container');
+        if (!container) return;
+        var menu = container.querySelector('.unit-dropdown-menu');
+        if (!menu) return;
+        var isOpen = menu.style.display === 'block';
+        document.querySelectorAll('.unit-dropdown-menu').forEach(function(m) { m.style.display = 'none'; });
+        document.querySelectorAll('.unit-dropdown-toggle').forEach(function(b) { b.classList.remove('active'); });
+        if (!isOpen) {
+            menu.style.display = 'block';
+            if (element.classList) element.classList.add('active');
+        }
+    };
+
+    window.selectUnitFromDropdown = function(liEl) {
+        if (!liEl) return;
+        var row = liEl.closest('tr');
+        var raw = liEl.getAttribute('data-unit-obj');
+        if (!raw) return;
+        var unitObj;
+        try { unitObj = JSON.parse(raw); } catch(e) { return; }
+        window.selectUnitView(row, unitObj);
+        var container = liEl.closest('.unit-dropdown-container');
+        if (container) {
+            var menu = container.querySelector('.unit-dropdown-menu');
+            if (menu) menu.style.display = 'none';
+            var btn = container.querySelector('.unit-dropdown-toggle');
+            if (btn) btn.classList.add('active');
+        }
+    };
+
+    window.selectBaseUnit = function(liEl) {
+        if (!liEl) return;
+        var row = liEl.closest('tr');
+        window.resetUnitView(row);
+        var container = liEl.closest('.unit-dropdown-container');
+        if (container) {
+            var menu = container.querySelector('.unit-dropdown-menu');
+            if (menu) menu.style.display = 'none';
+            var btn = container.querySelector('.unit-dropdown-toggle');
+            if (btn) btn.classList.remove('active');
+        }
+    };
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.unit-dropdown-container')) {
+            document.querySelectorAll('.unit-dropdown-menu').forEach(function(m) { m.style.display = 'none'; });
+            document.querySelectorAll('.unit-dropdown-toggle').forEach(function(b) { b.classList.remove('active'); });
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.unit-dropdown-menu').forEach(function(m) { m.style.display = 'none'; });
+            document.querySelectorAll('.unit-dropdown-toggle').forEach(function(b) { b.classList.remove('active'); });
+        }
+    });
 })();

@@ -321,6 +321,7 @@ class Product extends BaseModel
                 'ma_vach' => $u->ma_vach,
                 'la_don_vi_mac_dinh' => $u->la_don_vi_mac_dinh,
                 'don_vi_chuan_id' => $u->don_vi_chuan_id,
+                'hinh_anh' => $u->hinh_anh,
             ])->all();
             $variantsArr[] = [
                 'id' => $v->id,

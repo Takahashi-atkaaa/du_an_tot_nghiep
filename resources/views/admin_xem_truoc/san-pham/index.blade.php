@@ -41,7 +41,7 @@
 
 <div class="card table-admin mb-4">
     <div class="card-body">
-        <form action="{{ url('admin/san-pham') }}" method="GET">
+        <form id="searchProductForm" action="{{ url('admin/san-pham') }}" method="GET">
             <div class="row g-3">
                 <div class="col-md-4">
                     <div class="input-group">
@@ -82,7 +82,13 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div id="qrScanner" style="width:100%; min-height:400px;"></div>
+                <div id="qrScanner" style="width:100%; min-height:300px; background:#000; border-radius:6px; position:relative;">
+                    <div id="qrScannerLoading" class="text-center text-white py-5" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column;">
+                        <div class="spinner-border text-light mb-2" role="status"></div>
+                        <div>Đang khởi động camera...</div>
+                    </div>
+                </div>
+                <div id="qrScannerError" class="alert alert-danger mt-2 d-none" role="alert"></div>
                 <div class="mt-3 text-center">
                     <button type="button" class="btn btn-secondary" id="stopQrScanBtn">Dừng quét</button>
                 </div>
@@ -96,6 +102,18 @@
     <input type="hidden" name="action" id="bulkActionInput">
     <div id="selectedIdsContainer"></div>
 </form>
+
+{{-- ============================================================
+DROPDOWN ĐƠN VỊ QUY ĐỔI - 1 instance duy nhất, fixed position
+Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
+============================================================ --}}
+<div id="unitConversionDropdown" class="unit-conversion-popover" style="display:none;">
+    <div class="unit-popover-header">
+        <i class="fas fa-balance-scale me-1"></i>
+        <span>Đơn vị quy đổi</span>
+    </div>
+    <ul id="unitConversionList" class="unit-popover-list"></ul>
+</div>
 
 <div class="card">
     <div class="card-body p-0">
@@ -119,7 +137,7 @@
 
         @if($sanPhams->count() > 0)
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover mb-0 align-middle">
                 <thead>
                     <tr>
                         <th style="width:40px;"></th>
@@ -187,9 +205,9 @@
                         {{-- DÒNG CHÍNH (dòng đầu tiên) --}}
                         <tr class="product-parent-row {{ !$firstRow->trang_thai ? 'table-secondary opacity-50' : '' }}"
                             style="cursor:pointer;"
-                            data-id="{{ $firstRow->variant->id ?? $sp->id }}"
-                            data-variant-id="{{ $firstRow->variant->id ?? '' }}"
-                            data-unit-id="{{ $firstRow->unit->id ?? '' }}"
+                            data-id="{{ $sp->id }}"
+                            data-variant-id="{{ $firstVariant?->id ?? '' }}"
+                            data-unit-id=""
                             data-product-id="{{ $sp->id }}"
                             data-target-id="{{ $sp->id }}"
                             data-row-type="goc"
@@ -209,20 +227,23 @@
                                         </button>
                                     @endif
                                     <input type="checkbox" class="form-check-input product-checkbox"
-                                           value="{{ $firstRow->variant->id ?? $sp->id }}"
+                                           value="{{ $sp->id }}"
                                            data-product-id="{{ $sp->id }}"
-                                           data-type="{{ $firstRow->loai_dong }}"
+                                           data-type="goc"
                                            onclick="event.stopPropagation();">
                                 </div>
                             </td>
 
-                            {{-- Hình ảnh --}}
+                            {{-- Hình ảnh (lấy ảnh variant đầu) --}}
                             <td>
-                                @if(!empty($firstRow->hinh_anh))
-                                    <img src="{{ asset($firstRow->hinh_anh) }}" alt="{{ $sp->ten_san_pham }}"
-                                         style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
-                                @elseif(!empty($sp->hinh_anh))
-                                    <img src="{{ asset($sp->hinh_anh) }}" alt="{{ $sp->ten_san_pham }}"
+                                @php $firstImg = $firstVariant?->hinh_anh ?? $sp->hinh_anh; @endphp
+                                @if(!empty($firstImg))
+                                    @php
+                                        $firstImgSrc = (str_starts_with($firstImg, 'http://') || str_starts_with($firstImg, 'https://'))
+                                            ? $firstImg
+                                            : (str_starts_with($firstImg, '/') ? $firstImg : asset($firstImg));
+                                    @endphp
+                                    <img src="{{ $firstImgSrc }}" alt="{{ $sp->ten_san_pham }}"
                                          style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
                                 @else
                                     <div style="width:48px;height:48px;border-radius:6px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;">
@@ -231,7 +252,7 @@
                                 @endif
                             </td>
 
-                            {{-- Tên sản phẩm + số dòng --}}
+                            {{-- Tên sản phẩm + Thương hiệu --}}
                             <td>
                                 <div>
                                     <span class="fw-semibold" style="font-size:0.9rem;">{{ $sp->ten_san_pham }}</span>
@@ -307,7 +328,7 @@
                                 @endif
                             </td>
 
-                            {{-- Giá bán (dòng đầu) --}}
+                            {{-- Tồn kho (tổng các variants) --}}
                             <td>
                                 <span class="js-giaban fw-bold text-primary" style="font-size:0.88rem;"
                                       data-gia-ban="{{ (float)$baseGiaBanGoc }}">
@@ -332,7 +353,36 @@
                                 @elseif($baseTonKhoGoc <= 10)
                                     <span class="badge bg-warning text-dark">Sắp hết</span>
                                 @else
-                                    <span class="badge bg-success">Còn hàng</span>
+                                    <span class="js-tonkho {{ ($firstVariant?->so_luong_ton ?? 0) <= 0 ? 'text-danger' : (($firstVariant?->so_luong_ton ?? 0) <= 10 ? 'text-warning' : 'text-muted') }} small fw-medium">
+                                        {{ $firstVariant?->so_luong_ton ?? 0 }}
+                                    </span>
+                                @endif
+                            </td>
+
+                            {{-- Trạng thái --}}
+                            <td>
+                                @if($hasManyVariants)
+                                    @if(!$trangThaiSP)
+                                        <span class="badge bg-danger">Ngừng bán</span>
+                                    @elseif($tongTonKho <= 0)
+                                        <span class="badge bg-secondary">Hết hàng</span>
+                                    @elseif($tongTonKho <= 10)
+                                        <span class="badge bg-warning text-dark">Sắp hết</span>
+                                    @else
+                                        <span class="badge bg-success">Còn hàng</span>
+                                    @endif
+                                @else
+                                    <span class="js-trangthai">
+                                        @if(!$trangThaiSP)
+                                            <span class="badge bg-danger">Ngừng bán</span>
+                                        @elseif(($firstVariant?->so_luong_ton ?? 0) <= 0)
+                                            <span class="badge bg-secondary">Hết hàng</span>
+                                        @elseif(($firstVariant?->so_luong_ton ?? 0) <= 10)
+                                            <span class="badge bg-warning text-dark">Sắp hết</span>
+                                        @else
+                                            <span class="badge bg-success">Còn hàng</span>
+                                        @endif
+                                    </span>
                                 @endif
                             </td>
                         </tr>
@@ -360,17 +410,32 @@
                             <tr id="variantRow{{ $sp->id }}_{{ $rowIndex }}"
                                 class="variant-child-row"
                                 style="display:none; background:#fafafa; cursor:pointer;"
-                                data-id="{{ $row->variant->id ?? $sp->id }}"
-                                data-variant-id="{{ $row->variant->id ?? '' }}"
-                                data-unit-id="{{ $row->unit->id ?? '' }}"
-                                data-target-id="{{ $row->variant->id ?? $sp->id }}"
-                                data-type="{{ $row->loai_dong }}"
-                                data-row-type="{{ $row->loai_dong }}"
-                                data-product-id="{{ $sp->id }}">
+                                data-id="{{ $variant->id }}"
+                                data-variant-id="{{ $variant->id }}"
+                                data-unit-id=""
+                                data-target-id="{{ $variant->id }}"
+                                data-type="goc"
+                                data-row-type="goc"
+                                data-product-id="{{ $sp->id }}"
+                                data-base-donvi="{{ $laDonVi ? ($variant->ten_don_vi ?? '') : ($variant->ten_bien_the ?? '') }}"
+                                data-base-gia="{{ $variant->gia_ban ?? 0 }}"
+                                data-base-giavon="{{ $variant->gia_von ?? 0 }}"
+                                data-base-tonkho="{{ $variant->so_luong_ton ?? 0 }}"
+                                data-base-mahang="{{ $variant->ma_hang ?? '' }}"
+                                data-base-mavach="{{ $variant->ma_vach ?? '' }}"
+                                data-base-trangthai="{{ $trangThaiV ? '1' : '0' }}"
+                                data-base-dinhmuc="{{ $variant->dinh_muc_toi_thieu ?? 0 }}">
                                 <td></td>
+
+                                {{-- Ảnh nhỏ --}}
                                 <td>
-                                    @if(!empty($row->hinh_anh))
-                                        <img src="{{ asset($row->hinh_anh) }}" alt=""
+                                    @if(!empty($variant->hinh_anh))
+                                        @php
+                                            $vImgSrc = (str_starts_with($variant->hinh_anh, 'http://') || str_starts_with($variant->hinh_anh, 'https://'))
+                                                ? $variant->hinh_anh
+                                                : (str_starts_with($variant->hinh_anh, '/') ? $variant->hinh_anh : asset($variant->hinh_anh));
+                                        @endphp
+                                        <img src="{{ $vImgSrc }}" alt=""
                                              style="width:40px;height:40px;object-fit:cover;border-radius:4px;">
                                     @else
                                         <div style="width:40px;height:40px;border-radius:4px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;">
@@ -390,7 +455,19 @@
                                             <div class="small text-muted" style="padding-left: 1.1rem;">#{{ $rowBaseMaVach }}</div>
                                         @endif
                                     </div>
+                                    @if(!empty($variant->ma_vach))
+                                        <div class="small text-muted js-mavach" style="padding-left: 1.1rem; font-size:0.7rem;">#{{ $variant->ma_vach }}</div>
+                                    @else
+                                        <div class="small text-muted js-mavach" style="padding-left: 1.1rem; font-size:0.7rem;">—</div>
+                                    @endif
+                                    @if(!empty($variant->ma_hang))
+                                        <div class="small text-muted js-mahang" style="padding-left: 1.1rem; font-size:0.7rem;">MH: {{ $variant->ma_hang }}</div>
+                                    @else
+                                        <div class="small text-muted js-mahang" style="padding-left: 1.1rem; font-size:0.7rem;">MH: —</div>
+                                    @endif
                                 </td>
+
+                                {{-- Danh mục (placeholder) --}}
                                 <td><span class="text-muted small">—</span></td>
 
                                 {{-- Biến thể + Dropdown đơn vị (Hộp/Thùng) --}}
@@ -444,7 +521,7 @@
                                     </div>
                                 </td>
 
-                                {{-- Giá bán --}}
+                                {{-- Giá bán (của variant này) --}}
                                 <td>
                                     <span class="js-giaban fw-bold text-primary" style="font-size:0.85rem;"
                                           data-gia-ban="{{ (float)$rowBaseGiaBan }}">
@@ -452,7 +529,7 @@
                                     </span>
                                 </td>
 
-                                {{-- Tồn kho --}}
+                                {{-- Tồn kho (của variant này) --}}
                                 <td>
                                     <span class="js-tonkho {{ $rowBaseTonKho <= 0 ? 'text-danger' : ($rowBaseTonKho <= 3 ? 'text-warning' : 'text-muted') }} small"
                                           data-base-tonkho="{{ (int)$rowBaseTonKho }}">
@@ -678,7 +755,7 @@
 @endsection
 
 @section('page_scripts')
-<script src="https://unpkg.com/html5-qrcode@2.3.7/minified/html5-qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.7/minified/html5-qrcode.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.7/minified/html5-qrcode.min.js'"></script>
 <script src="https://unpkg.com/vue@3.4.27/dist/vue.global.prod.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 @php
