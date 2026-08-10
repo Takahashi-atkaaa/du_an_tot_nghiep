@@ -5,6 +5,7 @@ namespace App\Http\Controllers\admin\BanHang;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class HoaDonController extends Controller
 {
@@ -36,15 +37,25 @@ class HoaDonController extends Controller
             });
         }
 
-        if ($request->filled('ngay')) {
+        if ($request->filled('tu_ngay') || $request->filled('den_ngay')) {
+            $startDate = $request->filled('tu_ngay')
+                ? Carbon::parse($request->tu_ngay)->startOfDay()
+                : Carbon::parse($request->den_ngay)->startOfDay();
+
+            $endDate = $request->filled('den_ngay')
+                ? Carbon::parse($request->den_ngay)->endOfDay()
+                : Carbon::parse($request->tu_ngay)->endOfDay();
+
+            if ($startDate->gt($endDate)) {
+                [$startDate, $endDate] = [$endDate, $startDate];
+            }
+
+            $query->whereBetween('hoa_don.created_at', [$startDate, $endDate]);
+        } elseif ($request->filled('ngay')) {
             $query->whereDate('hoa_don.created_at', $request->ngay);
         }
 
         if ($request->filled('trang_thai')) {
-            $query->where('hoa_don.trang_thai', $request->trang_thai);
-        }
-
-        if ($request->filled('phuong_thuc')) {
             $query->where('hoa_don.phuong_thuc_thanh_toan', $request->phuong_thuc);
         }
 
