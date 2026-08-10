@@ -25,20 +25,24 @@
     <div class="card-body">
         <form method="GET" action="{{ url('admin/dashboard') }}">
             <div class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label">Chọn ngày thống kê</label>
-                    <input type="date" name="ngay" class="form-control" value="{{ old('ngay', $selectedDate ?? now()->toDateString()) }}">
+                <div class="col-md-3">
+                    <label class="form-label">Từ ngày</label>
+                    <input type="date" name="tu_ngay" class="form-control" value="{{ old('tu_ngay', $selectedStartDate ?? now()->toDateString()) }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Đến ngày</label>
+                    <input type="date" name="den_ngay" class="form-control" value="{{ old('den_ngay', $selectedEndDate ?? now()->toDateString()) }}">
                 </div>
                 <div class="col-md-2">
                     <button class="btn btn-primary w-100">
-                        <i class="fas fa-filter me-2"></i>Lọc theo ngày
+                        <i class="fas fa-filter me-2"></i>Lọc theo khoảng thời gian
                     </button>
                 </div>
-                <div class="col-md-6 text-end">
+                <div class="col-md-4 text-end">
                     <div class="text-muted mb-2">
-                        Thống kê ngày: <strong>{{ $dailyStats['date'] ?? now()->format('d/m/Y') }}</strong>
+                        Thống kê: <strong>{{ $dailyStats['range_label'] ?? now()->format('d/m/Y') }}</strong>
                     </div>
-                    <a href="{{ url('admin/hoa-don?ngay=' . $selectedDate) }}" class="btn btn-outline-secondary btn-sm">Xem chi tiết đơn hàng</a>
+                    <a href="{{ url('admin/hoa-don?tu_ngay=' . $selectedStartDate . '&den_ngay=' . $selectedEndDate) }}" class="btn btn-outline-secondary btn-sm">Xem chi tiết đơn hàng</a>
                 </div>
             </div>
         </form>
@@ -51,7 +55,7 @@
             <div class="card-body d-flex align-items-center">
                 <div class="icon me-3"><i class="fas fa-wallet"></i></div>
                 <div>
-                    <h6 class="text-muted mb-1">Doanh thu ngày</h6>
+                    <h6 class="text-muted mb-1">Doanh thu</h6>
                     <h3 class="mb-0">{{ number_format($dailyStats['revenue'] ?? 0, 0, ',', '.') }} đ</h3>
                 </div>
             </div>
@@ -376,8 +380,8 @@
 
 <div class="card table-admin mb-4">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h5 class="mb-0 fw-bold">Danh sách đơn hàng trong ngày</h5>
-        <a href="{{ url('admin/hoa-don?ngay=' . $selectedDate) }}" class="btn btn-sm btn-primary">Xem tất cả</a>
+        <h5 class="mb-0 fw-bold">Danh sách đơn hàng trong khoảng thời gian</h5>
+        <a href="{{ url('admin/hoa-don?tu_ngay=' . $selectedStartDate . '&den_ngay=' . $selectedEndDate) }}" class="btn btn-sm btn-primary">Xem tất cả</a>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">

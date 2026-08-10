@@ -1389,6 +1389,14 @@ body {
         </div>
         <div class="cart-bottom">
         <div class="cart-promotion">
+            <label class="form-label mb-1">
+                <i class="fas fa-user-tie me-1"></i>Người bán
+            </label>
+            <select id="sellerSelect" class="form-select form-select-sm" onchange="applySeller()">
+                <option value="">-- Chọn người bán --</option>
+            </select>
+        </div>
+        <div class="cart-promotion">
             <label class="form-label mb-1">Khuyến mãi</label>
             <select id="promotionSelect" class="form-select form-select-sm" onchange="applyPromotion()">
                <option value="">Không áp dụng</option>
@@ -1511,6 +1519,7 @@ const categoryListUrl = '{{ route('nhan-vien.ban-hang.danh-muc') }}';
 const customerListUrl = '{{ route('nhan-vien.ban-hang.khach-hang') }}';
 const promotionListUrl = '{{ route('nhan-vien.ban-hang.khuyen-mai') }}';
 const checkoutUrl = '{{ route('nhan-vien.ban-hang.thanh-toan') }}';
+const sellerListUrl = '{{ route('nhan-vien.ban-hang.nhan-vien') }}';
 const invoiceListUrl = '{{ url('/hoa-don') }}';
 
 function resolveImageUrl(path) {
@@ -1594,7 +1603,8 @@ let invoiceTabs = [
         promotion: null,
         payment: 'cash',
         usePoint: 0,
-        customerMoney: ''
+        customerMoney: '',
+        sellerId: null,
     }
 ];
 
@@ -1614,6 +1624,9 @@ function closePaidInvoiceTab() {
         // Nếu hết tab thì tạo hóa đơn mới trống
         tabIndex++;
 
+        // Tab mới KHÔNG reset sellerId — copy từ lựa chọn phiên hiện tại
+        // (đã lưu trong localStorage khi người dùng chọn người bán).
+        const rememberedSellerId = getRememberedSellerId();
         invoiceTabs.push({
             id: tabIndex,
             name: 'HD' + tabIndex,
@@ -1622,7 +1635,8 @@ function closePaidInvoiceTab() {
             promotion: null,
             payment: 'cash',
             usePoint: 0,
-            customerMoney: ''
+            customerMoney: '',
+            sellerId: rememberedSellerId,
         });
 
         currentTab = 0;
@@ -1697,6 +1711,7 @@ function loadCurrentInvoiceForm() {
     }
 
     document.getElementById('promotionSelect').value = selectedPromotion ? selectedPromotion.id : '';
+    document.getElementById('sellerSelect').value = invoice.sellerId ? String(invoice.sellerId) : '';
 
     document.querySelectorAll('.pay-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.method === selectedPayment);
@@ -1714,19 +1729,31 @@ function createInvoice() {
 
     tabIndex++;
 
+    // Tab mới sẽ lấy sellerId từ phiên hiện tại (đã được lưu trong localStorage).
+    // Ưu tiên: sellerId của tab hiện tại → fallback rememberedSellerId.
+    const prevSellerId = invoiceTabs[currentTab] ? invoiceTabs[currentTab].sellerId : null;
+    const rememberedSellerId = getRememberedSellerId();
+    const newInvoiceSellerId = prevSellerId ?? rememberedSellerId;
+
     invoiceTabs.push({
-    id: tabIndex,
-    name: 'HD' + tabIndex,
-    cart: [],
-    customer: null,
-    promotion: null,
-    payment: 'cash',
-    usePoint: 0,
-    customerMoney: ''
-});
+        id: tabIndex,
+        name: 'HD' + tabIndex,
+        cart: [],
+        customer: null,
+        promotion: null,
+        payment: 'cash',
+        usePoint: 0,
+        customerMoney: '',
+        sellerId: newInvoiceSellerId,
+    });
 
     currentTab = invoiceTabs.length - 1;
     renderInvoiceTabs();
+    // Đồng bộ dropdown người bán với sellerId của tab mới
+    const select = document.getElementById('sellerSelect');
+    if (select && newInvoiceSellerId) {
+        select.value = String(newInvoiceSellerId);
+    }
 }
 
 function closeInvoiceTab(index) {
@@ -2326,9 +2353,10 @@ const response = await fetch(checkoutUrl, {
         qty: item.qty
     })),
     id_khach_hang: selectedCustomer ? selectedCustomer.id : null,
+    id_nguoi_ban: (getCurrentInvoice().sellerId ?? null),
     id_khuyen_mai: selectedPromotion ? selectedPromotion.id : null,
     tien_khach_dua: parseInt(
-    document.getElementById('customerMoney')
+        document.getElementById('customerMoney')
         .value
         .replace(/\D/g, '')
 ) || 0,
@@ -2573,11 +2601,140 @@ async function loadPromotions() {
         `;
     });
 }
+
+/**
+ * Lấy danh sách nhân viên/người bán hàng từ API và đổ vào dropdown Người bán.
+ * - Vai trò bất kỳ (Admin, Nhân viên, Trưởng ca, ...) — Admin lúc nào cũng có.
+ */
+let sellers = [];
+const SELLER_STORAGE_KEY = 'pos_last_seller_id_user_' + ({{ Auth::id() ?? 'null' }});
+
+/**
+ * Đọc sellerId đã lưu trong localStorage (theo user đang đăng nhập).
+ * Trả về null nếu chưa có / giá trị cũ không còn hợp lệ.
+ */
+function getRememberedSellerId() {
+    try {
+        const raw = localStorage.getItem(SELLER_STORAGE_KEY);
+        if (!raw) return null;
+        const id = Number(raw);
+        if (!Number.isFinite(id) || id <= 0) return null;
+        return id;
+    } catch (e) {
+        return null;
+    }
+}
+
+function setRememberedSellerId(id) {
+    try {
+        if (id && Number.isFinite(Number(id)) && Number(id) > 0) {
+            localStorage.setItem(SELLER_STORAGE_KEY, String(Number(id)));
+        }
+    } catch (e) {
+        /* localStorage không khả dụng - bỏ qua */
+    }
+}
+
+function clearRememberedSellerId() {
+    try {
+        localStorage.removeItem(SELLER_STORAGE_KEY);
+    } catch (e) {
+        /* bỏ qua */
+    }
+}
+
+async function loadSellers() {
+    try {
+        const response = await fetch(sellerListUrl, {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!response.ok) {
+            throw new Error('Không thể tải danh sách người bán.');
+        }
+
+        sellers = await response.json();
+
+        const select = document.getElementById('sellerSelect');
+        select.innerHTML = '<option value="">-- Chọn người bán --</option>';
+
+        sellers.forEach(nv => {
+            const tenVaiTro = nv.ten_vai_tro ? ` (${nv.ten_vai_tro})` : '';
+            select.innerHTML += `
+                <option value="${nv.id}">
+                    ${nv.ho_ten}${tenVaiTro}
+                </option>
+            `;
+        });
+
+        // Ưu tiên lựa chọn người bán cho hóa đơn hiện tại:
+        // 1. Nếu tab hiện tại đã có sellerId hợp lệ (do người dùng chọn trước đó) → giữ nguyên
+        // 2. Nếu chưa có → dùng sellerId đã lưu trong localStorage (phiên đăng nhập này)
+        // 3. Cuối cùng mới fallback về người đang đăng nhập
+        const currentInvoice = getCurrentInvoice();
+        const currentUserId = {{ Auth::id() ?? 'null' }};
+        let sellerToApply = null;
+
+        if (currentInvoice.sellerId && sellers.some(nv => Number(nv.id) === Number(currentInvoice.sellerId))) {
+            sellerToApply = currentInvoice.sellerId;
+        } else {
+            const remembered = getRememberedSellerId();
+            if (remembered && sellers.some(nv => Number(nv.id) === Number(remembered))) {
+                sellerToApply = remembered;
+                currentInvoice.sellerId = remembered;
+            } else if (currentUserId && sellers.some(nv => Number(nv.id) === Number(currentUserId))) {
+                sellerToApply = currentUserId;
+                currentInvoice.sellerId = currentUserId;
+                setRememberedSellerId(currentUserId);
+            }
+        }
+
+        if (sellerToApply) {
+            select.value = String(sellerToApply);
+            // Đồng bộ dropdown cho tất cả tab đang mở để tránh hiển thị trống khi switch
+            invoiceTabs.forEach(tab => {
+                if (!tab.sellerId && sellers.some(nv => Number(nv.id) === Number(sellerToApply))) {
+                    tab.sellerId = sellerToApply;
+                }
+            });
+        }
+    } catch (err) {
+        console.error('Lỗi loadSellers:', err);
+    }
+}
+
+function applySeller() {
+    const select = document.getElementById('sellerSelect');
+    const id = select && select.value ? Number(select.value) : null;
+    const invoice = getCurrentInvoice();
+    invoice.sellerId = id;
+
+    // Lưu lựa chọn vào localStorage để giữ cho các tab sau / lần mở POS tiếp theo.
+    // Khi id === null (chọn "-- Chọn người bán --") → KHÔNG xóa lưu nhớ,
+    // vì đây chỉ là chưa chọn trong tab hiện tại, không phải ý muốn reset phiên.
+    if (id !== null) {
+        setRememberedSellerId(id);
+    }
+}
 function tinhTienGiam() {
+    return tinhTienGiamDetail().discount;
+}
+
+/**
+ * Chi tiết tính tiền giảm và lý do nếu không giảm được.
+ * Trả về: { discount: number, reason: string|null }
+ *   - discount: số tiền được giảm (>=0)
+ *   - reason: null nếu áp dụng được, ngược lại là câu giải thích tiếng Việt.
+ */
+function tinhTienGiamDetail() {
     const cart = getCurrentCart();
 
-    if (!selectedPromotion || cart.length === 0) {
-        return 0;
+    if (!selectedPromotion) {
+        return { discount: 0, reason: null };
+    }
+
+    if (cart.length === 0) {
+        return { discount: 0, reason: 'Giỏ hàng đang trống.' };
     }
 
     /*
@@ -2593,7 +2750,10 @@ function tinhTienGiam() {
      * thì không giảm giá.
      */
     if (applicableProductIds.length === 0) {
-        return 0;
+        return {
+            discount: 0,
+            reason: 'Khuyến mãi này hiện chưa gắn với sản phẩm nào.',
+        };
     }
 
     /*
@@ -2610,7 +2770,10 @@ function tinhTienGiam() {
     });
 
     if (applicableItems.length === 0) {
-        return 0;
+        return {
+            discount: 0,
+            reason: 'Khuyến mãi này không áp dụng cho sản phẩm hiện có trong giỏ.',
+        };
     }
 
     /*
@@ -2648,14 +2811,25 @@ function tinhTienGiam() {
     );
 
     if (wholeCartSubtotal < minOrder) {
-        return 0;
+        return {
+            discount: 0,
+            reason:
+                'Đơn hàng chưa đạt tối thiểu ' +
+                formatCurrency(minOrder) +
+                ' để áp dụng khuyến mãi.',
+        };
     }
 
     /*
      * Số lượng tối thiểu chỉ xét sản phẩm thuộc khuyến mãi.
      */
     if (minQty > 0 && applicableQuantity < minQty) {
-        return 0;
+        return {
+            discount: 0,
+            reason:
+                'Cần tối thiểu ' + minQty +
+                ' sản phẩm áp dụng để dùng khuyến mãi.',
+        };
     }
 
     const type = String(
@@ -2721,10 +2895,15 @@ function tinhTienGiam() {
     /*
      * Không được giảm vượt tiền sản phẩm áp dụng.
      */
-    return Math.min(
+    const finalDiscount = Math.min(
         Math.max(0, discount),
         applicableSubtotal
     );
+
+    return {
+        discount: finalDiscount,
+        reason: finalDiscount > 0 ? null : 'Khuyến mãi không hợp lệ.',
+    };
 }
 function applyPromotion() {
     const id = document.getElementById('promotionSelect').value;
@@ -2735,7 +2914,15 @@ function applyPromotion() {
     renderCart();
     calculateTotal();
     calculateChange();
-} 
+
+    // Nếu vừa chọn 1 KM mới mà KM đó không giảm được → cảnh báo người dùng biết lý do.
+    if (selectedPromotion) {
+        const detail = tinhTienGiamDetail();
+        if (detail.reason) {
+            showToast('Khuyến mãi chưa áp dụng được: ' + detail.reason, 'error');
+        }
+    }
+}
 
 async function handleSearchEnter(event) {
     if (event.key !== 'Enter') return;
@@ -3032,6 +3219,7 @@ async function reopenPayOSQR(hoaDonId, maHoaDon) {
 loadCategories();
 loadProducts();
 loadPromotions();
+loadSellers();
 renderInvoiceTabs();
 </script>
 <div class="modal fade" id="qrPaymentModal" tabindex="-1">
@@ -3111,5 +3299,63 @@ renderInvoiceTabs();
         </div>
     </div>
 </div>
+
+<!-- #region agent log
+<script>
+(function () {
+    const ENDPOINT = 'http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2';
+    const SESSION  = '44ee82';
+    function send(hyp, loc, msg, data) {
+        try {
+            fetch(ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': SESSION },
+                body: JSON.stringify({
+                    sessionId: SESSION,
+                    id: 'log_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+                    timestamp: Date.now(),
+                    location: loc,
+                    message: msg,
+                    data: data,
+                    runId: 'probe-ui',
+                    hypothesisId: hyp
+                })
+            }).catch(() => {});
+        } catch (e) {}
+    }
+
+    // Log chung các thao tác để biết user muốn sửa chỗ nào
+    document.addEventListener('click', function (e) {
+        const t = e.target;
+        const id  = t.id  || t.closest('[id]')?.id || '';
+        const cls = t.className || '';
+        const tag = t.tagName || '';
+        send('PROBE', 'pos:click', 'user click', { tag, id, cls: String(cls).slice(0, 80), text: (t.innerText || '').slice(0, 30) });
+    }, true);
+
+    document.addEventListener('input', function (e) {
+        const t = e.target;
+        send('PROBE', 'pos:input', 'user input', { id: t.id, name: t.name, value: String(t.value).slice(0, 40), readOnly: t.readOnly, disabled: t.disabled });
+    }, true);
+
+    document.addEventListener('change', function (e) {
+        const t = e.target;
+        send('PROBE', 'pos:change', 'user change', { id: t.id, name: t.name, value: String(t.value).slice(0, 40) });
+    }, true);
+
+    // Log các phần tử có vẻ "không thể thao tác" - readonly/disabled/pointer-events:none
+    setTimeout(function () {
+        const blocked = [];
+        document.querySelectorAll('input, select, textarea, button, [contenteditable]').forEach(function (el) {
+            const cs = getComputedStyle(el);
+            if (el.disabled || el.readOnly || cs.pointerEvents === 'none' || cs.display === 'none' || cs.visibility === 'hidden') {
+                blocked.push({ tag: el.tagName, id: el.id, name: el.name, type: el.type, disabled: el.disabled, readOnly: el.readOnly, pointerEvents: cs.pointerEvents });
+            }
+        });
+        send('PROBE', 'pos:scan-blocked', 'elements blocked or hidden', { count: blocked.length, sample: blocked.slice(0, 25) });
+    }, 1500);
+})();
+</script>
+<!-- #endregion agent log -->
 </body>
 </html>

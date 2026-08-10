@@ -5,6 +5,7 @@ namespace App\Http\Controllers\admin\BanHang;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class HoaDonController extends Controller
 {
@@ -36,15 +37,25 @@ class HoaDonController extends Controller
             });
         }
 
-        if ($request->filled('ngay')) {
+        if ($request->filled('tu_ngay') || $request->filled('den_ngay')) {
+            $startDate = $request->filled('tu_ngay')
+                ? Carbon::parse($request->tu_ngay)->startOfDay()
+                : Carbon::parse($request->den_ngay)->startOfDay();
+
+            $endDate = $request->filled('den_ngay')
+                ? Carbon::parse($request->den_ngay)->endOfDay()
+                : Carbon::parse($request->tu_ngay)->endOfDay();
+
+            if ($startDate->gt($endDate)) {
+                [$startDate, $endDate] = [$endDate, $startDate];
+            }
+
+            $query->whereBetween('hoa_don.created_at', [$startDate, $endDate]);
+        } elseif ($request->filled('ngay')) {
             $query->whereDate('hoa_don.created_at', $request->ngay);
         }
 
         if ($request->filled('trang_thai')) {
-            $query->where('hoa_don.trang_thai', $request->trang_thai);
-        }
-
-        if ($request->filled('phuong_thuc')) {
             $query->where('hoa_don.phuong_thuc_thanh_toan', $request->phuong_thuc);
         }
 
@@ -97,7 +108,21 @@ class HoaDonController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
 
-        return view('admin_xem_truoc.hoa-don-chi-tiet', compact('hoaDon', 'chiTiet', 'diemTichDiems'));
+        $return_invoice_id = session('return_invoice_id');
+        $phieuDoiTra = null;
+        if ($return_invoice_id) {
+            $phieuDoiTra = DB::table('phieu')->where('id', $return_invoice_id)->first();
+            if ($phieuDoiTra) {
+                $phieuDoiTra->chi_tiet = DB::table('chi_tiet_phieu')
+                    ->join('san_pham', 'chi_tiet_phieu.id_san_pham', '=', 'san_pham.id')
+                    ->leftJoin('bien_the_san_pham', 'chi_tiet_phieu.variant_id', '=', 'bien_the_san_pham.id')
+                    ->select('chi_tiet_phieu.*', 'san_pham.ten_san_pham', 'bien_the_san_pham.ten_bien_the', 'bien_the_san_pham.ten_don_vi')
+                    ->where('id_phieu', $return_invoice_id)
+                    ->get();
+            }
+        }
+
+        return view('admin_xem_truoc.hoa-don-chi-tiet', compact('hoaDon', 'chiTiet', 'diemTichDiems', 'phieuDoiTra'));
     }
 
     public function showModal($id)
@@ -441,7 +466,8 @@ class HoaDonController extends Controller
             ]);
 
             return redirect()->route('admin.hoa-don.show', $id)
-                ->with('success', 'Đã xử lý Giao dịch Đổi/Trả hàng. Chênh lệch: ' . number_format($tienChenhLech, 0, ',', '.') . 'đ');
+                ->with('success', 'Đã xử lý Giao dịch Đổi/Trả hàng. Chênh lệch: ' . number_format($tienChenhLech, 0, ',', '.') . 'đ')
+                ->with('return_invoice_id', $phieuId);
         });
     }
 }

@@ -167,6 +167,71 @@
     </div>
 </div>
 
+@if(isset($phieuDoiTra) && $phieuDoiTra)
+<div class="text-center mt-4 mb-4 d-print-none">
+    <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#modalPhieuDoiTra">
+        <i class="fas fa-file-invoice me-2"></i> Hóa đơn đổi trả sản phẩm
+    </button>
+</div>
+
+<!-- Modal Hóa đơn đổi trả -->
+<div class="modal fade" id="modalPhieuDoiTra" tabindex="-1" aria-labelledby="modalPhieuDoiTraLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalPhieuDoiTraLabel">Chi tiết Phiếu Đổi/Trả #PT{{ str_pad($phieuDoiTra->id, 4, '0', STR_PAD_LEFT) }}</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+            <strong>Ghi chú:</strong> {{ $phieuDoiTra->ghi_chu }} <br>
+            <strong>Ngày thực hiện:</strong> {{ \Carbon\Carbon::parse($phieuDoiTra->created_at)->format('d/m/Y H:i') }}
+        </div>
+        <table class="table table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th>Sản phẩm</th>
+                    <th>Phân loại</th>
+                    <th class="text-center">Số lượng</th>
+                    <th class="text-end">Đơn giá</th>
+                    <th class="text-end">Thành tiền</th>
+                    <th>Loại</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($phieuDoiTra->chi_tiet as $ct)
+                @php
+                    $isTra = str_contains($ct->ghi_chu, 'Hàng khách trả');
+                @endphp
+                <tr>
+                    <td>{{ $ct->ten_san_pham }}</td>
+                    <td>{{ $ct->ten_don_vi ?: $ct->ten_bien_the }}</td>
+                    <td class="text-center">{{ $ct->so_luong }}</td>
+                    <td class="text-end">{{ number_format($ct->gia_nhap, 0, ',', '.') }}đ</td>
+                    <td class="text-end">{{ number_format($ct->so_luong * $ct->gia_nhap, 0, ',', '.') }}đ</td>
+                    <td>
+                        @if($isTra)
+                            <span class="badge bg-danger">Trả hàng</span>
+                            @if(str_contains($ct->ghi_chu, 'Lỗi'))
+                                <span class="badge bg-warning text-dark">Hàng lỗi</span>
+                            @endif
+                        @else
+                            <span class="badge bg-success">Đổi mới</span>
+                        @endif
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+      </div>
+    </div>
+  </div>
+</div>
+@endif
+
 <style>
 @media print {
     body * {
