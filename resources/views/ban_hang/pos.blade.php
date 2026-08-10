@@ -2717,10 +2717,24 @@ function applySeller() {
     }
 }
 function tinhTienGiam() {
+    return tinhTienGiamDetail().discount;
+}
+
+/**
+ * Chi tiết tính tiền giảm và lý do nếu không giảm được.
+ * Trả về: { discount: number, reason: string|null }
+ *   - discount: số tiền được giảm (>=0)
+ *   - reason: null nếu áp dụng được, ngược lại là câu giải thích tiếng Việt.
+ */
+function tinhTienGiamDetail() {
     const cart = getCurrentCart();
 
-    if (!selectedPromotion || cart.length === 0) {
-        return 0;
+    if (!selectedPromotion) {
+        return { discount: 0, reason: null };
+    }
+
+    if (cart.length === 0) {
+        return { discount: 0, reason: 'Giỏ hàng đang trống.' };
     }
 
     /*
@@ -2736,7 +2750,10 @@ function tinhTienGiam() {
      * thì không giảm giá.
      */
     if (applicableProductIds.length === 0) {
-        return 0;
+        return {
+            discount: 0,
+            reason: 'Khuyến mãi này hiện chưa gắn với sản phẩm nào.',
+        };
     }
 
     /*
@@ -2753,7 +2770,10 @@ function tinhTienGiam() {
     });
 
     if (applicableItems.length === 0) {
-        return 0;
+        return {
+            discount: 0,
+            reason: 'Khuyến mãi này không áp dụng cho sản phẩm hiện có trong giỏ.',
+        };
     }
 
     /*
@@ -2791,14 +2811,25 @@ function tinhTienGiam() {
     );
 
     if (wholeCartSubtotal < minOrder) {
-        return 0;
+        return {
+            discount: 0,
+            reason:
+                'Đơn hàng chưa đạt tối thiểu ' +
+                formatCurrency(minOrder) +
+                ' để áp dụng khuyến mãi.',
+        };
     }
 
     /*
      * Số lượng tối thiểu chỉ xét sản phẩm thuộc khuyến mãi.
      */
     if (minQty > 0 && applicableQuantity < minQty) {
-        return 0;
+        return {
+            discount: 0,
+            reason:
+                'Cần tối thiểu ' + minQty +
+                ' sản phẩm áp dụng để dùng khuyến mãi.',
+        };
     }
 
     const type = String(
@@ -2864,10 +2895,15 @@ function tinhTienGiam() {
     /*
      * Không được giảm vượt tiền sản phẩm áp dụng.
      */
-    return Math.min(
+    const finalDiscount = Math.min(
         Math.max(0, discount),
         applicableSubtotal
     );
+
+    return {
+        discount: finalDiscount,
+        reason: finalDiscount > 0 ? null : 'Khuyến mãi không hợp lệ.',
+    };
 }
 function applyPromotion() {
     const id = document.getElementById('promotionSelect').value;
@@ -2878,7 +2914,15 @@ function applyPromotion() {
     renderCart();
     calculateTotal();
     calculateChange();
-} 
+
+    // Nếu vừa chọn 1 KM mới mà KM đó không giảm được → cảnh báo người dùng biết lý do.
+    if (selectedPromotion) {
+        const detail = tinhTienGiamDetail();
+        if (detail.reason) {
+            showToast('Khuyến mãi chưa áp dụng được: ' + detail.reason, 'error');
+        }
+    }
+}
 
 async function handleSearchEnter(event) {
     if (event.key !== 'Enter') return;
@@ -3255,5 +3299,63 @@ renderInvoiceTabs();
         </div>
     </div>
 </div>
+
+<!-- #region agent log
+<script>
+(function () {
+    const ENDPOINT = 'http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2';
+    const SESSION  = '44ee82';
+    function send(hyp, loc, msg, data) {
+        try {
+            fetch(ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': SESSION },
+                body: JSON.stringify({
+                    sessionId: SESSION,
+                    id: 'log_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+                    timestamp: Date.now(),
+                    location: loc,
+                    message: msg,
+                    data: data,
+                    runId: 'probe-ui',
+                    hypothesisId: hyp
+                })
+            }).catch(() => {});
+        } catch (e) {}
+    }
+
+    // Log chung các thao tác để biết user muốn sửa chỗ nào
+    document.addEventListener('click', function (e) {
+        const t = e.target;
+        const id  = t.id  || t.closest('[id]')?.id || '';
+        const cls = t.className || '';
+        const tag = t.tagName || '';
+        send('PROBE', 'pos:click', 'user click', { tag, id, cls: String(cls).slice(0, 80), text: (t.innerText || '').slice(0, 30) });
+    }, true);
+
+    document.addEventListener('input', function (e) {
+        const t = e.target;
+        send('PROBE', 'pos:input', 'user input', { id: t.id, name: t.name, value: String(t.value).slice(0, 40), readOnly: t.readOnly, disabled: t.disabled });
+    }, true);
+
+    document.addEventListener('change', function (e) {
+        const t = e.target;
+        send('PROBE', 'pos:change', 'user change', { id: t.id, name: t.name, value: String(t.value).slice(0, 40) });
+    }, true);
+
+    // Log các phần tử có vẻ "không thể thao tác" - readonly/disabled/pointer-events:none
+    setTimeout(function () {
+        const blocked = [];
+        document.querySelectorAll('input, select, textarea, button, [contenteditable]').forEach(function (el) {
+            const cs = getComputedStyle(el);
+            if (el.disabled || el.readOnly || cs.pointerEvents === 'none' || cs.display === 'none' || cs.visibility === 'hidden') {
+                blocked.push({ tag: el.tagName, id: el.id, name: el.name, type: el.type, disabled: el.disabled, readOnly: el.readOnly, pointerEvents: cs.pointerEvents });
+            }
+        });
+        send('PROBE', 'pos:scan-blocked', 'elements blocked or hidden', { count: blocked.length, sample: blocked.slice(0, 25) });
+    }, 1500);
+})();
+</script>
+<!-- #endregion agent log -->
 </body>
 </html>
