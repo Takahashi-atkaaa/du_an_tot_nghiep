@@ -78,33 +78,19 @@
 
                         <thead class="table-light">
                             <tr>
-                                <th class="text-center" style="width: 60px;">
-                                    STT
-                                </th>
+                                <th class="text-center" style="width: 60px;">STT</th>
 
-                                <th>
-                                    Mã hóa đơn
-                                </th>
+                                <th>Mã hóa đơn</th>
 
-                                <th>
-                                    Khách hàng
-                                </th>
+                                <th>Khách hàng</th>
 
-                                <th>
-                                    Thời gian
-                                </th>
+                                <th>Thời gian</th>
 
-                                <th class="text-end">
-                                    Tổng tiền
-                                </th>
+                                <th class="text-end">Tổng tiền</th>
 
-                                <th class="text-center">
-                                    Trạng thái
-                                </th>
+                                <th class="text-center">Trạng thái</th>
 
-                                <th class="text-center">
-                                    Thao tác
-                                </th>
+                                <th class="text-center">Thao tác</th>
                             </tr>
                         </thead>
 
@@ -139,7 +125,7 @@
                                     </td>
 
                                     <td class="text-center">
-                                        <span class="badge bg-success">
+                                        <span class="badge bg-danger">
                                             {{ $hoaDon->trang_thai }}
                                         </span>
                                     </td>

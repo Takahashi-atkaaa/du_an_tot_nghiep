@@ -44,16 +44,17 @@ public function index()
         'id_ca_lam_viec', $ca_hien_tai->id
         )
         ->whereDate('created_at', $ngay_hien_tai)
-        ->where('phuong_thuc_thanh_toan', 'tien_mat')
+        ->where('phuong_thuc_thanh_toan', '!=', 'payos')
         ->where('trang_thai', 'Hoàn Thành')
         ->sum('khach_can_tra');    
 
+    
     $tong_doanh_thu_chuyen_khoan_cua_ca = HoaDon::where(
         'id_ca_lam_viec', $ca_hien_tai->id
         )
         ->whereDate('created_at', $ngay_hien_tai)
         ->where('phuong_thuc_thanh_toan', 'payos')
-        ->where('trang_thai', 'Hoàn Thành')
+        ->where('trang_thai', 'Hoàn thành')
         ->sum('khach_can_tra');
 
     $tong_doanh_thu_cua_ca = $tong_doanh_thu_tien_mat_cua_ca + $tong_doanh_thu_chuyen_khoan_cua_ca;
@@ -77,6 +78,8 @@ public function index()
          ->whereDate('created_at', $ngay_hien_tai)
          ->where('id_ca_lam_viec', $ca_hien_tai->id)
          ->get();
+         
+        
 
          
     return view(

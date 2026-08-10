@@ -64,7 +64,7 @@ class LichSuCaLam extends Controller
 
         $doanhThuTienMatCuaCa = HoaDon::whereDate('created_at', $ngay)
            ->where('id_ca_lam_viec', $id_ca)
-           ->where('phuong_thuc_thanh_toan', 'tien_mat')
+           ->where('phuong_thuc_thanh_toan','!=', 'payos')
            ->where('trang_thai', 'Hoàn Thành')
            ->sum('khach_can_tra');
 

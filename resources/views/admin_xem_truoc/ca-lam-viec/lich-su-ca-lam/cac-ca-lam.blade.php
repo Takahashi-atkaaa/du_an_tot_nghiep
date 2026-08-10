@@ -663,9 +663,21 @@ h3,h4,h5{
                                     </td>
 
                                     <td>
-                                        <span class="badge bg-success">
-                                            {{ $hoaDon->trang_thai }}
-                                        </span>
+                                        @if($hoaDon->trang_thai == 'Hoàn thành')
+                                            <span class="badge bg-success">
+                                                {{ $hoaDon->trang_thai }}
+                                            </span>
+                                        @elseif($hoaDon->trang_thai == 'Hủy')
+                                            <span class="badge bg-danger">
+                                                {{ $hoaDon->trang_thai }}
+                                            </span>
+                                        @else
+                                            <span class="badge bg-warning">
+                                                Đang xử lý
+                                            </span>
+                                        @endif
+                                       
+
                                     </td>
 
                                     <td class="text-danger fw-bold">
