@@ -829,8 +829,8 @@ body {
 
 /* ===== POS CART REDESIGN: compact list + fixed checkout ===== */
 .pos-cart {
-    width: 390px;
-    min-width: 390px;
+    width: 50%;
+    min-width: 50%;
     height: calc(100vh - 86px);
     overflow: hidden;
 }
@@ -1052,8 +1052,8 @@ body {
 
 @media (max-width: 1200px) {
     .pos-cart {
-        width: 360px;
-        min-width: 360px;
+        width: 50%;
+        min-width: 50%;
     }
 }
 
