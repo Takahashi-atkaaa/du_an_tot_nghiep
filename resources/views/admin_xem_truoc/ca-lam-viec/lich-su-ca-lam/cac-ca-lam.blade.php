@@ -275,6 +275,13 @@ h3,h4,h5{
 .icon-danger i {
     font-size: 22px;
 }
+
+.the-thong-ke.ngay {
+    box-shadow: 0 4px 12px rgba(25, 135, 84, 0.2);
+}
+
+
+
 }
 
 </style>
@@ -284,10 +291,18 @@ h3,h4,h5{
 
     <div class="thong-ke-ngay">
 
-    <a href="{{route('lich-su-ca-lam-viec.index')}}" class="btn btn-dark mb-3 quay_lai"
-       class="quay_lai">
-        ← Quay lại
-    </a>
+
+
+    <div class="the-thong-ke ngay">
+        <div class="icon">📅</div>
+
+        <div>
+            <div class="tieu-de">Ngày</div>
+            <h5 class="mb-0">
+                {{ date('Y/m/d', strtotime($ngay)) }}
+            </h5>
+        </div>
+    </div>
 
     <div class="the-thong-ke doanh-thu">
         <div class="icon">💰</div>
@@ -358,138 +373,41 @@ h3,h4,h5{
             </div>
 
             <div class="col-md-3">
-                <div class="card info-card">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="icon-box icon-success me-3">
-                            <i class="bi bi-calendar-event-fill"></i>
-                        </div>
+                <a style="text-decoration: none;" href="{{ route('hoa-don-cua-ca.hoan-thanh', ['ngay' => $ngay, 'id_ca' => $caDangChon->id]) }}" class="the-thong-ke hoa-don">
+                    <div class="icon">🧾</div>
 
-                        <div>
-                            <div class="text-muted">Ngày </div>
-                            <h5 class="mb-0">{{ date('Y/m/d', strtotime($ngay)) }}</h5>
+                    <div>
+                        <div class="tieu-de">Tổng số hóa đơn ca</div>
+                        <div class="gia-tri">
+                            {{ $tongHoaDoncuaCa }}
                         </div>
                     </div>
-                </div>
+                </a>
             </div>
-
-            <div class="col-md-3">
-                <div class="card info-card">
-                    <div class="card-body d-flex align-items-center">
-
-                        <div class="icon-box icon-purple me-3">
-                            <i class="bi bi-receipt"></i>
-                        </div>
-
-                        <div>
-                            <div class="text-muted">
-                                Số hóa đơn
-                            </div>
-
-                            <h3 class="mb-0">
-                                {{ $tongHoaDoncuaCa }}
-                            </h3>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3">
-                <div class="card info-card">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="icon-box icon-danger me-3">
-                            <i class="bi bi-receipt-cutoff"></i>
-                        </div>
-
-                        <div>
-                            <div class="text-muted">Số hóa đơn hủy</div>
-                            <h4 class="mb-0 text-danger">
-                                {{ $cacHoaDonBiHuyTrongCa }}
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
-        </div>
-
-
-        {{-- Thống kê --}}
-        <div class="row g-4 mb-4">
 
 
             <div class="col-md-3">
-                <div class="card info-card">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="icon-box icon-danger me-3">
-                            <i class="bi bi-cash-stack"></i>
-                        </div>
+                <a href="{{ route('hoa-don-cua-ca.huy', ['ngay' => $ngay,'id_ca' => $caDangChon->id]) }}"
+                class="the-thong-ke hoa-don"
+                style="text-decoration: none; border-left: 4px solid #dc3545;">
 
-                        <div>
-                            <div class="text-muted">
-                                Doanh thu ca
-                            </div>
+                    <div class="icon-box icon-danger me-3">
+                        <i class="bi bi-receipt-cutoff"></i>
+                    </div>
 
-                            <h5 class="mb-0 text-danger">
-                                {{ number_format($tongDoanhThuCuaCa) }}  VND
-                            </h5>
+                    <div>
+                        <div class="tieu-de">Số hóa đơn hủy</div>
+
+                        <div class="gia-tri" style="color: #dc3545;">
+                            {{ $cacHoaDonBiHuyTrongCa }}
                         </div>
                     </div>
-                </div>
-            </div>
 
-           
-
-            <div class="col-md-3">
-                <div class="card info-card">
-                    <div class="card-body d-flex align-items-center">
-
-                        <div class="icon-box icon-primary me-3">
-                            <i class="bi bi-credit-card-2-front-fill"></i>
-                        </div>
-
-                        <div>
-                            <div class="text-muted">
-                                Doanh thu chuyển khoản trong ca
-                            </div>
-
-                            <h3 class="mb-0">
-                                {{ number_format($doanhThuChuyenKhoan, 0, ',', '.') }} VND
-                            </h3>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-
-                        {{-- Tiền mặt trong ca --}}
-            <div class="col-md-3">
-                <div class="card info-card">
-                    <div class="card-body d-flex align-items-center">
-
-                        <div class="icon-box icon-success me-3">
-                            <i class="bi bi-cash-stack"></i>
-                        </div>
-
-                        <div>
-
-                            <h6 class="text-muted mb-1">
-                                Doanh thu tiền mặt trong ca
-                            </h6>
-
-                            <h4 class="fw-bold text-success mb-0">
-                                {{ number_format($doanhThuTienMatCuaCa, 0, ',', '.') }} VND
-                            </h4>
-
-                        </div>
-
-                    </div>
-                </div>
+                </a>
             </div>
 
 
-            {{-- Giao ca --}}
+                        {{-- Giao ca --}}
             <div class="col-md-3">
                 <div class="card info-card h-100">
                     <div class="card-body d-flex align-items-center">
@@ -595,6 +513,110 @@ h3,h4,h5{
                     </div>
                 </div>
             </div>
+
+
+        </div>
+
+
+        {{-- Thống kê --}}
+        <div class="row g-4 mb-4">
+
+
+            <div class="col-md-3">
+                <div class="card info-card">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="icon-box icon-danger me-3">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
+
+                        <div>
+                            <div class="text-muted">
+                                Doanh thu ca
+                            </div>
+
+                            <h5 class="mb-0 text-danger">
+                                {{ number_format($tongDoanhThuCuaCa) }}  VND
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+           
+
+            <div class="col-md-3">
+                <div class="card info-card">
+                    <div class="card-body d-flex align-items-center">
+
+                        <div class="icon-box icon-primary me-3">
+                            <i class="bi bi-credit-card-2-front-fill"></i>
+                        </div>
+
+                        <div>
+                            <div class="text-muted">
+                                Doanh thu chuyển khoản trong ca
+                            </div>
+
+                            <h3 class="mb-0">
+                                {{ number_format($doanhThuChuyenKhoan, 0, ',', '.') }} VND
+                            </h3>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+                        {{-- Tiền mặt trong ca --}}
+            <div class="col-md-3">
+                <div class="card info-card">
+                    <div class="card-body d-flex align-items-center">
+
+                        <div class="icon-box icon-success me-3">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
+
+                        <div>
+
+                            <h6 class="text-muted mb-1">
+                                Doanh thu tiền mặt trong ca
+                            </h6>
+
+                            <h4 class="fw-bold text-success mb-0">
+                                {{ number_format($doanhThuTienMatCuaCa, 0, ',', '.') }} VND
+                            </h4>
+
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            {{-- Số lượng nhân viên --}}
+            <div class="col-md-3">
+                <div class="card info-card">
+                    <div class="card-body d-flex align-items-center">
+
+                        <div class="icon-box icon-warning me-3">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+
+                        <div>
+
+                            <h6 class="text-muted mb-1">
+                                Số lượng nhân viên trong ca
+                            </h6>
+
+                            <h4 class="fw-bold text-warning mb-0">
+                                {{ $tongNhanVienTrongCa }}
+                            </h4>
+
+                        </div>
+
+                    </div>
+                </div>
+
+
+
 
         </div>
 

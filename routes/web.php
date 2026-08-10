@@ -305,6 +305,8 @@ Route::middleware([KTVaiTro::class])->group(function () {
         Route::get('/chi-tiet-hoa-don/{id_hoadon}',[CaLam::class, 'show'])->name('chi-tiet-hoa-don.show')->middleware('permission:quan_ly_ca_lam');
         //lịch sử ca làm
         Route::get('/lich-su-ca-lam-viec',[LichSuCaLam::class, 'index'])->name('lich-su-ca-lam-viec.index')->middleware('permission:quan_ly_ca_lam');
+        Route::get('/cac-hoa-don-cua-ca-hoan-thanh/{ngay}/{id_ca}',[LichSuCaLam::class, 'hoa_don_cua_ca_hoan_thanh'])->name('hoa-don-cua-ca.hoan-thanh')->middleware('permission:quan_ly_ca_lam');
+        Route::get('/cac-hoa-don-cua-ca-huy/{ngay}/{id_ca}',[LichSuCaLam::class, 'hoa_don_cua_ca_huy'])->name('hoa-don-cua-ca.huy')->middleware('permission:quan_ly_ca_lam');
         // Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}',[LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:quan_ly_ca_lam');
         Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}/{id_ca?}',[LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:quan_ly_ca_lam');
 

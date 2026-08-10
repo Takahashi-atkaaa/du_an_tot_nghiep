@@ -304,4 +304,49 @@ class LichSuCaLam extends Controller
             ->back()
             ->with('success', 'Đã từ chối giao ca.');
     }
+
+    //hóa đơn của ca
+        public function hoa_don_cua_ca_hoan_thanh(Request $request, $ngay, $id_ca)
+    {
+        $tuKhoa = $request->input('tu_khoa');
+
+        $hoaDonCuaCa = HoaDon::whereDate('created_at', $ngay)
+            ->where('id_ca_lam_viec', $id_ca)
+            ->where('trang_thai', 'Hoàn Thành')
+            ->when($tuKhoa, function ($query) use ($tuKhoa) {
+                $query->where(function ($q) use ($tuKhoa) {
+                    $q->where('id', 'like', '%' . $tuKhoa . '%');
+                });
+            })
+            ->latest('created_at')
+            ->get();
+
+        return view(
+            'admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.danh-sach-hoa-don-ht',
+            compact('hoaDonCuaCa', 'ngay', 'id_ca', 'tuKhoa')
+        );
+    }    
+
+    //hóa đơn của ca
+        public function hoa_don_cua_ca_huy(Request $request, $ngay, $id_ca)
+    {
+        $tuKhoa = $request->input('tu_khoa');
+
+        $hoaDonCuaCa = HoaDon::whereDate('created_at', $ngay)
+            ->where('id_ca_lam_viec', $id_ca)
+            ->where('trang_thai', 'Hủy')
+            ->when($tuKhoa, function ($query) use ($tuKhoa) {
+                $query->where(function ($q) use ($tuKhoa) {
+                    $q->where('id', 'like', '%' . $tuKhoa . '%');
+                });
+            })
+            ->latest('created_at')
+            ->get();
+
+        return view(
+            'admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.danh-sach-hoa-don-huy',
+            compact('hoaDonCuaCa', 'ngay', 'id_ca', 'tuKhoa')
+        );
+    }    
+        
 }
