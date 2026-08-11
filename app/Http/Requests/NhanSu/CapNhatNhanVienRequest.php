@@ -25,7 +25,13 @@ class CapNhatNhanVienRequest extends FormRequest
                 'max:255',
                 Rule::unique('nguoi_dung', 'email')->ignore($nguoiDungId),
             ],
-            'sdt' => ['required', 'string', 'max:20'],
+            'sdt' => [
+                'required',
+                'string',
+                'max:20',
+                'regex:/^(0[3|5|7|8|9])[0-9]{8}$/',
+                Rule::unique('nguoi_dung', 'sdt')->ignore($nguoiDungId),
+            ],
             'gioi_tinh' => ['required', 'in:Nam,Nữ,Khác'],
             'cccd' => [
                 'required',
@@ -76,6 +82,7 @@ class CapNhatNhanVienRequest extends FormRequest
             'email.email' => 'Email không đúng định dạng.',
             'email.unique' => 'Email này đã tồn tại.',
             'sdt.required' => 'Vui lòng nhập số điện thoại.',
+            'sdt.unique' => 'Số điện thoại đã tồn tại.',
             'gioi_tinh.required' => 'Vui lòng chọn giới tính.',
             'gioi_tinh.in' => 'Giới tính không hợp lệ.',
             'cccd.required' => 'Vui lòng nhập số CCCD.',

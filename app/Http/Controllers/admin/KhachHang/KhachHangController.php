@@ -22,7 +22,6 @@ class KhachHangController extends Controller
 		if (! is_null($trangThai)) {
 			$query->where('trang_thai', $trangThai);
 		}
-
 		$khachHangs = $query->orderByDesc('id')->paginate(10)->withQueryString();
 
 		return view('admin_xem_truoc.khach-hang.index', [
