@@ -229,30 +229,6 @@ class SanPhamApiController extends Controller
         $requestedVariantId = request()->query('variant_id');
         $requestedUnitId = request()->query('unit_id');
         $isMaster = request()->query('is_master') === '1';
-        // #region agent log
-        try {
-            $logPath = base_path('debug-80bdd0.log');
-            $payload = [
-                'sessionId' => '80bdd0',
-                'id' => 'log_' . time() . '_' . substr(md5(uniqid()), 0, 6),
-                'timestamp' => (int)(microtime(true) * 1000),
-                'location' => 'SanPhamApiController.php:231',
-                'message' => 'show() entry',
-                'data' => [
-                    'route' => 'san-pham.api.show',
-                    'id' => $id,
-                    'variant_id' => $requestedVariantId,
-                    'unit_id' => $requestedUnitId,
-                    'is_master' => $isMaster,
-                    'method' => request()->method(),
-                    'ip' => request()->ip(),
-                ],
-                'runId' => 'post-fix',
-                'hypothesisId' => 'H1',
-            ];
-            file_put_contents($logPath, json_encode($payload, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND | LOCK_EX);
-        } catch (\Throwable $logEx) {}
-        // #endregion
         \Log::info('[SanPhamApi show] id=' . $id . ' variant_id=' . ($requestedVariantId ?? 'null') . ' unit_id=' . ($requestedUnitId ?? 'null') . ' is_master=' . ($isMaster ? '1' : '0'));
 
         $product = Product::with([
@@ -295,52 +271,8 @@ class SanPhamApiController extends Controller
         }
 
         if (!$variant || !$variant->product) {
-            // #region agent log
-            try {
-                $logPath = base_path('debug-80bdd0.log');
-                $payload = [
-                    'sessionId' => '80bdd0',
-                    'id' => 'log_' . time() . '_' . substr(md5(uniqid()), 0, 6),
-                    'timestamp' => (int)(microtime(true) * 1000),
-                    'location' => 'SanPhamApiController.php:298',
-                    'message' => '404 not found',
-                    'data' => [
-                        'id' => $id,
-                        'variant_is_null' => $variant === null,
-                    ],
-                    'runId' => 'initial',
-                    'hypothesisId' => 'H9',
-                ];
-                file_put_contents($logPath, json_encode($payload, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND | LOCK_EX);
-            } catch (\Throwable $logEx) {}
-            // #endregion
             return response()->json(['success' => false, 'message' => 'San pham khong ton tai.'], 404);
         }
-
-        // #region agent log
-        try {
-            $logPath = base_path('debug-80bdd0.log');
-            $payload = [
-                'sessionId' => '80bdd0',
-                'id' => 'log_' . time() . '_' . substr(md5(uniqid()), 0, 6),
-                'timestamp' => (int)(microtime(true) * 1000),
-                'location' => 'SanPhamApiController.php:303',
-                'message' => 'variant resolved',
-                'data' => [
-                    'id' => $id,
-                    'variant_id' => $variant->id,
-                    'product_id' => $variant->product_id,
-                    'product_deleted_at' => $variant->product->deleted_at,
-                    'requested_variant_id' => $requestedVariantId,
-                    'requested_unit_id' => $requestedUnitId,
-                    'has_units' => $variant->units->count(),
-                ],
-                'runId' => 'initial',
-                'hypothesisId' => 'H10',
-            ];
-            file_put_contents($logPath, json_encode($payload, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND | LOCK_EX);
-        } catch (\Throwable $logEx) {}
-        // #endregion
 
         $theKho = DB::table('phieu')
             ->join('chi_tiet_phieu', 'phieu.id', '=', 'chi_tiet_phieu.id_phieu')
@@ -464,25 +396,6 @@ class SanPhamApiController extends Controller
             ])->all(),
         ]);
 
-        // #region agent log
-        try {
-            $logPath = base_path('debug-80bdd0.log');
-            $payload = [
-                'sessionId' => '80bdd0',
-                'id' => 'log_' . time() . '_' . substr(md5(uniqid()), 0, 6),
-                'timestamp' => (int)(microtime(true) * 1000),
-                'location' => 'SanPhamApiController.php:455',
-                'message' => 'returning success response',
-                'data' => [
-                    'id' => $id,
-                    'variant_id' => $variant->id,
-                ],
-                'runId' => 'initial',
-                'hypothesisId' => 'H11',
-            ];
-            file_put_contents($logPath, json_encode($payload, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND | LOCK_EX);
-        } catch (\Throwable $logEx) {}
-        // #endregion
         return response()->json([
             'success' => true,
             'data' => [

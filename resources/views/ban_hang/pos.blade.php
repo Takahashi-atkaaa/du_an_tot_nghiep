@@ -2013,6 +2013,9 @@ function addToCart(id) {
     hinh_anh: product.hinh_anh,
     qty: 1
 });
+        // #region agent log
+        fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'efdd04'},body:JSON.stringify({sessionId:'efdd04',location:'pos.blade.php:2015',message:'addToCart pushed item',data:{pushedItem:cart[cart.length-1],hasRowKey:!!cart[cart.length-1].row_key},hypothesisId:'H1',runId:'pre-fix',timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
     }
 
     renderCart();
@@ -2059,11 +2062,11 @@ function renderCart() {
                     <div class="item-price">${formatCurrency(gia)} / sản phẩm</div>
                 </div>
                 <div class="item-qty">
-                    <button type="button" class="qty-btn" aria-label="Giảm số lượng" onclick="updateQuantity(${item.id}, -1)">
+                    <button type="button" class="qty-btn" aria-label="Giảm số lượng" onclick="onQtyClick(event, ${item.id}, -1)">
                         <i class="fas fa-minus"></i>
                     </button>
                     <span class="qty-num">${item.qty}</span>
-                    <button type="button" class="qty-btn" aria-label="Tăng số lượng" onclick="updateQuantity(${item.id}, 1)">
+                    <button type="button" class="qty-btn" aria-label="Tăng số lượng" onclick="onQtyClick(event, ${item.id}, 1)">
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
@@ -2146,11 +2149,27 @@ function calculateTotal() {
 // ─────────────────────────────────────────────
 // Update Quantity
 // ─────────────────────────────────────────────
+function onQtyClick(event, id, change) {
+    const target = event && event.currentTarget;
+    const cs = target ? window.getComputedStyle(target) : null;
+    // #region agent log
+    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'efdd04'},body:JSON.stringify({sessionId:'efdd04',location:'pos.blade.php:2152',message:'qty button clicked',data:{id:id,change:change,pointerEvents:cs?cs.pointerEvents:null,visibility:cs?cs.visibility:null,display:cs?cs.display:null,disabled:target?target.disabled:null,isConnected:target?target.isConnected:null},hypothesisId:'H4',runId:'pre-fix',timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    updateQuantity(id, change);
+}
+
 function updateQuantity(rowKey, change) {
+    // #region agent log
+    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'efdd04'},body:JSON.stringify({sessionId:'efdd04',location:'pos.blade.php:2161',message:'updateQuantity called',data:{rowKey:rowKey,rowKeyType:typeof rowKey,change:change,cartCount:getCurrentCart().length,cartSample:getCurrentCart().slice(0,2).map(i=>({id:i.id,row_key:i.row_key,qty:i.qty}))},hypothesisId:'H1',runId:'pre-fix',timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     const cart = getCurrentCart();
     const item = cart.find(i => i.row_key === rowKey);
-    if (!item) return;
-
+    if (!item) {
+        // #region agent log
+        fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'efdd04'},body:JSON.stringify({sessionId:'efdd04',location:'pos.blade.php:2167',message:'ITEM NOT FOUND by row_key',data:{rowKey:rowKey,availableIds:cart.map(i=>({id:i.id,row_key:i.row_key}))},hypothesisId:'H1',runId:'pre-fix',timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        return;
+    }
     item.qty += change;
     if (item.qty <= 0) {
         removeFromCart(rowKey);
@@ -3300,62 +3319,5 @@ renderInvoiceTabs();
     </div>
 </div>
 
-<!-- #region agent log
-<script>
-(function () {
-    const ENDPOINT = 'http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2';
-    const SESSION  = '44ee82';
-    function send(hyp, loc, msg, data) {
-        try {
-            fetch(ENDPOINT, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': SESSION },
-                body: JSON.stringify({
-                    sessionId: SESSION,
-                    id: 'log_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-                    timestamp: Date.now(),
-                    location: loc,
-                    message: msg,
-                    data: data,
-                    runId: 'probe-ui',
-                    hypothesisId: hyp
-                })
-            }).catch(() => {});
-        } catch (e) {}
-    }
-
-    // Log chung các thao tác để biết user muốn sửa chỗ nào
-    document.addEventListener('click', function (e) {
-        const t = e.target;
-        const id  = t.id  || t.closest('[id]')?.id || '';
-        const cls = t.className || '';
-        const tag = t.tagName || '';
-        send('PROBE', 'pos:click', 'user click', { tag, id, cls: String(cls).slice(0, 80), text: (t.innerText || '').slice(0, 30) });
-    }, true);
-
-    document.addEventListener('input', function (e) {
-        const t = e.target;
-        send('PROBE', 'pos:input', 'user input', { id: t.id, name: t.name, value: String(t.value).slice(0, 40), readOnly: t.readOnly, disabled: t.disabled });
-    }, true);
-
-    document.addEventListener('change', function (e) {
-        const t = e.target;
-        send('PROBE', 'pos:change', 'user change', { id: t.id, name: t.name, value: String(t.value).slice(0, 40) });
-    }, true);
-
-    // Log các phần tử có vẻ "không thể thao tác" - readonly/disabled/pointer-events:none
-    setTimeout(function () {
-        const blocked = [];
-        document.querySelectorAll('input, select, textarea, button, [contenteditable]').forEach(function (el) {
-            const cs = getComputedStyle(el);
-            if (el.disabled || el.readOnly || cs.pointerEvents === 'none' || cs.display === 'none' || cs.visibility === 'hidden') {
-                blocked.push({ tag: el.tagName, id: el.id, name: el.name, type: el.type, disabled: el.disabled, readOnly: el.readOnly, pointerEvents: cs.pointerEvents });
-            }
-        });
-        send('PROBE', 'pos:scan-blocked', 'elements blocked or hidden', { count: blocked.length, sample: blocked.slice(0, 25) });
-    }, 1500);
-})();
-</script>
-<!-- #endregion agent log -->
 </body>
 </html>

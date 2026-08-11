@@ -184,10 +184,6 @@ public function donChoThanhToan(Request $request): \Illuminate\Http\JsonResponse
         ];
     });
 
-    // #region agent log
-    // instrumentation removed after successful verification
-    // #endregion agent log
-
     return response()->json([
         'success' => true,
         'data' => $data,
