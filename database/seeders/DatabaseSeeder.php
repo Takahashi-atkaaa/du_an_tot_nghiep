@@ -18,14 +18,11 @@ class DatabaseSeeder extends Seeder
             PhanQuyenSeeder::class,
             NhanSuSeeder::class,
 
-            // Nhom danh muc
+            // Nhom danh muc (DanhMucDonViSeeder, ThuocTinhSeeder da xoa - tao du lieu thu cong)
             KhachHangSeeder::class,
             NhaCungCapSeeder::class,
-            DanhMucDonViSeeder::class,
-            ThuocTinhSeeder::class,
 
-            // Nhom san pham & kho
-            SanPhamSeeder::class,
+            // Nhom san pham & kho (SanPhamSeeder da xoa - tao du lieu thu cong)
             KhoHangSeeder::class,
             DonViQuyDoiSeeder::class,
 

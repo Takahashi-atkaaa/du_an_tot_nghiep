@@ -34,7 +34,8 @@ class SanPhamController extends Controller
             ->with(['thuocTinhCons' => fn($q) => $q->where('trang_thai', true)->orderBy('ten_thuoc_tinh')])
             ->get();
 
-        $sanPhams = Product::with(['danhMuc', 'variants.units'])
+        $sanPhams = Product::with(['danhMuc', 'bienThe.units'])
+            ->withTongDaBan()
             ->whereNull('deleted_at')
             ->whereHas('variants', fn($q) => $q->whereNull('deleted_at'))
             ->when($keyword, fn($q) => $q
@@ -296,30 +297,12 @@ class SanPhamController extends Controller
                             ]);
                         }
                     }
-                    foreach ($unitsToCreate as $unit) {
-                        $uMaHang = !empty($unit['ma_hang']) ? $unit['ma_hang'] : $this->generateUniqueMaHang();
-                        DonViQuyDoi::create([
-                            'variant_id' => $createdVariant->id,
-                            'product_id' => $product->id,
-                            'don_vi_chuan_id' => $unit['don_vi_chuan_id'] ?? null,
-                            'ten_don_vi' => $unit['ten_don_vi'],
-                            'so_luong_san_pham_trong_don_vi' => (int)($unit['so_luong_san_pham_trong_don_vi'] ?? 1),
-                            'ma_hang' => $uMaHang,
-                            'ma_vach' => $unit['ma_vach'] ?? null,
-                            'gia_von_quy_doi' => $unit['gia_von_quy_doi'] ?? 0,
-                            'gia_ban_quy_doi' => $unit['gia_ban_quy_doi'] ?? 0,
-                            'gia_ban_si' => $unit['gia_ban_si'] ?? null,
-                            'hinh_anh' => $unit['hinh_anh'] ?? $variantImage,
-                            'la_don_vi_mac_dinh' => false,
-                        ]);
-                    }
                 }
             }
 
             return redirect()->back()->with('success', 'Đã thêm sản phẩm mới.');
-            });
+        });
         } catch (\Exception $e) {
-            DB::rollBack();
             \Log::error('Lỗi store sản phẩm: ' . $e->getMessage());
             return redirect()->back()->withInput()->withErrors(['general' => 'Lỗi: ' . $e->getMessage()]);
         }
