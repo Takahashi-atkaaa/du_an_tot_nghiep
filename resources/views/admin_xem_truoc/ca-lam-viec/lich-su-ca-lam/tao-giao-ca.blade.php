@@ -303,6 +303,18 @@
                                 value="{{ old('chenh_lech') }}">
                         </div>
 
+                        <div class="col-md-3 mt-3">
+                            <label class="form-label">
+                                Doanh thu chuyển khoản của ca
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                value="{{ number_format($tongTienChuyenKhoan, 0, ',', '.') }}"
+                                class="doanh_thu_chuyen_khoan"
+                                disabled>
+                        </div>
                     </div>
                 </div>
 

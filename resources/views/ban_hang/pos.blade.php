@@ -870,8 +870,8 @@ body {
 
 /* ===== POS CART REDESIGN: compact list + fixed checkout ===== */
 .pos-cart {
-    width: 390px;
-    min-width: 390px;
+    width: 50%;
+    min-width: 50%;
     height: calc(100vh - 86px);
     overflow: hidden;
 }
@@ -1093,8 +1093,8 @@ body {
 
 @media (max-width: 1200px) {
     .pos-cart {
-        width: 360px;
-        min-width: 360px;
+        width: 50%;
+        min-width: 50%;
     }
 }
 
@@ -2309,6 +2309,15 @@ function addToCart(id) {
             hinh_anh: product.hinh_anh,
             qty: 1
         });
+    ten_san_pham: product.ten_san_pham,
+    gia_ban: Number(product.gia_ban),
+    so_luong_ton_kho: Number(product.so_luong_ton_kho),
+    hinh_anh: product.hinh_anh,
+    qty: 1
+});
+        // #region agent log
+        fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'efdd04'},body:JSON.stringify({sessionId:'efdd04',location:'pos.blade.php:2015',message:'addToCart pushed item',data:{pushedItem:cart[cart.length-1],hasRowKey:!!cart[cart.length-1].row_key},hypothesisId:'H1',runId:'pre-fix',timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
     }
 
     renderCart();
@@ -2359,11 +2368,11 @@ function renderCart() {
                     <div class="item-price">${formatCurrency(gia)} / sản phẩm</div>
                 </div>
                 <div class="item-qty">
-                    <button type="button" class="qty-btn" aria-label="Giảm số lượng" onclick="updateQuantity(${item.id}, -1)">
+                    <button type="button" class="qty-btn" aria-label="Giảm số lượng" onclick="onQtyClick(event, ${item.id}, -1)">
                         <i class="fas fa-minus"></i>
                     </button>
                     <span class="qty-num">${item.qty}</span>
-                    <button type="button" class="qty-btn" aria-label="Tăng số lượng" onclick="updateQuantity(${item.id}, 1)">
+                    <button type="button" class="qty-btn" aria-label="Tăng số lượng" onclick="onQtyClick(event, ${item.id}, 1)">
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
@@ -2455,6 +2464,27 @@ function updateQuantity(id, change) {
 
     if (!item) return;
 
+function onQtyClick(event, id, change) {
+    const target = event && event.currentTarget;
+    const cs = target ? window.getComputedStyle(target) : null;
+    // #region agent log
+    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'efdd04'},body:JSON.stringify({sessionId:'efdd04',location:'pos.blade.php:2152',message:'qty button clicked',data:{id:id,change:change,pointerEvents:cs?cs.pointerEvents:null,visibility:cs?cs.visibility:null,display:cs?cs.display:null,disabled:target?target.disabled:null,isConnected:target?target.isConnected:null},hypothesisId:'H4',runId:'pre-fix',timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    updateQuantity(id, change);
+}
+
+function updateQuantity(rowKey, change) {
+    // #region agent log
+    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'efdd04'},body:JSON.stringify({sessionId:'efdd04',location:'pos.blade.php:2161',message:'updateQuantity called',data:{rowKey:rowKey,rowKeyType:typeof rowKey,change:change,cartCount:getCurrentCart().length,cartSample:getCurrentCart().slice(0,2).map(i=>({id:i.id,row_key:i.row_key,qty:i.qty}))},hypothesisId:'H1',runId:'pre-fix',timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    const cart = getCurrentCart();
+    const item = cart.find(i => i.row_key === rowKey);
+    if (!item) {
+        // #region agent log
+        fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'efdd04'},body:JSON.stringify({sessionId:'efdd04',location:'pos.blade.php:2167',message:'ITEM NOT FOUND by row_key',data:{rowKey:rowKey,availableIds:cart.map(i=>({id:i.id,row_key:i.row_key}))},hypothesisId:'H1',runId:'pre-fix',timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        return;
+    }
     item.qty += change;
 
     if (item.qty <= 0) {
@@ -3038,10 +3068,24 @@ function applySeller() {
     }
 }
 function tinhTienGiam() {
+    return tinhTienGiamDetail().discount;
+}
+
+/**
+ * Chi tiết tính tiền giảm và lý do nếu không giảm được.
+ * Trả về: { discount: number, reason: string|null }
+ *   - discount: số tiền được giảm (>=0)
+ *   - reason: null nếu áp dụng được, ngược lại là câu giải thích tiếng Việt.
+ */
+function tinhTienGiamDetail() {
     const cart = getCurrentCart();
 
-    if (!selectedPromotion || cart.length === 0) {
-        return 0;
+    if (!selectedPromotion) {
+        return { discount: 0, reason: null };
+    }
+
+    if (cart.length === 0) {
+        return { discount: 0, reason: 'Giỏ hàng đang trống.' };
     }
 
     // ID sản phẩm áp dụng toàn bộ biến thể
@@ -3063,6 +3107,11 @@ function tinhTienGiam() {
         applicableVariantIds.length === 0
     ) {
         return 0;
+    if (applicableProductIds.length === 0) {
+        return {
+            discount: 0,
+            reason: 'Khuyến mãi này hiện chưa gắn với sản phẩm nào.',
+        };
     }
 
     /*
@@ -3095,7 +3144,10 @@ function tinhTienGiam() {
     });
 
     if (applicableItems.length === 0) {
-        return 0;
+        return {
+            discount: 0,
+            reason: 'Khuyến mãi này không áp dụng cho sản phẩm hiện có trong giỏ.',
+        };
     }
 
     /*
@@ -3140,7 +3192,13 @@ function tinhTienGiam() {
     );
 
     if (wholeCartSubtotal < minOrder) {
-        return 0;
+        return {
+            discount: 0,
+            reason:
+                'Đơn hàng chưa đạt tối thiểu ' +
+                formatCurrency(minOrder) +
+                ' để áp dụng khuyến mãi.',
+        };
     }
 
     /*
@@ -3152,6 +3210,13 @@ function tinhTienGiam() {
         applicableQuantity < minQty
     ) {
         return 0;
+    if (minQty > 0 && applicableQuantity < minQty) {
+        return {
+            discount: 0,
+            reason:
+                'Cần tối thiểu ' + minQty +
+                ' sản phẩm áp dụng để dùng khuyến mãi.',
+        };
     }
 
     const type = String(
@@ -3231,10 +3296,15 @@ function tinhTienGiam() {
      * Không được giảm vượt quá tổng tiền
      * của sản phẩm được áp dụng.
      */
-    return Math.min(
+    const finalDiscount = Math.min(
         Math.max(0, discount),
         applicableSubtotal
     );
+
+    return {
+        discount: finalDiscount,
+        reason: finalDiscount > 0 ? null : 'Khuyến mãi không hợp lệ.',
+    };
 }
 function applyPromotion() {
     const id = document.getElementById('promotionSelect').value;
@@ -3245,7 +3315,15 @@ function applyPromotion() {
     renderCart();
     calculateTotal();
     calculateChange();
-} 
+
+    // Nếu vừa chọn 1 KM mới mà KM đó không giảm được → cảnh báo người dùng biết lý do.
+    if (selectedPromotion) {
+        const detail = tinhTienGiamDetail();
+        if (detail.reason) {
+            showToast('Khuyến mãi chưa áp dụng được: ' + detail.reason, 'error');
+        }
+    }
+}
 
 async function handleSearchEnter(event) {
     if (event.key !== 'Enter') return;
@@ -3622,5 +3700,6 @@ renderInvoiceTabs();
         </div>
     </div>
 </div>
+
 </body>
 </html>

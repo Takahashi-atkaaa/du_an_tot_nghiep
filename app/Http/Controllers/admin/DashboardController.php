@@ -11,15 +11,23 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $selectedDate = $request->filled('ngay')
-            ? Carbon::parse($request->ngay)->toDateString()
-            : Carbon::today()->toDateString();
+        $selectedStartDate = $request->filled('tu_ngay')
+            ? Carbon::parse($request->tu_ngay)->toDateString()
+            : ($request->filled('ngay') ? Carbon::parse($request->ngay)->toDateString() : Carbon::today()->toDateString());
 
-        $dayStart = Carbon::parse($selectedDate)->startOfDay();
-        $dayEnd = Carbon::parse($selectedDate)->endOfDay();
+        $selectedEndDate = $request->filled('den_ngay')
+            ? Carbon::parse($request->den_ngay)->toDateString()
+            : ($request->filled('ngay') ? Carbon::parse($request->ngay)->toDateString() : Carbon::today()->toDateString());
+
+        $rangeStart = Carbon::parse($selectedStartDate)->startOfDay();
+        $rangeEnd = Carbon::parse($selectedEndDate)->endOfDay();
+
+        if ($rangeStart->gt($rangeEnd)) {
+            [$rangeStart, $rangeEnd] = [$rangeEnd, $rangeStart];
+        }
 
         $ordersQuery = DB::table('hoa_don')
-            ->whereBetween('created_at', [$dayStart, $dayEnd]);
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd]);
 
         $completedOrdersQuery = (clone $ordersQuery)
             ->where('trang_thai', 'Hoàn thành');
@@ -35,7 +43,7 @@ class DashboardController extends Controller
 
         $productsSold = DB::table('chi_tiet_hoa_don')
             ->join('hoa_don', 'chi_tiet_hoa_don.id_hoa_don', '=', 'hoa_don.id')
-            ->whereBetween('hoa_don.created_at', [$dayStart, $dayEnd])
+            ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
             ->where('hoa_don.trang_thai', 'Hoàn thành')
             ->sum('chi_tiet_hoa_don.so_luong');
 
@@ -46,8 +54,8 @@ class DashboardController extends Controller
 
         $newCustomerCount = DB::table('hoa_don')
             ->join('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
-            ->whereBetween('hoa_don.created_at', [$dayStart, $dayEnd])
-            ->whereDate('khach_hang.created_at', $selectedDate)
+            ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
+            ->whereBetween('khach_hang.created_at', [$rangeStart, $rangeEnd])
             ->distinct('khach_hang.id')
             ->count('khach_hang.id');
 
@@ -66,7 +74,7 @@ class DashboardController extends Controller
 
         $last3DaysStats = [];
         for ($i = 2; $i >= 0; $i--) {
-            $date = Carbon::parse($selectedDate)->subDays($i)->toDateString();
+            $date = Carbon::parse($rangeEnd)->subDays($i)->toDateString();
             $dayQuery = DB::table('hoa_don')->whereDate('created_at', $date);
             $last3DaysStats[] = [
                 'date' => $date,
@@ -122,7 +130,7 @@ class DashboardController extends Controller
         $topProductsSold = DB::table('chi_tiet_hoa_don')
             ->join('hoa_don', 'chi_tiet_hoa_don.id_hoa_don', '=', 'hoa_don.id')
             ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
-            ->whereBetween('hoa_don.created_at', [$dayStart, $dayEnd])
+            ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
             ->where('hoa_don.trang_thai', 'Hoàn thành')
             ->groupBy('san_pham.id', 'san_pham.ten_san_pham')
             ->select(
@@ -138,7 +146,7 @@ class DashboardController extends Controller
         $topProductsSlow = DB::table('chi_tiet_hoa_don')
             ->join('hoa_don', 'chi_tiet_hoa_don.id_hoa_don', '=', 'hoa_don.id')
             ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
-            ->whereBetween('hoa_don.created_at', [$dayStart, $dayEnd])
+            ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
             ->where('hoa_don.trang_thai', 'Hoàn thành')
             ->groupBy('san_pham.id', 'san_pham.ten_san_pham')
             ->select(
@@ -153,7 +161,7 @@ class DashboardController extends Controller
 
         $topCustomers = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
-            ->whereBetween('hoa_don.created_at', [$dayStart, $dayEnd])
+            ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
             ->where('hoa_don.trang_thai', 'Hoàn thành')
             ->groupBy('hoa_don.id_khach_hang', 'khach_hang.ten_khach_hang')
             ->select(
@@ -168,7 +176,7 @@ class DashboardController extends Controller
 
         $staffPerformance = DB::table('hoa_don')
             ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
-            ->whereBetween('hoa_don.created_at', [$dayStart, $dayEnd])
+            ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
             ->where('hoa_don.trang_thai', 'Hoàn thành')
             ->groupBy('hoa_don.id_nguoi_dung', 'nguoi_dung.ho_ten')
             ->select(
@@ -191,13 +199,17 @@ class DashboardController extends Controller
                 'nguoi_dung.ho_ten as ten_nhan_vien',
                 'ca_lam_viec.ten_ca as ten_ca'
             )
-            ->whereBetween('hoa_don.created_at', [$dayStart, $dayEnd])
+            ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
             ->orderByDesc('hoa_don.created_at')
             ->paginate(10)
             ->withQueryString();
 
+        $rangeLabel = $rangeStart->toDateString() === $rangeEnd->toDateString()
+            ? Carbon::parse($rangeStart)->format('d/m/Y')
+            : Carbon::parse($rangeStart)->format('d/m/Y') . ' - ' . Carbon::parse($rangeEnd)->format('d/m/Y');
+
         $dailyStats = [
-            'date' => Carbon::parse($selectedDate)->format('d/m/Y'),
+            'range_label' => $rangeLabel,
             'revenue' => (float) $dailyRevenue,
             'total_orders' => $totalOrders,
             'completed_orders' => $completedOrders,
@@ -212,7 +224,8 @@ class DashboardController extends Controller
         ];
 
         return view('admin_xem_truoc.dashboard', compact(
-            'selectedDate',
+            'selectedStartDate',
+            'selectedEndDate',
             'dailyStats',
             'paymentBreakdown',
             'hourLabels',

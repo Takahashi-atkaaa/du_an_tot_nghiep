@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Product extends BaseModel
 {
@@ -31,6 +32,41 @@ class Product extends BaseModel
     public function variants()
     {
         return $this->hasMany(BienTheSanPham::class, 'product_id');
+    }
+
+    // Alias cho variants() để tương thích với code cũ dùng bienThe
+    public function bienThe()
+    {
+        return $this->hasMany(BienTheSanPham::class, 'product_id');
+    }
+
+    /**
+     * Chi tiết hóa đơn thuộc về sản phẩm này (qua FK id_san_pham).
+     * Dùng để tính tổng số lượng đã bán (withSum) hoặc truy vấn thống kê.
+     */
+    public function chiTietHoaDons()
+    {
+        return $this->hasMany(ChiTietHoaDon::class, 'id_san_pham');
+    }
+
+    /**
+     * Scope: thêm cột tong_da_ban = SUM(so_luong) của các chi tiết hóa đơn
+     * mà hóa đơn CHA có trang_thai = 'Hoàn thành'.
+     *
+     * Lưu ý: Dùng subquery (không join) để tránh nhân bản dòng khi paginate.
+     * Dùng DB::table với alias thủ công vì Eloquent Model::query()->join() không
+     * giữ alias trong FROM clause, gây lỗi "Unknown column 'cth.so_luong'".
+     */
+    public function scopeWithTongDaBan($query)
+    {
+        return $query->addSelect([
+            'tong_da_ban' => DB::table('chi_tiet_hoa_don as cth')
+                ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
+                ->whereColumn('cth.id_san_pham', 'san_pham.id')
+                ->where('hd.trang_thai', 'Hoàn thành')
+                ->whereNull('hd.deleted_at')
+                ->selectRaw('COALESCE(SUM(cth.so_luong), 0)'),
+        ]);
     }
 
     // ============================================================
@@ -98,8 +134,9 @@ class Product extends BaseModel
     {
         $rows = collect();
 
-        // Load tất cả variants trước (đã eager load units ở controller index)
-        $variants = $this->variants()->get();
+        // Load tất cả variants từ eager loaded relationship (bienThe.units)
+        // Dùng bienThe (đã eager load units) thay vì variants() để tránh re-query
+        $variants = $this->bienThe;
 
         // Tập tên các đơn vị quy đổi (DonViQuyDoi) để phân biệt với đơn vị cơ bản.
         $conversionNames = [];
@@ -321,6 +358,7 @@ class Product extends BaseModel
                 'ma_vach' => $u->ma_vach,
                 'la_don_vi_mac_dinh' => $u->la_don_vi_mac_dinh,
                 'don_vi_chuan_id' => $u->don_vi_chuan_id,
+                'hinh_anh' => $u->hinh_anh,
             ])->all();
             $variantsArr[] = [
                 'id' => $v->id,

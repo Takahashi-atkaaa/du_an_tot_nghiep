@@ -158,6 +158,7 @@ Route::middleware([KTVaiTro::class])->group(function () {
 
     // API - phải đặt TRƯỚC san-pham/{id} để tránh bị match nhầm (KHÔNG bị chặn bởi KTVaiTro)
     Route::get('/admin/api/san-pham', [SanPhamApiController::class, 'index']);
+    Route::get('/admin/api/san-pham/{id}/thong-ke', [SanPhamApiController::class, 'thongKe']);
     Route::get('/admin/api/san-pham/{id}', [SanPhamApiController::class, 'show']);
     Route::delete('/admin/api/san-pham/variant/{id}', [SanPhamApiController::class, 'destroyVariant']);
     Route::delete('/admin/api/san-pham/{id}/variants', [SanPhamApiController::class, 'destroyAllVariants']);
@@ -218,7 +219,7 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::post('/admin/san-pham/import', [SanPhamController::class, 'import'])->middleware('permission:them_san_pham');
     Route::post('/admin/san-pham/{id}/restore', [SanPhamController::class, 'restore'])->middleware('permission:xoa_san_pham');
     Route::delete('/admin/san-pham/{id}/force', [SanPhamController::class, 'forceDelete'])->middleware('permission:xoa_san_pham');
-    Route::get('/admin/san-pham/{id}/edit', [SanPhamController::class, 'edit'])->middleware('permission:sua_san_pham');
+    Route::get('/admin/san-pham/{id}/edit', [SanPhamController::class, 'edit'])->middleware('permission:sua_san_pham')->name('san-pham.edit');
     Route::put('/admin/san-pham/{id}', [SanPhamController::class, 'update'])->middleware('permission:sua_san_pham');
     Route::delete('/admin/san-pham/{id}', [SanPhamController::class, 'destroy'])->middleware('permission:xoa_san_pham');
     Route::get('/admin/san-pham/{id}', [SanPhamController::class, 'show'])->middleware('permission:xem_san_pham');
@@ -305,6 +306,8 @@ Route::middleware([KTVaiTro::class])->group(function () {
         Route::get('/chi-tiet-hoa-don/{id_hoadon}',[CaLam::class, 'show'])->name('chi-tiet-hoa-don.show')->middleware('permission:quan_ly_ca_lam');
         //lịch sử ca làm
         Route::get('/lich-su-ca-lam-viec',[LichSuCaLam::class, 'index'])->name('lich-su-ca-lam-viec.index')->middleware('permission:quan_ly_ca_lam');
+        Route::get('/cac-hoa-don-cua-ca-hoan-thanh/{ngay}/{id_ca}',[LichSuCaLam::class, 'hoa_don_cua_ca_hoan_thanh'])->name('hoa-don-cua-ca.hoan-thanh')->middleware('permission:quan_ly_ca_lam');
+        Route::get('/cac-hoa-don-cua-ca-huy/{ngay}/{id_ca}',[LichSuCaLam::class, 'hoa_don_cua_ca_huy'])->name('hoa-don-cua-ca.huy')->middleware('permission:quan_ly_ca_lam');
         // Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}',[LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:quan_ly_ca_lam');
         Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}/{id_ca?}',[LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:quan_ly_ca_lam');
 

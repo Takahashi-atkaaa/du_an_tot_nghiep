@@ -524,7 +524,10 @@ function taiSanPhamNhap() {
 
 function taiNhaCungCapNhap() {
     $.get('/admin/api/lo-hang/nha-cung-cap', res => {
-        const opts = res.map(n => `<option value="${n.id}">${n.ten_nha_cung_cap}</option>`).join('');
+        // API /admin/api/lo-hang/nha-cung-cap trả về {success, data: [...]};
+        // các nơi khác đôi khi chỉ trả mảng — chuẩn hoá về mảng trước khi .map()
+        const list = Array.isArray(res) ? res : (res?.data || []);
+        const opts = list.map(n => `<option value="${n.id}">${n.ten_nha_cung_cap}</option>`).join('');
         $('#pn-id-ncc').html('<option value="">-- Chọn NCC --</option>' + opts);
         $('#sua-pn-ncc').html('<option value="">-- Chọn NCC --</option>' + opts);
     });

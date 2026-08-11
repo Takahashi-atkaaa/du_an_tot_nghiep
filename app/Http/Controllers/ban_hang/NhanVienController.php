@@ -184,10 +184,6 @@ public function donChoThanhToan(Request $request): \Illuminate\Http\JsonResponse
         ];
     });
 
-    // #region agent log
-    // instrumentation removed after successful verification
-    // #endregion agent log
-
     return response()->json([
         'success' => true,
         'data' => $data,
@@ -919,7 +915,21 @@ public function hoaDon(Request $request)
             ->where('chi_tiet_hoa_don.id_hoa_don', $id)
             ->get();
 
-        return view('ban_hang.hoa-don.chi-tiet', compact('hoaDon', 'chiTiet'))
+        $return_invoice_id = session('return_invoice_id');
+        $phieuDoiTra = null;
+        if ($return_invoice_id) {
+            $phieuDoiTra = DB::table('phieu')->where('id', $return_invoice_id)->first();
+            if ($phieuDoiTra) {
+                $phieuDoiTra->chi_tiet = DB::table('chi_tiet_phieu')
+                    ->join('san_pham', 'chi_tiet_phieu.id_san_pham', '=', 'san_pham.id')
+                    ->leftJoin('bien_the_san_pham', 'chi_tiet_phieu.variant_id', '=', 'bien_the_san_pham.id')
+                    ->select('chi_tiet_phieu.*', 'san_pham.ten_san_pham', 'bien_the_san_pham.ten_bien_the', 'bien_the_san_pham.ten_don_vi')
+                    ->where('id_phieu', $return_invoice_id)
+                    ->get();
+            }
+        }
+
+        return view('ban_hang.hoa-don.chi-tiet', compact('hoaDon', 'chiTiet', 'phieuDoiTra'))
             ->with('auto_print', request()->boolean('print'));
     }
 
@@ -981,7 +991,10 @@ public function hoaDon(Request $request)
                 return $redirect->with('error', session('error'));
             }
             if (session()->has('message')) {
-                return $redirect->with('message', session('message'));
+                $redirect->with('message', session('message'));
+            }
+            if (session()->has('return_invoice_id')) {
+                $redirect->with('return_invoice_id', session('return_invoice_id'));
             }
             return $redirect;
         }

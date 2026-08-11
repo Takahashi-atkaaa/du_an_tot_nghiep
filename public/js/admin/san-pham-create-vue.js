@@ -829,6 +829,7 @@
 
                 const bienThe = gridData.value.map((row, i) => {
                     const idField = row.existingId ? { id: row.existingId } : {};
+                    const isBase = row.isBase === true;
 
                     // Dùng savedUnits (reference gốc từ initFromProduct, không bị debouncedRegen overwrite)
                     // Lọc ra các đơn vị QUY ĐỔI (so_luong_san_pham_trong_don_vi > 1) thuộc dòng này

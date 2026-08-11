@@ -74,10 +74,14 @@ class SanPhamApiController extends Controller
                         'id' => $u->id,
                         'ten_don_vi' => $u->ten_don_vi,
                         'so_luong_san_pham_trong_don_vi' => $u->so_luong_san_pham_trong_don_vi,
+                        'ty_le_quy_doi' => $u->so_luong_san_pham_trong_don_vi,
                         'gia_von_quy_doi' => $u->gia_von_quy_doi,
                         'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
+                        'gia_ban_si' => $u->gia_ban_si,
                         'ma_hang' => $u->ma_hang,
                         'ma_vach' => $u->ma_vach,
+                        'hinh_anh' => $u->hinh_anh,
+                        'so_luong_ton' => $u->so_luong_ton,
                     ])->all(),
                 ];
             }
@@ -99,6 +103,124 @@ class SanPhamApiController extends Controller
             'success' => true,
             'data' => $dataArray,
             'danh_muc_list' => DanhMucSanPham::orderBy('ten_danh_muc')->get(['id', 'ten_danh_muc'])->toArray(),
+        ]);
+    }
+
+    public function thongKe(int $id): JsonResponse
+    {
+        $product = Product::with(['danhMuc', 'variants'])->find($id);
+        if (!$product) {
+            return response()->json(['success' => false, 'message' => 'Sản phẩm không tồn tại.'], 404);
+        }
+
+        $days = (int) request()->query('days', 30);
+        $days = $days > 0 ? min($days, 365) : 30;
+        $to = now()->endOfDay();
+        $from = now()->subDays($days - 1)->startOfDay();
+
+        $baseQuery = DB::table('chi_tiet_hoa_don as cth')
+            ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
+            ->where('cth.id_san_pham', $product->id)
+            ->where('hd.trang_thai', 'Hoàn thành');
+
+        $summary = (clone $baseQuery)
+            ->whereBetween('hd.created_at', [$from, $to])
+            ->selectRaw('COALESCE(SUM(cth.so_luong), 0) as total_quantity')
+            ->selectRaw('COALESCE(SUM(cth.thanh_tien), 0) as total_revenue')
+            ->selectRaw('COUNT(DISTINCT cth.id_hoa_don) as total_orders')
+            ->first();
+
+        $dailySales = (clone $baseQuery)
+            ->whereBetween('hd.created_at', [$from, $to])
+            ->selectRaw('DATE(hd.created_at) as date')
+            ->selectRaw('COALESCE(SUM(cth.so_luong), 0) as quantity')
+            ->selectRaw('COALESCE(SUM(cth.thanh_tien), 0) as revenue')
+            ->groupByRaw('DATE(hd.created_at)')
+            ->orderBy('date')
+            ->get()
+            ->keyBy('date');
+
+        $salesByDay = [];
+        for ($i = 0; $i < $days; $i++) {
+            $date = $from->copy()->addDays($i)->toDateString();
+            $row = $dailySales->get($date);
+            $salesByDay[] = [
+                'date' => $date,
+                'quantity' => (int) ($row->quantity ?? 0),
+                'revenue' => (float) ($row->revenue ?? 0),
+            ];
+        }
+
+        $topVariants = (clone $baseQuery)
+            ->leftJoin('bien_the_san_pham as v', 'cth.id_chi_tiet_phieu', '=', 'v.id')
+            ->whereBetween('hd.created_at', [$from, $to])
+            ->selectRaw('COALESCE(cth.id_chi_tiet_phieu, 0) as variant_id')
+            ->selectRaw('COALESCE(v.ten_bien_the, v.ten_don_vi, ?) as variant_name', [$product->ten_san_pham])
+            ->selectRaw('COALESCE(SUM(cth.so_luong), 0) as quantity')
+            ->selectRaw('COALESCE(SUM(cth.thanh_tien), 0) as revenue')
+            ->groupBy('cth.id_chi_tiet_phieu', 'variant_name')
+            ->orderByDesc('quantity')
+            ->limit(5)
+            ->get()
+            ->map(fn($row) => [
+                'variant_id' => $row->variant_id,
+                'variant_name' => $row->variant_name,
+                'quantity' => (int) $row->quantity,
+                'revenue' => (float) $row->revenue,
+            ])->values()->all();
+
+        $recentOrders = DB::table('chi_tiet_hoa_don as cth')
+            ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
+            ->leftJoin('khach_hang as kh', 'hd.id_khach_hang', '=', 'kh.id')
+            ->where('cth.id_san_pham', $product->id)
+            ->where('hd.trang_thai', 'Hoàn thành')
+            ->whereBetween('hd.created_at', [$from, $to])
+            ->selectRaw('cth.id_hoa_don as order_id')
+            ->selectRaw("CONCAT('#', hd.id) as ma_hoa_don")
+            ->selectRaw('hd.created_at as order_date')
+            ->selectRaw('cth.so_luong as quantity')
+            ->selectRaw('cth.thanh_tien as revenue')
+            ->selectRaw('kh.ten_khach_hang as customer_name')
+            ->orderByDesc('hd.created_at')
+            ->limit(5)
+            ->get()
+            ->map(fn($row) => [
+                'order_id' => $row->order_id,
+                'ma_hoa_don' => $row->ma_hoa_don,
+                'order_date' => $row->order_date,
+                'quantity' => (int) $row->quantity,
+                'revenue' => (float) $row->revenue,
+                'customer_name' => $row->customer_name,
+            ])->values()->all();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'product' => [
+                    'id' => $product->id,
+                    'ten_san_pham' => $product->ten_san_pham,
+                    'danh_muc' => $product->danhMuc ? [
+                        'id' => $product->danhMuc->id,
+                        'ten_danh_muc' => $product->danhMuc->ten_danh_muc,
+                    ] : null,
+                    'tong_ton_kho' => $product->variants->sum('so_luong_ton'),
+                    'bien_the_count' => $product->variants->count(),
+                ],
+                'summary' => [
+                    'from' => $from->toDateString(),
+                    'to' => $to->toDateString(),
+                    'days' => $days,
+                    'total_orders' => (int) $summary->total_orders,
+                    'total_quantity' => (int) $summary->total_quantity,
+                    'total_revenue' => (float) $summary->total_revenue,
+                    'average_price' => $summary->total_quantity > 0
+                        ? round($summary->total_revenue / $summary->total_quantity, 2)
+                        : 0,
+                ],
+                'sales_by_day' => $salesByDay,
+                'top_variants' => $topVariants,
+                'recent_orders' => $recentOrders,
+            ],
         ]);
     }
 
@@ -232,6 +354,7 @@ class SanPhamApiController extends Controller
 
         // Tạo bienThe[] với thuocTinhs từ accessor cho JS drawer
         // Lưu ý: thuocTinhs là accessor, KHÔNG gọi load() được
+        // BAO GỒM cả units (đơn vị quy đổi)
         $bienTheArr = [];
         foreach ($variant->product->variants as $v) {
             $bienTheArr[] = [
@@ -247,6 +370,17 @@ class SanPhamApiController extends Controller
                 'thuoc_tinhs' => $v->thuocTinhs->map(fn($tt) => [
                     'id' => $tt->id,
                     'ten_thuoc_tinh' => $tt->ten_thuoc_tinh,
+                ])->all(),
+                // Đơn vị quy đổi - BẮT BUỘC để frontend hiển thị trong Tab Biến thể
+                'units' => $v->units->map(fn($u) => [
+                    'id' => $u->id,
+                    'ten_don_vi' => $u->ten_don_vi,
+                    'so_luong_san_pham_trong_don_vi' => $u->so_luong_san_pham_trong_don_vi,
+                    'gia_von_quy_doi' => $u->gia_von_quy_doi,
+                    'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
+                    'gia_ban_si' => $u->gia_ban_si,
+                    'ma_hang' => $u->ma_hang,
+                    'ma_vach' => $u->ma_vach,
                 ])->all(),
             ];
         }
@@ -279,7 +413,19 @@ class SanPhamApiController extends Controller
                 'bienThe' => $bienTheArr,
                 'selectedUnit' => $selectedUnit?->toArray(),
                 'allVariants' => $variant->product->variants->toArray(),
-                'units' => $variant->units->toArray(),
+                'units' => $variant->units->map(fn($u) => [
+                    'id' => $u->id,
+                    'ten_don_vi' => $u->ten_don_vi,
+                    'so_luong_san_pham_trong_don_vi' => $u->so_luong_san_pham_trong_don_vi,
+                    'ty_le_quy_doi' => $u->so_luong_san_pham_trong_don_vi,
+                    'gia_von_quy_doi' => $u->gia_von_quy_doi,
+                    'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
+                    'gia_ban_si' => $u->gia_ban_si,
+                    'ma_hang' => $u->ma_hang,
+                    'ma_vach' => $u->ma_vach,
+                    'hinh_anh' => $u->hinh_anh,
+                    'so_luong_ton' => $u->so_luong_ton,
+                ])->toArray(),
                 'theKho' => $theKho,
                 'loHang' => $loHang,
                 'masterSummary' => $masterSummary,

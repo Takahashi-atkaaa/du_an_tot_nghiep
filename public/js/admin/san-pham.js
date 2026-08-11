@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // SAN-PHAM: Toggle section (shared with index + edit pages)
 // ============================================================
 function toggleSection(headerEl) {
@@ -67,113 +67,31 @@ function toggleSection(headerEl) {
         if (bulkActionInput) bulkActionInput.value = action;
         if (bulkActionForm) bulkActionForm.submit();
     };
-})();
-
-// ============================================================
-// QR SCANNER (san-pham index)
-// ============================================================
-(function() {
-    var startQrScanBtn = document.getElementById('startQrScanBtn');
-    var stopQrScanBtn = document.getElementById('stopQrScanBtn');
-    var qrScannerModal = document.getElementById('qrScannerModal');
-    var searchKeywordInput = document.getElementById('searchKeywordInput');
-    var qrScannerElementId = 'qrScanner';
-    var html5QrCode = null;
-    var qrScannerActive = false;
-
-    window.startQrScanner = function() {
-        if (qrScannerActive) return;
-
-        html5QrCode = new Html5Qrcode(qrScannerElementId);
-        var config = { fps: 10, qrbox: 250 };
-
-        Html5Qrcode.getCameras().then(function(cameras) {
-            if (cameras && cameras.length) {
-                var cameraId = cameras[0].id;
-                html5QrCode.start(cameraId, config, function(qrCodeMessage) {
-                    if (searchKeywordInput) {
-                        searchKeywordInput.value = qrCodeMessage;
-                    }
-                    var modalInstance = bootstrap.Modal.getInstance(qrScannerModal);
-                    if (modalInstance) modalInstance.hide();
-                    window.stopQrScanner();
-                    var form = document.querySelector('form[action*="admin/san-pham"]');
-                    if (form) form.submit();
-                }, function(errorMessage) {
-                    console.debug('QR scan error', errorMessage);
-                }).then(function() {
-                    qrScannerActive = true;
-                }).catch(function(err) {
-                    console.error('Không thể khởi động QR scanner', err);
-                    alert('Không thể khởi động camera để quét mã vạch. Vui lòng kiểm tra quyền truy cập camera.');
-                });
-            } else {
-                alert('Không tìm thấy camera phù hợp để quét mã vạch.');
-            }
-        }).catch(function(err) {
-            console.error('Lỗi lấy camera', err);
-            alert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập thiết bị.');
-        });
-    };
-
-    window.stopQrScanner = function() {
-        if (!qrScannerActive || !html5QrCode) return;
-        html5QrCode.stop().then(function() {
-            html5QrCode.clear();
-            qrScannerActive = false;
-        }).catch(function(err) {
-            console.error('Lỗi dừng QR scanner', err);
-        });
-    };
-
-    if (startQrScanBtn) {
-        startQrScanBtn.addEventListener('click', function() {
-            var modal = new bootstrap.Modal(qrScannerModal);
-            modal.show();
-            window.startQrScanner();
-        });
-    }
-
-    if (stopQrScanBtn) {
-        stopQrScanBtn.addEventListener('click', function() {
-            var modal = bootstrap.Modal.getInstance(qrScannerModal);
-            if (modal) modal.hide();
-            window.stopQrScanner();
-        });
-    }
-
-    if (qrScannerModal) {
-        qrScannerModal.addEventListener('hidden.bs.modal', function() {
-            window.stopQrScanner();
-        });
-    }
-})();
-
-// ============================================================
-// PRODUCT DETAIL DRAWER (san-pham index)
-// ============================================================
-(function() {
-    var drawer = document.getElementById('productDetailDrawer');
-    var drawerBody = document.getElementById('drawerBody');
-    var drawerEditBtn = document.getElementById('drawerEditBtn');
-
-    var _drawerController = null;
-    var _drawerRequestId = 0;
 
     window.toggleVariants = function(productId) {
         var btn = document.getElementById('expandBtn' + productId);
-        var rows = document.querySelectorAll('[id^="variantRow' + productId + '_"]');
-        var isExpanded = btn && btn.classList.contains('expanded');
+        var detailRow = document.getElementById('productDetailRow' + productId);
+        var isExpanded = false;
+
+        if (btn && btn.classList.contains('expanded')) {
+            isExpanded = true;
+        } else if (detailRow) {
+            var detailDisplay = window.getComputedStyle(detailRow).display;
+            isExpanded = detailDisplay !== 'none';
+        }
 
         if (isExpanded) {
-            rows.forEach(function(row) { row.style.display = 'none'; });
+            if (detailRow) detailRow.style.display = 'none';
             if (btn) {
                 btn.classList.remove('expanded');
                 var icon = btn.querySelector('i');
                 if (icon) icon.style.transform = '';
             }
         } else {
-            rows.forEach(function(row) { row.style.display = ''; });
+            if (detailRow) {
+                detailRow.style.display = '';
+                window.loadProductStats && window.loadProductStats(productId);
+            }
             if (btn) {
                 btn.classList.add('expanded');
                 var icon = btn.querySelector('i');
@@ -181,425 +99,544 @@ function toggleSection(headerEl) {
             }
         }
     };
+})();
 
-    var productTableBody = document.getElementById('productTableBody');
-    if (productTableBody) {
-        productTableBody.addEventListener('click', function(e) {
-            var row = e.target.closest('.product-parent-row, .variant-child-row, .unit-child-row, tr[data-id]');
-            if (!row) return;
-            var productId = row.dataset.productId || row.dataset.id;
-            var targetId = row.dataset.targetId || row.dataset.variantId || productId;
-            var rowType = row.dataset.rowType || 'goc';
-            var unitId = row.dataset.unitId || '';
-            var isMaster = row.dataset.isMaster || '0';
-            if (productId) window.openProductDrawer(productId, targetId, rowType, unitId, isMaster);
-        });
-    }
+    function buildStatsHtml(data) {
+        var product = data.product || {};
+        var summary = data.summary || {};
+        var topVariants = data.top_variants || [];
+        var recentOrders = data.recent_orders || [];
 
-    window.openProductDrawer = async function(productId, targetId, rowType, unitId, isMaster) {
-        if (targetId === undefined) { targetId = productId; rowType = 'goc'; }
-        if (isMaster === undefined) { isMaster = '0'; }
-        console.log('[Drawer] openProductDrawer called', { productId, targetId, rowType, unitId, isMaster });
+        var rangeLabel = '30 ngày';
+        if (summary.from && summary.to) {
+            rangeLabel = summary.from === summary.to ? summary.from : summary.from + ' - ' + summary.to;
+        }
 
-        var modal = new bootstrap.Offcanvas(drawer);
-        drawerBody.innerHTML = '<div class="d-flex justify-content-center align-items-center" style="min-height:300px;">' +
-            '<div class="text-center">' +
-                '<div class="spinner-border text-primary mb-3" role="status"></div>' +
-                '<p class="text-muted mb-0">Đang tải...</p>' +
+        // Tính toán "Giá trị tồn kho" = Tồn kho * Giá vốn (data.summary.inventory_value)
+        // Fallback: nếu backend chưa trả, dùng tổng tồn kho * 70% giá bán trung bình
+        var inventoryValue = summary.inventory_value;
+        if (inventoryValue === undefined || inventoryValue === null) {
+            var approxCost = Math.round((summary.average_price || 0) * 0.7);
+            inventoryValue = (product.tong_ton_kho || 0) * approxCost;
+        }
+
+        // ============================================================
+        // YÊU CẦU 2: 4 Thẻ Thống Kê (Top Cards) - Text-left, có icon SVG
+        // ============================================================
+        var cardsHtml = '<div class="row g-3 mb-3 stats-cards-row">';
+
+        // Card 1: Đơn hàng (Shopping Bag icon)
+        cardsHtml += '<div class="col-md-3 col-sm-6">' +
+            '<div class="stat-card text-left shadow-sm">' +
+                '<div class="stat-card-icon stat-icon-blue">' +
+                    // Heroicons: shopping-bag
+                    '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" width="22" height="22">' +
+                        '<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />' +
+                    '</svg>' +
+                '</div>' +
+                '<div class="stat-card-label">Đơn hàng</div>' +
+                '<div class="stat-card-value">' + (summary.total_orders ?? 0) + '</div>' +
             '</div>' +
         '</div>';
-        if (drawerEditBtn) drawerEditBtn.href = '/admin/san-pham/' + productId + '/edit';
-        window.currentDrawerProductId = productId;
-        modal.show();
 
-        // Abort any in-flight request before starting a new one
-        if (_drawerController) _drawerController.abort();
-        _drawerController = new AbortController();
-        var myRequestId = ++_drawerRequestId;
+        // Card 2: Số lượng bán (Cube icon)
+        cardsHtml += '<div class="col-md-3 col-sm-6">' +
+            '<div class="stat-card text-left shadow-sm">' +
+                '<div class="stat-card-icon stat-icon-orange">' +
+                    // Heroicons: cube
+                    '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" width="22" height="22">' +
+                        '<path stroke-linecap="round" stroke-linejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />' +
+                    '</svg>' +
+                '</div>' +
+                '<div class="stat-card-label">Số lượng bán</div>' +
+                '<div class="stat-card-value">' + (summary.total_quantity ?? 0) + '</div>' +
+            '</div>' +
+        '</div>';
 
-        try {
-            var apiUrl = '/admin/api/san-pham/' + productId;
-            var queryParts = [];
-            if (targetId && String(targetId) !== String(productId)) {
-                queryParts.push('variant_id=' + encodeURIComponent(targetId));
-            }
-            if (unitId) {
-                queryParts.push('unit_id=' + encodeURIComponent(unitId));
-            }
-            if (isMaster === '1') {
-                queryParts.push('is_master=1');
-            }
-            if (queryParts.length) {
-                apiUrl += '?' + queryParts.join('&');
-            }
-            var res = await fetch(apiUrl, { signal: _drawerController.signal });
-            var json = await res.json();
-            if (myRequestId !== _drawerRequestId) return;
-            if (!json.success) {
-                drawerBody.innerHTML = '<div class="p-4 text-center text-danger">' + (json.message || 'Khong tim thay san pham.') + '</div>';
-                return;
-            }
-            renderDrawerContent(json.data, targetId, rowType);
-        } catch(e) {
-            if (e.name === 'AbortError') return;
-            drawerBody.innerHTML = '<div class="p-4 text-center text-danger">Lỗi tải dữ liệu: ' + e.message + '</div>';
+        // Card 3: Doanh thu (Currency icon)
+        cardsHtml += '<div class="col-md-3 col-sm-6">' +
+            '<div class="stat-card text-left shadow-sm">' +
+                '<div class="stat-card-icon stat-icon-green">' +
+                    // Heroicons: banknotes / currency-dollar
+                    '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" width="22" height="22">' +
+                        '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />' +
+                    '</svg>' +
+                '</div>' +
+                '<div class="stat-card-label">Doanh thu</div>' +
+                '<div class="stat-card-value">' + formatMoney(summary.total_revenue ?? 0) + 'đ</div>' +
+            '</div>' +
+        '</div>';
+
+        // Card 4: Giá trị tồn kho (Archive box icon) - THAY THẾ "Giá TB / đơn vị"
+        cardsHtml += '<div class="col-md-3 col-sm-6">' +
+            '<div class="stat-card text-left shadow-sm">' +
+                '<div class="stat-card-icon stat-icon-purple">' +
+                    // Heroicons: archive-box (tồn kho)
+                    '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" width="22" height="22">' +
+                        '<path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />' +
+                    '</svg>' +
+                '</div>' +
+                '<div class="stat-card-label">Giá trị tồn kho</div>' +
+                '<div class="stat-card-value">' + formatMoney(inventoryValue) + 'đ</div>' +
+                '<div class="stat-card-growth">' +
+                    '<span class="text-gray-500">Tồn: ' + (product.tong_ton_kho ?? 0) + ' sp</span>' +
+                    '<span class="text-gray-400 ms-1">trên kho</span>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        cardsHtml += '</div>'; // đóng row stats-cards-row
+
+        // ============================================================
+        // Header mini (dòng thời gian + meta)
+        // ============================================================
+        var headerHtml = '<div class="d-flex justify-content-between align-items-center mb-3 px-1">' +
+            '<div class="text-muted small"><i class="far fa-calendar-alt me-1"></i>Dữ liệu bán hàng: ' + rangeLabel + '</div>' +
+            '<div class="text-muted small">' + (product.bien_the_count ?? 0) + ' biến thể · ' + (product.tong_ton_kho ?? 0) + ' tồn kho</div>' +
+        '</div>';
+
+        // ============================================================
+        // YÊU CẦU 4: 2 Khối Bottom (Top biến thể & Đơn hàng gần nhất)
+        // Chia layout col-span-4 (Top biến thể) và col-span-8 (Đơn hàng gần nhất)
+        // Dùng Bootstrap grid 12: col-md-4 và col-md-8
+        // ============================================================
+
+        // ---- Top biến thể (col-md-4) - có Progress Bar ----
+        // Tính max để làm thanh progress tỉ lệ (chỉ khi có dữ liệu thật)
+        var maxQty = 0;
+        if (topVariants.length > 0) {
+            topVariants.forEach(function(item) {
+                var q = parseInt(item.quantity || 0);
+                if (q > maxQty) maxQty = q;
+            });
         }
-    };
 
-    window.confirmDeleteFromDrawer = function() {
-        if (!window.currentDrawerProductId) return;
-        if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
-        var form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '/admin/san-pham/' + window.currentDrawerProductId;
-        form.innerHTML = '<input name="_token" value="' + (document.querySelector('meta[name=csrf-token]')?.content || '') + '"><input name="_method" value="DELETE">';
-        document.body.appendChild(form);
-        form.submit();
-    };
+        var topVariantsHtml = '<div class="col-md-4">' +
+            '<div class="bg-white rounded shadow-sm p-3 h-100 panel-block">' +
+                '<div class="d-flex justify-content-between align-items-center mb-3">' +
+                    '<h6 class="fw-semibold mb-0 panel-title"><i class="fas fa-fire text-warning me-2"></i>Top biến thể bán chạy</h6>' +
+                    '<span class="badge bg-light text-dark border">' + topVariants.length + '</span>' +
+                '</div>';
 
-    function formatMoney(num) {
-        if (num === null || num === undefined) return '0';
-        return Number(num).toLocaleString('vi-VN');
-    }
+        if (topVariants.length === 0) {
+            topVariantsHtml += '<div class="p-4 text-center text-sm text-gray-500">Chưa có dữ liệu bán hàng.</div>';
+        } else {
+            topVariantsHtml += '<ul class="list-unstyled mb-0 top-variants-list">';
+            topVariants.slice(0, 5).forEach(function(item, idx) {
+                var qty = parseInt(item.quantity || 0);
+                var pct = maxQty > 0 ? Math.round((qty / maxQty) * 100) : 0;
+                topVariantsHtml += '<li class="top-variant-item">' +
+                    '<div class="d-flex justify-content-between align-items-start mb-1">' +
+                        '<div class="flex-grow-1 me-2">' +
+                            '<div class="fw-medium variant-name">' +
+                                (idx === 0 ? '<span class="rank-badge rank-1">1</span>' : '<span class="rank-badge">' + (idx + 1) + '</span>') +
+                                (item.variant_name || '-') +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="text-end">' +
+                            '<div class="fw-semibold text-primary small">' + formatMoney(item.revenue ?? 0) + 'đ</div>' +
+                            '<div class="text-muted" style="font-size:0.7rem;">' + qty + ' sp</div>' +
+                        '</div>' +
+                    '</div>' +
+                    // YÊU CẦU 4: Progress Bar cao 4px, màu xanh bg-blue-500
+                    '<div class="progress variant-progress" style="height:4px;">' +
+                        '<div class="progress-bar bg-blue-500" role="progressbar" style="width:' + pct + '%; background-color:#3b82f6;" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"></div>' +
+                    '</div>' +
+                '</li>';
+            });
+            topVariantsHtml += '</ul>';
+        }
 
-    function formatDate(dateStr) {
-        if (!dateStr) return '-';
-        var d = new Date(dateStr);
-        return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    }
+        topVariantsHtml += '</div></div>'; // đóng panel + col
 
-    function loaiPhieuLabel(loai) {
-        var map = {
-            'nhap': '<span class="badge bg-success">Nhập</span>',
-            'xuat': '<span class="badge bg-danger">Xuất</span>',
-            'ban': '<span class="badge bg-primary">Bán</span>',
-            'tra': '<span class="badge bg-warning text-dark">Trả</span>',
+        // ---- Đơn hàng gần nhất (col-md-8) - Mini Table/List ----
+        var statusBadge = function(status) {
+            // Map status về tiếng Việt + class
+            var map = {
+                'hoan_thanh':   { label: 'Hoàn thành', cls: 'badge-status badge-success' },
+                'hoanthanh':    { label: 'Hoàn thành', cls: 'badge-status badge-success' },
+                'completed':    { label: 'Hoàn thành', cls: 'badge-status badge-success' },
+                'dang_xu_ly':   { label: 'Đang xử lý', cls: 'badge-status badge-warning' },
+                'dangxuly':     { label: 'Đang xử lý', cls: 'badge-status badge-warning' },
+                'processing':   { label: 'Đang xử lý', cls: 'badge-status badge-warning' },
+                'huy':          { label: 'Đã hủy',     cls: 'badge-status badge-danger' },
+                'cancelled':    { label: 'Đã hủy',     cls: 'badge-status badge-danger' },
+                'tra_hang':     { label: 'Trả hàng',   cls: 'badge-status badge-secondary' },
+            };
+            var key = (status || '').toString().toLowerCase();
+            return map[key] || { label: status || '—', cls: 'badge-status badge-secondary' };
         };
-        return map[loai?.toLowerCase()] || '<span class="badge bg-secondary">' + (loai || '-') + '</span>';
-    }
 
-    function renderDrawerContent(data, targetId, rowType) {
-        var sp = data.product || {};
-        var allVariants = data.allVariants || [];
-        var variant = data.variant || {};
-        var units = data.units || [];
-        var theKho = data.theKho || [];
-        var loHang = data.loHang || [];
-        var hasMultipleVariants = data.hasMultipleVariants || false;
-        var masterSummary = data.masterSummary || null;
-        var isMaster = data.isMaster || false;
-
-        // === Tìm đúng variant để hiển thị trên Header ===
-        var displayVariant = variant;
-
-        if (targetId && String(targetId) !== String(sp.id)) {
-            var found = allVariants.find(function(v) { return String(v.id) === String(targetId); });
-            if (found) displayVariant = found;
-        }
-
-        // Lấy units đúng của variant đang hiển thị
-        var displayUnits = displayVariant && displayVariant.units
-            ? displayVariant.units
-            : units;
-
-        // Tìm đơn vị tương ứng với variant đang hiển thị
-        var displayUnit = null;
-
-        if (data.selectedUnit && data.selectedUnit.id) {
-            displayUnit = data.selectedUnit;
-        }
-
-        if (!displayUnit && displayVariant && displayVariant.don_vi_id) {
-            displayUnit = displayUnits.find(function(u) { return String(u.id) === String(displayVariant.don_vi_id); });
-        }
-
-        // Xác định hiển thị dựa trên la_don_vi và isMaster
-        var isLaDonVi = displayVariant && displayVariant.la_don_vi;
-        var tenDonViHienThi;
-        var tenBienTheHienThi;
-
-        if (isLaDonVi) {
-            tenDonViHienThi = displayVariant.ten_don_vi || '-';
-            tenBienTheHienThi = '-';
-        } else {
-            // Ưu tiên: displayVariant.ten_don_vi > units[0].ten_don_vi > fallback
-            tenDonViHienThi = displayVariant.ten_don_vi || (units.length > 0 ? (units[0].ten_don_vi || '-') : '-');
-            tenBienTheHienThi = displayVariant.ten_bien_the || '-';
-        }
-
-        var selectedUnitBadge = '';
-        if (rowType === 'quy_doi' && displayUnit) {
-            tenDonViHienThi = displayUnit.ten_don_vi;
-            selectedUnitBadge = '<span class="badge bg-info ms-2" style="font-size:0.65rem;"><i class="fas fa-cube me-1"></i>Đơn vị quy đổi</span>';
-        }
-
-        // === Xác định giá trị hiển thị dựa trên isMaster ===
-        var maHangHienThi;
-        var maVachHienThi;
-        var giaBanHienThi;
-        var giaVonHienThi;
-        var tonKhoHienThi;
-
-        if (isMaster) {
-            // TRẠNG THÁI A: MASTER PRODUCT (Dòng Cha) - Hiển thị thông tin tổng hợp
-            maHangHienThi = '<span class="text-muted fst-italic">Nhiều SKU</span>';
-            maVachHienThi = '<span class="text-muted fst-italic">Nhiều SKU</span>';
-            giaBanHienThi = masterSummary && masterSummary.gia_ban_min !== null
-                ? (masterSummary.gia_ban_min === masterSummary.gia_ban_max
-                    ? formatMoney(masterSummary.gia_ban_min)
-                    : formatMoney(masterSummary.gia_ban_min) + ' - ' + formatMoney(masterSummary.gia_ban_max))
-                : '-';
-            giaVonHienThi = masterSummary && masterSummary.gia_von_min !== null
-                ? (masterSummary.gia_von_min === masterSummary.gia_von_max
-                    ? formatMoney(masterSummary.gia_von_min)
-                    : formatMoney(masterSummary.gia_von_min) + ' - ' + formatMoney(masterSummary.gia_von_max))
-                : '-';
-            tonKhoHienThi = masterSummary ? masterSummary.tong_ton_kho : 0;
-            tenBienTheHienThi = '<span class="text-muted fst-italic">Nhiều biến thể</span>';
-            tenDonViHienThi = '<span class="text-muted fst-italic">Nhiều đơn vị</span>';
-        } else {
-            // TRẠNG THÁI B: VARIANT CỤ THỂ - Hiển thị thông tin variant
-            // QUAN TRỌNG: Khi user click vào dòng QUY ĐỔI (rowType='quy_doi'), displayUnit sẽ là
-            // đơn vị quy đổi cụ thể (VD: "thùng 24") - đơn vị này có mã hàng/mã vạch/giá RIÊNG
-            // trong DB. Không được hiển thị mã hàng/mã vạch/giá của variant CHA (lon).
-            maHangHienThi = (rowType === 'quy_doi' && displayUnit)
-                ? (displayUnit.ma_hang || displayUnit.ma_vach || '-')
-                : (displayVariant.ma_hang || displayVariant.ma_vach || '-');
-            maVachHienThi = (rowType === 'quy_doi' && displayUnit)
-                ? (displayUnit.ma_vach || '-')
-                : (displayVariant.ma_vach || '-');
-            giaBanHienThi = (rowType === 'quy_doi' && displayUnit)
-                ? displayUnit.gia_ban_quy_doi
-                : displayVariant.gia_ban;
-            giaVonHienThi = (rowType === 'quy_doi' && displayUnit)
-                ? displayUnit.gia_von_quy_doi
-                : displayVariant.gia_von;
-            tonKhoHienThi = (rowType === 'quy_doi' && displayUnit)
-                ? displayUnit.so_luong_ton
-                : displayVariant.so_luong_ton;
-        }
-
-        var trangThaiVariant = !displayVariant.trang_thai
-            ? '<span class="badge bg-danger">Ngừng bán</span>'
-            : ((tonKhoHienThi ?? 0) <= 0
-                ? '<span class="badge bg-secondary">Hết hàng</span>'
-                : ((displayVariant.dinh_muc_toi_thieu && (tonKhoHienThi ?? 0) <= displayVariant.dinh_muc_toi_thieu)
-                    ? '<span class="badge bg-warning text-dark">Sắp hết hàng</span>'
-                    : '<span class="badge bg-success">Còn hàng</span>'));
-
-        var thuocTinhLabels = '';
-        if (displayVariant.thuoc_tinh_ids && Array.isArray(displayVariant.thuoc_tinh_ids)) {
-            var thuocTinhChas = window.thuocTinhChasData || [];
-            displayVariant.thuoc_tinh_ids.forEach(function(ttId) {
-                var found = thuocTinhChas.find(function(t) { return String(t.id) === String(ttId); });
-                if (found) {
-                    thuocTinhLabels += '<span class="badge bg-info text-dark me-1">' + found.ten_thuoc_tinh + '</span>';
-                }
-            });
-        }
-
-        var mainHinhAnh = displayVariant.hinh_anh
-            ? '<img src="/' + displayVariant.hinh_anh + '" class="img-fluid rounded" alt="' + (sp.ten_san_pham || '') + '" style="max-height:220px; object-fit:contain; background:#f8f9fa;">'
-            : '<div class="text-center text-muted py-5 bg-light rounded"><i class="fas fa-image fa-3x"></i><p class="mt-2 mb-0">Không có ảnh</p></div>';
-
-        // === Bảng đơn vị quy đổi (chỉ hiển thị khi KHÔNG phải Master) ===
-        var unitsHtml = '';
-        if (!isMaster && units.length > 0) {
-            unitsHtml = '<div class="mb-3">' +
-                '<h6 class="fw-bold mb-2"><i class="fas fa-balance-scale me-1"></i>Đơn vị quy đổi <span class="fw-normal text-muted small">(' + displayUnits.length + ')</span></h6>' +
-                '<table class="table table-sm table-bordered mb-0" style="font-size:0.82rem;">' +
-                    '<thead class="table-light">' +
-                        '<tr>' +
-                            '<th>Tên đơn vị</th>' +
-                            '<th class="text-center">Tỷ lệ QĐ</th>' +
-                            '<th class="text-end">Giá vốn</th>' +
-                            '<th class="text-end">Giá bán</th>' +
-                            '<th class="text-end">Giá bán sỉ</th>' +
-                            '<th>Mã vạch</th>' +
-                        '</tr>' +
-                    '</thead>' +
-                    '<tbody>';
-            displayUnits.forEach(function(unit) {
-                unitsHtml += '<tr>' +
-                    '<td class="small">' + (unit.ten_don_vi || '-') + '</td>' +
-                    '<td class="text-center small">' + (unit.ty_le_quy_doi || '-') + '</td>' +
-                    '<td class="text-end small">' + formatMoney(unit.gia_von_quy_doi) + ' d</td>' +
-                    '<td class="text-end small fw-bold text-primary">' + formatMoney(unit.gia_ban_quy_doi) + ' d</td>' +
-                    '<td class="text-end small">' + formatMoney(unit.gia_ban_si) + ' d</td>' +
-                    '<td class="small text-muted">' + (unit.ma_vach || '-') + '</td>' +
-                '</tr>';
-            });
-            unitsHtml += '</tbody></table></div>';
-        }
-
-        // === Bảng Thẻ kho (chỉ hiển thị khi KHÔNG phải Master) ===
-        var theKhoHtml = '';
-        if (!isMaster) {
-            if (theKho.length > 0) {
-                theKhoHtml = '<div class="table-scroll-wrap">' +
-                    '<table class="table table-sm table-hover mb-0">' +
-                        '<thead class="table-light">' +
+        var recentOrdersHtml = '<div class="col-md-8">' +
+            '<div class="bg-white rounded shadow-sm p-3 h-100 panel-block">' +
+                '<div class="d-flex justify-content-between align-items-center mb-3">' +
+                    '<h6 class="fw-semibold mb-0 panel-title"><i class="fas fa-receipt text-success me-2"></i>Đơn hàng gần nhất</h6>' +
+                    '<a href="#" class="small text-decoration-none">Xem tất cả <i class="fas fa-arrow-right ms-1"></i></a>' +
+                '</div>' +
+                '<div class="table-responsive recent-orders-table">' +
+                    '<table class="table table-sm align-middle mb-0">' +
+                        '<thead>' +
                             '<tr>' +
-                                '<th>Mã phiếu</th>' +
-                                '<th>Thời gian</th>' +
-                                '<th>Loại</th>' +
-                                '<th>Lô</th>' +
-                                '<th class="text-end">Giá nhập</th>' +
-                                '<th class="text-center">SL</th>' +
-                                '<th class="text-center">SL còn lại của lô</th>' +
+                                '<th class="border-0 text-muted" style="font-size:0.72rem;font-weight:600;">Mã đơn</th>' +
+                                '<th class="border-0 text-muted" style="font-size:0.72rem;font-weight:600;">Thời gian</th>' +
+                                '<th class="border-0 text-muted text-center" style="font-size:0.72rem;font-weight:600;">SL</th>' +
+                                '<th class="border-0 text-muted text-end" style="font-size:0.72rem;font-weight:600;">Tổng tiền</th>' +
+                                '<th class="border-0 text-muted text-end" style="font-size:0.72rem;font-weight:600;">Trạng thái</th>' +
                             '</tr>' +
                         '</thead>' +
                         '<tbody>';
-                theKho.forEach(function(item) {
-                    var maLoHienThi = item.maLo || (item.idLoHang ? 'L-' + item.idLoHang : '-');
-                    theKhoHtml += '<tr>' +
-                        '<td class="small">' + (item.maPhieu || '-') + '</td>' +
-                        '<td class="small">' + formatDate(item.thoiGian) + '</td>' +
-                        '<td>' + loaiPhieuLabel(item.loaiPhieu) + '</td>' +
-                        '<td class="small"><span class="badge bg-dark">' + maLoHienThi + '</span></td>' +
-                        '<td class="small text-end">' + formatMoney(item.gia) + ' d</td>' +
-                        '<td class="small text-center">' + (item.soLuong ?? '-') + '</td>' +
-                        '<td class="small text-center">' + (item.soLuongConLai ?? '-') + '</td>' +
-                    '</tr>';
-                });
-                theKhoHtml += '</tbody></table></div>';
-            } else {
-                theKhoHtml = '<p class="text-muted text-center py-3 mb-0 small">Chưa có dữ liệu thẻ kho.</p>';
-            }
-        }
 
-        // === Bảng Lô hàng (chỉ hiển thị khi KHÔNG phải Master) ===
-        var loHangHtml = '';
-        if (!isMaster) {
-            if (loHang.length > 0) {
-                loHangHtml = '<table class="table table-sm table-hover mb-0">' +
-                    '<thead class="table-light">' +
-                        '<tr>' +
-                            '<th>Số lô</th>' +
-                            '<th>Hạn sử dụng</th>' +
-                            '<th class="text-end">SL nhập</th>' +
-                            '<th class="text-end">SL còn lại</th>' +
-                        '</tr>' +
-                    '</thead>' +
-                    '<tbody>';
-                loHang.forEach(function(item) {
-                    var isExpired = item.hanSuDung && new Date(item.hanSuDung) < new Date();
-                    var maLoHienThi = item.maLo || (item.idLoHang ? 'L-' + item.idLoHang : '-');
-                    loHangHtml += '<tr>' +
-                        '<td class="small"><span class="badge bg-dark">' + maLoHienThi + '</span></td>' +
-                        '<td class="small ' + (isExpired ? 'text-danger' : '') + '">' + formatDate(item.hanSuDung) + ' ' + (isExpired ? '<i class="fas fa-exclamation-circle"></i>' : '') + '</td>' +
-                        '<td class="small text-end">' + (item.so_luong ?? '-') + '</td>' +
-                        '<td class="small text-end">' + (item.soLuongConLai ?? '-') + '</td>' +
-                    '</tr>';
-                });
-                loHangHtml += '</tbody></table>';
-            } else {
-                loHangHtml = '<p class="text-muted text-center py-3 mb-0 small">Chưa có lô hàng.</p>';
-            }
-        }
-
-        // === Bảng biến thể (CHỉ hiển thị khi LÀ Master) ===
-        var variantsTableHtml = '';
-        if (isMaster && hasMultipleVariants) {
-            variantsTableHtml = '<div class="mb-3">' +
-                '<h6 class="fw-bold mb-2"><i class="fas fa-boxes me-1"></i>Danh sách biến thể <span class="badge bg-secondary ms-1" style="font-size:0.7rem;">' + allVariants.length + '</span></h6>' +
-                '<div class="table-responsive" style="max-height:250px;overflow-y:auto;border:1px solid #dee2e6;border-radius:6px;">' +
-                '<table class="table table-sm table-bordered table-hover mb-0" style="font-size:0.8rem;">' +
-                    '<thead class="table-light sticky-top">' +
-                        '<tr>' +
-                            '<th>Tên biến thể</th>' +
-                            '<th>Mã hàng</th>' +
-                            '<th>Mã vạch</th>' +
-                            '<th class="text-end">Giá vốn</th>' +
-                            '<th class="text-end">Giá bán</th>' +
-                            '<th class="text-end">Tồn kho</th>' +
-                        '</tr>' +
-                    '</thead>' +
-                    '<tbody>';
-            allVariants.forEach(function(vt) {
-                var vtTonKho = vt.so_luong_ton || 0;
-                var vtTonBadge = vtTonKho > 0 ? 'bg-success' : 'bg-secondary';
-                var thuocTinhLabels = '';
-                if (vt.thuoc_tinh_ids && Array.isArray(vt.thuoc_tinh_ids)) {
-                    vt.thuoc_tinh_ids.forEach(function(ttId) {
-                        var found = (window.thuocTinhChasData || []).find(function(t) { return String(t.id) === String(ttId); });
-                        if (found) {
-                            thuocTinhLabels += '<span class="badge bg-light text-dark border" style="font-size:0.6rem;">' + found.ten_thuoc_tinh + '</span> ';
-                        }
-                    });
-                }
-                var vtTen = vt.ten_bien_the
-                    ? vt.ten_bien_the + (thuocTinhLabels ? '<br>' + thuocTinhLabels : '')
-                    : (thuocTinhLabels ? thuocTinhLabels : '<span class="text-muted fst-italic">Mặc định</span>');
-
-                variantsTableHtml += '<tr>' +
-                    '<td class="small">' + vtTen + '</td>' +
-                    '<td class="small text-muted">' + (vt.ma_hang || '-') + '</td>' +
-                    '<td class="small text-muted">' + (vt.ma_vach || '-') + '</td>' +
-                    '<td class="text-end small">' + formatMoney(vt.gia_von) + ' đ</td>' +
-                    '<td class="text-end small fw-bold text-primary">' + formatMoney(vt.gia_ban) + ' đ</td>' +
-                    '<td class="text-end"><span class="badge ' + vtTonBadge + '" style="font-size:0.65rem;">' + vtTonKho + '</span></td>' +
+        if (recentOrders.length === 0) {
+            recentOrdersHtml += '<tr><td colspan="5" class="p-4 text-center text-sm text-gray-500">Chưa có giao dịch nào.</td></tr>';
+        } else {
+            recentOrders.slice(0, 5).forEach(function(order) {
+                var orderDate = order.order_date ? new Date(order.order_date).toLocaleString('vi-VN', {
+                    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                }) : '-';
+                var st = statusBadge(order.status);
+                var detailUrl = '/admin/hoa-don/' + order.order_id;
+                recentOrdersHtml += '<tr class="recent-order-row" data-href="' + detailUrl + '" style="cursor:pointer;" title="Xem chi tiết hóa đơn">' +
+                    '<td>' +
+                        '<span class="fw-semibold text-primary">' +
+                            (order.ma_hoa_don || ('#' + order.order_id)) +
+                        '</span>' +
+                    '</td>' +
+                    '<td class="text-muted small">' + orderDate + '</td>' +
+                    '<td class="text-center"><span class="qty-badge">x' + (order.quantity ?? 0) + '</span></td>' +
+                    '<td class="text-end fw-semibold">' + formatMoney(order.revenue ?? 0) + 'đ</td>' +
+                    '<td class="text-end"><span class="' + st.cls + '">' + st.label + '</span></td>' +
                 '</tr>';
             });
-            variantsTableHtml += '</tbody></table></div></div>';
         }
 
-        // === Render HTML ===
-        drawerBody.innerHTML = '<div class="p-3">' +
-            '<div class="row g-3 mb-3">' +
-                '<div class="col-4">' + mainHinhAnh + '</div>' +
-                '<div class="col-8">' +
-                    '<div class="d-flex justify-content-between align-items-start">' +
-                        '<div>' +
-                            '<h5 class="fw-bold mb-1">' + (sp.ten_san_pham || '-') + ' <span class="text-primary">/ ' + (tenDonViHienThi || '-') + '</span>' + selectedUnitBadge + '</h5>' +
-                            '<p class="text-muted small mb-1">#' + (maHangHienThi || displayVariant.ma_vach || displayVariant.id || sp.id || '-') + '</p>' +
-                            trangThaiVariant +
-                        '</div>' +
-                        '<div class="text-end">' +
-                            '<p class="fw-bold text-primary mb-0" style="font-size:1.4rem;">' + (typeof giaBanHienThi === 'string' ? giaBanHienThi : formatMoney(giaBanHienThi)) + ' đ</p>' +
-                            '<p class="text-muted small mb-0">Giá vốn: ' + (typeof giaVonHienThi === 'string' ? giaVonHienThi : formatMoney(giaVonHienThi)) + ' đ</p>' +
-                        '</div>' +
-                    '</div>' +
-                    '<hr>' +
-                    '<div class="row g-2 small">' +
-                        '<div class="col-6"><strong>Danh mục:</strong> ' + (sp.danh_muc?.ten_danh_muc || '-') + '</div>' +
-                        '<div class="col-6"><strong>Thương hiệu:</strong> ' + (sp.thuong_hieu || '-') + '</div>' +
-                        '<div class="col-6"><strong>Biến thể:</strong> ' + tenBienTheHienThi + '</div>' +
-                        '<div class="col-6"><strong>Đơn vị:</strong> ' + tenDonViHienThi + '</div>' +
-                        '<div class="col-6"><strong>Mã vạch:</strong> ' + maVachHienThi + '</div>' +
-                        '<div class="col-6"><strong>Tồn kho:</strong> ' + (tonKhoHienThi ?? 0) + '</div>' +
-                        (!isMaster ? '<div class="col-6"><strong>Định mức:</strong> ' + (displayVariant.dinh_muc_toi_thieu ?? 0) + '</div>' : '') +
-                    '</div>' +
-                    (!isMaster && thuocTinhLabels ? '<div class="mt-2">' + thuocTinhLabels + '</div>' : '') +
-                '</div>' +
-            '</div>' +
+        recentOrdersHtml += '</tbody></table></div></div></div>'; // đóng table, panel, col
 
-            (sp.mo_ta ? '<div class="mb-3"><h6 class="fw-bold mb-2"><i class="fas fa-align-left me-1"></i>Mô tả</h6><div class="bg-light rounded p-2 small text-muted" style="white-space:pre-line;">' + sp.mo_ta + '</div></div>' : '') +
+        var bottomHtml = '<div class="row g-3 mt-1 stats-bottom-row">' + topVariantsHtml + recentOrdersHtml + '</div>';
 
-            // === Bảng biến thể: CHỉ hiển thị khi LÀ MASTER ===
-            variantsTableHtml +
-
-            // === Bảng đơn vị quy đổi: CHỉ hiển thị khi KHÔNG phải Master ===
-            unitsHtml +
-
-            // === Bảng Thẻ kho: CHỉ hiển thị khi KHÔNG phải Master ===
-            (!isMaster ? '<div class="mb-3">' : '') +
-            (!isMaster ? '<h6 class="fw-bold mb-2"><i class="fas fa-history me-1"></i>Thẻ kho <span class="fw-normal text-muted small">(' + theKho.length + ')</span></h6>' : '') +
-            (!isMaster ? theKhoHtml : '') +
-            (!isMaster ? '</div>' : '') +
-
-            // === Bảng Lô hàng: CHỉ hiển thị khi KHÔNG phải Master ===
-            (!isMaster ? '<div class="mb-3">' : '') +
-            (!isMaster ? '<h6 class="fw-bold mb-2"><i class="fas fa-boxes-stacked me-1"></i>Lô - Hạn sử dụng <span class="fw-normal text-muted small">(' + loHang.length + ')</span></h6>' : '') +
-            (!isMaster ? loHangHtml : '') +
-            (!isMaster ? '</div>' : '') +
-
-            '<div class="text-muted small border-top pt-2">' +
-                '<i class="fas fa-clock me-1"></i>Tạo: ' + formatDate(sp.created_at) + ' | Cập nhật: ' + formatDate(sp.updated_at) +
-            '</div>' +
-        '</div>';
+        return headerHtml + cardsHtml + bottomHtml;
     }
+
+    function buildVariantsHtml(data) {
+        var variants = data.allVariants || [];
+        if (!variants.length) {
+            return '<div class="text-muted small py-4">Không có biến thể.</div>';
+        }
+
+        var html = '<div class="row g-3">';
+        variants.forEach(function(v) {
+            var stock = v.so_luong_ton ?? 0;
+            var minStock = v.dinh_muc_toi_thieu ?? 0;
+            var status = 'Còn hàng';
+            var badgeClass = 'bg-success';
+            if (!v.trang_thai) {
+                status = 'Ngừng';
+                badgeClass = 'bg-danger';
+            } else if (stock <= 0) {
+                status = 'Hết hàng';
+                badgeClass = 'bg-secondary';
+            } else if (stock <= minStock) {
+                status = 'Sắp hết';
+                badgeClass = 'bg-warning text-dark';
+            }
+
+            html += '<div class="col-12"><div class="bg-white rounded shadow-sm p-3">';
+            html += '<div class="d-flex justify-content-between align-items-start mb-2">';
+            html += '<div><div class="fw-semibold">' + (v.ten_bien_the || v.ten_don_vi || 'Biến thể') + '</div>';
+            html += '<div class="text-muted small">#' + (v.ma_hang || v.ma_vach || v.id) + '</div></div>';
+            html += '<span class="badge ' + badgeClass + '">' + status + '</span>';
+            html += '</div>';
+            html += '<div class="row gx-2 gy-2 small text-muted">';
+            html += '<div class="col-sm-3"><div class="fw-medium">Giá bán</div>' + formatMoney(v.gia_ban ?? 0) + ' đ</div>';
+            html += '<div class="col-sm-3"><div class="fw-medium">Tồn kho</div>' + stock + '</div>';
+            html += '<div class="col-sm-3"><div class="fw-medium">Định mức</div>' + minStock + '</div>';
+            html += '<div class="col-sm-3"><div class="fw-medium">Đơn vị</div>' + (v.ten_don_vi || '-') + '</div>';
+            html += '</div>';
+
+            var units = v.units || [];
+            if (units.length) {
+                html += '<div class="mt-3">';
+                html += '<div class="text-muted small fw-semibold mb-2">Đơn vị quy đổi</div>';
+                html += '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Đơn vị</th><th>Tỷ lệ</th><th>Giá bán</th><th>Tồn</th></tr></thead><tbody>';
+                units.forEach(function(unit) {
+                    html += '<tr>';
+                    html += '<td>' + (unit.ten_don_vi || '-') + '</td>';
+                    html += '<td>' + (unit.so_luong_san_pham_trong_don_vi ?? unit.ty_le_quy_doi ?? '-') + '</td>';
+                    html += '<td>' + formatMoney(unit.gia_ban_quy_doi ?? 0) + ' đ</td>';
+                    html += '<td>' + (unit.so_luong_ton ?? 0) + '</td>';
+                    html += '</tr>';
+                });
+                html += '</tbody></table></div>';
+                html += '</div>';
+            } else {
+                html += '<div class="mt-3 text-muted small">Không có đơn vị quy đổi.</div>';
+            }
+            html += '</div></div>';
+        });
+        html += '</div>';
+        return html;
+    }
+
+    function buildStockHtml(productId, data) {
+        var currentVariant = data.variant || {};
+        var variants = data.allVariants || [];
+        var theKho = data.theKho || [];
+        var loHang = data.loHang || [];
+        var html = '';
+
+        if (variants.length > 1) {
+            html += '<div class="mb-3 d-flex flex-wrap gap-2">';
+            variants.forEach(function(v) {
+                var active = String(v.id) === String(currentVariant.id) ? ' active' : '';
+                html += '<button type="button" class="btn btn-sm btn-outline-secondary' + active + '" onclick="event.stopPropagation(); window.switchProductTab(' + productId + ', \"stock\", ' + v.id + ')">' + (v.ten_bien_the || v.ten_don_vi || 'Biến thể ' + v.id) + '</button>';
+            });
+            html += '</div>';
+        }
+
+        html += '<div class="row g-3">';
+        html += '<div class="col-md-6">';
+        html += '<div class="bg-white rounded shadow-sm p-3">';
+        html += '<h6 class="fw-semibold mb-2">Thẻ kho mini</h6>';
+        if (!theKho.length) {
+            html += '<div class="text-muted small py-3">Chưa có lịch sử kho.</div>';
+        } else {
+            html += '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>#</th><th>Phiếu</th><th>Thời gian</th><th>Loại</th><th>Số lượng</th><th>Còn lại</th></tr></thead><tbody>';
+            theKho.forEach(function(item, index) {
+                html += '<tr>';
+                html += '<td>' + (index + 1) + '</td>';
+                html += '<td>' + (item.maPhieu || '-') + '</td>';
+                html += '<td>' + (item.thoiGian ? new Date(item.thoiGian).toLocaleString('vi-VN') : '-') + '</td>';
+                html += '<td>' + (item.loaiPhieu || '-') + '</td>';
+                html += '<td>' + (item.soLuong ?? 0) + '</td>';
+                html += '<td>' + (item.soLuongConLai ?? 0) + '</td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+        }
+        html += '</div></div>';
+
+        html += '<div class="col-md-6">';
+        html += '<div class="bg-white rounded shadow-sm p-3">';
+        html += '<h6 class="fw-semibold mb-2">Lô hàng</h6>';
+        if (!loHang.length) {
+            html += '<div class="text-muted small py-3">Không có lô hàng tồn kho.</div>';
+        } else {
+            html += '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>#</th><th>Mã lô</th><th>Hạn dùng</th><th>Số lượng</th><th>Giá</th></tr></thead><tbody>';
+            loHang.forEach(function(item, index) {
+                html += '<tr>';
+                html += '<td>' + (index + 1) + '</td>';
+                html += '<td>' + (item.maLo || '-') + '</td>';
+                html += '<td>' + (item.hanSuDung ? new Date(item.hanSuDung).toLocaleDateString('vi-VN') : '-') + '</td>';
+                html += '<td>' + (item.soLuongConLai ?? 0) + '</td>';
+                html += '<td>' + formatMoney(item.giaNhap ?? 0) + ' đ</td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+        }
+        html += '</div></div>';
+
+        html += '</div>';
+        return html;
+    }
+
+    window.loadProductStats = async function(productId, forceReload) {
+        var detailRow = document.getElementById('productDetailRow' + productId);
+        if (!detailRow) return;
+        var panel = detailRow.querySelector('.product-detail-panel');
+        if (!panel) return;
+        var content = panel.querySelector('.product-summary-tab');
+        if (!content) return;
+        if (panel.dataset.loadedSummary === '1' && !forceReload) return;
+
+        panel.dataset.loadedSummary = '0';
+        content.innerHTML = '<div class="d-flex justify-content-center align-items-center py-4"><div class="spinner-border spinner-border-sm me-2" role="status"></div>Đang tải thống kê...</div>';
+
+        try {
+            var res = await fetch('/admin/api/san-pham/' + productId + '/thong-ke?days=30');
+            if (!res.ok) throw new Error('Không tải được dữ liệu.');
+            var json = await res.json();
+            if (!json.success) throw new Error(json.message || 'Lỗi API');
+            content.innerHTML = buildStatsHtml(json.data);
+            panel.dataset.loadedSummary = '1';
+        } catch (e) {
+            content.innerHTML = '<div class="text-danger">Lỗi tải thống kê: ' + (e.message || 'Không xác định') + '</div>';
+        }
+    };
+
+    window.loadProductDetail = async function(productId, variantId) {
+        window.productDetailCache = window.productDetailCache || {};
+        var cached = window.productDetailCache[productId];
+        var requestedVariant = variantId ? String(variantId) : null;
+        if (cached && (!requestedVariant || String(cached.variantId) === requestedVariant)) {
+            return cached.data;
+        }
+
+        var url = '/admin/api/san-pham/' + productId;
+        if (requestedVariant) {
+            url += '?variant_id=' + encodeURIComponent(requestedVariant);
+        }
+
+        var res;
+        try {
+            res = await fetch(url);
+        } catch (networkErr) {
+            throw new Error('Lỗi mạng: ' + networkErr.message);
+        }
+        if (!res.ok) {
+            // Try to read body to see what error
+            let bodyText = '';
+            try { bodyText = await res.text(); } catch (e) {}
+            throw new Error('Không tải được dữ liệu sản phẩm.');
+        }
+        var json = await res.json();
+        if (!json.success) throw new Error(json.message || 'Lỗi API');
+
+        window.productDetailCache[productId] = {
+            variantId: requestedVariant || String(json.data.variant?.id || ''),
+            data: json.data,
+        };
+        return json.data;
+    };
+
+    window.loadProductVariants = async function(productId) {
+        var detailRow = document.getElementById('productDetailRow' + productId);
+        if (!detailRow) return;
+        var panel = detailRow.querySelector('.product-detail-panel');
+        if (!panel) return;
+        var content = panel.querySelector('.product-variants-tab');
+        if (!content) return;
+
+        panel.dataset.loadedVariants = '0';
+        content.innerHTML = '<div class="d-flex justify-content-center align-items-center py-4"><div class="spinner-border spinner-border-sm me-2" role="status"></div>Đang tải danh sách biến thể...</div>';
+
+        try {
+            var data = await window.loadProductDetail(productId);
+            content.innerHTML = buildVariantsHtml(data);
+            panel.dataset.loadedVariants = '1';
+        } catch (e) {
+            content.innerHTML = '<div class="text-danger">Lỗi tải biến thể: ' + (e.message || 'Không xác định') + '</div>';
+        }
+    };
+
+    window.loadProductStock = async function(productId, variantId) {
+        var detailRow = document.getElementById('productDetailRow' + productId);
+        if (!detailRow) return;
+        var panel = detailRow.querySelector('.product-detail-panel');
+        if (!panel) return;
+        var content = panel.querySelector('.product-stock-tab');
+        if (!content) return;
+
+        panel.dataset.loadedStock = '0';
+        content.innerHTML = '<div class="d-flex justify-content-center align-items-center py-4"><div class="spinner-border spinner-border-sm me-2" role="status"></div>Đang tải thông tin kho...</div>';
+
+        try {
+            var data = await window.loadProductDetail(productId, variantId);
+            content.innerHTML = buildStockHtml(productId, data);
+            panel.dataset.loadedStock = '1';
+        } catch (e) {
+            content.innerHTML = '<div class="text-danger">Lỗi tải kho: ' + (e.message || 'Không xác định') + '</div>';
+        }
+    };
+
+    window.switchProductTab = async function(productId, tabKey, variantId) {
+        var detailRow = document.getElementById('productDetailRow' + productId);
+        if (!detailRow) return;
+        var panel = detailRow.querySelector('.product-detail-panel');
+        if (!panel) return;
+        var buttons = panel.querySelectorAll('[data-tab-key]');
+        buttons.forEach(function(btn) {
+            btn.classList.toggle('active', btn.dataset.tabKey === tabKey);
+        });
+
+        var summaryTab = panel.querySelector('.product-summary-tab');
+        var variantsTab = panel.querySelector('.product-variants-tab');
+        var stockTab = panel.querySelector('.product-stock-tab');
+        if (summaryTab) summaryTab.classList.toggle('d-none', tabKey !== 'summary');
+        if (variantsTab) variantsTab.classList.toggle('d-none', tabKey !== 'variants');
+        if (stockTab) stockTab.classList.toggle('d-none', tabKey !== 'stock');
+
+        if (tabKey === 'summary') {
+            await window.loadProductStats(productId, true);
+        } else if (tabKey === 'variants') {
+            await window.loadProductVariants(productId);
+        } else if (tabKey === 'stock') {
+            await window.loadProductStock(productId, variantId);
+        }
+    };
+
+    // ============================================================
+// RECENT ORDERS ROW → MỞ TRANG CHI TIẾT HÓA ĐƠN
+// Click bất kỳ đâu trên dòng đơn hàng gần nhất → chuyển sang /admin/hoa-don/{id}
+// Dùng event delegation để hoạt động với cả row được render sau bằng AJAX.
+// ============================================================
+(function() {
+    document.addEventListener('click', function(e) {
+        var row = e.target.closest('.recent-order-row[data-href]');
+        if (!row) return;
+
+        // Nếu click vào link/button bên trong (mở tab mới) thì bỏ qua
+        if (e.target.closest('a, button, input, select, textarea')) return;
+
+        var url = row.getAttribute('data-href');
+        if (!url) return;
+
+        // Mở trong tab mới nếu giữ Ctrl/Cmd, ngược lại chuyển tab hiện tại
+        if (e.ctrlKey || e.metaKey) {
+            window.open(url, '_blank');
+        } else {
+            window.location.href = url;
+        }
+    });
+
+    // Hiệu ứng phím: Enter trên dòng đơn hàng → cũng mở
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        var active = document.activeElement;
+        if (!active || !active.classList || !active.classList.contains('recent-order-row')) return;
+        e.preventDefault();
+        var url = active.getAttribute('data-href');
+        if (url) window.location.href = url;
+    });
 })();
+
+function formatMoney(num) {
+    if (num === null || num === undefined) return '0';
+    return Number(num).toLocaleString('vi-VN');
+}
+
+;
+
+// ============================================================
+// DELETE PRODUCT (from detail panel)
+// ============================================================
+window.deleteProduct = async function(productId, productName) {
+    if (!confirm('Bạn có chắc muốn xóa sản phẩm "' + (productName || '') + '"?\n\nSản phẩm sẽ được chuyển vào thùng rác và có thể khôi phục.')) {
+        return;
+    }
+    try {
+        var res = await fetch('/admin/san-pham/' + productId, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || document.querySelector('input[name=_token]')?.value || '',
+                'Accept': 'application/json',
+            },
+        });
+        var data;
+        try {
+            data = await res.json();
+        } catch (parseErr) {
+            data = { success: res.ok, message: res.ok ? 'Đã xóa sản phẩm.' : 'Không thể xóa sản phẩm.' };
+        }
+
+        if (res.ok && data.success) {
+            alert(data.message || 'Đã xóa sản phẩm thành công.');
+            window.location.reload();
+        } else {
+            alert('Lỗi: ' + (data.message || 'Không thể xóa sản phẩm.'));
+        }
+    } catch (e) {
+        alert('Lỗi: ' + e.message);
+    }
+};
 
 // ============================================================
 // EXPORT EXCEL
@@ -675,7 +712,7 @@ window.deleteVariant = async function(variantId, productId) {
         });
         var json = await res.json();
         if (json.success) {
-            window.openProductDrawer(productId || window.currentDrawerProductId);
+            window.location.reload();
         } else {
             alert(json.message || 'Không thể xóa biến thể.');
         }
@@ -940,3 +977,161 @@ window.deleteVariant = async function(variantId, productId) {
         }
     };
 })();
+
+// ============================================================
+// UNIT CONVERSION DROPDOWN (san-pham index) - Dynamic Switch
+// ============================================================
+(function() {
+    window.activeUnits = window.activeUnits || {};
+
+    function formatMoneyVN(num) {
+        if (num === null || num === undefined || num === '') return '0';
+        return Number(num).toLocaleString('vi-VN');
+    }
+
+    function recalcRow(row, unitObj) {
+        if (!row) return;
+        var isChild = row.classList.contains('variant-child-row');
+        var baseDonvi = row.getAttribute('data-base-donvi') || '';
+        var baseGia = parseFloat(row.getAttribute('data-base-gia')) || 0;
+        var baseTonKho = parseFloat(row.getAttribute('data-base-tonkho')) || 0;
+        var baseMaHang = row.getAttribute('data-base-mahang') || '';
+        var baseMaVach = row.getAttribute('data-base-mavach') || '';
+        var baseTrangThai = row.getAttribute('data-base-trangthai') === '1';
+
+        var showDonvi, showGia, showTonKho, showMaHang, showMaVach, showTrangThai;
+        if (!unitObj) {
+            showDonvi = baseDonvi || '—';
+            showGia = baseGia;
+            showTonKho = baseTonKho;
+            showMaHang = baseMaHang || '—';
+            showMaVach = baseMaVach || '—';
+            showTrangThai = baseTrangThai;
+        } else {
+            var tyLe = parseFloat(unitObj.ty_le) || 1;
+            showDonvi = unitObj.ten_don_vi || '—';
+            showGia = parseFloat(unitObj.gia_ban) || 0;
+            showTonKho = Math.floor(baseTonKho / tyLe);
+            showMaHang = unitObj.ma_hang || '—';
+            showMaVach = unitObj.ma_vach || '—';
+            showTrangThai = baseTrangThai;
+        }
+
+        var elDonvi = row.querySelector('.js-donvi');
+        if (elDonvi) elDonvi.textContent = showDonvi;
+
+        var elGia = row.querySelector('.js-giaban');
+        if (elGia) elGia.textContent = formatMoneyVN(showGia) + ' d';
+
+        var elTonKho = row.querySelector('.js-tonkho');
+        if (elTonKho) {
+            elTonKho.textContent = showTonKho;
+            var tonKhoClass = 'js-tonkho small ';
+            if (showTonKho <= 0) tonKhoClass += 'text-danger';
+            else if (showTonKho <= (isChild ? 3 : 10)) tonKhoClass += 'text-warning';
+            else tonKhoClass += 'text-muted';
+            elTonKho.className = tonKhoClass;
+        }
+
+        var elMaHang = row.querySelector('.js-mahang');
+        if (elMaHang) elMaHang.textContent = 'MH: ' + (showMaHang || '—');
+
+        var elMaVach = row.querySelector('.js-mavach');
+        if (elMaVach) elMaVach.textContent = showMaVach && showMaVach !== '—' ? '#' + showMaVach : '—';
+
+        var elTrangThai = row.querySelector('.js-trangthai');
+        if (elTrangThai) {
+            var badge = '';
+            if (!showTrangThai) badge = '<span class="badge bg-danger">Ngừng kinh doanh</span>';
+            else if (showTonKho <= 0) badge = '<span class="badge bg-secondary">Hết hàng</span>';
+            else if (showTonKho <= (isChild ? 3 : 10)) badge = '<span class="badge bg-warning text-dark">Sắp hết</span>';
+            else badge = '<span class="badge bg-success">Còn hàng</span>';
+            elTrangThai.innerHTML = badge;
+        }
+
+        if (unitObj) row.classList.add('is-unit-switched');
+        else row.classList.remove('is-unit-switched');
+    }
+
+    window.selectUnitView = function(row, unitObj) {
+        if (!row || !unitObj) return;
+        var targetId = row.dataset.variantId || row.dataset.productId || row.getAttribute('data-id') || row.id;
+        if (!targetId) return;
+        window.activeUnits[targetId] = unitObj;
+        recalcRow(row, unitObj);
+    };
+
+    window.resetUnitView = function(row) {
+        if (!row) return;
+        var targetId = row.dataset.variantId || row.dataset.productId || row.getAttribute('data-id') || row.id;
+        if (targetId) delete window.activeUnits[targetId];
+        recalcRow(row, null);
+    };
+
+    window.getActiveUnitView = function(row) {
+        if (!row) return null;
+        var targetId = row.dataset.variantId || row.dataset.productId || row.getAttribute('data-id') || row.id;
+        if (!targetId) return null;
+        return window.activeUnits[targetId] || null;
+    };
+
+    window.toggleUnitDropdown = function(element) {
+        if (!element) return;
+        var container = element.closest('.unit-dropdown-container');
+        if (!container) return;
+        var menu = container.querySelector('.unit-dropdown-menu');
+        if (!menu) return;
+        var isOpen = menu.style.display === 'block';
+        document.querySelectorAll('.unit-dropdown-menu').forEach(function(m) { m.style.display = 'none'; });
+        document.querySelectorAll('.unit-dropdown-toggle').forEach(function(b) { b.classList.remove('active'); });
+        if (!isOpen) {
+            menu.style.display = 'block';
+            if (element.classList) element.classList.add('active');
+        }
+    };
+
+    window.selectUnitFromDropdown = function(liEl) {
+        if (!liEl) return;
+        var row = liEl.closest('tr');
+        var raw = liEl.getAttribute('data-unit-obj');
+        if (!raw) return;
+        var unitObj;
+        try { unitObj = JSON.parse(raw); } catch(e) { return; }
+        window.selectUnitView(row, unitObj);
+        var container = liEl.closest('.unit-dropdown-container');
+        if (container) {
+            var menu = container.querySelector('.unit-dropdown-menu');
+            if (menu) menu.style.display = 'none';
+            var btn = container.querySelector('.unit-dropdown-toggle');
+            if (btn) btn.classList.add('active');
+        }
+    };
+
+    window.selectBaseUnit = function(liEl) {
+        if (!liEl) return;
+        var row = liEl.closest('tr');
+        window.resetUnitView(row);
+        var container = liEl.closest('.unit-dropdown-container');
+        if (container) {
+            var menu = container.querySelector('.unit-dropdown-menu');
+            if (menu) menu.style.display = 'none';
+            var btn = container.querySelector('.unit-dropdown-toggle');
+            if (btn) btn.classList.remove('active');
+        }
+    };
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.unit-dropdown-container')) {
+            document.querySelectorAll('.unit-dropdown-menu').forEach(function(m) { m.style.display = 'none'; });
+            document.querySelectorAll('.unit-dropdown-toggle').forEach(function(b) { b.classList.remove('active'); });
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.unit-dropdown-menu').forEach(function(m) { m.style.display = 'none'; });
+            document.querySelectorAll('.unit-dropdown-toggle').forEach(function(b) { b.classList.remove('active'); });
+        }
+    });
+})();
+
