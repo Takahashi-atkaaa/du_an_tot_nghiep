@@ -209,7 +209,7 @@
     </div>
 </div>
 
-<div class="card table-admin mb-4">
+{{-- <div class="card table-admin mb-4">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <h5 class="mb-0 fw-bold">3 ngày gần nhất</h5>
     </div>
@@ -247,7 +247,7 @@
             </table>
         </div>
     </div>
-</div>
+</div> --}}
 
 <div class="row g-4 mb-4">
     <div class="col-xl-6">

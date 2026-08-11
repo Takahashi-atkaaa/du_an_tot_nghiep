@@ -3,6 +3,7 @@
 namespace App\Http\Requests\NhanSu;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ThemNhanVienRequest extends FormRequest
 {
@@ -16,7 +17,13 @@ class ThemNhanVienRequest extends FormRequest
         return [
             'ho_ten' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:nguoi_dung,email'],
-            'sdt' => ['required', 'string', 'max:20'],
+            'sdt' => [
+                'required',
+                'string',
+                'max:20',
+                'regex:/^(0[3|5|7|8|9])[0-9]{8}$/',
+                Rule::unique('nguoi_dung', 'sdt'),
+            ],
 
             'gioi_tinh' => [
                 'required',
@@ -77,6 +84,8 @@ class ThemNhanVienRequest extends FormRequest
             'email.email' => 'Email không đúng định dạng.',
             'email.unique' => 'Email này đã tồn tại.',
             'sdt.required' => 'Vui lòng nhập số điện thoại.',
+            'sdt.regex' => 'Số điện thoại không đúng định dạng.',
+            'sdt.unique' => 'Số điện thoại đã tồn tại.',
             'gioi_tinh.required' => 'Vui lòng chọn giới tính.',
             'gioi_tinh.in' => 'Giới tính không hợp lệ.',
             'cccd.required' => 'Vui lòng nhập số CCCD.',

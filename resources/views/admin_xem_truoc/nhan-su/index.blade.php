@@ -25,7 +25,7 @@
     @endif
 
     <div class="row g-4 mb-4">
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl-4 col-md-6">
             <div class="card card-stat blue h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="icon me-3"><i class="fas fa-users"></i></div>
@@ -36,7 +36,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl-4 col-md-6">
             <div class="card card-stat green h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="icon me-3"><i class="fas fa-user-check"></i></div>
@@ -47,18 +47,18 @@
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl-4 col-md-6">
             <div class="card card-stat orange h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="icon me-3"><i class="fas fa-clock"></i></div>
                     <div>
-                        <h6 class="text-muted mb-1">Nghỉ phép</h6>
+                        <h6 class="text-muted mb-1">Ngưng hoạt động</h6>
                         <h3 class="mb-0">{{ number_format($nghiPhep) }}</h3>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6">
+        {{-- <div class="col-xl-3 col-md-6">
             <div class="card card-stat red h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="icon me-3"><i class="fas fa-user-times"></i></div>
@@ -68,7 +68,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> --}}
     </div>
 
     <div class="card table-admin mb-4">
@@ -195,7 +195,7 @@
                                         <i class="fas fa-edit"></i>
                                     </a>
 
-                                    <form action="{{ route('nguoi-dung.destroy', $nguoiDung) }}" method="POST"
+                                    {{-- <form action="{{ route('nguoi-dung.destroy', $nguoiDung) }}" method="POST"
                                         class="d-inline">
                                         @csrf
                                         @method('DELETE')
@@ -204,7 +204,7 @@
                                             onclick="return confirm('Bạn có chắc muốn cho nhân viên nghỉ việc?')">
                                             <i class="fas fa-trash"></i>
                                         </button>
-                                    </form>
+                                    </form> --}}
                                 </td>
                             </tr>
                         @empty
