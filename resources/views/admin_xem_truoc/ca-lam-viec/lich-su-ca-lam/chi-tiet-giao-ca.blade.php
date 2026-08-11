@@ -178,6 +178,17 @@
 
             {{-- Tiền --}}
             <div class="section-title">
+                💰 Thông tin chuyển khoản
+            </div>
+            <div class="col-md-4 info-item">
+                        <div class="info-label">Tiền chuyển khoản</div>
+                        <div class="info-value">
+                            {{ number_format($giaoCa->doanh_thu_chuyen_khoan,0,',','.') }} VNĐ
+                        </div>
+                    </div>
+
+            {{-- Tiền --}}
+            <div class="section-title">
                 💰 Thông tin tiền mặt
             </div>
 
