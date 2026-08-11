@@ -1,33 +1,33 @@
-@extends('admin_xem_truoc.layouts.admin')
+﻿@extends('admin_xem_truoc.layouts.admin')
 
 @section('title', 'Quản lý Sản phẩm - SmartMart')
 
 @section('content')
 <!-- Page Header -->
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
     <div>
         <h4 class="fw-bold mb-1">Quản lý Sản phẩm</h4>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
+            <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="{{ url('admin/dashboard') }}">Admin</a></li>
                 <li class="breadcrumb-item active">Sản phẩm</li>
             </ol>
         </nav>
     </div>
-    <div class="d-flex gap-2">
-        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#importProductModal">
+    <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#importProductModal">
             <i class="fas fa-file-import me-2"></i>Import
         </button>
-        <button class="btn btn-outline-success" id="btnExportExcel">
+        <button class="btn btn-outline-success btn-sm" id="btnExportExcel">
             <i class="fas fa-file-export me-2"></i>Export
         </button>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addProductModal">
             <i class="fas fa-plus me-2"></i>Thêm sản phẩm
         </button>
-        <button class="btn btn-outline-secondary" id="startQrScanBtn">
+        <button class="btn btn-outline-secondary btn-sm" id="startQrScanBtn">
             <i class="fas fa-barcode me-2"></i>Quét mã vạch
         </button>
-        <a href="{{ url('admin/san-pham/trash') }}" class="btn btn-outline-danger">
+        <a href="{{ url('admin/san-pham/trash') }}" class="btn btn-outline-danger btn-sm">
             <i class="fas fa-trash me-2"></i>Thùng rác
         </a>
     </div>
@@ -49,14 +49,14 @@
         </div>
     @endif
     <!-- Filter & Search -->
-<div class="card table-admin mb-4">
-    <div class="card-body">
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body bg-white">
         <form action="{{ url('admin/san-pham') }}" method="GET">
-            <div class="row g-3">
+            <div class="row g-3 align-items-center">
                 <div class="col-md-4">
-                    <div class="input-group">
-                        <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" id="searchKeywordInput" class="form-control" name="keyword" value="{{ $keyword ?? '' }}" placeholder="Tìm kiếm sản phẩm...">
+                    <div class="input-group shadow-sm rounded border">
+                        <span class="input-group-text bg-white border-0"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" id="searchKeywordInput" class="form-control border-0" name="keyword" value="{{ $keyword ?? '' }}" placeholder="Tìm kiếm sản phẩm...">
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -112,9 +112,9 @@
 </form>
 
 <!-- Products Table -->
-<div class="card">
+<div class="card border-0 shadow-sm">
     <div class="card-body p-0">
-        <div class="d-flex justify-content-between align-items-center px-3 py-2 bg-light border-bottom">
+        <div class="d-flex justify-content-between align-items-center px-3 py-2 bg-light border-bottom rounded-top">
             <div class="d-flex align-items-center gap-3">
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" id="selectAllCheckbox">
@@ -133,9 +133,9 @@
         </div>
 
         @if($sanPhams->count() > 0)
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
+        <div class="table-responsive bg-white">
+            <table class="table table-hover align-middle mb-0 w-100">
+                <thead class="bg-white">
                     <tr>
                         <th style="width: 40px;"></th>
                         <th style="width: 60px;">Ảnh</th>
@@ -161,7 +161,7 @@
                         <td onclick="event.stopPropagation();">
                             <input type="checkbox" class="form-check-input product-checkbox" value="{{ $sanPham->id }}">
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
+                        <td onclick="event.stopPropagation();">
                             @if($sanPham->hinh_anh)
                                 <img src="{{ asset($sanPham->hinh_anh) }}"
                                      alt="{{ $sanPham->ten_san_pham }}"
@@ -172,10 +172,10 @@
                                 </div>
                             @endif
                         </td> 
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
+                        <td onclick="event.stopPropagation();">
                             <span class="text-muted small">#{{ $sanPham->ma_hang ?? $sanPham->ma_vach ?? $sanPham->id }}</span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
+                        <td onclick="event.stopPropagation();">
                             <div class="d-flex align-items-center gap-2">
                                 @if($hasVariants)
                                     <a href="javascript:void(0)" onclick="event.stopPropagation(); toggleVariants({{ $sanPham->id }})" class="text-decoration-none expand-btn" id="expandBtn{{ $sanPham->id }}" title="Xem biến thể">
@@ -190,28 +190,28 @@
                                 @endif
                             </div>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
+                        <td onclick="event.stopPropagation();">
                             <span class="text-muted small">{{ $sanPham->danhMuc->ten_danh_muc ?? '-' }}</span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
+                        <td onclick="event.stopPropagation();">
                             <span class="text-muted small">{{ $sanPham->donVi->ten_don_vi ?? '-' }}</span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
+                        <td onclick="event.stopPropagation();">
                             <span class="text-muted small text-center d-block">{{ $sanPham->dinh_muc_toi_thieu ?? 0 }}</span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
+                        <td onclick="event.stopPropagation();">
                             @if(is_numeric($giaHienThi))
                                 <span class="fw-bold text-primary" style="font-size:0.88rem;">{{ number_format($giaHienThi, 0, ',', '.') }} đ</span>
                             @else
                                 <span class="fw-bold text-primary" style="font-size:0.8rem;">{{ $giaHienThi }} đ</span>
                             @endif
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
+                        <td onclick="event.stopPropagation();">
                             <span class="{{ $tongTonKho <= ($sanPham->dinh_muc_toi_thieu ?? 0) ? 'text-warning' : 'text-muted' }} small">
                                 {{ $tongTonKho }}
                             </span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $sanPham->id }}, 'goc');">
+                        <td onclick="event.stopPropagation();">
                             @php
                                 $displayStock = $tongTonKho;
                                 $minStock = $sanPham->dinh_muc_toi_thieu ?? 0;
@@ -241,10 +241,10 @@
                                 </div>
                             @endif
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $bienThe->id }}, 'goc');">
+                        <td onclick="event.stopPropagation();">
                             <span class="text-muted small">#{{ $bienThe->ma_hang ?? $bienThe->ma_vach ?? $bienThe->id }}</span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $bienThe->id }}, 'goc');">
+                        <td onclick="event.stopPropagation();">
                             <div class="d-flex align-items-center gap-2" style="padding-left:20px;">
                                 <i class="fas fa-arrow-turn-down-right text-muted" style="font-size:0.6rem;"></i>
                                 <span class="text-muted" style="font-size:0.82rem;">
@@ -258,17 +258,17 @@
                             </div>
                         </td>
                         <td></td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $bienThe->id }}, 'goc');">
+                        <td onclick="event.stopPropagation();">
                             <span class="text-muted small">{{ $bienThe->donVi->ten_don_vi ?? '-' }}</span>
                         </td>
                         <td></td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $bienThe->id }}, 'goc');">
+                        <td onclick="event.stopPropagation();">
                             <span class="fw-bold text-primary" style="font-size:0.82rem;">{{ number_format($bienThe->gia_ban, 0, ',', '.') }} đ</span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $bienThe->id }}, 'goc');">
+                        <td onclick="event.stopPropagation();">
                             <span class="{{ ($bienThe->so_luong_ton_kho ?? 0) <= ($bienThe->dinh_muc_toi_thieu ?? 0) ? 'text-warning' : 'text-muted' }} small">{{ $bienThe->so_luong_ton_kho ?? 0 }}</span>
                         </td>
-                        <td onclick="event.stopPropagation(); openProductDrawer({{ $sanPham->id }}, {{ $bienThe->id }}, 'goc');">
+                        <td onclick="event.stopPropagation();">
                             @if(!$bienThe->trang_thai)
                                 <span class="badge bg-danger">Ngừng</span>
                             @elseif(($bienThe->so_luong_ton_kho ?? 0) <= 0)
@@ -280,6 +280,59 @@
                             @endif
                         </td>
                     </tr>
+
+                    {{-- Đơn vị quy đổi (sub-rows) --}}
+                    @if($bienThe->units && $bienThe->units->count() > 0)
+                        @foreach($bienThe->units as $donViQuyDoi)
+                        <tr class="unit-child-row" id="unitRow{{ $sanPham->id }}_{{ $bienThe->id }}_{{ $donViQuyDoi->id }}" style="display:none; background:#f5f8ff;" data-product-id="{{ $sanPham->id }}" data-target-id="{{ $donViQuyDoi->id }}" data-row-type="quy_doi">
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td onclick="event.stopPropagation();">
+                                <div class="d-flex align-items-center gap-2" style="padding-left:44px;">
+                                    <i class="fas fa-level-down-alt text-secondary" style="font-size:0.6rem; transform: rotate(180deg);"></i>
+                                    <span class="text-secondary" style="font-size:0.8rem;">
+                                        <span class="badge bg-info-subtle text-info border" style="font-size:0.68rem;">
+                                            <i class="fas fa-exchange-alt me-1"></i>Quy đổi
+                                        </span>
+                                    </span>
+                                </div>
+                            </td>
+                            <td></td>
+                            <td onclick="event.stopPropagation();" class="text-center">
+                                <span class="text-primary fw-semibold" style="font-size:0.8rem;">
+                                    {{ $donViQuyDoi->ten_don_vi ?? '-' }}
+                                </span>
+                                <br>
+                                <small class="text-muted">× {{ (int)$donViQuyDoi->so_luong_san_pham_trong_don_vi }}</small>
+                            </td>
+                            <td onclick="event.stopPropagation();" class="text-center">
+                                <span class="text-muted small">{{ number_format($donViQuyDoi->gia_von_quy_doi ?? 0, 0, ',', '.') }} đ</span>
+                            </td>
+                            <td onclick="event.stopPropagation();">
+                                <span class="fw-bold text-info" style="font-size:0.8rem;">{{ number_format($donViQuyDoi->gia_ban_quy_doi ?? 0, 0, ',', '.') }} đ</span>
+                            </td>
+                            <td onclick="event.stopPropagation();" class="text-center">
+                                @php
+                                    $soLuongQuyDoi = $bienThe->so_luong_ton_kho > 0 && $donViQuyDoi->so_luong_san_pham_trong_don_vi > 0
+                                        ? floor($bienThe->so_luong_ton_kho / $donViQuyDoi->so_luong_san_pham_trong_don_vi)
+                                        : 0;
+                                @endphp
+                                <span class="text-muted small">{{ $soLuongQuyDoi }}</span>
+                            </td>
+                            <td></td>
+                        </tr>
+                        @endforeach
+                    @else
+                        <tr class="unit-empty-row" id="unitEmptyRow{{ $sanPham->id }}_{{ $bienThe->id }}" style="display:none; background:#fafafa;">
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td colspan="7" class="text-muted text-center py-2" style="font-size:0.8rem;">
+                                <i class="fas fa-info-circle me-1"></i>Không có đơn vị quy đổi
+                            </td>
+                        </tr>
+                    @endif
                     @endforeach
                     @endforeach
                 </tbody>
@@ -307,31 +360,7 @@
 </div>
 
 <!-- Product Detail Drawer -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="productDetailDrawer" style="width:680px;">
-    <div class="offcanvas-header border-bottom">
-        <h5 class="offcanvas-title fw-bold"><i class="fas fa-box-open me-2 text-primary"></i>Chi tiết sản phẩm</h5>
-        <div class="d-flex gap-2">
-            <a href="#" id="drawerEditBtn" class="btn btn-sm btn-primary">
-                <i class="fas fa-edit me-1"></i>Sửa
-            </a>
-            <button type="button" class="btn btn-sm btn-danger" id="drawerDeleteBtn" onclick="confirmDeleteFromDrawer()">
-                <i class="fas fa-trash me-1"></i>Xóa
-            </button>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-        </div>
-    </div>
-    <div class="offcanvas-body p-0" id="drawerBody" style="overflow-y:auto;">
-        <!-- Loading -->
-        <div class="d-flex justify-content-center align-items-center" style="min-height:300px;">
-            <div class="text-center">
-                <div class="spinner-border text-primary mb-3" role="status"></div>
-                <p class="text-muted mb-0">Đang tải...</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Add Product Modal -->
+<!-- Product detail drawer removed -->
 <div class="modal fade" id="addProductModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-fullheight">
         <div class="modal-content">
@@ -747,6 +776,66 @@
         position: sticky;
         top: 0;
         z-index: 2;
+    }
+
+    /* ======= Product list styling ======= */
+    .product-parent-row,
+    .variant-child-row {
+        transition: background-color 0.2s ease, transform 0.2s ease;
+    }
+    .product-parent-row:hover {
+        background-color: #f6f9ff;
+    }
+    .variant-child-row:hover {
+        background-color: #f3f7ff;
+    }
+    .expand-btn i {
+        transition: transform 0.2s ease;
+    }
+    .expand-btn.expanded i {
+        transform: rotate(90deg);
+    }
+    .product-parent-row td,
+    .variant-child-row td {
+        vertical-align: middle;
+        border-top: 1px solid #f0f0f0;
+    }
+    .table-responsive.bg-white {
+        background: #ffffff;
+    }
+    .table-responsive.bg-white {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+    }
+    .table-responsive.bg-white table {
+        width: 100% !important;
+        table-layout: fixed !important;
+        min-width: 100%;
+    }
+    .table-responsive.bg-white th,
+    .table-responsive.bg-white td {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .table-responsive.bg-white th:first-child,
+    .table-responsive.bg-white td:first-child {
+        width: 40px;
+    }
+    .table-responsive.bg-white th:nth-child(2),
+    .table-responsive.bg-white td:nth-child(2) {
+        width: 60px;
+    }
+    .table-responsive.bg-white th:nth-child(4),
+    .table-responsive.bg-white td:nth-child(4) {
+        width: 220px;
+    }
+    .table-responsive.bg-white th {
+        border-bottom: 2px solid #e9ecef;
+    }
+    .card-footer {
+        background: #ffffff;
     }
 
     #addProductModal .bang-hcl-table-wrap {
@@ -1743,371 +1832,6 @@
     </div>
 </div>
 
-<script>
-// ---- Product Detail Drawer ----
-(function() {
-    const drawer = document.getElementById('productDetailDrawer');
-    const drawerBody = document.getElementById('drawerBody');
-    const drawerEditBtn = document.getElementById('drawerEditBtn');
-
-    // Toggle variants expand/collapse
-    window.toggleVariants = function(productId) {
-        const btn = document.getElementById('expandBtn' + productId);
-        const rows = document.querySelectorAll('[id^="variantRow' + productId + '_"]');
-        const isExpanded = btn.classList.contains('expanded');
-
-        if (isExpanded) {
-            rows.forEach(row => row.style.display = 'none');
-            btn.classList.remove('expanded');
-            btn.querySelector('i').style.transform = '';
-        } else {
-            rows.forEach(row => row.style.display = '');
-            btn.classList.add('expanded');
-            btn.querySelector('i').style.transform = 'rotate(90deg)';
-        }
-    };
-
-    // Open drawer when clicking any table row (except checkbox/action columns)
-    document.getElementById('productTableBody')?.addEventListener('click', function(e) {
-        const row = e.target.closest('.product-row');
-        if (!row) return;
-        const id = row.dataset.productId;
-        if (id) openProductDrawer(id);
-    });
-
-    window.openProductDrawer = async function(id) {
-        const modal = new bootstrap.Offcanvas(drawer);
-        drawerBody.innerHTML = `
-            <div class="d-flex justify-content-center align-items-center" style="min-height:300px;">
-                <div class="text-center">
-                    <div class="spinner-border text-primary mb-3" role="status"></div>
-                    <p class="text-muted mb-0">Đang tải...</p>
-                </div>
-            </div>`;
-        drawerEditBtn.href = `{{ url('admin/san-pham/') }}/${id}/edit`;
-        currentDrawerProductId = id;
-        modal.show();
-
-        try {
-            const res = await fetch(`/admin/api/san-pham/${id}`);
-            const json = await res.json();
-            if (!json.success) {
-                drawerBody.innerHTML = `<div class="p-4 text-center text-danger">${json.message || 'Không tìm thấy sản phẩm.'}</div>`;
-                return;
-            }
-            renderDrawerContent(json.data);
-        } catch(e) {
-            drawerBody.innerHTML = `<div class="p-4 text-center text-danger">Lỗi tải dữ liệu: ${e.message}</div>`;
-        }
-    };
-
-    let currentDrawerProductId = null;
-    window.confirmDeleteFromDrawer = function() {
-        if (!currentDrawerProductId) return;
-        if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `{{ url('admin/san-pham') }}/${currentDrawerProductId}`;
-        form.innerHTML = `@csrf @method('DELETE')`;
-        document.body.appendChild(form);
-        form.submit();
-    }
-
-    function formatMoney(num) {
-        if (num === null || num === undefined) return '0';
-        return Number(num).toLocaleString('vi-VN');
-    }
-
-    function formatDate(dateStr) {
-        if (!dateStr) return '-';
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    }
-
-    function loaiPhieuLabel(loai) {
-        const map = {
-            'nhap': '<span class="badge bg-success">Nhập</span>',
-            'xuat': '<span class="badge bg-danger">Xuất</span>',
-            'ban': '<span class="badge bg-primary">Bán</span>',
-            'tra': '<span class="badge bg-warning text-dark">Trả</span>',
-        };
-        return map[loai?.toLowerCase()] || `<span class="badge bg-secondary">${loai || '-'}</span>`;
-    }
-
-    function renderDrawerContent(data) {
-        const sp = data.sanPham;
-        const theKho = data.theKho || [];
-        const loHang = data.loHang || [];
-
-        const trangThaiLabel = !sp.trang_thai
-            ? '<span class="badge bg-danger">Ngừng bán</span>'
-            : (sp.so_luong_ton_kho <= 0
-                ? '<span class="badge bg-secondary">Hết hàng</span>'
-                : (sp.so_luong_ton_kho <= (sp.dinh_muc_toi_thieu || 0)
-                    ? '<span class="badge bg-warning text-dark">Sắp hết hàng</span>'
-                    : '<span class="badge bg-success">Còn hàng</span>'));
-
-        const thuocTinhLabels = (sp.thuoc_tinhs || []).map(tt =>
-            `<span class="badge bg-info text-dark me-1">${tt.ten_thuoc_tinh}</span>`
-        ).join('');
-
-        const bienTheHtml = (() => {
-            const bt = data.bienThe || [];
-            if (bt.length === 0) return '';
-            return `
-            <div class="mb-3">
-                <h6 class="fw-bold mb-2"><i class="fas fa-layer-group me-1"></i>Biến thể <span class="fw-normal text-muted small">(${bt.length})</span></h6>
-                <table class="table table-sm table-bordered mb-0" style="font-size:0.82rem;">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Ảnh</th>
-                            <th>Thuộc tính</th>
-                            <th>Mã vạch</th>
-                            <th class="text-end">Giá bán</th>
-                            <th class="text-end">Tồn kho</th>
-                            <th>Trạng thái</th>
-                            <th class="text-center">Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${bt.map(v => `
-                        <tr>
-                            <td>
-                                ${v.hinh_anh
-                                    ? `<img src="/${v.hinh_anh}" style="width:32px;height:32px;object-fit:cover;border-radius:4px;">`
-                                    : `<div style="width:32px;height:32px;border-radius:4px;background:#eee;display:flex;align-items:center;justify-content:center;"><i class="fas fa-image text-muted" style="font-size:0.6rem;"></i></div>`
-                                }
-                            </td>
-                            <td>
-                                ${(v.thuoc_tinhs || []).length > 0
-                                    ? v.thuoc_tinhs.map(tt => `<span class="badge bg-light text-dark border me-1">${tt.ten_thuoc_tinh}</span>`).join('')
-                                    : '<em class="text-muted">—</em>'
-                                }
-                            </td>
-                            <td class="small">${v.ma_vach || '-'}</td>
-                            <td class="text-end fw-bold text-primary">${formatMoney(v.gia_ban)} đ</td>
-                            <td class="text-end ${(v.so_luong_ton_kho ?? 0) <= (v.dinh_muc_toi_thieu || 0) ? 'text-warning' : 'text-muted'}">${v.so_luong_ton_kho ?? 0}</td>
-                            <td>
-                                ${!v.trang_thai
-                                    ? '<span class="badge bg-danger">Ngừng</span>'
-                                    : (v.so_luong_ton_kho <= 0
-                                        ? '<span class="badge bg-secondary">Hết</span>'
-                                        : '<span class="badge bg-success">Còn</span>'
-                                    )
-                                }
-                            </td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteVariant(${v.id}, ${sp.id})" title="Xóa biến thể">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>`).join('')}
-                    </tbody>
-                </table>
-            </div>`;
-        })();
-
-        const hinhAnh = sp.hinh_anh
-            ? `<img src="/${sp.hinh_anh}" class="img-fluid rounded" alt="${sp.ten_san_pham}" style="max-height:220px; object-fit:contain; background:#f8f9fa;">`
-            : `<div class="text-center text-muted py-5 bg-light rounded"><i class="fas fa-image fa-3x"></i><p class="mt-2 mb-0">Không có ảnh</p></div>`;
-
-        const galleryHtml = '';
-
-        // Thẻ kho
-        let theKhoHtml = '';
-        if (theKho.length > 0) {
-            theKhoHtml = `
-            <div class="table-scroll-wrap">
-                <table class="table table-sm table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Mã phiếu</th>
-                            <th>Thời gian</th>
-                            <th>Loại</th>
-                            <th>Lô</th>
-                            <th>Giá nhập</th>
-                            <th>SL</th>
-                            <th>SL còn lại của lô</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${theKho.map(item => `
-                        <tr>
-                            <td class="small">${item.maPhieu || '-'}</td>
-                            <td class="small">${formatDate(item.thoiGian)}</td>
-                            <td>${loaiPhieuLabel(item.loaiPhieu)}</td>
-                            <td class="small">${item.maLo || '-'}</td>
-                            <td class="small text-end">${formatMoney(item.gia)} đ</td>
-                            <td class="small text-center">${item.soLuong}</td>
-                            <td class="small text-center">${item.soLuongConLai ?? '-'}</td>
-                        </tr>`).join('')}
-                    </tbody>
-                </table>
-            </div>`;
-        } else {
-            theKhoHtml = `<p class="text-muted text-center py-3 mb-0 small">Chưa có dữ liệu thẻ kho.</p>`;
-        }
-
-        // Lô hàng
-        let loHangHtml = '';
-        if (loHang.length > 0) {
-            loHangHtml = `
-            <table class="table table-sm table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Số lô</th>
-                        <th>Hạn sử dụng</th>
-                        <th class="text-end">SL nhập</th>
-                        <th class="text-end">SL còn lại</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${loHang.map(item => {
-                        const isExpired = item.hanSuDung && new Date(item.hanSuDung) < new Date();
-                        return `<tr>
-                            <td class="small">${item.maLo || '-'}</td>
-                            <td class="small ${isExpired ? 'text-danger' : ''}">${formatDate(item.hanSuDung)} ${isExpired ? '<i class="fas fa-exclamation-circle"></i>' : ''}</td>
-                            <td class="small text-end">${item.so_luong ?? '-'}</td>
-                            <td class="small text-end">${item.soLuongConLai ?? '-'}</td>
-                        </tr>`;
-                    }).join('')}
-                </tbody>
-            </table>`;
-        } else {
-            loHangHtml = `<p class="text-muted text-center py-3 mb-0 small">Chưa có lô hàng.</p>`;
-        }
-
-        drawerBody.innerHTML = `
-        <div class="p-3">
-            <div class="row g-3 mb-3">
-                <div class="col-4">
-                    ${hinhAnh}
-                </div>
-                <div class="col-8">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h5 class="fw-bold mb-1">${sp.ten_san_pham}</h5>
-                            <p class="text-muted small mb-1">#${sp.ma_hang || sp.ma_vach || sp.id}</p>
-                            ${trangThaiLabel}
-                        </div>
-                        <div class="text-end">
-                            <p class="fw-bold text-primary mb-0" style="font-size:1.4rem;">${formatMoney(sp.gia_ban)} đ</p>
-                            <p class="text-muted small mb-0">Giá vốn: ${formatMoney(sp.gia_von)} đ</p>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="row g-2 small">
-                        <div class="col-6"><strong>Danh mục:</strong> ${sp.danh_muc?.ten_danh_muc || '-'}</div>
-                        <div class="col-6"><strong>Thương hiệu:</strong> ${sp.thuong_hieu || '-'}</div>
-                        <div class="col-6"><strong>Đơn vị:</strong> ${sp.ten_don_vi || '-'}</div>
-                        <div class="col-6"><strong>Mã vạch:</strong> ${sp.ma_vach || '-'}</div>
-                        <div class="col-6"><strong>Tồn kho:</strong> ${sp.so_luong_ton_kho ?? 0}</div>
-                        <div class="col-6"><strong>Định mức:</strong> ${sp.dinh_muc_toi_thieu ?? 0}</div>
-                    </div>
-                    ${thuocTinhLabels ? `<div class="mt-2">${thuocTinhLabels}</div>` : ''}
-                </div>
-            </div>
-
-            ${sp.mo_ta ? `
-            <div class="mb-3">
-                <h6 class="fw-bold mb-2"><i class="fas fa-align-left me-1"></i>Mô tả</h6>
-                <div class="bg-light rounded p-2 small text-muted" style="white-space:pre-line;">${sp.mo_ta}</div>
-            </div>` : ''}
-
-            ${bienTheHtml}
-
-            <div class="mb-3">
-                <h6 class="fw-bold mb-2"><i class="fas fa-history me-1"></i>Thẻ kho <span class="fw-normal text-muted small">(${theKho.length})</span></h6>
-                ${theKhoHtml}
-            </div>
-
-            <div class="mb-3">
-                <h6 class="fw-bold mb-2"><i class="fas fa-boxes-stacked me-1"></i>Lô - Hạn sử dụng <span class="fw-normal text-muted small">(${loHang.length})</span></h6>
-                ${loHangHtml}
-            </div>
-
-            <div class="text-muted small border-top pt-2">
-                <i class="fas fa-clock me-1"></i>Tạo: ${formatDate(sp.created_at)} | Cập nhật: ${formatDate(sp.updated_at)}
-            </div>
-        </div>`;
-    }
-})();
-
-// ---- Export Excel ----
-(function() {
-    const btn = document.getElementById('btnExportExcel');
-    if (!btn) return;
-    btn.addEventListener('click', function() {
-        const params = new URLSearchParams(window.location.search);
-        window.location.href = '{{ url('admin/san-pham/export') }}?' + params.toString();
-    });
-})();
-
-// ---- Import Preview ----
-(function() {
-    const input = document.getElementById('importFileInput');
-    if (!input) return;
-    input.addEventListener('change', function() {
-        const file = this.files[0];
-        if (!file) return;
-
-        const previewSection = document.getElementById('importPreviewSection');
-        const previewTable = document.getElementById('importPreviewTable');
-        if (!previewTable) return;
-        const thead = previewTable.querySelector('thead');
-        const tbody = previewTable.querySelector('tbody');
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-
-                if (jsonData.length < 2) {
-                    alert('File không có dữ liệu hoặc chỉ có header.');
-                    return;
-                }
-
-                const headers = jsonData[0];
-                const rows = jsonData.slice(1, 6);
-
-                thead.innerHTML = '<tr>' + headers.map(h => `<th>${h || ''}</th>`).join('') + '</tr>';
-                tbody.innerHTML = rows.map(row => {
-                    return '<tr>' + headers.map((_, i) => `<td>${row[i] !== undefined ? row[i] : ''}</td>`).join('') + '</tr>';
-                }).join('');
-
-                previewSection.classList.remove('d-none');
-            } catch(err) {
-                alert('Không thể đọc file. Vui lòng đảm bảo file đúng định dạng.');
-                console.error(err);
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    });
-})();
-
-// ---- Delete Variant (global, accessible from HTML) ----
-window.deleteVariant = async function(variantId, productId) {
-    if (!confirm('Bạn có chắc muốn xóa biến thể này?')) return;
-    try {
-        const res = await fetch(`/admin/api/san-pham/variant/${variantId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content,
-                'Accept': 'application/json',
-            },
-        });
-        const json = await res.json();
-        if (json.success) {
-            window.openProductDrawer(productId);
-        } else {
-            alert(json.message || 'Không thể xóa biến thể.');
-        }
-    } catch(e) {
-        alert('Lỗi: ' + e.message);
-    }
-};
-</script>
+<script>/* Product detail drawer removed */</script>
 @endsection
+

@@ -106,11 +106,153 @@ class SanPhamApiController extends Controller
         ]);
     }
 
+    public function thongKe(int $id): JsonResponse
+    {
+        $product = Product::with(['danhMuc', 'variants'])->find($id);
+        if (!$product) {
+            return response()->json(['success' => false, 'message' => 'Sản phẩm không tồn tại.'], 404);
+        }
+
+        $days = (int) request()->query('days', 30);
+        $days = $days > 0 ? min($days, 365) : 30;
+        $to = now()->endOfDay();
+        $from = now()->subDays($days - 1)->startOfDay();
+
+        $baseQuery = DB::table('chi_tiet_hoa_don as cth')
+            ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
+            ->where('cth.id_san_pham', $product->id)
+            ->where('hd.trang_thai', 'Hoàn thành');
+
+        $summary = (clone $baseQuery)
+            ->whereBetween('hd.created_at', [$from, $to])
+            ->selectRaw('COALESCE(SUM(cth.so_luong), 0) as total_quantity')
+            ->selectRaw('COALESCE(SUM(cth.thanh_tien), 0) as total_revenue')
+            ->selectRaw('COUNT(DISTINCT cth.id_hoa_don) as total_orders')
+            ->first();
+
+        $dailySales = (clone $baseQuery)
+            ->whereBetween('hd.created_at', [$from, $to])
+            ->selectRaw('DATE(hd.created_at) as date')
+            ->selectRaw('COALESCE(SUM(cth.so_luong), 0) as quantity')
+            ->selectRaw('COALESCE(SUM(cth.thanh_tien), 0) as revenue')
+            ->groupByRaw('DATE(hd.created_at)')
+            ->orderBy('date')
+            ->get()
+            ->keyBy('date');
+
+        $salesByDay = [];
+        for ($i = 0; $i < $days; $i++) {
+            $date = $from->copy()->addDays($i)->toDateString();
+            $row = $dailySales->get($date);
+            $salesByDay[] = [
+                'date' => $date,
+                'quantity' => (int) ($row->quantity ?? 0),
+                'revenue' => (float) ($row->revenue ?? 0),
+            ];
+        }
+
+        $topVariants = (clone $baseQuery)
+            ->leftJoin('bien_the_san_pham as v', 'cth.id_chi_tiet_phieu', '=', 'v.id')
+            ->whereBetween('hd.created_at', [$from, $to])
+            ->selectRaw('COALESCE(cth.id_chi_tiet_phieu, 0) as variant_id')
+            ->selectRaw('COALESCE(v.ten_bien_the, v.ten_don_vi, ?) as variant_name', [$product->ten_san_pham])
+            ->selectRaw('COALESCE(SUM(cth.so_luong), 0) as quantity')
+            ->selectRaw('COALESCE(SUM(cth.thanh_tien), 0) as revenue')
+            ->groupBy('cth.id_chi_tiet_phieu', 'variant_name')
+            ->orderByDesc('quantity')
+            ->limit(5)
+            ->get()
+            ->map(fn($row) => [
+                'variant_id' => $row->variant_id,
+                'variant_name' => $row->variant_name,
+                'quantity' => (int) $row->quantity,
+                'revenue' => (float) $row->revenue,
+            ])->values()->all();
+
+        $recentOrders = DB::table('chi_tiet_hoa_don as cth')
+            ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
+            ->leftJoin('khach_hang as kh', 'hd.id_khach_hang', '=', 'kh.id')
+            ->where('cth.id_san_pham', $product->id)
+            ->where('hd.trang_thai', 'Hoàn thành')
+            ->whereBetween('hd.created_at', [$from, $to])
+            ->selectRaw('cth.id_hoa_don as order_id')
+            ->selectRaw("CONCAT('#', hd.id) as ma_hoa_don")
+            ->selectRaw('hd.created_at as order_date')
+            ->selectRaw('cth.so_luong as quantity')
+            ->selectRaw('cth.thanh_tien as revenue')
+            ->selectRaw('kh.ten_khach_hang as customer_name')
+            ->orderByDesc('hd.created_at')
+            ->limit(5)
+            ->get()
+            ->map(fn($row) => [
+                'order_id' => $row->order_id,
+                'ma_hoa_don' => $row->ma_hoa_don,
+                'order_date' => $row->order_date,
+                'quantity' => (int) $row->quantity,
+                'revenue' => (float) $row->revenue,
+                'customer_name' => $row->customer_name,
+            ])->values()->all();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'product' => [
+                    'id' => $product->id,
+                    'ten_san_pham' => $product->ten_san_pham,
+                    'danh_muc' => $product->danhMuc ? [
+                        'id' => $product->danhMuc->id,
+                        'ten_danh_muc' => $product->danhMuc->ten_danh_muc,
+                    ] : null,
+                    'tong_ton_kho' => $product->variants->sum('so_luong_ton'),
+                    'bien_the_count' => $product->variants->count(),
+                ],
+                'summary' => [
+                    'from' => $from->toDateString(),
+                    'to' => $to->toDateString(),
+                    'days' => $days,
+                    'total_orders' => (int) $summary->total_orders,
+                    'total_quantity' => (int) $summary->total_quantity,
+                    'total_revenue' => (float) $summary->total_revenue,
+                    'average_price' => $summary->total_quantity > 0
+                        ? round($summary->total_revenue / $summary->total_quantity, 2)
+                        : 0,
+                ],
+                'sales_by_day' => $salesByDay,
+                'top_variants' => $topVariants,
+                'recent_orders' => $recentOrders,
+            ],
+        ]);
+    }
+
     public function show(int $id): JsonResponse
     {
         $requestedVariantId = request()->query('variant_id');
         $requestedUnitId = request()->query('unit_id');
         $isMaster = request()->query('is_master') === '1';
+        // #region agent log
+        try {
+            $logPath = base_path('debug-80bdd0.log');
+            $payload = [
+                'sessionId' => '80bdd0',
+                'id' => 'log_' . time() . '_' . substr(md5(uniqid()), 0, 6),
+                'timestamp' => (int)(microtime(true) * 1000),
+                'location' => 'SanPhamApiController.php:231',
+                'message' => 'show() entry',
+                'data' => [
+                    'route' => 'san-pham.api.show',
+                    'id' => $id,
+                    'variant_id' => $requestedVariantId,
+                    'unit_id' => $requestedUnitId,
+                    'is_master' => $isMaster,
+                    'method' => request()->method(),
+                    'ip' => request()->ip(),
+                ],
+                'runId' => 'post-fix',
+                'hypothesisId' => 'H1',
+            ];
+            file_put_contents($logPath, json_encode($payload, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND | LOCK_EX);
+        } catch (\Throwable $logEx) {}
+        // #endregion
         \Log::info('[SanPhamApi show] id=' . $id . ' variant_id=' . ($requestedVariantId ?? 'null') . ' unit_id=' . ($requestedUnitId ?? 'null') . ' is_master=' . ($isMaster ? '1' : '0'));
 
         $product = Product::with([
@@ -153,8 +295,52 @@ class SanPhamApiController extends Controller
         }
 
         if (!$variant || !$variant->product) {
+            // #region agent log
+            try {
+                $logPath = base_path('debug-80bdd0.log');
+                $payload = [
+                    'sessionId' => '80bdd0',
+                    'id' => 'log_' . time() . '_' . substr(md5(uniqid()), 0, 6),
+                    'timestamp' => (int)(microtime(true) * 1000),
+                    'location' => 'SanPhamApiController.php:298',
+                    'message' => '404 not found',
+                    'data' => [
+                        'id' => $id,
+                        'variant_is_null' => $variant === null,
+                    ],
+                    'runId' => 'initial',
+                    'hypothesisId' => 'H9',
+                ];
+                file_put_contents($logPath, json_encode($payload, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND | LOCK_EX);
+            } catch (\Throwable $logEx) {}
+            // #endregion
             return response()->json(['success' => false, 'message' => 'San pham khong ton tai.'], 404);
         }
+
+        // #region agent log
+        try {
+            $logPath = base_path('debug-80bdd0.log');
+            $payload = [
+                'sessionId' => '80bdd0',
+                'id' => 'log_' . time() . '_' . substr(md5(uniqid()), 0, 6),
+                'timestamp' => (int)(microtime(true) * 1000),
+                'location' => 'SanPhamApiController.php:303',
+                'message' => 'variant resolved',
+                'data' => [
+                    'id' => $id,
+                    'variant_id' => $variant->id,
+                    'product_id' => $variant->product_id,
+                    'product_deleted_at' => $variant->product->deleted_at,
+                    'requested_variant_id' => $requestedVariantId,
+                    'requested_unit_id' => $requestedUnitId,
+                    'has_units' => $variant->units->count(),
+                ],
+                'runId' => 'initial',
+                'hypothesisId' => 'H10',
+            ];
+            file_put_contents($logPath, json_encode($payload, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND | LOCK_EX);
+        } catch (\Throwable $logEx) {}
+        // #endregion
 
         $theKho = DB::table('phieu')
             ->join('chi_tiet_phieu', 'phieu.id', '=', 'chi_tiet_phieu.id_phieu')
@@ -236,6 +422,7 @@ class SanPhamApiController extends Controller
 
         // Tạo bienThe[] với thuocTinhs từ accessor cho JS drawer
         // Lưu ý: thuocTinhs là accessor, KHÔNG gọi load() được
+        // BAO GỒM cả units (đơn vị quy đổi)
         $bienTheArr = [];
         foreach ($variant->product->variants as $v) {
             $bienTheArr[] = [
@@ -252,6 +439,17 @@ class SanPhamApiController extends Controller
                     'id' => $tt->id,
                     'ten_thuoc_tinh' => $tt->ten_thuoc_tinh,
                 ])->all(),
+                // Đơn vị quy đổi - BẮT BUỘC để frontend hiển thị trong Tab Biến thể
+                'units' => $v->units->map(fn($u) => [
+                    'id' => $u->id,
+                    'ten_don_vi' => $u->ten_don_vi,
+                    'so_luong_san_pham_trong_don_vi' => $u->so_luong_san_pham_trong_don_vi,
+                    'gia_von_quy_doi' => $u->gia_von_quy_doi,
+                    'gia_ban_quy_doi' => $u->gia_ban_quy_doi,
+                    'gia_ban_si' => $u->gia_ban_si,
+                    'ma_hang' => $u->ma_hang,
+                    'ma_vach' => $u->ma_vach,
+                ])->all(),
             ];
         }
 
@@ -266,6 +464,25 @@ class SanPhamApiController extends Controller
             ])->all(),
         ]);
 
+        // #region agent log
+        try {
+            $logPath = base_path('debug-80bdd0.log');
+            $payload = [
+                'sessionId' => '80bdd0',
+                'id' => 'log_' . time() . '_' . substr(md5(uniqid()), 0, 6),
+                'timestamp' => (int)(microtime(true) * 1000),
+                'location' => 'SanPhamApiController.php:455',
+                'message' => 'returning success response',
+                'data' => [
+                    'id' => $id,
+                    'variant_id' => $variant->id,
+                ],
+                'runId' => 'initial',
+                'hypothesisId' => 'H11',
+            ];
+            file_put_contents($logPath, json_encode($payload, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND | LOCK_EX);
+        } catch (\Throwable $logEx) {}
+        // #endregion
         return response()->json([
             'success' => true,
             'data' => [
