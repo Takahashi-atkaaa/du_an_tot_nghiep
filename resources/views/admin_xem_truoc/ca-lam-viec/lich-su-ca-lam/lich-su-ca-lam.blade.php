@@ -82,7 +82,7 @@
 
     <div class="thung_chua">
         @foreach($ngay2 as $n)
-            <a href="{{ route('lich-su-ngay-lam-viec.cac-ca-lam', ['ngay'=> $n->ngay, 'id_ca'=> null])}}" class="vien">
+            <a style="text-decoration: none;" href="{{ route('lich-su-ngay-lam-viec.cac-ca-lam', ['ngay'=> $n->ngay, 'id_ca'=> null])}}" class="vien">
                 <label class="ngay">📅 Ngày: {{ $n->ngay->format('Y-m-d') }}</label>
             </a>
         @endforeach

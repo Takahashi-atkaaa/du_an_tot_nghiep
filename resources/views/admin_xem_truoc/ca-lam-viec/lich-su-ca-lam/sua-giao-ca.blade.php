@@ -193,6 +193,22 @@
 
                 {{-- Thông tin tiền mặt --}}
                 <div class="group-title">
+                    💰 Thông tin chuyển khoản
+                </div>
+
+                <div class="row">
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Doanh thu chuyển khoản</label>
+
+                        <input type="number"
+                            class="form-control"
+                            name="doanh_thu_chuyen_khoan"
+                            value="{{ $giaoCa->doanh_thu_chuyen_khoan }}">
+                    </div>
+
+                {{-- Thông tin tiền mặt --}}
+                <div class="group-title">
                     💰 Thông tin tiền mặt
                 </div>
 
