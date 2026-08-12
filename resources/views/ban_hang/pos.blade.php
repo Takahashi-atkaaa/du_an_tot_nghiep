@@ -2364,7 +2364,154 @@ function renderCart() {
    calculateChange();
 }
 
+function tinhGiamSanPhamTuDong() {
+    const cart = getCurrentCart();
 
+    if (
+        cart.length === 0 ||
+        !Array.isArray(promotions)
+    ) {
+        return 0;
+    }
+
+    const productPromotions = promotions.filter(
+        km => km.la_khuyen_mai_san_pham
+    );
+
+    let tongGiam = 0;
+
+    cart.forEach(item => {
+
+        const productId = Number(
+            item.product_id ??
+            item.id_san_pham ??
+            0
+        );
+
+        const variantId =
+            Number(item.id);
+
+        const itemSubtotal =
+            Number(item.gia_ban) *
+            Number(item.qty);
+
+        /*
+         * Những chương trình áp dụng cho item này.
+         */
+        const kms = productPromotions.filter(km => {
+
+            const productIds =
+                (km.id_san_phams || []).map(Number);
+
+            const variantIds =
+                (km.id_bien_thes || []).map(Number);
+
+            return (
+                productIds.includes(productId) ||
+                variantIds.includes(variantId)
+            );
+        });
+
+        if (kms.length === 0) {
+            return;
+        }
+
+        /*
+         * Nếu bị trùng nhiều KM,
+         * chỉ dùng KM giảm nhiều nhất.
+         */
+        let bestDiscount = 0;
+
+        kms.forEach(km => {
+
+            const type = String(
+                km.loai_giam_gia || ''
+            )
+                .trim()
+                .toLowerCase();
+
+            const value =
+                Number(km.gia_tri_giam || 0);
+
+            const minQty =
+                Number(
+                    km.so_luong_sp_toi_thieu || 0
+                );
+
+            if (
+                minQty > 0 &&
+                Number(item.qty) < minQty
+            ) {
+                return;
+            }
+
+            let discount = 0;
+
+            if (
+                [
+                    'percent',
+                    'phan_tram',
+                    'percentage'
+                ].includes(type)
+            ) {
+                discount =
+                    itemSubtotal *
+                    value /
+                    100;
+
+                const maxDiscount =
+                    Number(km.giam_toi_da || 0);
+
+                if (maxDiscount > 0) {
+                    discount = Math.min(
+                        discount,
+                        maxDiscount
+                    );
+                }
+            }
+
+            else if (
+    [
+        'amount',
+        'fixed',
+        'tien_mat',
+        'so_tien',
+        'giam_tien'
+    ].includes(type)
+) {
+    discount = Math.min(
+        value * Number(item.qty),
+        itemSubtotal
+    );
+}
+
+            else if (
+                type === 'bogo' ||
+                type === 'mua_1_tang_1'
+            ) {
+                const freeQty = Math.floor(
+                    Number(item.qty) / 2
+                );
+
+                discount =
+                    freeQty *
+                    Number(item.gia_ban);
+            }
+
+            bestDiscount = Math.max(
+                bestDiscount,
+                discount
+            );
+        });
+
+        tongGiam += Math.min(
+            bestDiscount,
+            itemSubtotal
+        );
+    });
+
+    return tongGiam;
+}
 function calculateTotal() {
     const cart = getCurrentCart();
     const subtotal = cart.reduce(
@@ -2373,7 +2520,15 @@ function calculateTotal() {
     );
 
     // Tiền giảm từ khuyến mãi
-    const promotionDiscount = tinhTienGiam();
+    const productDiscount =
+    tinhGiamSanPhamTuDong();
+
+const voucherDiscount =
+    tinhGiamVoucher(subtotal);
+
+const promotionDiscount =
+    productDiscount +
+    voucherDiscount;
 
     // Điểm hiện có của khách
     const customerPoint = selectedCustomer
@@ -2431,6 +2586,11 @@ function calculateTotal() {
 // ─────────────────────────────────────────────
 // Update Quantity
 // ─────────────────────────────────────────────
+function onQtyClick(event, id, change) {
+    event.stopPropagation();
+    updateQuantity(id, change);
+}
+
 function updateQuantity(id, change) {
     const cart = getCurrentCart();
 
@@ -2438,21 +2598,10 @@ function updateQuantity(id, change) {
         i => String(i.id) === String(id)
     );
 
-    if (!item) return;
-
-function onQtyClick(event, id, change) {
-    updateQuantity(id, change);
-}
-
-function updateQuantity(rowKey, change) {
-    const cart = getCurrentCart();
-    const item = cart.find(i =>
-        Number(i.id) === Number(rowKey) ||
-        (i.row_key !== undefined && String(i.row_key) === String(rowKey))
-    );
     if (!item) {
         return;
     }
+
     item.qty += change;
 
     if (item.qty <= 0) {
@@ -2460,9 +2609,14 @@ function updateQuantity(rowKey, change) {
         return;
     }
 
-    // Không cho tăng vượt tồn kho
-    if (item.qty > Number(item.so_luong_ton_kho)) {
-        item.qty = Number(item.so_luong_ton_kho);
+    const maxQty = Number(
+        item.available_qty ??
+        item.so_luong_ton_kho ??
+        0
+    );
+
+    if (maxQty > 0 && item.qty > maxQty) {
+        item.qty = maxQty;
 
         showToast(
             'Số lượng vượt quá tồn kho!',
@@ -2526,48 +2680,75 @@ function calculateChange() {
     const cart = getCurrentCart();
 
     const subtotal = cart.reduce(
-        (sum, item) => sum + Number(item.gia_ban) * item.qty,
+        (sum, item) =>
+            sum + Number(item.gia_ban) * Number(item.qty),
         0
     );
 
-    const promotionDiscount = tinhTienGiam();
+    const productDiscount =
+        tinhGiamSanPhamTuDong();
+
+    const voucherDiscount =
+        tinhGiamVoucher(subtotal);
+
+    const promotionDiscount =
+        productDiscount + voucherDiscount;
 
     const customerPoint = selectedCustomer
         ? Number(selectedCustomer.diem_tich_luy)
         : 0;
 
     let usePoint =
-        parseInt(document.getElementById("usePoint").value) || 0;
+        parseInt(
+            document.getElementById("usePoint").value
+        ) || 0;
 
-    usePoint = Math.min(usePoint, customerPoint);
-
-    const maxUsePoint = Math.floor(
-        Math.max(0, subtotal - promotionDiscount) / 100
+    usePoint = Math.min(
+        usePoint,
+        customerPoint
     );
 
-    usePoint = Math.min(usePoint, maxUsePoint);
+    const maxUsePoint = Math.floor(
+        Math.max(
+            0,
+            subtotal - promotionDiscount
+        ) / 100
+    );
 
-    document.getElementById("usePoint").value = usePoint;
+    usePoint = Math.min(
+        usePoint,
+        maxUsePoint
+    );
 
-    const pointDiscount = usePoint * 100;
+    const pointDiscount =
+        usePoint * 100;
 
     const total = Math.max(
         0,
-        subtotal - promotionDiscount - pointDiscount
+        subtotal -
+        promotionDiscount -
+        pointDiscount
     );
 
-    const customerMoneyValue =
-        document.getElementById("customerMoney").value;
-
+    // QUAN TRỌNG:
+    // "300.000" -> 300000
     const customer = parseInt(
-        String(customerMoneyValue).replace(/\D/g, ''),
+        String(
+            document.getElementById(
+                "customerMoney"
+            ).value || ''
+        ).replace(/\D/g, ''),
         10
     ) || 0;
 
-    const change = Math.max(0, customer - total);
+    const change = Math.max(
+        0,
+        customer - total
+    );
 
-    document.getElementById("changeAmount").innerText =
-        formatCurrency(change);
+    document.getElementById(
+        "changeAmount"
+    ).innerText = formatCurrency(change);
 }
 
 // ─────────────────────────────────────────────
@@ -2602,49 +2783,89 @@ async function processPayment(isTransferConfirmed = false) {
 
   
 const subtotal = cart.reduce(
-    (sum, item) => sum + Number(item.gia_ban) * item.qty,
+    (sum, item) =>
+        sum + Number(item.gia_ban) * Number(item.qty),
     0
 );
 
+// Khuyến mãi sản phẩm tự động
+const productDiscount =
+    tinhGiamSanPhamTuDong();
+
+// Voucher hóa đơn
+const voucherDiscount =
+    tinhGiamVoucher(subtotal);
+
+// Tổng khuyến mãi
 const promotionDiscount =
-    tinhTienGiam();
+    productDiscount + voucherDiscount;
 
 const customerPoint = selectedCustomer
     ? Number(selectedCustomer.diem_tich_luy)
     : 0;
 
 let usePoint =
-    parseInt(document.getElementById("usePoint").value) || 0;
+    parseInt(
+        document.getElementById("usePoint").value
+    ) || 0;
 
-// Không được vượt quá điểm hiện có
-usePoint = Math.min(usePoint, customerPoint);
-
-// Không được vượt quá số tiền còn phải trả
-const maxUsePoint = Math.floor(
-    Math.max(0, subtotal - promotionDiscount) / 100
+usePoint = Math.min(
+    usePoint,
+    customerPoint
 );
 
-usePoint = Math.min(usePoint, maxUsePoint);
+const maxUsePoint = Math.floor(
+    Math.max(
+        0,
+        subtotal - promotionDiscount
+    ) / 100
+);
 
-// cập nhật lại input
-document.getElementById("usePoint").value = usePoint;
+usePoint = Math.min(
+    usePoint,
+    maxUsePoint
+);
 
-const pointDiscount = usePoint * 100;
+document.getElementById(
+    "usePoint"
+).value = usePoint;
+
+const pointDiscount =
+    usePoint * 100;
 
 const total = Math.max(
     0,
-    subtotal - promotionDiscount - pointDiscount
+    subtotal -
+    promotionDiscount -
+    pointDiscount
 );
+
+// "300.000" -> 300000
 let customer = parseInt(
     String(
-        document.getElementById("customerMoney").value || ''
+        document.getElementById(
+            "customerMoney"
+        ).value || ''
     ).replace(/\D/g, ''),
     10
 ) || 0;
 
+console.log({
+    subtotal,
+    productDiscount,
+    voucherDiscount,
+    promotionDiscount,
+    pointDiscount,
+    total,
+    customer
+});
+
 if (selectedPayment === 'cash') {
     if (customer < total) {
-        showToast('Tiền khách đưa chưa đủ.', 'error');
+        showToast(
+            'Tiền khách đưa chưa đủ.',
+            'error'
+        );
         return;
     }
 } else {
@@ -2895,28 +3116,63 @@ function clearSelectedCustomer() {
     calculateChange();
 }
 async function loadPromotions() {
-    const response = await fetch(promotionListUrl, {
-        headers: { 'Accept': 'application/json' }
-    });
+    try {
+        const response = await fetch(promotionListUrl, {
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
 
-    if (!response.ok) {
-        throw new Error('Không thể tải khuyến mãi.');
+        if (!response.ok) {
+            throw new Error(
+                'Không thể tải khuyến mãi.'
+            );
+        }
+
+        promotions = await response.json();
+
+        /*
+         * Dropdown chỉ lấy khuyến mãi hóa đơn.
+         */
+        const orderPromotions = promotions.filter(
+            km => !km.la_khuyen_mai_san_pham
+        );
+
+        const select =
+            document.getElementById('promotionSelect');
+
+        select.innerHTML =
+            '<option value="">Không áp dụng</option>';
+
+        orderPromotions.forEach(km => {
+
+            let dieuKien = '';
+
+            if (Number(km.don_hang_toi_thieu || 0) > 0) {
+                dieuKien =
+                    ` - Đơn từ ${formatCurrency(
+                        Number(km.don_hang_toi_thieu)
+                    )}`;
+            }
+
+            select.innerHTML += `
+                <option value="${km.id}">
+                    ${km.ten_chuong_trinh}${dieuKien}
+                </option>
+            `;
+        });
+
+        /*
+         * Render lại card để badge KM sản phẩm hiện đúng.
+         */
+        renderProducts(products);
+
+        calculateTotal();
+        calculateChange();
+
+    } catch (error) {
+        console.error(error);
     }
-
-    promotions = await response.json();
-
-    const select = document.getElementById('promotionSelect');
-    select.innerHTML = '<option value="">Không áp dụng</option>';
-
-    promotions.forEach(km => {
-        select.innerHTML += `
-            <option value="${km.id}">
-                ${km.ten_chuong_trinh}
-            </option>
-        `;
-    });
-    // Render lại sản phẩm để hiện badge khuyến mãi
-renderProducts(products);
 }
 
 /**
@@ -3033,9 +3289,8 @@ function applySeller() {
         setRememberedSellerId(id);
     }
 }
-function tinhTienGiam() {
-    return tinhTienGiamDetail().discount;
-}
+
+
 
 /**
  * Chi tiết tính tiền giảm và lý do nếu không giảm được.
@@ -3043,97 +3298,26 @@ function tinhTienGiam() {
  *   - discount: số tiền được giảm (>=0)
  *   - reason: null nếu áp dụng được, ngược lại là câu giải thích tiếng Việt.
  */
-function tinhTienGiamDetail() {
-    const cart = getCurrentCart();
+function tinhTienGiam(subtotal) {
+    return tinhGiamVoucher(subtotal);
+}
+
+function tinhGiamVoucher(subtotal) {
 
     if (!selectedPromotion) {
-        return { discount: 0, reason: null };
-    }
-
-    if (cart.length === 0) {
-        return { discount: 0, reason: 'Giỏ hàng đang trống.' };
-    }
-
-    // ID sản phẩm áp dụng toàn bộ biến thể
-    const applicableProductIds = (
-        selectedPromotion.id_san_phams || []
-    ).map(Number);
-
-    // ID biến thể áp dụng riêng
-    const applicableVariantIds = (
-        selectedPromotion.id_bien_thes || []
-    ).map(Number);
-
-    /*
-     * Nếu không có sản phẩm và cũng không có biến thể
-     * thì không áp dụng khuyến mãi.
-     */
-    if (
-        applicableProductIds.length === 0 &&
-        applicableVariantIds.length === 0
-    ) {
         return 0;
-    if (applicableProductIds.length === 0) {
-        return {
-            discount: 0,
-            reason: 'Khuyến mãi này hiện chưa gắn với sản phẩm nào.',
-        };
     }
 
-    /*
-     * Chỉ lấy item thuộc phạm vi khuyến mãi.
-     */
-    const applicableItems = cart.filter(item => {
-
-        // ID sản phẩm cha
-        const productId = Number(
-            item.product_id ??
-            item.id_san_pham ??
-            0
-        );
-
-        // item.id chính là ID biến thể
-        const variantId = Number(item.id);
-
-        // Nếu chọn toàn bộ sản phẩm
-        const applyWholeProduct =
-            applicableProductIds.includes(productId);
-
-        // Nếu chỉ chọn riêng biến thể
-        const applySpecificVariant =
-            applicableVariantIds.includes(variantId);
-
-        return (
-            applyWholeProduct ||
-            applySpecificVariant
-        );
-    });
-
-    if (applicableItems.length === 0) {
-        return {
-            discount: 0,
-            reason: 'Khuyến mãi này không áp dụng cho sản phẩm hiện có trong giỏ.',
-        };
+    // Không cho KM sản phẩm lọt vào đây
+    if (selectedPromotion.la_khuyen_mai_san_pham) {
+        return 0;
     }
 
-    /*
-     * Tổng tiền chỉ của các sản phẩm / biến thể
-     * được áp dụng khuyến mãi.
-     */
-    const applicableSubtotal = applicableItems.reduce(
-        (sum, item) =>
-            sum +
-            Number(item.gia_ban) *
-            Number(item.qty),
-        0
-    );
+    const cart = getCurrentCart();
 
-    /*
-     * Tổng số lượng được áp dụng.
-     */
-    const applicableQuantity = applicableItems.reduce(
+    const totalQty = cart.reduce(
         (sum, item) =>
-            sum + Number(item.qty),
+            sum + Number(item.qty || 0),
         0
     );
 
@@ -3145,44 +3329,15 @@ function tinhTienGiamDetail() {
         selectedPromotion.so_luong_sp_toi_thieu || 0
     );
 
-    /*
-     * Tổng toàn bộ giỏ hàng.
-     * Dùng để xét đơn hàng tối thiểu.
-     */
-    const wholeCartSubtotal = cart.reduce(
-        (sum, item) =>
-            sum +
-            Number(item.gia_ban) *
-            Number(item.qty),
-        0
-    );
-
-    if (wholeCartSubtotal < minOrder) {
-        return {
-            discount: 0,
-            reason:
-                'Đơn hàng chưa đạt tối thiểu ' +
-                formatCurrency(minOrder) +
-                ' để áp dụng khuyến mãi.',
-        };
+    if (subtotal < minOrder) {
+        return 0;
     }
 
-    /*
-     * Số lượng tối thiểu chỉ xét những item
-     * thuộc chương trình khuyến mãi.
-     */
     if (
         minQty > 0 &&
-        applicableQuantity < minQty
+        totalQty < minQty
     ) {
         return 0;
-    if (minQty > 0 && applicableQuantity < minQty) {
-        return {
-            discount: 0,
-            reason:
-                'Cần tối thiểu ' + minQty +
-                ' sản phẩm áp dụng để dùng khuyến mãi.',
-        };
     }
 
     const type = String(
@@ -3191,7 +3346,7 @@ function tinhTienGiamDetail() {
         .trim()
         .toLowerCase();
 
-    const discountValue = Number(
+    const value = Number(
         selectedPromotion.gia_tri_giam || 0
     );
 
@@ -3206,8 +3361,8 @@ function tinhTienGiamDetail() {
         ].includes(type)
     ) {
         discount =
-            applicableSubtotal *
-            discountValue /
+            subtotal *
+            value /
             100;
     }
 
@@ -3221,32 +3376,9 @@ function tinhTienGiamDetail() {
             'giam_tien'
         ].includes(type)
     ) {
-        discount = Math.min(
-            discountValue,
-            applicableSubtotal
-        );
+        discount = value;
     }
 
-    // Mua 1 tặng 1
-    else if (
-        type === 'bogo' ||
-        type === 'mua_1_tang_1'
-    ) {
-        applicableItems.forEach(item => {
-
-            const freeQuantity = Math.floor(
-                Number(item.qty) / 2
-            );
-
-            discount +=
-                freeQuantity *
-                Number(item.gia_ban);
-        });
-    }
-
-    /*
-     * Giảm tối đa.
-     */
     const maxDiscount = Number(
         selectedPromotion.giam_toi_da || 0
     );
@@ -3258,37 +3390,28 @@ function tinhTienGiamDetail() {
         );
     }
 
-    /*
-     * Không được giảm vượt quá tổng tiền
-     * của sản phẩm được áp dụng.
-     */
-    const finalDiscount = Math.min(
+    return Math.min(
         Math.max(0, discount),
-        applicableSubtotal
+        subtotal
     );
-
-    return {
-        discount: finalDiscount,
-        reason: finalDiscount > 0 ? null : 'Khuyến mãi không hợp lệ.',
-    };
 }
 function applyPromotion() {
-    const id = document.getElementById('promotionSelect').value;
+    const id =
+        document.getElementById(
+            'promotionSelect'
+        ).value;
 
-    selectedPromotion = promotions.find(km => String(km.id) === String(id)) || null;
-    getCurrentInvoice().promotion = selectedPromotion;
+    selectedPromotion = promotions.find(
+        km =>
+            String(km.id) === String(id) &&
+            !km.la_khuyen_mai_san_pham
+    ) || null;
 
-    renderCart();
+    getCurrentInvoice().promotion =
+        selectedPromotion;
+
     calculateTotal();
     calculateChange();
-
-    // Nếu vừa chọn 1 KM mới mà KM đó không giảm được → cảnh báo người dùng biết lý do.
-    if (selectedPromotion) {
-        const detail = tinhTienGiamDetail();
-        if (detail.reason) {
-            showToast('Khuyến mãi chưa áp dụng được: ' + detail.reason, 'error');
-        }
-    }
 }
 
 async function handleSearchEnter(event) {
