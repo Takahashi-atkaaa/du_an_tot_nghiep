@@ -59,32 +59,20 @@ class DashboardController extends Controller
             ->distinct('khach_hang.id')
             ->count('khach_hang.id');
 
-        $discountTotal = (clone $ordersQuery)
-            ->sum('tien_giam_gia');
+      $discountTotal = (clone $completedOrdersQuery)
+    ->sum('tien_giam_gia');
 
-        $pointsEarned = (clone $ordersQuery)
-            ->sum('diem_thu_duoc');
+$pointsEarned = (clone $completedOrdersQuery)
+    ->sum('diem_thu_duoc');
 
-        $pointsUsed = (clone $ordersQuery)
-            ->sum('diem_su_dung');
+$pointsUsed = (clone $completedOrdersQuery)
+    ->sum('diem_su_dung');
 
         $averageOrderValue = $completedOrders > 0
             ? round($dailyRevenue / $completedOrders)
             : 0;
 
-        $last3DaysStats = [];
-        for ($i = 2; $i >= 0; $i--) {
-            $date = Carbon::parse($rangeEnd)->subDays($i)->toDateString();
-            $dayQuery = DB::table('hoa_don')->whereDate('created_at', $date);
-            $last3DaysStats[] = [
-                'date' => $date,
-                'label' => Carbon::parse($date)->format('d/m/Y'),
-                'revenue' => (float) $dayQuery->where('trang_thai', 'Hoàn thành')->sum('tong_tien_hang'),
-                'orders' => $dayQuery->count(),
-                'completed' => $dayQuery->where('trang_thai', 'Hoàn thành')->count(),
-                'cancelled' => $dayQuery->where('trang_thai', 'Đã hủy')->count(),
-            ];
-        }
+      
 
         $paymentRows = (clone $completedOrdersQuery)
             ->selectRaw("CASE
@@ -235,7 +223,6 @@ class DashboardController extends Controller
             'topCustomers',
             'staffPerformance',
             'dailyOrders',
-            'last3DaysStats'
         ));
     }
 }

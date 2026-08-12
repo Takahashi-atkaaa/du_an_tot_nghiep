@@ -166,9 +166,9 @@
             </form>
         </div>
         <div class="login-footer">
-            <a href="{{ url('/') }}">
+            {{-- <a href="{{ url('/') }}">
                 <i class="fas fa-arrow-left me-2"></i>Quay lại trang chủ
-            </a>
+            </a> --}}
         </div>
     </div>
 

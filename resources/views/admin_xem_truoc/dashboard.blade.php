@@ -209,45 +209,7 @@
     </div>
 </div>
 
-{{-- <div class="card table-admin mb-4">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h5 class="mb-0 fw-bold">3 ngày gần nhất</h5>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle">
-                <thead>
-                    <tr>
-                        <th>Ngày</th>
-                        <th>Doanh thu</th>
-                        <th>Số đơn</th>
-                        <th>Hoàn thành</th>
-                        <th>Đã hủy</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($last3DaysStats as $dayStat)
-                        <tr>
-                            <td>{{ $dayStat['label'] }}</td>
-                            <td>{{ number_format($dayStat['revenue'], 0, ',', '.') }} đ</td>
-                            <td>{{ number_format($dayStat['orders']) }}</td>
-                            <td>{{ number_format($dayStat['completed']) }}</td>
-                            <td>{{ number_format($dayStat['cancelled']) }}</td>
-                            <td>
-                                <a href="{{ url('admin/hoa-don?ngay=' . $dayStat['date']) }}" class="btn btn-sm btn-outline-primary">Xem</a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">Chưa có dữ liệu.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div> --}}
+
 
 <div class="row g-4 mb-4">
     <div class="col-xl-6">
