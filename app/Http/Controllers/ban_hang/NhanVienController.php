@@ -541,70 +541,298 @@ public function hoaDon(Request $request)
 
             $tienGiamGia = 0;
             $diemSuDung = (int)($request->diem_su_dung ?? 0);
+            // ===============================
+// KHUYẾN MÃI SẢN PHẨM TỰ ĐỘNG
+// ===============================
+foreach ($items as $item) {
 
+    $idSanPham = (int) $item['bien_the']->product_id;
+    $idBienThe = (int) $item['bien_the']->id;
+
+    $soLuong = (int) $item['so_luong'];
+    $giaBan = (float) $item['gia_ban'];
+    $thanhTien = (float) $item['thanh_tien'];
+
+    $khuyenMaisSanPham = DB::table('khuyen_mai')
+        ->join(
+            'khuyen_mai_san_pham',
+            'khuyen_mai.id',
+            '=',
+            'khuyen_mai_san_pham.id_khuyen_mai'
+        )
+        ->where('khuyen_mai.trang_thai', 1)
+        ->where('khuyen_mai.ngay_bat_dau', '<=', now())
+        ->where('khuyen_mai.ngay_ket_thuc', '>=', now())
+        ->where(function ($q) use ($idSanPham, $idBienThe) {
+
+            $q->where(function ($sub) use ($idSanPham) {
+                $sub->where(
+                    'khuyen_mai_san_pham.id_san_pham',
+                    $idSanPham
+                )
+                ->whereNull(
+                    'khuyen_mai_san_pham.id_bien_the_san_pham'
+                );
+            })
+
+            ->orWhere(
+                'khuyen_mai_san_pham.id_bien_the_san_pham',
+                $idBienThe
+            );
+        })
+        ->select('khuyen_mai.*')
+        ->get();
+
+    $giamTotNhat = 0;
+
+    foreach ($khuyenMaisSanPham as $km) {
+
+        $minQty = (int) ($km->so_luong_sp_toi_thieu ?? 0);
+
+        if ($minQty > 0 && $soLuong < $minQty) {
+            continue;
+        }
+
+        if (
+            $tongTienHang <
+            (float) ($km->don_hang_toi_thieu ?? 0)
+        ) {
+            continue;
+        }
+
+        $loai = Str::of((string) $km->loai_giam_gia)
+            ->trim()
+            ->lower()
+            ->ascii()
+            ->replace([' ', '-'], '_')
+            ->value();
+
+        $giaTri = (float) ($km->gia_tri_giam ?? 0);
+        $giamToiDa = (float) ($km->giam_toi_da ?? 0);
+
+        $giam = 0;
+
+        switch ($loai) {
+
+            case 'phan_tram':
+            case 'percent':
+            case 'percentage':
+
+                $giam =
+                    $thanhTien *
+                    $giaTri /
+                    100;
+
+                break;
+
+            case 'amount':
+            case 'fixed':
+            case 'tien_mat':
+            case 'so_tien':
+            case 'giam_tien':
+
+                // giảm theo từng sản phẩm
+                $giam = min(
+                    $giaTri * $soLuong,
+                    $thanhTien
+                );
+
+                break;
+
+            case 'bogo':
+            case 'mua_1_tang_1':
+
+                $giam =
+                    floor($soLuong / 2) *
+                    $giaBan;
+
+                break;
+        }
+
+        if ($giamToiDa > 0) {
+            $giam = min(
+                $giam,
+                $giamToiDa
+            );
+        }
+
+        $giam = min(
+            max(0, $giam),
+            $thanhTien
+        );
+
+        $giamTotNhat = max(
+            $giamTotNhat,
+            $giam
+        );
+    }
+
+    $tienGiamGia += $giamTotNhat;
+}
             if ($request->id_khuyen_mai) {
-                $khuyenMai = DB::table('khuyen_mai')
-                    ->where('id', $request->id_khuyen_mai)
-                    ->where('trang_thai', 1)
-                    ->first();
+    $khuyenMai = DB::table('khuyen_mai')
+        ->where('id', $request->id_khuyen_mai)
+        ->where('trang_thai', 1)
+        ->first();
 
-                if ($khuyenMai) {
-                    $tongSoLuong = collect($items)->sum('so_luong');
+    if ($khuyenMai) {
 
-                    if (
-                        $tongTienHang >= ($khuyenMai->don_hang_toi_thieu ?? 0) &&
-                        $tongSoLuong >= ($khuyenMai->so_luong_sp_toi_thieu ?? 0)
-                    ) {
-                        $loaiGiamGia = Str::of((string) $khuyenMai->loai_giam_gia)
-                            ->trim()
-                            ->lower()
-                            ->ascii()
-                            ->replace([' ', '-'], '_')
-                            ->value();
+        /*
+         * Lấy phạm vi áp dụng khuyến mãi.
+         */
+        $phamViKhuyenMai = DB::table('khuyen_mai_san_pham')
+            ->where('id_khuyen_mai', $khuyenMai->id)
+            ->get();
 
-                        $giaTriGiam = (float) ($khuyenMai->gia_tri_giam ?? 0);
-                        $giamToiDa = (float) ($khuyenMai->giam_toi_da ?? 0);
+        /*
+         * Sản phẩm được áp dụng toàn bộ biến thể.
+         */
+        $idSanPhamsApDung = $phamViKhuyenMai
+            ->whereNull('id_bien_the_san_pham')
+            ->pluck('id_san_pham')
+            ->map(fn ($id) => (int) $id)
+            ->all();
 
-                        switch ($loaiGiamGia) {
-                            case 'phan_tram':
-                            case 'percent':
-                                $tienGiamGia = $tongTienHang * $giaTriGiam / 100;
+        /*
+         * Những biến thể được áp dụng riêng.
+         */
+        $idBienThesApDung = $phamViKhuyenMai
+            ->whereNotNull('id_bien_the_san_pham')
+            ->pluck('id_bien_the_san_pham')
+            ->map(fn ($id) => (int) $id)
+            ->all();
 
-                                if ($giamToiDa > 0) {
-                                    $tienGiamGia = min($tienGiamGia, $giamToiDa);
-                                }
-                                break;
+        /*
+         * Lọc đúng các item được khuyến mãi.
+         */
+        $itemsDuocKhuyenMai = collect($items)
+            ->filter(function ($item) use (
+                $idSanPhamsApDung,
+                $idBienThesApDung
+            ) {
+                $idSanPham = (int) $item['bien_the']->product_id;
+                $idBienThe = (int) $item['bien_the']->id;
 
-                            case 'bogo':
-                            case 'mua_1_tang_1':
-                                foreach ($items as $item) {
-                                    $freeQty = floor($item['so_luong'] / 2);
-                                    $tienGiamGia += $freeQty * $item['gia_ban'];
-                                }
-                                break;
+                $apDungTheoSanPham = in_array(
+                    $idSanPham,
+                    $idSanPhamsApDung,
+                    true
+                );
 
-                            case 'tien_mat':
-                            case 'so_tien':
-                            case 'giam_tien':
-                            case 'fixed':
-                                $tienGiamGia = $giaTriGiam;
-                                break;
+                $apDungTheoBienThe = in_array(
+                    $idBienThe,
+                    $idBienThesApDung,
+                    true
+                );
 
-                            default:
-                                return response()->json([
-                                    'success' => false,
-                                    'message' => 'Loại giảm giá không hợp lệ: '
-                                        . $khuyenMai->loai_giam_gia
-                                ], 422);
-                        }
+                return $apDungTheoSanPham || $apDungTheoBienThe;
+            });
 
+        /*
+         * Tổng tiền chỉ của sản phẩm/biến thể được khuyến mãi.
+         */
+        $tongTienDuocKhuyenMai =
+            (float) $itemsDuocKhuyenMai->sum('thanh_tien');
+
+        /*
+         * Tổng số lượng chỉ của item được khuyến mãi.
+         */
+        $tongSoLuongDuocKhuyenMai =
+            (int) $itemsDuocKhuyenMai->sum('so_luong');
+
+        /*
+         * Chỉ tính khi trong giỏ thực sự có item
+         * thuộc chương trình khuyến mãi.
+         */
+        if (
+            $tongTienDuocKhuyenMai > 0 &&
+            $tongTienHang >= ($khuyenMai->don_hang_toi_thieu ?? 0) &&
+            $tongSoLuongDuocKhuyenMai >= ($khuyenMai->so_luong_sp_toi_thieu ?? 0)
+        ) {
+            $loaiGiamGia = Str::of(
+                (string) $khuyenMai->loai_giam_gia
+            )
+                ->trim()
+                ->lower()
+                ->ascii()
+                ->replace([' ', '-'], '_')
+                ->value();
+
+            $giaTriGiam =
+                (float) ($khuyenMai->gia_tri_giam ?? 0);
+
+            $giamToiDa =
+                (float) ($khuyenMai->giam_toi_da ?? 0);
+
+            switch ($loaiGiamGia) {
+
+                case 'phan_tram':
+                case 'percent':
+                case 'percentage':
+
+                    $tienGiamGia =
+                        $tongTienDuocKhuyenMai
+                        * $giaTriGiam
+                        / 100;
+
+                    if ($giamToiDa > 0) {
                         $tienGiamGia = min(
-                            max($tienGiamGia, 0),
-                            $tongTienHang
+                            $tienGiamGia,
+                            $giamToiDa
                         );
                     }
-                }
+
+                    break;
+
+                case 'bogo':
+                case 'mua_1_tang_1':
+
+                    foreach ($itemsDuocKhuyenMai as $item) {
+                        $freeQty = floor(
+                            $item['so_luong'] / 2
+                        );
+
+                        $tienGiamGia +=
+                            $freeQty * $item['gia_ban'];
+                    }
+
+                    break;
+
+              case 'amount':
+case 'tien_mat':
+case 'so_tien':
+case 'giam_tien':
+case 'fixed':
+
+    // Giảm tiền theo từng sản phẩm
+    $tienGiamGia = min(
+        $giaTriGiam * $tongSoLuongDuocKhuyenMai,
+        $tongTienDuocKhuyenMai
+    );
+
+    break;
+
+                default:
+
+                    return response()->json([
+                        'success' => false,
+                        'message' =>
+                            'Loại giảm giá không hợp lệ: '
+                            . $khuyenMai->loai_giam_gia
+                    ], 422);
             }
+
+            /*
+             * Không bao giờ được giảm quá số tiền
+             * của các item thuộc phạm vi khuyến mãi.
+             */
+            $tienGiamGia = min(
+                max($tienGiamGia, 0),
+                $tongTienDuocKhuyenMai
+            );
+        }
+    }
+}
 
             $khachHang = null;
 
@@ -1017,22 +1245,53 @@ public function hoaDon(Request $request)
 {
     $khuyenMais = DB::table('khuyen_mai')
         ->where('trang_thai', 1)
-        ->whereDate('ngay_bat_dau', '<=', today())
-        ->whereDate('ngay_ket_thuc', '>=', today())
-        ->whereNull('deleted_at')
+        ->where('ngay_bat_dau', '<=', now())
+        ->where('ngay_ket_thuc', '>=', now())
+        ->select(
+            'id',
+            'ten_chuong_trinh',
+            'loai_giam_gia',
+            'gia_tri_giam',
+            'giam_toi_da',
+            'so_luong_sp_toi_thieu',
+            'don_hang_toi_thieu'
+        )
+        ->orderByDesc('id')
         ->get();
 
     foreach ($khuyenMais as $khuyenMai) {
-        $khuyenMai->id_san_phams =
-            DB::table('khuyen_mai_san_pham')
-                ->where(
-                    'id_khuyen_mai',
-                    $khuyenMai->id
-                )
-                ->pluck('id_san_pham')
-                ->map(fn ($id) => (int) $id)
-                ->values()
-                ->all();
+
+        $phamVi = DB::table('khuyen_mai_san_pham')
+            ->where('id_khuyen_mai', $khuyenMai->id)
+            ->get();
+
+        /*
+         * Có dữ liệu trong khuyen_mai_san_pham
+         * => đây là khuyến mãi sản phẩm.
+         */
+        $khuyenMai->la_khuyen_mai_san_pham =
+            $phamVi->isNotEmpty();
+
+        /*
+         * id_bien_the_san_pham = NULL
+         * => áp dụng toàn bộ biến thể của sản phẩm.
+         */
+        $khuyenMai->id_san_phams = $phamVi
+            ->whereNull('id_bien_the_san_pham')
+            ->pluck('id_san_pham')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        /*
+         * Khuyến mãi chỉ áp dụng riêng biến thể.
+         */
+        $khuyenMai->id_bien_thes = $phamVi
+            ->whereNotNull('id_bien_the_san_pham')
+            ->pluck('id_bien_the_san_pham')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
     }
 
     return response()->json($khuyenMais);

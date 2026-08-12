@@ -365,12 +365,29 @@
     </label>
 
     <input
-        type="text"
-        id="searchPromotionProduct"
-        class="form-control mb-2"
-        placeholder="Tìm tên sản phẩm..."
-        oninput="filterPromotionProducts()"
-    >
+    type="text"
+    id="searchPromotionProduct"
+    class="form-control mb-2"
+    placeholder="Tìm tên sản phẩm..."
+    autocomplete="off"
+>
+<div class="d-flex justify-content-between align-items-center mb-2 px-1">
+
+    <label class="d-flex align-items-center gap-2 fw-semibold mb-0">
+        <input
+            type="checkbox"
+            id="selectAllPromotionProducts"
+            class="form-check-input m-0"
+        >
+
+        <span>Chọn tất cả sản phẩm</span>
+    </label>
+
+    <small class="text-muted" id="promotionSelectedCount">
+        0 sản phẩm đã chọn
+    </small>
+
+</div>
 
     <div
         id="promotionProductList"
@@ -378,22 +395,74 @@
         style="max-height: 220px; overflow-y: auto;"
     >
         @foreach($sanPhams as $sanPham)
-            <label
-                class="promotion-product-item d-flex align-items-center gap-2 p-2 border-bottom"
-                data-name="{{ mb_strtolower($sanPham->ten_san_pham) }}"
-            >
-                <input
-                    type="checkbox"
-                    name="id_san_phams[]"
-                    value="{{ $sanPham->id }}"
-                    class="form-check-input m-0"
-                >
 
-                <span>
-                    {{ $sanPham->ten_san_pham }}
-                </span>
-            </label>
-        @endforeach
+    <div class="promotion-product-item border-bottom py-2">
+
+        {{-- Sản phẩm cha --}}
+        <label class="d-flex align-items-center gap-2 fw-semibold mb-2">
+
+            <input
+                type="checkbox"
+                name="id_san_phams[]"
+                value="{{ $sanPham->id }}"
+                class="form-check-input m-0 product-checkbox"
+                data-product-id="{{ $sanPham->id }}"
+            >
+
+            <i class="fas fa-box text-primary"></i>
+
+            <span>
+                {{ $sanPham->ten_san_pham }}
+            </span>
+
+            <small class="text-muted">
+                (Tất cả biến thể)
+            </small>
+
+        </label>
+
+        {{-- Danh sách biến thể --}}
+        @if(isset($bienThes[$sanPham->id]) && $bienThes[$sanPham->id]->count())
+
+            <div class="ms-4">
+
+                @foreach($bienThes[$sanPham->id] as $bienThe)
+
+                    <label class="d-flex align-items-center gap-2 py-1 variant-row">
+
+                        <input
+                            type="checkbox"
+                            name="id_bien_thes[]"
+                            value="{{ $bienThe->id }}"
+                            class="form-check-input m-0 variant-checkbox"
+                            data-product-id="{{ $sanPham->id }}"
+                        >
+
+                        <span>
+                            {{ $bienThe->ten_bien_the ?: 'Biến thể #' . $bienThe->id }}
+                        </span>
+
+                        @if($bienThe->ma_hang)
+                            <small class="text-muted">
+                                - {{ $bienThe->ma_hang }}
+                            </small>
+                        @endif
+
+                        <span class="ms-auto text-success">
+                            {{ number_format($bienThe->gia_ban, 0, ',', '.') }}đ
+                        </span>
+
+                    </label>
+
+                @endforeach
+
+            </div>
+
+        @endif
+
+    </div>
+
+@endforeach
     </div>
 
     <small class="text-muted">
@@ -428,30 +497,163 @@
     </div>
 </div>
 <script>
-function filterPromotionProducts() {
-    const input = document.getElementById(
-        'searchPromotionProduct'
+function normalizeText(text) {
+    return String(text || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/Đ/g, 'd')
+        .toLowerCase()
+        .trim();
+}
+function updatePromotionSelectedCount() {
+    const checkedProducts = document.querySelectorAll(
+        '.product-checkbox:checked'
+    ).length;
+
+    const checkedVariants = document.querySelectorAll(
+        '.variant-checkbox:checked'
+    ).length;
+
+    const countBox = document.getElementById(
+        'promotionSelectedCount'
     );
 
-    if (!input) {
+    if (countBox) {
+        countBox.textContent =
+            `${checkedProducts} sản phẩm, ${checkedVariants} biến thể đã chọn`;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    const selectAll = document.getElementById(
+        'selectAllPromotionProducts'
+    );
+
+    if (!selectAll) {
         return;
     }
 
-    const keyword = input.value
-        .trim()
-        .toLowerCase();
+    /*
+     * Tick "Chọn tất cả"
+     */
+    selectAll.addEventListener('change', function () {
 
-    document
-        .querySelectorAll('.promotion-product-item')
-        .forEach(item => {
-            const productName =
-                item.dataset.name || '';
+        const checked = this.checked;
 
-            item.style.display =
-                productName.includes(keyword)
-                    ? 'flex'
-                    : 'none';
+        document
+            .querySelectorAll(
+                '.product-checkbox, .variant-checkbox'
+            )
+            .forEach(function (checkbox) {
+                checkbox.checked = checked;
+            });
+
+        updatePromotionSelectedCount();
+    });
+
+    /*
+     * Nếu người dùng tự tick/bỏ tick từng sản phẩm
+     * thì cập nhật lại trạng thái "Chọn tất cả".
+     */
+    document.addEventListener('change', function (event) {
+
+        if (
+            !event.target.classList.contains(
+                'product-checkbox'
+            ) &&
+            !event.target.classList.contains(
+                'variant-checkbox'
+            )
+        ) {
+            return;
+        }
+
+        const allCheckboxes =
+            document.querySelectorAll(
+                '.product-checkbox, .variant-checkbox'
+            );
+
+        const checkedCheckboxes =
+            document.querySelectorAll(
+                '.product-checkbox:checked, .variant-checkbox:checked'
+            );
+
+        selectAll.checked =
+            allCheckboxes.length > 0 &&
+            allCheckboxes.length === checkedCheckboxes.length;
+
+        updatePromotionSelectedCount();
+    });
+
+    updatePromotionSelectedCount();
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    const searchInput =
+        document.getElementById('searchPromotionProduct');
+
+    if (searchInput) {
+
+        searchInput.addEventListener('input', function () {
+
+            const keyword = normalizeText(this.value);
+
+            document
+                .querySelectorAll('.promotion-product-item')
+                .forEach(function (item) {
+
+                    const text = normalizeText(
+                        item.textContent
+                    );
+
+                    if (
+                        keyword === '' ||
+                        text.includes(keyword)
+                    ) {
+                        item.classList.remove('d-none');
+                    } else {
+                        item.classList.add('d-none');
+                    }
+
+                });
+
         });
-}
+    }
+
+    /*
+     * Khi tick sản phẩm cha
+     * thì tick tất cả biến thể.
+     */
+    document.addEventListener('change', function (event) {
+
+        if (
+            !event.target.classList.contains(
+                'product-checkbox'
+            )
+        ) {
+            return;
+        }
+
+        const productId =
+            event.target.dataset.productId;
+
+        const checked =
+            event.target.checked;
+
+        document
+            .querySelectorAll(
+                `.variant-checkbox[data-product-id="${productId}"]`
+            )
+            .forEach(function (checkbox) {
+                checkbox.checked = checked;
+            });
+
+    });
+
+});
+
 </script>
 @endsection
