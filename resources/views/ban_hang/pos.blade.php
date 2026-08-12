@@ -2291,33 +2291,9 @@ function addToCart(id) {
         existing.qty += 1;
 
     } else {
-        cart.push({
-            // ID biến thể
-            id: Number(product.id),
-
-            // ID sản phẩm cha
-            product_id: Number(
-                product.product_id ??
-                product.id_san_pham ??
-                product.id
-            ),
-
-            ten_san_pham: product.ten_san_pham,
-            gia_ban: Number(product.gia_ban),
-            so_luong_ton_kho:
-                Number(product.so_luong_ton_kho),
-            hinh_anh: product.hinh_anh,
-            qty: 1
-        });
-    ten_san_pham: product.ten_san_pham,
-    gia_ban: Number(product.gia_ban),
-    so_luong_ton_kho: Number(product.so_luong_ton_kho),
-    hinh_anh: product.hinh_anh,
-    qty: 1
-});
-        // #region agent log
-        fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'efdd04'},body:JSON.stringify({sessionId:'efdd04',location:'pos.blade.php:2015',message:'addToCart pushed item',data:{pushedItem:cart[cart.length-1],hasRowKey:!!cart[cart.length-1].row_key},hypothesisId:'H1',runId:'pre-fix',timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
+        const built = buildCartItemFromProduct(product);
+        built.qty = 1;
+        cart.push(built);
     }
 
     renderCart();
@@ -2465,24 +2441,16 @@ function updateQuantity(id, change) {
     if (!item) return;
 
 function onQtyClick(event, id, change) {
-    const target = event && event.currentTarget;
-    const cs = target ? window.getComputedStyle(target) : null;
-    // #region agent log
-    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'efdd04'},body:JSON.stringify({sessionId:'efdd04',location:'pos.blade.php:2152',message:'qty button clicked',data:{id:id,change:change,pointerEvents:cs?cs.pointerEvents:null,visibility:cs?cs.visibility:null,display:cs?cs.display:null,disabled:target?target.disabled:null,isConnected:target?target.isConnected:null},hypothesisId:'H4',runId:'pre-fix',timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     updateQuantity(id, change);
 }
 
 function updateQuantity(rowKey, change) {
-    // #region agent log
-    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'efdd04'},body:JSON.stringify({sessionId:'efdd04',location:'pos.blade.php:2161',message:'updateQuantity called',data:{rowKey:rowKey,rowKeyType:typeof rowKey,change:change,cartCount:getCurrentCart().length,cartSample:getCurrentCart().slice(0,2).map(i=>({id:i.id,row_key:i.row_key,qty:i.qty}))},hypothesisId:'H1',runId:'pre-fix',timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     const cart = getCurrentCart();
-    const item = cart.find(i => i.row_key === rowKey);
+    const item = cart.find(i =>
+        Number(i.id) === Number(rowKey) ||
+        (i.row_key !== undefined && String(i.row_key) === String(rowKey))
+    );
     if (!item) {
-        // #region agent log
-        fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'efdd04'},body:JSON.stringify({sessionId:'efdd04',location:'pos.blade.php:2167',message:'ITEM NOT FOUND by row_key',data:{rowKey:rowKey,availableIds:cart.map(i=>({id:i.id,row_key:i.row_key}))},hypothesisId:'H1',runId:'pre-fix',timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return;
     }
     item.qty += change;
@@ -2510,13 +2478,11 @@ function updateQuantity(rowKey, change) {
 // ─────────────────────────────────────────────
 // Remove from Cart
 // ─────────────────────────────────────────────
-function removeFromCart(id) {
-    const cart = getCurrentCart();
-
-    invoiceTabs[currentTab].cart = cart.filter(
-        item => String(item.id) !== String(id)
+function removeFromCart(rowKey) {
+    invoiceTabs[currentTab].cart = getCurrentCart().filter(i =>
+        !(Number(i.id) === Number(rowKey) ||
+          (i.row_key !== undefined && String(i.row_key) === String(rowKey)))
     );
-
     renderCart();
     calculateTotal();
     calculateChange();
