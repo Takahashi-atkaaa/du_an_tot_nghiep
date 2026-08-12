@@ -301,34 +301,28 @@ class PayOSController extends Controller
             $chiTiets = DB::table('chi_tiet_hoa_don')->where('id_hoa_don', $hoaDon->id)->get();
 
             foreach ($chiTiets as $ct) {
-                if ($ct->id_chi_tiet_phieu) {
-                    $variantId = (int) $ct->id_chi_tiet_phieu;
-                    $soLuongBan = (int) $ct->so_luong;
+                $variantId = (int) $ct->id_bien_the_san_pham;
+                $soLuongBan = (int) $ct->so_luong;
 
-                    // Giống tiền mặt: trừ từ chi_tiet_lo_hang theo FIFO (HSD gần nhất trước),
-                    // id nhỏ trước nếu cùng HSD. Observer ChiTietLoHang sẽ tự đồng bộ
-                    // bien_the_san_pham.so_luong_ton = sum(so_luong_ton các lô của variant).
-                    $remaining = $soLuongBan;
-                    $loList = ChiTietLoHang::where('variant_id', $variantId)
-                        ->where('so_luong_ton', '>', 0)
-                        ->orderBy('han_su_dung', 'asc')
-                        ->orderBy('id', 'asc')
-                        ->lockForUpdate()
-                        ->get();
+                // Giống tiền mặt: trừ từ chi_tiet_lo_hang theo FIFO (HSD gần nhất trư�c),
+                // id nhỏ trước nếu cùng HSD. Observer ChiTietLoHang sẽ tự đồng bộ
+                // bien_the_san_pham.so_luong_ton = sum(so_luong_ton các lô của variant).
+                $remaining = $soLuongBan;
+                $loList = ChiTietLoHang::where('variant_id', $variantId)
+                    ->where('so_luong_ton', '>', 0)
+                    ->orderBy('han_su_dung', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->lockForUpdate()
+                    ->get();
 
-                    foreach ($loList as $lo) {
-                        if ($remaining <= 0) {
-                            break;
-                        }
-                        $truTuLo = (int) min($remaining, $lo->so_luong_ton);
-                        $lo->so_luong_ton -= $truTuLo;
-                        $lo->save();
-                        $remaining -= $truTuLo;
+                foreach ($loList as $lo) {
+                    if ($remaining <= 0) {
+                        break;
                     }
-                } elseif ($ct->id_san_pham) {
-                    DB::table('san_pham')
-                        ->where('id', $ct->id_san_pham)
-                        ->decrement('so_luong_ton_kho', $ct->so_luong);
+                    $truTuLo = (int) min($remaining, $lo->so_luong_ton);
+                    $lo->so_luong_ton -= $truTuLo;
+                    $lo->save();
+                    $remaining -= $truTuLo;
                 }
             }
 

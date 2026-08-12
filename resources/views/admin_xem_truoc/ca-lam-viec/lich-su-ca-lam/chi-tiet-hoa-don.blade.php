@@ -145,7 +145,7 @@
         <tr>
             <td class="text-center">{{ $loop->iteration }}</td>
 
-            <td>{{ $ct->sanPham->ten_san_pham ?? 'N/A' }}</td>
+            <td>{{ $ct->bienTheSanPham->sanPham->ten_san_pham ?? ($ct->bienTheSanPham->ten_bien_the ?? 'N/A') }}</td>
 
             <td class="money">
                 {{ number_format($ct->gia_ban) }} đ
@@ -160,15 +160,9 @@
             </td>
 
             <td class="text-center">
-                @if($ct->chiTietPhieu)
-                    <span class="badge-phieu">
-                        #{{ $ct->id_phieu }}
-                    </span>
-                @else
-                    <span class="badge-none">
-                        Không có
-                    </span>
-                @endif
+                <span class="badge-phieu">
+                    #{{ $ct->id_bien_the_san_pham }}
+                </span>
             </td>
         </tr>
         @endforeach

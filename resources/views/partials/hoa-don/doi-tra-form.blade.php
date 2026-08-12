@@ -29,7 +29,7 @@ $showRoute = $isAdmin ? route('admin.hoa-don.show', $hoaDon->id) : route('nhan-v
                 <tbody>
                     @foreach($chiTiet as $item)
                         @php
-                            $key = $item->id_chi_tiet_phieu ?: $item->id_san_pham;
+                            $key = $item->id_bien_the_san_pham;
                             $daTraSp = $daTra[$key] ?? 0;
                             $maxTra = $item->so_luong - $daTraSp;
                         @endphp

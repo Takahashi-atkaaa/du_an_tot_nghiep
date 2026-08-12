@@ -129,7 +129,8 @@ class DashboardController extends Controller
 
         $topProductsSold = DB::table('chi_tiet_hoa_don')
             ->join('hoa_don', 'chi_tiet_hoa_don.id_hoa_don', '=', 'hoa_don.id')
-            ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
+            ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
+            ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
             ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
             ->where('hoa_don.trang_thai', 'Hoàn thành')
             ->groupBy('san_pham.id', 'san_pham.ten_san_pham')
@@ -145,7 +146,8 @@ class DashboardController extends Controller
 
         $topProductsSlow = DB::table('chi_tiet_hoa_don')
             ->join('hoa_don', 'chi_tiet_hoa_don.id_hoa_don', '=', 'hoa_don.id')
-            ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
+            ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
+            ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
             ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
             ->where('hoa_don.trang_thai', 'Hoàn thành')
             ->groupBy('san_pham.id', 'san_pham.ten_san_pham')

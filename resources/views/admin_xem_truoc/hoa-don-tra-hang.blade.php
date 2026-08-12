@@ -38,7 +38,7 @@
                 <tbody>
                     @foreach($chiTiet as $item)
                         @php
-                            $soLuongDaTra = (int) ($daTra[$item->id_san_pham] ?? 0);
+                            $soLuongDaTra = (int) ($daTra[$item->id_bien_the_san_pham] ?? 0);
                             $soLuongConDuocTra = max(0, $item->so_luong - $soLuongDaTra);
                         @endphp
 

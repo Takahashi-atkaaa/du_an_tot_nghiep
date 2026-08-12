@@ -963,8 +963,7 @@ case 'fixed':
 
                 DB::table('chi_tiet_hoa_don')->insert([
                     'id_hoa_don' => $hoaDonId,
-                    'id_san_pham' => $item['bien_the']->product_id,
-                    'id_chi_tiet_phieu' => $item['bien_the']->id,
+                    'id_bien_the_san_pham' => $item['bien_the']->id,
                     'so_luong' => $item['so_luong'],
                     'gia_ban' => $item['gia_ban'],
                     'thanh_tien' => $item['thanh_tien'],
@@ -1031,8 +1030,8 @@ case 'fixed':
         abort_if(!$hoaDon, 404);
 
         $chiTiet = DB::table('chi_tiet_hoa_don')
-            ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
-            ->leftJoin('bien_the_san_pham', 'chi_tiet_hoa_don.id_chi_tiet_phieu', '=', 'bien_the_san_pham.id')
+            ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
+            ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
             ->select(
                 'chi_tiet_hoa_don.*',
                 'san_pham.ten_san_pham',
@@ -1076,8 +1075,8 @@ case 'fixed':
         }
 
         $chiTiet = DB::table('chi_tiet_hoa_don')
-            ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
-            ->leftJoin('bien_the_san_pham', 'chi_tiet_hoa_don.id_chi_tiet_phieu', '=', 'bien_the_san_pham.id')
+            ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
+            ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
             ->select(
                 'chi_tiet_hoa_don.*',
                 'san_pham.ten_san_pham',
@@ -1155,15 +1154,9 @@ case 'fixed':
                 ->get();
 
             foreach ($chiTiet as $item) {
-                if ($item->id_chi_tiet_phieu) {
-                    DB::table('bien_the_san_pham')
-                        ->where('id', $item->id_chi_tiet_phieu)
-                        ->increment('so_luong_ton', $item->so_luong);
-                } else {
-                    DB::table('san_pham')
-                        ->where('id', $item->id_san_pham)
-                        ->increment('so_luong_ton_kho', $item->so_luong);
-                }
+                DB::table('bien_the_san_pham')
+                    ->where('id', $item->id_bien_the_san_pham)
+                    ->increment('so_luong_ton', $item->so_luong);
             }
             if ($hoaDon->id_khach_hang && $hoaDon->diem_thu_duoc > 0) {
 

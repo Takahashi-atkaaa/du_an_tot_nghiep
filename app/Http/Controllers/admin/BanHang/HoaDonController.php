@@ -91,8 +91,8 @@ class HoaDonController extends Controller
         abort_if(!$hoaDon, 404);
 
         $chiTiet = DB::table('chi_tiet_hoa_don')
-            ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
-            ->leftJoin('bien_the_san_pham', 'chi_tiet_hoa_don.id_chi_tiet_phieu', '=', 'bien_the_san_pham.id')
+            ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
+            ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
             ->select(
                 'chi_tiet_hoa_don.*',
                 'san_pham.ten_san_pham',
@@ -144,8 +144,8 @@ class HoaDonController extends Controller
         abort_if(!$hoaDon, 404);
 
         $chiTiet = DB::table('chi_tiet_hoa_don')
-            ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
-            ->leftJoin('bien_the_san_pham', 'chi_tiet_hoa_don.id_chi_tiet_phieu', '=', 'bien_the_san_pham.id')
+            ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
+            ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
             ->select(
                 'chi_tiet_hoa_don.*',
                 'san_pham.ten_san_pham',
@@ -184,15 +184,9 @@ class HoaDonController extends Controller
                 ->get();
 
             foreach ($chiTiet as $item) {
-                if ($item->id_chi_tiet_phieu) {
-                    DB::table('bien_the_san_pham')
-                        ->where('id', $item->id_chi_tiet_phieu)
-                        ->increment('so_luong_ton', $item->so_luong);
-                } else {
-                    DB::table('san_pham')
-                        ->where('id', $item->id_san_pham)
-                        ->increment('so_luong_ton_kho', $item->so_luong);
-                }
+                DB::table('bien_the_san_pham')
+                    ->where('id', $item->id_bien_the_san_pham)
+                    ->increment('so_luong_ton', $item->so_luong);
             }
 
             DB::table('hoa_don')
@@ -252,8 +246,8 @@ class HoaDonController extends Controller
         }
 
         $chiTiet = DB::table('chi_tiet_hoa_don')
-            ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
-            ->leftJoin('bien_the_san_pham', 'chi_tiet_hoa_don.id_chi_tiet_phieu', '=', 'bien_the_san_pham.id')
+            ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
+            ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
             ->select(
                 'chi_tiet_hoa_don.*',
                 'san_pham.ten_san_pham',
@@ -327,7 +321,7 @@ class HoaDonController extends Controller
                 $ct = $chiTietHoaDon[$reqItem['id']] ?? null;
                 if (!$ct) return back()->with('error', 'Sản phẩm trả không hợp lệ.');
 
-                $key = $ct->id_chi_tiet_phieu ?: $ct->id_san_pham;
+                $key = $ct->id_bien_the_san_pham;
                 $daTra = (int) ($daTraTheoSanPham[$key] ?? 0);
                 $conDuocTra = $ct->so_luong - $daTra;
                 if ($reqItem['so_luong'] > $conDuocTra) {
@@ -394,11 +388,16 @@ class HoaDonController extends Controller
             ]);
 
             foreach ($danhSachTra as $item) {
+                $variant = DB::table('bien_the_san_pham')
+                    ->where('id', $item['ct']->id_bien_the_san_pham)
+                    ->first();
+                $productId = $variant ? $variant->product_id : null;
+
                 if ($item['so_luong_tot'] > 0) {
                     DB::table('chi_tiet_phieu')->insert([
                         'id_phieu' => $phieuId,
-                        'id_san_pham' => $item['ct']->id_san_pham,
-                        'variant_id' => $item['ct']->id_chi_tiet_phieu,
+                        'id_san_pham' => $productId,
+                        'variant_id' => $item['ct']->id_bien_the_san_pham,
                         'so_luong' => $item['so_luong_tot'],
                         'gia_nhap' => $item['gia_ban'],
                         'ghi_chu' => 'Hàng khách trả',
@@ -407,23 +406,17 @@ class HoaDonController extends Controller
                     ]);
 
                     if ($item['so_luong_tot'] > 0) {
-                        if ($item['ct']->id_chi_tiet_phieu) {
-                            DB::table('bien_the_san_pham')
-                                ->where('id', $item['ct']->id_chi_tiet_phieu)
-                                ->increment('so_luong_ton', $item['so_luong_tot']);
-                        } else {
-                            DB::table('san_pham')
-                                ->where('id', $item['ct']->id_san_pham)
-                                ->increment('so_luong_ton_kho', $item['so_luong_tot']);
-                        }
+                        DB::table('bien_the_san_pham')
+                            ->where('id', $item['ct']->id_bien_the_san_pham)
+                            ->increment('so_luong_ton', $item['so_luong_tot']);
                     }
                 }
 
                 if ($item['so_luong_loi'] > 0) {
                     DB::table('chi_tiet_phieu')->insert([
                         'id_phieu' => $phieuId,
-                        'id_san_pham' => $item['ct']->id_san_pham,
-                        'variant_id' => $item['ct']->id_chi_tiet_phieu,
+                        'id_san_pham' => $productId,
+                        'variant_id' => $item['ct']->id_bien_the_san_pham,
                         'so_luong' => $item['so_luong_loi'],
                         'gia_nhap' => $item['gia_ban'],
                         'ghi_chu' => 'Hàng khách trả - Lỗi (Không hoàn kho)',

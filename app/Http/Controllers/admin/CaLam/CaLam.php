@@ -105,7 +105,7 @@ public function index()
     $hoaDon = HoaDon::with(['nguoiDung', 'caLamViec'])
         ->findOrfail($id_hoadon);
 
-    $chiTietHoaDon = ChiTietHoaDon::with(['sanPham', 'chiTietPhieu'])
+    $chiTietHoaDon = ChiTietHoaDon::with(['bienTheSanPham'])
         ->where('id_hoa_don', $id_hoadon)
         ->get();
 

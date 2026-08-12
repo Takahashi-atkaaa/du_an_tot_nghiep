@@ -41,12 +41,19 @@ class Product extends BaseModel
     }
 
     /**
-     * Chi tiết hóa đơn thuộc về sản phẩm này (qua FK id_san_pham).
+     * Chi tiết hóa đơn thuộc về sản phẩm này (qua biến thể bien_the_san_pham.product_id).
      * Dùng để tính tổng số lượng đã bán (withSum) hoặc truy vấn thống kê.
      */
     public function chiTietHoaDons()
     {
-        return $this->hasMany(ChiTietHoaDon::class, 'id_san_pham');
+        return $this->hasManyThrough(
+            ChiTietHoaDon::class,
+            BienTheSanPham::class,
+            'product_id',
+            'id_bien_the_san_pham',
+            'id',
+            'id'
+        );
     }
 
     /**
@@ -60,9 +67,10 @@ class Product extends BaseModel
     public function scopeWithTongDaBan($query)
     {
         return $query->addSelect([
-            'tong_da_ban' => DB::table('chi_tiet_hoa_don as cth')
+            'tong_da_ban' => DB::table('bien_the_san_pham as v')
+                ->join('chi_tiet_hoa_don as cth', 'cth.id_bien_the_san_pham', '=', 'v.id')
                 ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
-                ->whereColumn('cth.id_san_pham', 'san_pham.id')
+                ->whereColumn('v.product_id', 'san_pham.id')
                 ->where('hd.trang_thai', 'Hoàn thành')
                 ->whereNull('hd.deleted_at')
                 ->selectRaw('COALESCE(SUM(cth.so_luong), 0)'),

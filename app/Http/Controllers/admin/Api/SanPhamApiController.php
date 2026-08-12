@@ -118,9 +118,10 @@ class SanPhamApiController extends Controller
         $to = now()->endOfDay();
         $from = now()->subDays($days - 1)->startOfDay();
 
-        $baseQuery = DB::table('chi_tiet_hoa_don as cth')
+        $baseQuery = DB::table('bien_the_san_pham as v')
+            ->join('chi_tiet_hoa_don as cth', 'cth.id_bien_the_san_pham', '=', 'v.id')
             ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
-            ->where('cth.id_san_pham', $product->id)
+            ->where('v.product_id', $product->id)
             ->where('hd.trang_thai', 'Hoàn thành');
 
         $summary = (clone $baseQuery)
@@ -152,13 +153,12 @@ class SanPhamApiController extends Controller
         }
 
         $topVariants = (clone $baseQuery)
-            ->leftJoin('bien_the_san_pham as v', 'cth.id_chi_tiet_phieu', '=', 'v.id')
             ->whereBetween('hd.created_at', [$from, $to])
-            ->selectRaw('COALESCE(cth.id_chi_tiet_phieu, 0) as variant_id')
+            ->selectRaw('v.id as variant_id')
             ->selectRaw('COALESCE(v.ten_bien_the, v.ten_don_vi, ?) as variant_name', [$product->ten_san_pham])
             ->selectRaw('COALESCE(SUM(cth.so_luong), 0) as quantity')
             ->selectRaw('COALESCE(SUM(cth.thanh_tien), 0) as revenue')
-            ->groupBy('cth.id_chi_tiet_phieu', 'variant_name')
+            ->groupBy('v.id', 'variant_name')
             ->orderByDesc('quantity')
             ->limit(5)
             ->get()
@@ -170,9 +170,10 @@ class SanPhamApiController extends Controller
             ])->values()->all();
 
         $recentOrders = DB::table('chi_tiet_hoa_don as cth')
+            ->join('bien_the_san_pham as v', 'cth.id_bien_the_san_pham', '=', 'v.id')
             ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
             ->leftJoin('khach_hang as kh', 'hd.id_khach_hang', '=', 'kh.id')
-            ->where('cth.id_san_pham', $product->id)
+            ->where('v.product_id', $product->id)
             ->where('hd.trang_thai', 'Hoàn thành')
             ->whereBetween('hd.created_at', [$from, $to])
             ->selectRaw('cth.id_hoa_don as order_id')
