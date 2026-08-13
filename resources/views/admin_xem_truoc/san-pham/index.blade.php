@@ -365,7 +365,7 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                                             <button type="button"
                                                     class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
                                                     title="Xóa sản phẩm"
-                                                    onclick="event.stopPropagation(); window.deleteProduct({{ $sp->id }}, '{{ addslashes($sp->ten_san_pham) }}');">
+                                                    onclick="event.stopPropagation(); window.deleteProductByUrl('{{ route('san-pham.destroy', $sp->id) }}', {{ $sp->id }}, '{{ addslashes($sp->ten_san_pham) }}');">
                                                 <i class="fas fa-trash"></i>
                                                 <span>Xóa</span>
                                             </button>

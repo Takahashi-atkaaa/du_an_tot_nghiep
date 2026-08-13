@@ -838,26 +838,55 @@ class SanPhamController extends Controller
         return redirect()->route('san-pham.index')->with('success', 'Đã cập nhật sản phẩm.');
     }
 
-    public function destroy(int $id): RedirectResponse
+    public function destroy(Request $request, int $id)
     {
-        $product = Product::with('variants.units')->findOrFail($id);
+        try {
+            // Tìm sản phẩm, bao gồm cả bản ghi đã bị soft delete
+            $product = Product::withTrashed()->with('variants.units')->find($id);
 
-        foreach ($product->variants as $variant) {
-            foreach ($variant->units as $unit) {
-                if ($unit->hinh_anh && !str_starts_with($unit->hinh_anh, 'http')) {
-                    $this->deleteImageIfUnused($unit->hinh_anh);
+            if (!$product) {
+                if ($request->expectsJson()) {
+                    return response()->json(['success' => false, 'message' => 'Sản phẩm không tồn tại.'], 404);
                 }
-                $unit->delete();
+                return redirect()->route('san-pham.index')->with('error', 'Sản phẩm không tồn tại.');
             }
-            if ($variant->hinh_anh && !str_starts_with($variant->hinh_anh, 'http')) {
-                $this->deleteImageIfUnused($variant->hinh_anh);
+
+            // Kiểm tra nếu sản phẩm đã bị xóa mềm
+            if ($product->trashed()) {
+                if ($request->expectsJson()) {
+                    return response()->json(['success' => false, 'message' => 'Sản phẩm đã nằm trong thùng rác.'], 400);
+                }
+                return redirect()->route('san-pham.index')->with('error', 'Sản phẩm đã nằm trong thùng rác.');
             }
-            $variant->delete();
+
+            // Xóa các biến thể và đơn vị quy đổi
+            foreach ($product->variants as $variant) {
+                foreach ($variant->units as $unit) {
+                    if ($unit->hinh_anh && !str_starts_with($unit->hinh_anh, 'http')) {
+                        $this->deleteImageIfUnused($unit->hinh_anh);
+                    }
+                    $unit->delete();
+                }
+                if ($variant->hinh_anh && !str_starts_with($variant->hinh_anh, 'http')) {
+                    $this->deleteImageIfUnused($variant->hinh_anh);
+                }
+                $variant->delete();
+            }
+
+            // Xóa sản phẩm (soft delete)
+            $product->delete();
+
+            if ($request->expectsJson()) {
+                return response()->json(['success' => true, 'message' => 'Đã xóa sản phẩm thành công.']);
+            }
+
+            return redirect()->route('san-pham.index')->with('success', 'Đã xóa sản phẩm.');
+        } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()], 500);
+            }
+            return redirect()->route('san-pham.index')->with('error', 'Lỗi xóa sản phẩm: ' . $e->getMessage());
         }
-
-        $product->delete();
-
-        return redirect()->route('san-pham.index')->with('success', 'Đã xóa sản phẩm.');
     }
 
     public function bulkAction(Request $request): RedirectResponse
