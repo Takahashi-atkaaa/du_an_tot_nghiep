@@ -1562,10 +1562,11 @@ const promotionListUrl = '{{ route('nhan-vien.ban-hang.khuyen-mai') }}';
 const checkoutUrl = '{{ route('nhan-vien.ban-hang.thanh-toan') }}';
 const sellerListUrl = '{{ route('nhan-vien.ban-hang.nhan-vien') }}';
 const invoiceListUrl = '{{ url('/hoa-don') }}';
+const productPlaceholderUrl = '{{ asset('images/product-placeholder.svg') }}';
 
 function resolveImageUrl(path) {
     if (!path) {
-        return 'https://via.placeholder.com/300x300?text=No+Image';
+        return productPlaceholderUrl;
     }
 
     const value = String(path).trim();
@@ -1577,7 +1578,7 @@ function resolveImageUrl(path) {
     const normalized = value.replace(/^\/+/, '');
 
     if (!normalized) {
-        return 'https://via.placeholder.com/300x300?text=No+Image';
+        return productPlaceholderUrl;
     }
 
     if (normalized.startsWith('storage/')) {
@@ -2172,7 +2173,7 @@ function renderProducts(source = products, filter = '') {
                         alt="${ten}"
                         onerror="
                             this.onerror=null;
-                            this.src='https://via.placeholder.com/300x300?text=No+Image';
+                            this.src=productPlaceholderUrl;
                         "
                     >
                 </div>
@@ -2337,7 +2338,7 @@ function renderCart() {
         return `
             <div class="cart-item">
                 <div class="item-img">
-                    <img src="${hinh}" alt="${ten}" onerror="this.onerror=null;this.src='https://via.placeholder.com/80?text=No+Image';">
+                    <img src="${hinh}" alt="${ten}" onerror="this.onerror=null;this.src=productPlaceholderUrl;">
                 </div>
                 <div class="item-details" title="${ten}">
                     <div class="item-name">${ten}</div>

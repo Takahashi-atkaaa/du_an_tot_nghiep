@@ -45,8 +45,8 @@
             </div>
             <div class="card-body">
                 <div class="text-center mb-4">
-                    @if($product->variants->count() > 0 && $product->variants->first()->hinh_anh)
-                        <img src="{{ asset($product->variants->first()->hinh_anh) }}"
+                    @if($product->variants->count() > 0 && $product->variants->first()->hinh_anh && \App\Models\BienTheSanPham::hasImageFile($product->variants->first()->hinh_anh))
+                        <img src="{{ \App\Models\BienTheSanPham::resolveImageUrl($product->variants->first()->hinh_anh) }}"
                              alt="{{ $product->ten_san_pham }}"
                              class="rounded-3 shadow-sm"
                              style="width: 100%; max-height: 260px; object-fit: cover;">
@@ -161,8 +161,8 @@
                                         <td class="text-center text-muted">{{ $index + 1 }}</td>
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
-                                                @if($variant->hinh_anh)
-                                                    <img src="{{ asset($variant->hinh_anh) }}"
+                                                @if($variant->hinh_anh && \App\Models\BienTheSanPham::hasImageFile($variant->hinh_anh))
+                                                    <img src="{{ \App\Models\BienTheSanPham::resolveImageUrl($variant->hinh_anh) }}"
                                                          alt="{{ $variant->ten_bien_the }}"
                                                          class="rounded"
                                                          style="width:40px;height:40px;object-fit:cover;">

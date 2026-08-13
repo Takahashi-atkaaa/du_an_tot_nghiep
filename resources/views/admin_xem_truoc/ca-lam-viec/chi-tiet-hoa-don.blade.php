@@ -145,7 +145,7 @@
         <tr>
             <td class="text-center">{{ $loop->iteration }}</td>
 
-            <td>{{ $ct->bienTheSanPham->sanPham->ten_san_pham ?? ($ct->bienTheSanPham->ten_bien_the ?? 'N/A') }}</td>
+            <td>{{ $ct->ten_hien_thi_san_pham ?: ($ct->bienTheSanPham->ten_hien_thi ?? 'N/A') }}</td>
 
             <td class="money">
                 {{ number_format($ct->gia_ban) }} đ

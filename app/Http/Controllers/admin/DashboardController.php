@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\RevenueStatisticsService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, RevenueStatisticsService $revenueStatisticsService)
     {
         $selectedStartDate = $request->filled('tu_ngay')
             ? Carbon::parse($request->tu_ngay)->toDateString()
@@ -26,31 +27,32 @@ class DashboardController extends Controller
             [$rangeStart, $rangeEnd] = [$rangeEnd, $rangeStart];
         }
 
-        $ordersQuery = DB::table('hoa_don')
-            ->whereBetween('created_at', [$rangeStart, $rangeEnd]);
+        $revenueStatuses = $revenueStatisticsService->salesRevenueStatuses();
 
-        $completedOrdersQuery = (clone $ordersQuery)
-            ->where('trang_thai', 'Hoàn thành');
+        $ordersQuery = $revenueStatisticsService->invoiceNetRevenueQuery()
+            ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd]);
 
-        $dailyRevenue = (clone $completedOrdersQuery)
-            ->sum('tong_tien_hang');
+        $revenueOrdersQuery = (clone $ordersQuery)
+            ->whereIn('hoa_don.trang_thai', $revenueStatuses);
+
+        $dailyRevenue = $revenueStatisticsService->sumInvoiceNetRevenue($revenueOrdersQuery);
 
         $totalOrders = (clone $ordersQuery)->count();
-        $completedOrders = (clone $completedOrdersQuery)->count();
+        $completedOrders = (clone $revenueOrdersQuery)->count();
         $cancelledOrders = (clone $ordersQuery)
-            ->where('trang_thai', 'Đã hủy')
+            ->where('hoa_don.trang_thai', 'Đã hủy')
             ->count();
 
         $productsSold = DB::table('chi_tiet_hoa_don')
             ->join('hoa_don', 'chi_tiet_hoa_don.id_hoa_don', '=', 'hoa_don.id')
             ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
-            ->where('hoa_don.trang_thai', 'Hoàn thành')
+            ->whereIn('hoa_don.trang_thai', $revenueStatuses)
             ->sum('chi_tiet_hoa_don.so_luong');
 
         $uniqueCustomerCount = (clone $ordersQuery)
-            ->whereNotNull('id_khach_hang')
-            ->distinct('id_khach_hang')
-            ->count('id_khach_hang');
+            ->whereNotNull('hoa_don.id_khach_hang')
+            ->distinct('hoa_don.id_khach_hang')
+            ->count('hoa_don.id_khach_hang');
 
         $newCustomerCount = DB::table('hoa_don')
             ->join('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
@@ -59,28 +61,26 @@ class DashboardController extends Controller
             ->distinct('khach_hang.id')
             ->count('khach_hang.id');
 
-      $discountTotal = (clone $completedOrdersQuery)
-    ->sum('tien_giam_gia');
-
-$pointsEarned = (clone $completedOrdersQuery)
-    ->sum('diem_thu_duoc');
-
-$pointsUsed = (clone $completedOrdersQuery)
-    ->sum('diem_su_dung');
+        $discountTotal = (clone $revenueOrdersQuery)->sum('hoa_don.tien_giam_gia');
+        $pointsEarned = (clone $revenueOrdersQuery)->sum('hoa_don.diem_thu_duoc');
+        $pointsUsed = (clone $revenueOrdersQuery)->sum('hoa_don.diem_su_dung');
 
         $averageOrderValue = $completedOrders > 0
             ? round($dailyRevenue / $completedOrders)
             : 0;
 
-      
+        $invoiceNetRevenueExpression = $revenueStatisticsService->invoiceNetRevenueExpression();
+        $lineNetRevenueExpression = $revenueStatisticsService->lineNetRevenueExpression();
+        $returnedByInvoiceSub = $revenueStatisticsService->returnedAmountPerInvoiceSubquery();
+        $returnedByInvoiceVariantSub = $revenueStatisticsService->returnedAmountPerInvoiceVariantSubquery();
 
-        $paymentRows = (clone $completedOrdersQuery)
+        $paymentRows = (clone $revenueOrdersQuery)
             ->selectRaw("CASE
-                WHEN phuong_thuc_thanh_toan IN ('cash','tien_mat','Tiền mặt') THEN 'Tiền mặt'
-                WHEN phuong_thuc_thanh_toan IN ('transfer','chuyen_khoan','Chuyển khoản') THEN 'Chuyển khoản'
-                ELSE COALESCE(phuong_thuc_thanh_toan, 'Khác')
+                WHEN hoa_don.phuong_thuc_thanh_toan IN ('cash','tien_mat','Tiền mặt') THEN 'Tiền mặt'
+                WHEN hoa_don.phuong_thuc_thanh_toan IN ('transfer','chuyen_khoan','Chuyển khoản') THEN 'Chuyển khoản'
+                ELSE COALESCE(hoa_don.phuong_thuc_thanh_toan, 'Khác')
             END as method")
-            ->selectRaw('SUM(tong_tien_hang) as revenue')
+            ->selectRaw("SUM({$invoiceNetRevenueExpression}) as revenue")
             ->groupBy('method')
             ->orderBy('method')
             ->get();
@@ -95,9 +95,9 @@ $pointsUsed = (clone $completedOrdersQuery)
             $paymentBreakdown[$row->method] = (float) $row->revenue;
         }
 
-        $hourlyRows = (clone $completedOrdersQuery)
-            ->selectRaw('HOUR(created_at) as hour')
-            ->selectRaw('SUM(tong_tien_hang) as revenue')
+        $hourlyRows = (clone $revenueOrdersQuery)
+            ->selectRaw('HOUR(hoa_don.created_at) as hour')
+            ->selectRaw("SUM({$invoiceNetRevenueExpression}) as revenue")
             ->groupBy('hour')
             ->orderBy('hour')
             ->get();
@@ -111,22 +111,27 @@ $pointsUsed = (clone $completedOrdersQuery)
             $hourlyRevenue[(int) $row->hour] = (float) $row->revenue;
         }
 
-        $hourLabels = array_map(function ($hour) {
-            return sprintf('%02d:00', $hour);
-        }, range(0, 23));
+        $hourLabels = array_map(
+            fn (int $hour) => sprintf('%02d:00', $hour),
+            range(0, 23)
+        );
 
         $topProductsSold = DB::table('chi_tiet_hoa_don')
             ->join('hoa_don', 'chi_tiet_hoa_don.id_hoa_don', '=', 'hoa_don.id')
             ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
             ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
+            ->leftJoinSub($returnedByInvoiceVariantSub, 'doi_tra_bien_the', function ($join) {
+                $join->on('chi_tiet_hoa_don.id_hoa_don', '=', 'doi_tra_bien_the.id_hoa_don')
+                    ->on('chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'doi_tra_bien_the.id_bien_the');
+            })
             ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
-            ->where('hoa_don.trang_thai', 'Hoàn thành')
+            ->whereIn('hoa_don.trang_thai', $revenueStatuses)
             ->groupBy('san_pham.id', 'san_pham.ten_san_pham')
             ->select(
                 'san_pham.id',
                 'san_pham.ten_san_pham',
                 DB::raw('SUM(chi_tiet_hoa_don.so_luong) as total_quantity'),
-                DB::raw('SUM(chi_tiet_hoa_don.thanh_tien) as total_revenue')
+                DB::raw("SUM({$lineNetRevenueExpression}) as total_revenue")
             )
             ->orderByDesc('total_quantity')
             ->limit(10)
@@ -136,14 +141,18 @@ $pointsUsed = (clone $completedOrdersQuery)
             ->join('hoa_don', 'chi_tiet_hoa_don.id_hoa_don', '=', 'hoa_don.id')
             ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
             ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
+            ->leftJoinSub($returnedByInvoiceVariantSub, 'doi_tra_bien_the', function ($join) {
+                $join->on('chi_tiet_hoa_don.id_hoa_don', '=', 'doi_tra_bien_the.id_hoa_don')
+                    ->on('chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'doi_tra_bien_the.id_bien_the');
+            })
             ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
-            ->where('hoa_don.trang_thai', 'Hoàn thành')
+            ->whereIn('hoa_don.trang_thai', $revenueStatuses)
             ->groupBy('san_pham.id', 'san_pham.ten_san_pham')
             ->select(
                 'san_pham.id',
                 'san_pham.ten_san_pham',
                 DB::raw('SUM(chi_tiet_hoa_don.so_luong) as total_quantity'),
-                DB::raw('SUM(chi_tiet_hoa_don.thanh_tien) as total_revenue')
+                DB::raw("SUM({$lineNetRevenueExpression}) as total_revenue")
             )
             ->orderBy('total_quantity', 'asc')
             ->limit(10)
@@ -151,13 +160,16 @@ $pointsUsed = (clone $completedOrdersQuery)
 
         $topCustomers = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
+            ->leftJoinSub($returnedByInvoiceSub, 'doi_tra_tra_hang', function ($join) {
+                $join->on('hoa_don.id', '=', 'doi_tra_tra_hang.id_hoa_don');
+            })
             ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
-            ->where('hoa_don.trang_thai', 'Hoàn thành')
+            ->whereIn('hoa_don.trang_thai', $revenueStatuses)
             ->groupBy('hoa_don.id_khach_hang', 'khach_hang.ten_khach_hang')
             ->select(
                 'hoa_don.id_khach_hang as customer_id',
                 DB::raw("COALESCE(khach_hang.ten_khach_hang, 'Khách lẻ') as ten_khach_hang"),
-                DB::raw('SUM(hoa_don.khach_can_tra) as total_revenue'),
+                DB::raw("SUM({$invoiceNetRevenueExpression}) as total_revenue"),
                 DB::raw('COUNT(*) as order_count')
             )
             ->orderByDesc('total_revenue')
@@ -166,13 +178,16 @@ $pointsUsed = (clone $completedOrdersQuery)
 
         $staffPerformance = DB::table('hoa_don')
             ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
+            ->leftJoinSub($returnedByInvoiceSub, 'doi_tra_tra_hang', function ($join) {
+                $join->on('hoa_don.id', '=', 'doi_tra_tra_hang.id_hoa_don');
+            })
             ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
-            ->where('hoa_don.trang_thai', 'Hoàn thành')
+            ->whereIn('hoa_don.trang_thai', $revenueStatuses)
             ->groupBy('hoa_don.id_nguoi_dung', 'nguoi_dung.ho_ten')
             ->select(
                 'hoa_don.id_nguoi_dung as staff_id',
                 DB::raw("COALESCE(nguoi_dung.ho_ten, 'Chưa phân công') as staff_name"),
-                DB::raw('SUM(hoa_don.tong_tien_hang) as total_revenue'),
+                DB::raw("SUM({$invoiceNetRevenueExpression}) as total_revenue"),
                 DB::raw('COUNT(*) as order_count')
             )
             ->orderByDesc('total_revenue')

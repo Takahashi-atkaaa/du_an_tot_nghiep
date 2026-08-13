@@ -278,7 +278,9 @@ class Product extends BaseModel
             'defaultPrice' => $first->gia_ban ?? 0,
             'defaultCost' => $first->gia_von ?? 0,
             'defaultMinStock' => $first->dinh_muc_toi_thieu ?? 0,
-            'imagePreview' => $first->hinh_anh ? asset($first->hinh_anh) : '',
+            'imagePreview' => $first->hinh_anh
+                ? \App\Models\BienTheSanPham::resolveImageUrl($first->hinh_anh)
+                : \App\Models\BienTheSanPham::placeholderImageUrl(),
         ];
 
         // Tập tên các đơn vị quy đổi (DonViQuyDoi) để phân biệt với đơn vị cơ bản.

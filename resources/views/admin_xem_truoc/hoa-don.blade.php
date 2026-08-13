@@ -1,6 +1,6 @@
 @extends('admin_xem_truoc.layouts.admin')
 
-@section('title', 'Quản lý Hóa đơn - SmartMart')
+@section('title', 'Quản lý hóa đơn - SmartMart')
 
 @section('content')
 @if(session('success'))
@@ -13,12 +13,10 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h4 class="fw-bold mb-1">Quản lý Hóa đơn</h4>
+        <h4 class="fw-bold mb-1">Quản lý hóa đơn</h4>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item">
-                    <a href="{{ url('admin/dashboard') }}">Admin</a>
-                </li>
+                <li class="breadcrumb-item"><a href="{{ url('admin/dashboard') }}">Admin</a></li>
                 <li class="breadcrumb-item active">Hóa đơn</li>
             </ol>
         </nav>
@@ -29,7 +27,6 @@
     <div class="card-body">
         <form method="GET" action="{{ route('admin.hoa-don.index') }}">
             <div class="row g-3 align-items-end">
-
                 <div class="col-md-3">
                     <label class="form-label">Tìm kiếm</label>
                     <input type="text"
@@ -41,30 +38,20 @@
 
                 <div class="col-md-2">
                     <label class="form-label">Từ ngày</label>
-                    <input type="date"
-                           name="tu_ngay"
-                           class="form-control"
-                           value="{{ request('tu_ngay') }}">
+                    <input type="date" name="tu_ngay" class="form-control" value="{{ request('tu_ngay') }}">
                 </div>
 
                 <div class="col-md-2">
                     <label class="form-label">Đến ngày</label>
-                    <input type="date"
-                           name="den_ngay"
-                           class="form-control"
-                           value="{{ request('den_ngay') }}">
+                    <input type="date" name="den_ngay" class="form-control" value="{{ request('den_ngay') }}">
                 </div>
 
                 <div class="col-md-2">
                     <label class="form-label">Trạng thái</label>
                     <select name="trang_thai" class="form-select">
                         <option value="">Tất cả</option>
-                        <option value="Hoàn thành" {{ request('trang_thai') == 'Hoàn thành' ? 'selected' : '' }}>
-                            Hoàn thành
-                        </option>
-                        <option value="Đã hủy" {{ request('trang_thai') == 'Đã hủy' ? 'selected' : '' }}>
-                            Đã hủy
-                        </option>
+                        <option value="Hoàn thành" {{ request('trang_thai') == 'Hoàn thành' ? 'selected' : '' }}>Hoàn thành</option>
+                        <option value="Đã hủy" {{ request('trang_thai') == 'Đã hủy' ? 'selected' : '' }}>Đã hủy</option>
                     </select>
                 </div>
 
@@ -88,7 +75,6 @@
                         <i class="fas fa-filter me-2"></i>Lọc
                     </button>
                 </div>
-
             </div>
         </form>
     </div>
@@ -110,95 +96,65 @@
                         <th>PTTT</th>
                         <th>Trạng thái</th>
                         <th>Ca làm việc</th>
-                        <th style="width: 120px;">Thao tác</th>
+                        <th style="width: 170px;">Thao tác</th>
                     </tr>
                 </thead>
 
                 <tbody>
                     @forelse($hoaDons as $hoaDon)
                         <tr>
+                            <td><strong class="text-primary">#HD{{ str_pad($hoaDon->id, 4, '0', STR_PAD_LEFT) }}</strong></td>
                             <td>
-                                <strong class="text-primary">
-                                    #HD{{ str_pad($hoaDon->id, 4, '0', STR_PAD_LEFT) }}
-                                </strong>
+                                {{ $hoaDon->ten_khach_hang ?? 'Khách lẻ' }}
+                                @if(($hoaDon->so_lan_doi_tra ?? 0) > 0)
+                                    <div class="small text-warning fw-semibold mt-1">
+                                        Có {{ $hoaDon->so_lan_doi_tra }} lần đổi/trả
+                                    </div>
+                                @endif
                             </td>
-
-                            <td>{{ $hoaDon->ten_khach_hang ?? 'Khách lẻ' }}</td>
-
                             <td>{{ $hoaDon->ten_nhan_vien ?? '---' }}</td>
-
-                            <td>
-                                {{ \Carbon\Carbon::parse($hoaDon->created_at)->format('d/m/Y H:i') }}
-                            </td>
-
-                            <td>
-                                <strong>
-                                    {{ number_format($hoaDon->tong_tien_hang ?? 0, 0, ',', '.') }} đ
-                                </strong>
-                            </td>
-
+                            <td>{{ \Carbon\Carbon::parse($hoaDon->created_at)->format('d/m/Y H:i') }}</td>
+                            <td><strong>{{ number_format($hoaDon->tong_tien_hang ?? 0, 0, ',', '.') }} đ</strong></td>
                             <td>
                                 @if(($hoaDon->tien_giam_gia ?? 0) > 0)
-                                    <span class="text-danger">
-                                        -{{ number_format($hoaDon->tien_giam_gia, 0, ',', '.') }} đ
-                                    </span>
+                                    <span class="text-danger">-{{ number_format($hoaDon->tien_giam_gia, 0, ',', '.') }} đ</span>
                                 @else
                                     <span class="text-muted">0 đ</span>
                                 @endif
                             </td>
-
-                            <td>
-                                <strong class="text-success">
-                                    {{ number_format($hoaDon->khach_can_tra ?? 0, 0, ',', '.') }} đ
-                                </strong>
-                            </td>
-
+                            <td><strong class="text-success">{{ number_format($hoaDon->khach_can_tra ?? 0, 0, ',', '.') }} đ</strong></td>
                             <td>
                                 @php
                                     $pttt = [
                                         'cash' => 'Tiền mặt',
                                         'tien_mat' => 'Tiền mặt',
                                         'Tiền mặt' => 'Tiền mặt',
-
                                         'transfer' => 'Chuyển khoản',
                                         'chuyen_khoan' => 'Chuyển khoản',
                                         'Chuyển khoản' => 'Chuyển khoản',
                                     ];
-
-                                    $tenPttt = $pttt[$hoaDon->phuong_thuc_thanh_toan] 
-                                        ?? $hoaDon->phuong_thuc_thanh_toan 
-                                        ?? '---';
+                                    $tenPttt = $pttt[$hoaDon->phuong_thuc_thanh_toan] ?? $hoaDon->phuong_thuc_thanh_toan ?? '---';
                                 @endphp
-
-                                <span class="badge bg-light text-dark border">
-                                    {{ $tenPttt }}
-                                </span>
+                                <span class="badge bg-light text-dark border">{{ $tenPttt }}</span>
                             </td>
-
                             <td>
                                 @if($hoaDon->trang_thai === 'Đã hủy')
                                     <span class="badge bg-danger">Đã hủy</span>
                                 @else
-                                    <span class="badge bg-success">
-                                        {{ $hoaDon->trang_thai ?? 'Hoàn thành' }}
-                                    </span>
+                                    <span class="badge bg-success">{{ $hoaDon->trang_thai ?? 'Hoàn thành' }}</span>
                                 @endif
                             </td>
-
                             <td>
                                 @if(!empty($hoaDon->ten_ca))
-                                    <span class="badge bg-info text-dark">
-                                        {{ $hoaDon->ten_ca }}
-                                    </span>
+                                    <span class="badge bg-info text-dark">{{ $hoaDon->ten_ca }}</span>
                                 @else
                                     <span class="text-muted">Chưa có ca</span>
                                 @endif
                             </td>
-
                             <td>
                                 <a href="{{ route('admin.hoa-don.show', $hoaDon->id) }}"
                                    class="btn btn-sm btn-outline-primary btn-action"
-                                   title="Xem">
+                                   title="Xem hóa đơn">
                                     <i class="fas fa-eye"></i>
                                 </a>
 
@@ -207,6 +163,14 @@
                                    title="In">
                                     <i class="fas fa-print"></i>
                                 </a>
+
+                                @if(($hoaDon->so_lan_doi_tra ?? 0) > 0)
+                                    <a href="{{ route('admin.hoa-don.show', $hoaDon->id) }}#chi-tiet-doi-tra"
+                                       class="btn btn-sm btn-outline-warning btn-action"
+                                       title="Chi tiết đổi/trả">
+                                        <i class="fas fa-rotate-left"></i>
+                                    </a>
+                                @endif
 
                                 @if($hoaDon->trang_thai !== 'Đã hủy')
                                     <form action="{{ route('admin.hoa-don.huy', $hoaDon->id) }}"
@@ -223,9 +187,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="11" class="text-center py-4 text-muted">
-                                Chưa có hóa đơn nào
-                            </td>
+                            <td colspan="11" class="text-center py-4 text-muted">Chưa có hóa đơn nào</td>
                         </tr>
                     @endforelse
                 </tbody>

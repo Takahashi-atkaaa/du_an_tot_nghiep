@@ -246,9 +246,7 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                                 @php $firstImg = $firstVariant?->hinh_anh ?? $sp->hinh_anh; @endphp
                                 @if(!empty($firstImg))
                                     @php
-                                        $firstImgSrc = (str_starts_with($firstImg, 'http://') || str_starts_with($firstImg, 'https://'))
-                                            ? $firstImg
-                                            : (str_starts_with($firstImg, '/') ? $firstImg : asset($firstImg));
+                                        $firstImgSrc = \App\Models\BienTheSanPham::resolveImageUrl($firstImg);
                                     @endphp
                                     <img src="{{ $firstImgSrc }}" alt="{{ $sp->ten_san_pham }}"
                                          style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
