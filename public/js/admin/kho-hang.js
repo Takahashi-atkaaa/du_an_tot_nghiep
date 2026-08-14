@@ -321,6 +321,7 @@ function searchProductsNhap(q, danhMuc) {
                     <td class="text-center align-middle"><span class="fw-semibold ${tonClass}">${totalTon.toLocaleString()}</span></td>
                     <td class="text-center align-middle">
                         ${expandBtn}
+                        ${!hasVariants ? `
                         <button class="btn btn-sm ${parentBtnClass} btn-chon-sp-nhap"
                             data-id="${parentVariantId}"
                             data-ten="${sp.ten_san_pham}"
@@ -330,7 +331,7 @@ function searchProductsNhap(q, danhMuc) {
                             data-units='${JSON.stringify(variants[0]?.units || []).replace(/'/g, '&#39;')}'
                             ${parentDisabled}>
                             <i class="fas ${parentBtnIcon}"></i> ${parentBtnText}
-                        </button>
+                        </button>` : ''}
                     </td>
                 </tr>`,
                 ...variantRows
@@ -454,8 +455,12 @@ $(document).on('click', '.btn-remove-pn-row', function () {
     if (!$('#pn-ds-sp tr').length) {
         $('#pn-ds-sp').html('<tr id="pn-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td></tr>');
     }
+    // Chỉ re-enable nút nếu nó tồn tại (sản phẩm không có biến thể)
     const btn = $(`.btn-chon-sp-nhap[data-id="${spId}"]`);
-    btn.prop('disabled', false).removeClass('btn-secondary').addClass(btn.data('variant') ? 'btn-success' : 'btn-primary').html(`<i class="fas fa-plus"></i> Chon`);
+    if (btn.length) {
+        const isVariant = btn.data('variant') == 1;
+        btn.prop('disabled', false).removeClass('btn-secondary').addClass(isVariant ? 'btn-success' : 'btn-primary').html(`<i class="fas fa-plus"></i> Chọn`);
+    }
 });
 
 // ─── PRODUCT SEARCH (PX Modal) ─────────────────────────────────────
@@ -566,6 +571,7 @@ function searchProductsXuat(q, danhMuc) {
                     <td class="text-center align-middle"><span class="fw-semibold ${tonClass}">${totalTon.toLocaleString()}</span></td>
                     <td class="text-center align-middle">
                         ${expandBtn}
+                        ${!hasVariants ? `
                         <button class="btn btn-sm ${parentBtnClass} btn-chon-sp-xuat"
                             data-id="${parentVariantId}"
                             data-ten-sp="${escapeAttr(sp.ten_san_pham)}"
@@ -576,7 +582,7 @@ function searchProductsXuat(q, danhMuc) {
                             data-variant="0"
                             ${parentDisabled}>
                             <i class="fas ${parentBtnIcon}"></i> ${parentBtnText}
-                        </button>
+                        </button>` : ''}
                     </td>
                 </tr>`,
                 ...variantRows
@@ -1352,12 +1358,13 @@ function removePxRow(btn) {
             $('#px-ds-sp').html('<tr id="px-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td></tr>');
         }
     }
-    // Bật lại nút "Chọn" trong bảng kết quả search
+    // Bật lại nút "Chọn" trong bảng kết quả search (chỉ nếu nút tồn tại)
     if (spId) {
-        const sel = `.btn-chon-sp-xuat[data-id="${spId}"]`;
-        const $btnSel = $(sel);
-        const isVariant = $btnSel.data('variant') == 1;
-        $btnSel.prop('disabled', false).removeClass('btn-secondary').addClass(isVariant ? 'btn-success' : 'btn-primary').html('<i class="fas fa-plus"></i> Chọn');
+        const $btnSel = $(`.btn-chon-sp-xuat[data-id="${spId}"]`);
+        if ($btnSel.length) {
+            const isVariant = $btnSel.data('variant') == 1;
+            $btnSel.prop('disabled', false).removeClass('btn-secondary').addClass(isVariant ? 'btn-success' : 'btn-primary').html('<i class="fas fa-plus"></i> Chọn');
+        }
     }
     updatePxTongSl();
 }

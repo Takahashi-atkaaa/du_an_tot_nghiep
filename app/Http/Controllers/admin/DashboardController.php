@@ -12,14 +12,57 @@ class DashboardController extends Controller
 {
     public function index(Request $request, RevenueStatisticsService $revenueStatisticsService)
     {
-        $selectedStartDate = $request->filled('tu_ngay')
-            ? Carbon::parse($request->tu_ngay)->toDateString()
-            : ($request->filled('ngay') ? Carbon::parse($request->ngay)->toDateString() : Carbon::today()->toDateString());
+        $quickFilter = $request->get('bo_loc');
 
-        $selectedEndDate = $request->filled('den_ngay')
-            ? Carbon::parse($request->den_ngay)->toDateString()
-            : ($request->filled('ngay') ? Carbon::parse($request->ngay)->toDateString() : Carbon::today()->toDateString());
+if ($quickFilter === '3_ngay') {
 
+    $selectedStartDate = Carbon::today()
+        ->subDays(2)
+        ->toDateString();
+
+    $selectedEndDate = Carbon::today()
+        ->toDateString();
+
+} elseif ($quickFilter === '7_ngay') {
+
+    $selectedStartDate = Carbon::today()
+        ->subDays(6)
+        ->toDateString();
+
+    $selectedEndDate = Carbon::today()
+        ->toDateString();
+
+} elseif ($quickFilter === 'thang') {
+
+    $selectedStartDate = Carbon::today()
+        ->startOfMonth()
+        ->toDateString();
+
+    $selectedEndDate = Carbon::today()
+        ->endOfMonth()
+        ->toDateString();
+
+} elseif ($quickFilter === 'nam') {
+
+    $selectedStartDate = Carbon::today()
+        ->startOfYear()
+        ->toDateString();
+
+    $selectedEndDate = Carbon::today()
+        ->endOfYear()
+        ->toDateString();
+
+} else {
+
+    // Lọc thủ công từ ngày → đến ngày
+    $selectedStartDate = $request->filled('tu_ngay')
+        ? Carbon::parse($request->tu_ngay)->toDateString()
+        : Carbon::today()->toDateString();
+
+    $selectedEndDate = $request->filled('den_ngay')
+        ? Carbon::parse($request->den_ngay)->toDateString()
+        : Carbon::today()->toDateString();
+}
         $rangeStart = Carbon::parse($selectedStartDate)->startOfDay();
         $rangeEnd = Carbon::parse($selectedEndDate)->endOfDay();
 
@@ -35,7 +78,8 @@ class DashboardController extends Controller
         $revenueOrdersQuery = (clone $ordersQuery)
             ->whereIn('hoa_don.trang_thai', $revenueStatuses);
 
-        $dailyRevenue = $revenueStatisticsService->sumInvoiceNetRevenue($revenueOrdersQuery);
+        $dailyRevenue = (clone $completedOrdersQuery)
+            ->sum('khach_can_tra');
 
         $totalOrders = (clone $ordersQuery)->count();
         $completedOrders = (clone $revenueOrdersQuery)->count();
@@ -49,10 +93,10 @@ class DashboardController extends Controller
             ->whereIn('hoa_don.trang_thai', $revenueStatuses)
             ->sum('chi_tiet_hoa_don.so_luong');
 
-        $uniqueCustomerCount = (clone $ordersQuery)
-            ->whereNotNull('hoa_don.id_khach_hang')
-            ->distinct('hoa_don.id_khach_hang')
-            ->count('hoa_don.id_khach_hang');
+        $uniqueCustomerCount = (clone $completedOrdersQuery)
+    ->whereNotNull('id_khach_hang')
+    ->distinct('id_khach_hang')
+    ->count('id_khach_hang');
 
         $newCustomerCount = DB::table('hoa_don')
             ->join('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
@@ -61,60 +105,153 @@ class DashboardController extends Controller
             ->distinct('khach_hang.id')
             ->count('khach_hang.id');
 
-        $discountTotal = (clone $revenueOrdersQuery)->sum('hoa_don.tien_giam_gia');
-        $pointsEarned = (clone $revenueOrdersQuery)->sum('hoa_don.diem_thu_duoc');
-        $pointsUsed = (clone $revenueOrdersQuery)->sum('hoa_don.diem_su_dung');
+      $discountTotal = (clone $completedOrdersQuery)
+    ->sum('tien_giam_gia');
 
-        $averageOrderValue = $completedOrders > 0
-            ? round($dailyRevenue / $completedOrders)
-            : 0;
+// Điểm thưởng kiếm được:
+// Chỉ cộng đúng cột diem_thu_duoc của các hóa đơn đã hoàn thành.
+$pointsEarned = (clone $completedOrdersQuery)
+    ->sum('diem_thu_duoc');
+
+$pointsUsed = (clone $completedOrdersQuery)
+    ->sum('diem_su_dung');
+
+    $averageOrderValue = $completedOrders > 0
+    ? round($dailyRevenue / $completedOrders)
+    : 0;
 
         $invoiceNetRevenueExpression = $revenueStatisticsService->invoiceNetRevenueExpression();
         $lineNetRevenueExpression = $revenueStatisticsService->lineNetRevenueExpression();
         $returnedByInvoiceSub = $revenueStatisticsService->returnedAmountPerInvoiceSubquery();
         $returnedByInvoiceVariantSub = $revenueStatisticsService->returnedAmountPerInvoiceVariantSubquery();
 
-        $paymentRows = (clone $revenueOrdersQuery)
-            ->selectRaw("CASE
-                WHEN hoa_don.phuong_thuc_thanh_toan IN ('cash','tien_mat','Tiền mặt') THEN 'Tiền mặt'
-                WHEN hoa_don.phuong_thuc_thanh_toan IN ('transfer','chuyen_khoan','Chuyển khoản') THEN 'Chuyển khoản'
-                ELSE COALESCE(hoa_don.phuong_thuc_thanh_toan, 'Khác')
-            END as method")
-            ->selectRaw("SUM({$invoiceNetRevenueExpression}) as revenue")
-            ->groupBy('method')
-            ->orderBy('method')
-            ->get();
+  $paymentRows = (clone $completedOrdersQuery)
+    ->selectRaw("
+        CASE
+            WHEN LOWER(TRIM(phuong_thuc_thanh_toan)) IN ('cash', 'tien_mat', 'tiền mặt')
+                THEN 'Tiền mặt'
+            WHEN LOWER(TRIM(phuong_thuc_thanh_toan)) IN ('payos', 'transfer', 'chuyen_khoan', 'chuyển khoản')
+                THEN 'PayOS'
+            ELSE NULL
+        END as method
+    ")
+    ->selectRaw('SUM(khach_can_tra) as revenue')
+    ->whereNotNull('phuong_thuc_thanh_toan')
+    ->groupBy('method')
+    ->get();
 
-        $paymentBreakdown = [
-            'Tiền mặt' => 0,
-            'Chuyển khoản' => 0,
-            'Khác' => 0,
-        ];
+$paymentBreakdown = [
+    'Tiền mặt' => 0,
+    'PayOS' => 0,
+];
 
-        foreach ($paymentRows as $row) {
-            $paymentBreakdown[$row->method] = (float) $row->revenue;
-        }
+foreach ($paymentRows as $row) {
+    if ($row->method !== null && array_key_exists($row->method, $paymentBreakdown)) {
+        $paymentBreakdown[$row->method] = (float) $row->revenue;
+    }
+}
 
-        $hourlyRows = (clone $revenueOrdersQuery)
-            ->selectRaw('HOUR(hoa_don.created_at) as hour')
-            ->selectRaw("SUM({$invoiceNetRevenueExpression}) as revenue")
-            ->groupBy('hour')
-            ->orderBy('hour')
-            ->get();
+       /*
+|--------------------------------------------------------------------------
+| BIỂU ĐỒ DOANH THU
+|--------------------------------------------------------------------------
+| 1 ngày        → theo giờ
+| 3 / 7 ngày    → theo ngày
+| Tháng         → theo ngày
+| Năm           → theo tháng
+*/
 
-        $hourlyRevenue = [];
-        for ($hour = 0; $hour < 24; $hour++) {
-            $hourlyRevenue[$hour] = 0;
-        }
+$startDate = Carbon::parse($selectedStartDate);
+$endDate = Carbon::parse($selectedEndDate);
 
-        foreach ($hourlyRows as $row) {
-            $hourlyRevenue[(int) $row->hour] = (float) $row->revenue;
-        }
+$numberOfDays = $startDate->diffInDays($endDate) + 1;
 
-        $hourLabels = array_map(
-            fn (int $hour) => sprintf('%02d:00', $hour),
-            range(0, 23)
-        );
+$chartLabels = [];
+$chartData = [];
+$chartTitle = 'Doanh thu';
+
+if ($quickFilter === 'nam') {
+
+    // =========================
+    // NĂM → THEO THÁNG
+    // =========================
+
+    $monthlyRows = (clone $completedOrdersQuery)
+        ->selectRaw('MONTH(created_at) as month')
+        ->selectRaw('SUM(khach_can_tra) as revenue')
+        ->groupByRaw('MONTH(created_at)')
+        ->orderByRaw('MONTH(created_at)')
+        ->get()
+        ->keyBy('month');
+
+    for ($month = 1; $month <= 12; $month++) {
+
+        $chartLabels[] = 'Tháng ' . $month;
+
+        $chartData[] = isset($monthlyRows[$month])
+            ? (float) $monthlyRows[$month]->revenue
+            : 0;
+    }
+
+    $chartTitle = 'Doanh thu theo tháng';
+
+} elseif ($numberOfDays === 1) {
+
+    // =========================
+    // 1 NGÀY → THEO GIỜ
+    // =========================
+
+    $hourlyRows = (clone $completedOrdersQuery)
+        ->selectRaw('HOUR(created_at) as hour')
+        ->selectRaw('SUM(khach_can_tra) as revenue')
+        ->groupByRaw('HOUR(created_at)')
+        ->orderByRaw('HOUR(created_at)')
+        ->get()
+        ->keyBy('hour');
+
+    for ($hour = 0; $hour < 24; $hour++) {
+
+        $chartLabels[] = sprintf('%02d:00', $hour);
+
+        $chartData[] = isset($hourlyRows[$hour])
+            ? (float) $hourlyRows[$hour]->revenue
+            : 0;
+    }
+
+    $chartTitle = 'Doanh thu theo giờ';
+
+} else {
+
+    // =========================
+    // 3 NGÀY / 7 NGÀY / THÁNG
+    // → THEO NGÀY
+    // =========================
+
+    $dailyRows = (clone $completedOrdersQuery)
+        ->selectRaw('DATE(created_at) as report_date')
+        ->selectRaw('SUM(khach_can_tra) as revenue')
+        ->groupByRaw('DATE(created_at)')
+        ->orderByRaw('DATE(created_at)')
+        ->get()
+        ->keyBy('report_date');
+
+    $currentDate = $startDate->copy();
+
+    while ($currentDate->lte($endDate)) {
+
+        $dateKey = $currentDate->toDateString();
+
+        $chartLabels[] = $currentDate->format('d/m');
+
+        $chartData[] = isset($dailyRows[$dateKey])
+            ? (float) $dailyRows[$dateKey]->revenue
+            : 0;
+
+        $currentDate->addDay();
+    }
+
+    $chartTitle = 'Doanh thu theo ngày';
+}
 
         $topProductsSold = DB::table('chi_tiet_hoa_don')
             ->join('hoa_don', 'chi_tiet_hoa_don.id_hoa_don', '=', 'hoa_don.id')
@@ -187,7 +324,7 @@ class DashboardController extends Controller
             ->select(
                 'hoa_don.id_nguoi_dung as staff_id',
                 DB::raw("COALESCE(nguoi_dung.ho_ten, 'Chưa phân công') as staff_name"),
-                DB::raw("SUM({$invoiceNetRevenueExpression}) as total_revenue"),
+                DB::raw('SUM(hoa_don.khach_can_tra) as total_revenue'),
                 DB::raw('COUNT(*) as order_count')
             )
             ->orderByDesc('total_revenue')
@@ -228,18 +365,23 @@ class DashboardController extends Controller
             'average_order_value' => (float) $averageOrderValue,
         ];
 
-        return view('admin_xem_truoc.dashboard', compact(
-            'selectedStartDate',
-            'selectedEndDate',
-            'dailyStats',
-            'paymentBreakdown',
-            'hourLabels',
-            'hourlyRevenue',
-            'topProductsSold',
-            'topProductsSlow',
-            'topCustomers',
-            'staffPerformance',
-            'dailyOrders',
-        ));
+       return view('admin_xem_truoc.dashboard', compact(
+    'selectedStartDate',
+    'selectedEndDate',
+    'quickFilter',
+    'dailyStats',
+    'paymentBreakdown',
+
+    // Biểu đồ
+    'chartLabels',
+    'chartData',
+    'chartTitle',
+
+    'topProductsSold',
+    'topProductsSlow',
+    'topCustomers',
+    'staffPerformance',
+    'dailyOrders',
+));
     }
 }
