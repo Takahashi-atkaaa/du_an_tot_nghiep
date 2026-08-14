@@ -503,4 +503,83 @@ class SanPhamApiController extends Controller
             }
         }
     }
+
+    /**
+     * API: Lấy dữ liệu bán hàng 7 ngày gần nhất của 1 sản phẩm
+     * (gom tất cả biến thể). Dùng cho Line Chart "Xu hướng bán hàng"
+     * ở trang chi tiết sản phẩm.
+     *
+     * Query params:
+     *   - days  : số ngày lấy (mặc định 7, tối đa 30)
+     *
+     * Response:
+     *   { success: true, data: {
+     *       labels: ['2025-08-08', '2025-08-09', ...],
+     *       labels_display: ['T6', 'T7', ...],  // nhãn tiếng Việt ngắn gọn
+     *       quantities: [3, 5, 0, ...],         // số sp bán mỗi ngày
+     *       revenues:  [60000, 120000, 0, ...],  // doanh thu mỗi ngày
+     *       total_quantity: 23,
+     *       total_revenue:  560000,
+     *       from: '2025-08-08',
+     *       to:   '2025-08-14'
+     *   } }
+     */
+    public function salesTrend(int $id, Request $request): JsonResponse
+    {
+        $product = Product::find($id);
+        if (!$product) {
+            return response()->json(['success' => false, 'message' => 'Sản phẩm không tồn tại.'], 404);
+        }
+
+        $days = (int) $request->query('days', 7);
+        $days = $days > 0 ? min($days, 30) : 7;
+
+        $to   = now()->endOfDay();
+        $from = now()->subDays($days - 1)->startOfDay();
+
+        // Gom số lượng + doanh thu theo ngày (chỉ tính hóa đơn Hoàn thành)
+        $rows = DB::table('chi_tiet_hoa_don as cth')
+            ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
+            ->where('cth.id_san_pham', $product->id)
+            ->where('hd.trang_thai', 'Hoàn thành')
+            ->whereBetween('hd.created_at', [$from, $to])
+            ->selectRaw('DATE(hd.created_at) as ngay')
+            ->selectRaw('COALESCE(SUM(cth.so_luong), 0)   as so_luong')
+            ->selectRaw('COALESCE(SUM(cth.thanh_tien), 0) as doanh_thu')
+            ->groupByRaw('DATE(hd.created_at)')
+            ->get()
+            ->keyBy('ngay');
+
+        $labels         = [];
+        $labelsDisplay  = [];
+        $quantities     = [];
+        $revenues       = [];
+
+        $weekdayMap = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+        for ($i = 0; $i < $days; $i++) {
+            $date   = $from->copy()->addDays($i);
+            $iso    = $date->toDateString();
+            $row    = $rows->get($iso);
+            $labels[]        = $iso;
+            $labelsDisplay[] = $weekdayMap[$date->dayOfWeek] . ' (' . $date->format('d/m') . ')';
+            $quantities[]    = (int) ($row->so_luong ?? 0);
+            $revenues[]      = (float) ($row->doanh_thu ?? 0);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'labels'         => $labels,
+                'labels_display' => $labelsDisplay,
+                'quantities'     => $quantities,
+                'revenues'       => $revenues,
+                'total_quantity' => array_sum($quantities),
+                'total_revenue'  => array_sum($revenues),
+                'from'           => $from->toDateString(),
+                'to'             => $to->toDateString(),
+                'days'           => $days,
+            ],
+        ]);
+    }
 }
