@@ -33,6 +33,11 @@
                     <tr>
                         <td>
                             {{ $item->ten_hien_thi_san_pham ?: $item->ten_san_pham }}
+                            @if(!empty($item->thuoc_tinh_hien_thi))
+                                <br><small class="text-muted">
+                                    <i class="fas fa-tags"></i> {{ implode(' • ', $item->thuoc_tinh_hien_thi) }}
+                                </small>
+                            @endif
                         </td>
                         <td class="text-center">{{ $item->so_luong }}</td>
                         <td class="text-end">{{ number_format($item->gia_ban, 0, ',', '.') }}đ</td>

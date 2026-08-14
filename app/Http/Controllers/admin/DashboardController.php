@@ -78,7 +78,7 @@ if ($quickFilter === '3_ngay') {
         $revenueOrdersQuery = (clone $ordersQuery)
             ->whereIn('hoa_don.trang_thai', $revenueStatuses);
 
-        $dailyRevenue = (clone $completedOrdersQuery)
+        $dailyRevenue = (clone $revenueOrdersQuery)
             ->sum('khach_can_tra');
 
         $totalOrders = (clone $ordersQuery)->count();
@@ -93,7 +93,7 @@ if ($quickFilter === '3_ngay') {
             ->whereIn('hoa_don.trang_thai', $revenueStatuses)
             ->sum('chi_tiet_hoa_don.so_luong');
 
-        $uniqueCustomerCount = (clone $completedOrdersQuery)
+        $uniqueCustomerCount = (clone $revenueOrdersQuery)
     ->whereNotNull('id_khach_hang')
     ->distinct('id_khach_hang')
     ->count('id_khach_hang');
@@ -105,15 +105,15 @@ if ($quickFilter === '3_ngay') {
             ->distinct('khach_hang.id')
             ->count('khach_hang.id');
 
-      $discountTotal = (clone $completedOrdersQuery)
+      $discountTotal = (clone $revenueOrdersQuery)
     ->sum('tien_giam_gia');
 
 // Điểm thưởng kiếm được:
 // Chỉ cộng đúng cột diem_thu_duoc của các hóa đơn đã hoàn thành.
-$pointsEarned = (clone $completedOrdersQuery)
+$pointsEarned = (clone $revenueOrdersQuery)
     ->sum('diem_thu_duoc');
 
-$pointsUsed = (clone $completedOrdersQuery)
+$pointsUsed = (clone $revenueOrdersQuery)
     ->sum('diem_su_dung');
 
     $averageOrderValue = $completedOrders > 0
@@ -125,7 +125,7 @@ $pointsUsed = (clone $completedOrdersQuery)
         $returnedByInvoiceSub = $revenueStatisticsService->returnedAmountPerInvoiceSubquery();
         $returnedByInvoiceVariantSub = $revenueStatisticsService->returnedAmountPerInvoiceVariantSubquery();
 
-  $paymentRows = (clone $completedOrdersQuery)
+  $paymentRows = (clone $revenueOrdersQuery)
     ->selectRaw("
         CASE
             WHEN LOWER(TRIM(phuong_thuc_thanh_toan)) IN ('cash', 'tien_mat', 'tiền mặt')
@@ -176,7 +176,7 @@ if ($quickFilter === 'nam') {
     // NĂM → THEO THÁNG
     // =========================
 
-    $monthlyRows = (clone $completedOrdersQuery)
+    $monthlyRows = (clone $revenueOrdersQuery)
         ->selectRaw('MONTH(created_at) as month')
         ->selectRaw('SUM(khach_can_tra) as revenue')
         ->groupByRaw('MONTH(created_at)')
@@ -201,7 +201,7 @@ if ($quickFilter === 'nam') {
     // 1 NGÀY → THEO GIỜ
     // =========================
 
-    $hourlyRows = (clone $completedOrdersQuery)
+    $hourlyRows = (clone $revenueOrdersQuery)
         ->selectRaw('HOUR(created_at) as hour')
         ->selectRaw('SUM(khach_can_tra) as revenue')
         ->groupByRaw('HOUR(created_at)')
@@ -227,7 +227,7 @@ if ($quickFilter === 'nam') {
     // → THEO NGÀY
     // =========================
 
-    $dailyRows = (clone $completedOrdersQuery)
+    $dailyRows = (clone $revenueOrdersQuery)
         ->selectRaw('DATE(created_at) as report_date')
         ->selectRaw('SUM(khach_can_tra) as revenue')
         ->groupByRaw('DATE(created_at)')

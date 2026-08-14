@@ -168,6 +168,8 @@ class HoaDonController extends Controller
             $item->tong_da_doi_tra = (int) ($returnItem->tong_doi_tra ?? 0);
         }
 
+        $this->ganThuocTinhBienTheChoChiTiet($chiTiet);
+
         return view('admin_xem_truoc.hoa-don-chi-tiet', compact(
             'hoaDon',
             'chiTiet',
@@ -228,6 +230,8 @@ class HoaDonController extends Controller
         $lichSuDoiTra = $returnSummary['lichSuDoiTra'];
         $tongHopDoiTra = $returnSummary['tongHopDoiTra'];
 
+        $this->ganThuocTinhBienTheChoChiTiet($chiTiet);
+
         return view('admin_xem_truoc.partials.hoa-don-modal-content', compact(
             'hoaDon',
             'chiTiet',
@@ -235,6 +239,63 @@ class HoaDonController extends Controller
             'lichSuDoiTra',
             'tongHopDoiTra'
         ));
+    }
+
+    private function ganThuocTinhBienTheChoChiTiet($chiTiet): void
+    {
+        if ($chiTiet->isEmpty()) {
+            return;
+        }
+
+        $variantIds = $chiTiet->pluck('id_bien_the_san_pham')->filter()->unique()->all();
+
+        $thuocTinhRows = DB::table('bien_the_san_pham')
+            ->whereIn('id', $variantIds)
+            ->select('id', 'thuoc_tinh_ids')
+            ->get()
+            ->keyBy('id');
+
+        $allAttrIds = $thuocTinhRows->pluck('thuoc_tinh_ids')
+            ->filter()
+            ->flatten()
+            ->map(fn ($x) => (int) $x)
+            ->unique()
+            ->all();
+
+        if (empty($allAttrIds)) {
+            foreach ($chiTiet as $item) {
+                $item->thuoc_tinh_hien_thi = [];
+            }
+            return;
+        }
+
+        $attrMap = DB::table('thuoc_tinh_san_pham')
+            ->whereIn('id', $allAttrIds)
+            ->select('id', 'ten_thuoc_tinh', 'thuoc_tinh_cha_id')
+            ->get()
+            ->keyBy('id');
+
+        foreach ($chiTiet as $item) {
+            $row = $thuocTinhRows->get($item->id_bien_the_san_pham);
+            $rawIds = $row->thuoc_tinh_ids ?? [];
+            $labels = [];
+
+            foreach ((array) $rawIds as $aid) {
+                $aid = (int) $aid;
+                if (! isset($attrMap[$aid])) {
+                    continue;
+                }
+                $attr = $attrMap[$aid];
+                $parentId = $attr->thuoc_tinh_cha_id ? (int) $attr->thuoc_tinh_cha_id : null;
+                if ($parentId && isset($attrMap[$parentId])) {
+                    $labels[] = $attrMap[$parentId]->ten_thuoc_tinh . ': ' . $attr->ten_thuoc_tinh;
+                } else {
+                    $labels[] = $attr->ten_thuoc_tinh;
+                }
+            }
+
+            $item->thuoc_tinh_hien_thi = array_values(array_filter($labels, fn ($v) => $v !== null && $v !== ''));
+        }
     }
 
     public function huy($id)

@@ -84,6 +84,11 @@
                     <tr>
                         <td>
                             {{ $item->ten_hien_thi_san_pham ?: $item->ten_san_pham }}
+                            @if(!empty($item->thuoc_tinh_hien_thi))
+                                <br><small class="text-muted">
+                                    <i class="fas fa-tags"></i> {{ implode(' • ', $item->thuoc_tinh_hien_thi) }}
+                                </small>
+                            @endif
                         </td>
                         <td>{{ $item->ma_vach }}</td>
                         <td class="text-center">{{ $item->so_luong }}</td>
