@@ -101,7 +101,7 @@ function toggleSection(headerEl) {
     };
 })();
 
-    function buildStatsHtml(data) {
+    function buildStatsHtml(productId, data) {
         var product = data.product || {};
         var summary = data.summary || {};
         var topVariants = data.top_variants || [];
@@ -119,6 +119,12 @@ function toggleSection(headerEl) {
             var approxCost = Math.round((summary.average_price || 0) * 0.7);
             inventoryValue = (product.tong_ton_kho || 0) * approxCost;
         }
+
+        // ============================================================
+        // URL trang chi tiết (Progressive Disclosure: Quick View → Detail)
+        // Dùng cho nút "Xem chi tiết đầy đủ" của từng panel + hash cho tab
+        // ============================================================
+        var detailPageUrl = '/admin/san-pham/' + productId;
 
         // ============================================================
         // YÊU CẦU 2: 4 Thẻ Thống Kê (Top Cards) - Text-left, có icon SVG
@@ -268,10 +274,18 @@ function toggleSection(headerEl) {
         };
 
         var recentOrdersHtml = '<div class="col-md-8">' +
-            '<div class="bg-white rounded shadow-sm p-3 h-100 panel-block">' +
+            '<div class="bg-white rounded shadow-sm p-3 h-100 panel-block" id="tab-don-hang-' + productId + '">' +
                 '<div class="d-flex justify-content-between align-items-center mb-3">' +
                     '<h6 class="fw-semibold mb-0 panel-title"><i class="fas fa-receipt text-success me-2"></i>Đơn hàng gần nhất</h6>' +
-                    '<a href="#" class="small text-decoration-none">Xem tất cả <i class="fas fa-arrow-right ms-1"></i></a>' +
+                    // ============================================================
+                    // PROGRESSIVE DISCLOSURE: "Xem tất cả" → chuyển sang trang
+                    // chi tiết (#tab-don-hang) thay vì chỉ là href="#" stub.
+                    // Backend LIMIT 5 nên panel này chỉ hiển thị 5 đơn mới nhất;
+                    // click để xem lịch sử đầy đủ trên trang chi tiết.
+                    // ============================================================
+                    '<a href="' + detailPageUrl + '#tab-don-hang" class="small text-decoration-none view-all-link" title="Xem tất cả đơn hàng trên trang chi tiết">' +
+                        'Xem tất cả <i class="fas fa-arrow-right ms-1"></i>' +
+                    '</a>' +
                 '</div>' +
                 '<div class="table-responsive recent-orders-table">' +
                     '<table class="table table-sm align-middle mb-0">' +
@@ -455,7 +469,7 @@ function toggleSection(headerEl) {
             if (!res.ok) throw new Error('Không tải được dữ liệu.');
             var json = await res.json();
             if (!json.success) throw new Error(json.message || 'Lỗi API');
-            content.innerHTML = buildStatsHtml(json.data);
+            content.innerHTML = buildStatsHtml(productId, json.data);
             panel.dataset.loadedSummary = '1';
         } catch (e) {
             content.innerHTML = '<div class="text-danger">Lỗi tải thống kê: ' + (e.message || 'Không xác định') + '</div>';

@@ -349,26 +349,50 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                             <td colspan="9" class="p-0">
                                 <div id="productDetailPanel{{ $sp->id }}" class="product-detail-panel p-3">
                                     <div class="d-flex justify-content-between align-items-start mb-3">
-                                        <div class="flex-grow-1">
-                                            <h6 class="mb-1 fw-semibold" style="font-size:0.95rem;">Chi tiết sản phẩm</h6>
-                                            <div class="text-muted small">{{ $sp->ten_san_pham }} · {{ $sp->danhMuc?->ten_danh_muc ?? 'Không xác định' }}</div>
+                                        <div class="flex-grow-1 me-3">
+                                            <h6 class="mb-1 fw-semibold" style="font-size:0.95rem;">
+                                                <i class="fas fa-info-circle text-primary me-2"></i>Chi tiết sản phẩm
+                                            </h6>
+                                            <div class="text-muted small">
+                                                {{ $sp->ten_san_pham }} · {{ $sp->danhMuc?->ten_danh_muc ?? 'Không xác định' }}
+                                            </div>
+                                            <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+                                                <span class="badge bg-secondary">{{ $sp->variants->count() }} biến thể</span>
+                                                <span class="text-muted small">
+                                                    <i class="far fa-eye me-1"></i>Đây là chế độ xem nhanh. Nhấn <strong>“Xem chi tiết”</strong> để mở trang đầy đủ.
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="badge bg-secondary me-2">{{ $sp->variants->count() }} biến thể</span>
-                                            <a href="{{ route('san-pham.edit', $sp->id) }}"
-                                               class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
-                                               title="Sửa sản phẩm"
+                                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                            {{-- ===========================================================
+                                                NÚT CHÍNH (PRIMARY CTA) — "Xem chi tiết đầy đủ"
+                                                Mô hình Progressive Disclosure: đưa người dùng từ
+                                                Quick View trong bảng xổ xuống sang trang chi tiết.
+                                                Bằng chứng thị giác: gradient xanh dương + icon
+                                                mũi tên trượt khi hover.
+                                                ============================================================ --}}
+                                            <a href="{{ url('admin/san-pham/' . $sp->id) }}"
+                                               class="btn-view-detail-full"
+                                               title="Xem chi tiết đầy đủ"
                                                onclick="event.stopPropagation();">
-                                                <i class="fas fa-edit"></i>
-                                                <span>Sửa</span>
+                                                <span class="btn-view-detail-label">Xem chi tiết đầy đủ</span>
+                                                <i class="fas fa-arrow-right btn-view-detail-arrow"></i>
                                             </a>
-                                            <button type="button"
-                                                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                                                    title="Xóa sản phẩm"
-                                                    onclick="event.stopPropagation(); window.deleteProductByUrl('{{ route('san-pham.destroy', $sp->id) }}', {{ $sp->id }}, '{{ addslashes($sp->ten_san_pham) }}');">
-                                                <i class="fas fa-trash"></i>
-                                                <span>Xóa</span>
-                                            </button>
+                                            {{-- Nhóm nút phụ: Sửa / Xóa — thu nhỏ về icon-only --}}
+                                            <div class="panel-action-group">
+                                                <a href="{{ route('san-pham.edit', $sp->id) }}"
+                                                   class="btn btn-outline-primary"
+                                                   title="Sửa sản phẩm"
+                                                   onclick="event.stopPropagation();">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <button type="button"
+                                                        class="btn btn-outline-danger"
+                                                        title="Xóa sản phẩm"
+                                                        onclick="event.stopPropagation(); window.deleteProductByUrl('{{ route('san-pham.destroy', $sp->id) }}', {{ $sp->id }}, '{{ addslashes($sp->ten_san_pham) }}');">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -945,10 +969,104 @@ $unitsPayload = $donViMacDinhs->map(fn($u) => [
         background: #f1f5f9;
     }
 
+    /* =========================================================
+       PROGRESSIVE DISCLOSURE — NÚT "XEM CHI TIẾT ĐẦY ĐỦ"
+       Style nổi bật so với các nút phụ Sửa/Xóa:
+         - gradient xanh dương
+         - icon mũi tên có chuyển động nhẹ khi hover
+         - viền đổ bóng
+       ========================================================= */
+    .btn-view-detail-full {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        border: 1px solid #1d4ed8;
+        color: #ffffff;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        padding: 0.45rem 0.95rem;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+        text-decoration: none;
+    }
+    .btn-view-detail-full:hover {
+        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+        color: #ffffff;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(37, 99, 235, 0.35);
+    }
+    .btn-view-detail-full:active {
+        transform: translateY(0);
+    }
+    .btn-view-detail-full:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+    }
+    /* Mũi tên trượt nhẹ sang phải khi hover → nhấn mạnh "chuyển trang" */
+    .btn-view-detail-full:hover .btn-view-detail-arrow {
+        transform: translateX(3px);
+    }
+    .btn-view-detail-arrow {
+        transition: transform 0.18s ease;
+        font-size: 0.85rem;
+    }
+
+    /* "Sửa/Xóa" thu nhỏ về dạng icon-only nút phụ */
+    .panel-action-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding-left: 6px;
+        border-left: 1px solid #e5e7eb;
+        margin-left: 4px;
+    }
+    .panel-action-group .btn {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Hint nhỏ dưới tiêu đề (Progressive Disclosure cue) */
+    .quick-view-hint {
+        font-size: 0.7rem;
+        color: #6b7280;
+        line-height: 1.3;
+    }
+
+    /* "Xem tất cả" link trong khối "Đơn hàng gần nhất" */
+    .view-all-link {
+        color: #2563eb;
+        font-weight: 500;
+        transition: color 0.15s ease, transform 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .view-all-link:hover {
+        color: #1d4ed8;
+        transform: translateX(2px);
+    }
+    .view-all-link i {
+        transition: transform 0.15s ease;
+    }
+    .view-all-link:hover i {
+        transform: translateX(2px);
+    }
+
     /* Responsive: stack panels trên mobile */
     @media (max-width: 767.98px) {
         .stats-cards-row > [class*="col-"] { margin-bottom: 0.75rem; }
         .stats-bottom-row > [class*="col-"] { margin-bottom: 0.75rem; }
+    }
+    @media (max-width: 575.98px) {
+        /* Trên mobile: ẩn text "Xem chi tiết đầy đủ", chỉ giữ icon */
+        .btn-view-detail-full .btn-view-detail-label { display: none !important; }
+        .panel-action-group { padding-left: 4px; }
     }
 </style>
 @endsection

@@ -997,10 +997,46 @@ class SanPhamController extends Controller
 
     public function restore(int $id): RedirectResponse
     {
-        $variant = BienTheSanPham::onlyTrashed()->findOrFail($id);
-        $variant->restore();
+        DB::beginTransaction();
+        try {
+            $variant = BienTheSanPham::onlyTrashed()
+                ->with(['product'])
+                ->findOrFail($id);
 
-        return redirect()->route('san-pham.trash')->with('success', 'Đã khôi phục biến thể.');
+            // 1. Khôi phục các đơn vị quy đổi của biến thể (chỉ những đơn vị đang bị soft-delete)
+            $restoredUnits = 0;
+            foreach ($variant->units()->onlyTrashed()->get() as $unit) {
+                $unit->restore();
+                $restoredUnits++;
+            }
+
+            // 2. Khôi phục biến thể
+            $variant->restore();
+
+            // 3. Cascade khôi phục Product cha nếu cha cũng đang soft-deleted
+            $productRestored = false;
+            $parentProduct   = Product::withTrashed()->find($variant->product_id);
+            if ($parentProduct && $parentProduct->trashed()) {
+                $parentProduct->restore();
+                $productRestored = true;
+            }
+
+            DB::commit();
+
+            $msg = 'Đã khôi phục biến thể.';
+            if ($productRestored) {
+                $msg .= ' Sản phẩm cha cũng đã được khôi phục.';
+            }
+            if ($restoredUnits > 0) {
+                $msg .= " Đồng thời khôi phục {$restoredUnits} đơn vị quy đổi.";
+            }
+
+            return redirect()->route('san-pham.trash')->with('success', $msg);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return redirect()->route('san-pham.trash')
+                ->with('error', 'Lỗi khi khôi phục: ' . $e->getMessage());
+        }
     }
 
     public function forceDelete(int $id): RedirectResponse
@@ -1040,17 +1076,55 @@ class SanPhamController extends Controller
         ]);
 
         $ids = $request->input('ids', []);
-        $restoredCount = 0;
 
-        $variants = BienTheSanPham::onlyTrashed()->whereIn('id', $ids)->get();
+        DB::beginTransaction();
+        try {
+            $variants = BienTheSanPham::onlyTrashed()
+                ->whereIn('id', $ids)
+                ->get();
 
-        foreach ($variants as $variant) {
-            $variant->restore();
-            $restoredCount++;
+            $restoredVariants   = 0;
+            $restoredUnits      = 0;
+            $restoredProducts   = 0;
+            $productIdsRestored = [];
+
+            foreach ($variants as $variant) {
+                // Restore units trước
+                foreach ($variant->units()->onlyTrashed()->get() as $unit) {
+                    $unit->restore();
+                    $restoredUnits++;
+                }
+
+                // Restore variant
+                $variant->restore();
+                $restoredVariants++;
+
+                // Cascade restore product cha nếu đang soft-deleted
+                $parentProduct = Product::withTrashed()->find($variant->product_id);
+                if ($parentProduct && $parentProduct->trashed()
+                    && !in_array($parentProduct->id, $productIdsRestored, true)) {
+                    $parentProduct->restore();
+                    $restoredProducts++;
+                    $productIdsRestored[] = $parentProduct->id;
+                }
+            }
+
+            DB::commit();
+
+            $msg = "Đã khôi phục {$restoredVariants} biến thể thành công.";
+            if ($restoredProducts > 0) {
+                $msg .= " Đồng thời khôi phục {$restoredProducts} sản phẩm cha.";
+            }
+            if ($restoredUnits > 0) {
+                $msg .= " Và {$restoredUnits} đơn vị quy đổi.";
+            }
+
+            return redirect()->route('san-pham.trash')->with('success', $msg);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return redirect()->route('san-pham.trash')
+                ->with('error', 'Lỗi khi khôi phục hàng loạt: ' . $e->getMessage());
         }
-
-        return redirect()->route('san-pham.trash')
-            ->with('success', "Đã khôi phục {$restoredCount} biến thể thành công.");
     }
 
     /**
@@ -1133,7 +1207,76 @@ class SanPhamController extends Controller
                 ->get();
         }
 
-        return view('admin_xem_truoc.san-pham.chi-tiet', compact('product', 'theKho', 'loHang'));
+        // ============================================================
+        // KPI #1: Tóm tắt bán hàng 30 ngày gần nhất (doanh thu, lợi
+        // nhuận gộp, sản phẩm đã bán) — tính ở cấp SẢN PHẨM (gom
+        // tất cả các biến thể của product này).
+        // ============================================================
+        $ordersSummary = [
+            'doanh_thu'      => 0,
+            'so_luong_ban'   => 0,
+            'so_don'         => 0,
+            'gia_von_uoc'    => 0,
+            'loi_nhuan_gop'  => 0,
+            'bieu_loi_nhuan' => 0,
+        ];
+        try {
+            $from = now()->subDays(29)->startOfDay();
+            $to   = now()->endOfDay();
+
+            $row = DB::table('chi_tiet_hoa_don as cth')
+                ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
+                ->leftJoin('bien_the_san_pham as v', 'cth.id_chi_tiet_phieu', '=', 'v.id')
+                ->where('cth.id_san_pham', $product->id)
+                ->where('hd.trang_thai', 'Hoàn thành')
+                ->whereBetween('hd.created_at', [$from, $to])
+                ->selectRaw('COALESCE(SUM(cth.so_luong), 0)            as total_quantity')
+                ->selectRaw('COALESCE(SUM(cth.thanh_tien), 0)          as total_revenue')
+                ->selectRaw('COUNT(DISTINCT cth.id_hoa_don)            as total_orders')
+                ->selectRaw('COALESCE(SUM(cth.so_luong * v.gia_von), 0) as total_cost')
+                ->first();
+
+            if ($row) {
+                $doanhThu     = (float) $row->total_revenue;
+                $giaVonUoc    = (float) $row->total_cost;
+                $loiNhuanGop  = $doanhThu - $giaVonUoc;
+                $ordersSummary = [
+                    'doanh_thu'      => $doanhThu,
+                    'so_luong_ban'   => (int) $row->total_quantity,
+                    'so_don'         => (int) $row->total_orders,
+                    'gia_von_uoc'    => $giaVonUoc,
+                    'loi_nhuan_gop'  => $loiNhuanGop,
+                    'bieu_loi_nhuan' => $doanhThu > 0 ? round(($loiNhuanGop / $doanhThu) * 100, 1) : 0,
+                ];
+            }
+        } catch (\Throwable $e) {
+            // Nếu thiếu cột/table (ví dụ môi trường dev chưa seed) → để = 0, UI vẫn render OK
+            \Log::warning('[SanPham show] ordersSummary fail: ' . $e->getMessage());
+        }
+
+        // ============================================================
+        // KPI #2: Thống kê biến thể (tổng, tồn nhiều nhất, sắp hết)
+        // ============================================================
+        $variantKpis = [
+            'tong_bien_the'      => $product->variants->count(),
+            'ton_nhieu_nhat'     => null,   // ['ten_bien_the' => ..., 'so_luong_ton' => ...]
+            'sap_het_hang'       => [],     // collection các variant sắp hết (ton <= dinh_muc_toi_thieu)
+            'so_bien_the_sap_het'=> 0,
+        ];
+        if ($product->variants->isNotEmpty()) {
+            $tonNhieuNhat = $product->variants->sortByDesc('so_luong_ton')->first();
+            $variantKpis['ton_nhieu_nhat'] = $tonNhieuNhat;
+
+            $sapHetHang = $product->variants->filter(function ($v) {
+                $ton = (int) ($v->so_luong_ton ?? 0);
+                $dinhMuc = (int) ($v->dinh_muc_toi_thieu ?? 0);
+                return $ton <= $dinhMuc;
+            })->values();
+            $variantKpis['sap_het_hang']      = $sapHetHang;
+            $variantKpis['so_bien_the_sap_het'] = $sapHetHang->count();
+        }
+
+        return view('admin_xem_truoc.san-pham.chi-tiet', compact('product', 'theKho', 'loHang', 'ordersSummary', 'variantKpis'));
     }
 
     protected function uploadImage($file, string $subDir = 'san-pham'): string
