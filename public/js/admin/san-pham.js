@@ -606,20 +606,44 @@ function formatMoney(num) {
 ;
 
 // ============================================================
-// DELETE PRODUCT (from detail panel)
+// DELETE PRODUCT (from detail panel) - by URL
 // ============================================================
-window.deleteProduct = async function(productId, productName) {
-    if (!confirm('Bạn có chắc muốn xóa sản phẩm "' + (productName || '') + '"?\n\nSản phẩm sẽ được chuyển vào thùng rác và có thể khôi phục.')) {
+window.deleteProductByUrl = async function(deleteUrl, productId, productName) {
+    // Validate URL
+    if (!deleteUrl || deleteUrl.includes('undefined') || deleteUrl.includes('null')) {
+        alert('Lỗi: Không tìm thấy URL xóa sản phẩm. Vui lòng tải lại trang và thử lại.');
+        console.error('deleteProductByUrl called with invalid URL:', deleteUrl);
         return;
     }
+
+    var confirmMsg = 'Bạn có chắc muốn xóa sản phẩm "' + (productName || '') + '"?\n\nSản phẩm sẽ được chuyển vào thùng rác và có thể khôi phục.';
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+
+    console.log('DELETE request to:', deleteUrl);
+
+    // Tạo loading state
+    var deleteBtn = event?.target?.closest?.('button') || document.activeElement;
+    var originalBtnContent = '';
+    if (deleteBtn && deleteBtn.innerHTML) {
+        originalBtnContent = deleteBtn.innerHTML;
+        deleteBtn.disabled = true;
+        deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    }
+
     try {
-        var res = await fetch('/admin/san-pham/' + productId, {
+        var res = await fetch(deleteUrl, {
             method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || document.querySelector('input[name=_token]')?.value || '',
                 'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
             },
         });
+
+        console.log('DELETE response status:', res.status);
+
         var data;
         try {
             data = await res.json();
@@ -628,14 +652,56 @@ window.deleteProduct = async function(productId, productName) {
         }
 
         if (res.ok && data.success) {
+            // Xóa dòng sản phẩm khỏi bảng mà không reload
+            if (productId) {
+                var productRow = document.querySelector('tr[data-id="' + productId + '"]');
+                var detailRow = document.getElementById('productDetailRow' + productId);
+
+                if (detailRow) {
+                    detailRow.remove();
+                }
+                if (productRow) {
+                    productRow.remove();
+                }
+
+                // Cập nhật tổng số sản phẩm
+                var totalProducts = document.getElementById('totalProducts');
+                if (totalProducts) {
+                    var currentTotal = parseInt(totalProducts.textContent) || 0;
+                    totalProducts.textContent = Math.max(0, currentTotal - 1);
+                }
+            }
+
+            // Hiển thị thông báo thành công
             alert(data.message || 'Đã xóa sản phẩm thành công.');
-            window.location.reload();
         } else {
-            alert('Lỗi: ' + (data.message || 'Không thể xóa sản phẩm.'));
+            alert('Lỗi: ' + (data.message || 'Không thể xóa sản phẩm.') + ' (HTTP ' + res.status + ')');
         }
     } catch (e) {
-        alert('Lỗi: ' + e.message);
+        console.error('DELETE error:', e);
+        alert('Lỗi kết nối: ' + e.message);
+    } finally {
+        // Khôi phục button
+        if (deleteBtn && originalBtnContent) {
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = originalBtnContent;
+        }
     }
+};
+
+// ============================================================
+// DELETE PRODUCT (from detail panel) - by ID (legacy)
+// ============================================================
+window.deleteProduct = async function(productId, productName) {
+    // Validate productId
+    if (!productId || productId === 'null' || productId === 'undefined') {
+        alert('Lỗi: Không tìm thấy ID sản phẩm. Vui lòng tải lại trang và thử lại.');
+        console.error('deleteProduct called with invalid productId:', productId);
+        return;
+    }
+
+    var deleteUrl = '/admin/san-pham/' + productId;
+    window.deleteProductByUrl(deleteUrl, productId, productName);
 };
 
 // ============================================================
