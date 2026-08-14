@@ -331,6 +331,7 @@ Route::middleware([KTVaiTro::class])->group(function () {
     // Routes bán hàng
     Route::get('/dashboard', [NhanVienController::class, 'index'])->name('nhan-vien.dashboard')->middleware('permission:ban_hang');
     Route::get('/ban-hang', [NhanVienController::class, 'banHang'])->name('nhan-vien.ban-hang')->middleware('permission:ban_hang');
+    Route::get('/ban-hang-moi', [NhanVienController::class, 'banHangMoi'])->name('nhan-vien.ban-hang-moi')->middleware('permission:ban_hang');
     Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don')->middleware('permission:ban_hang');
     // AJAX tìm kiếm sản phẩm cho chức năng đổi hàng (nhân viên)
     Route::get('/hoa-don/search-product', [HoaDonController::class, 'searchProduct'])->name('nhan-vien.hoa-don.search-product')->middleware('permission:ban_hang');

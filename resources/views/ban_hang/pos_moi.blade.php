@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartMart POS — Bán lẻ</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --pos-bg: #f4f6fb;
+            --pos-card: #ffffff;
+            --pos-primary: #2563eb;
+            --pos-primary-dark: #1d4ed8;
+            --pos-primary-light: #dbeafe;
+            --pos-text: #0f172a;
+            --pos-muted: #64748b;
+            --pos-border: #e5e7eb;
+            --pos-success: #16a34a;
+            --pos-danger: #ef4444;
+            --pos-warning: #f59e0b;
+            --pos-radius: 12px;
+            --pos-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background: var(--pos-bg);
+            color: var(--pos-text);
+            font-size: 14px;
+        }
+
+        .pos-shell {
+            display: grid;
+            grid-template-rows: 56px 1fr;
+            height: 100vh;
+        }
+
+        /* ===== HEADER ===== */
+        .pos-header {
+            background: linear-gradient(90deg, #1d4ed8, #2563eb);
+            color: #fff;
+            padding: 0 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(29, 78, 216, 0.18);
+            z-index: 100;
+        }
+
+        .pos-header .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 18px;
+            letter-spacing: 0.3px;
+        }
+
+        .pos-header .logo i {
+            background: rgba(255,255,255,0.18);
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+
+        .pos-header .meta {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .pos-header .ca-badge {
+            background: rgba(255,255,255,0.18);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .pos-header .live-clock {
+            font-size: 13px;
+            color: #dbeafe;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .pos-header .user-block {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+        }
+
+        .pos-header .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #fff;
+            color: #1d4ed8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 15px;
+        }
+
+        /* ===== MAIN LAYOUT ===== */
+        .pos-main {
+            display: grid;
+            grid-template-columns: 440px 1fr;
+            gap: 0;
+            overflow: hidden;
+        }
+
+        /* ===== LEFT: INVOICE PANEL ===== */
+        .pos-left {
+            background: #fff;
+            border-right: 1px solid var(--pos-border);
+            display: grid;
+            grid-template-rows: auto auto 1fr auto;
+            overflow: hidden;
+        }
+
+        .invoice-tabs {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--pos-border);
+            overflow-x: auto;
+            background: #f9fafb;
+        }
+
+        .invoice-tab {
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            border: 1px solid transparent;
+            background: #fff;
+            color: var(--pos-muted);
+            transition: 0.15s;
+            position: relative;
+        }
+
+        .invoice-tab.active {
+            background: var(--pos-primary);
+            color: #fff;
+            border-color: var(--pos-primary);
+        }
+
+        .invoice-tab .close-tab {
+            margin-left: 8px;
+            opacity: 0.7;
+            cursor: pointer;
+        }
+
+        .invoice-tab .close-tab:hover { opacity: 1; }
+
+        .invoice-tab-add {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px dashed var(--pos-border);
+            background: #fff;
+            color: var(--pos-muted);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .invoice-tab-add:hover { color: var(--pos-primary); border-color: var(--pos-primary); }
+
+        .search-panels {
+            padding: 12px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            border-bottom: 1px solid var(--pos-border);
+            background: #fff;
+        }
+
+        .search-panels .input-group-text {
+            background: #f1f5f9;
+            border-right: 0;
+            color: var(--pos-muted);
+        }
+
+        .search-panels .form-control {
+            border-left: 0;
+            font-size: 13px;
+        }
+
+        .search-panels .form-control:focus { box-shadow: none; border-color: var(--pos-border); }
+
+        .customer-info {
+            margin: 0 12px 8px;
+            padding: 10px 12px;
+            background: var(--pos-primary-light);
+            border-radius: 10px;
+            font-size: 13px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .customer-info.show { display: flex; }
+
+        .customer-info .name { font-weight: 700; color: var(--pos-primary-dark); }
+        .customer-info .points { color: var(--pos-primary-dark); font-weight: 600; font-size: 12px; }
+
+        .invoice-items {
+            overflow-y: auto;
+            padding: 8px 12px;
+        }
+
+        .invoice-empty {
+            text-align: center;
+            color: var(--pos-muted);
+            padding: 50px 16px;
+        }
+
+        .invoice-empty i { font-size: 36px; opacity: 0.4; }
+
+        .invoice-item {
+            display: grid;
+            grid-template-columns: 56px 1fr auto;
+            gap: 10px;
+            padding: 10px 6px;
+            border-bottom: 1px solid #f1f5f9;
+            align-items: center;
+        }
+
+        .invoice-item img {
+            width: 56px;
+            height: 56px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: #f1f5f9;
+        }
+
+        .invoice-item .name {
+            font-weight: 600;
+            font-size: 13px;
+            line-height: 1.25;
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .invoice-item .price {
+            color: var(--pos-muted);
+            font-size: 12px;
+        }
+
+        .invoice-item .qty-control {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .qty-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            border: 1px solid var(--pos-border);
+            background: #fff;
+            cursor: pointer;
+            font-weight: 700;
+            color: var(--pos-primary);
+        }
+
+        .qty-btn:hover { background: var(--pos-primary-light); }
+
+        .qty-input {
+            width: 40px;
+            text-align: center;
+            border: 1px solid var(--pos-border);
+            border-radius: 6px;
+            height: 24px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .invoice-item .total {
+            font-weight: 700;
+            color: var(--pos-primary-dark);
+            font-size: 13px;
+            text-align: right;
+        }
+
+        .invoice-item .remove-btn {
+            display: block;
+            margin-top: 4px;
+            font-size: 11px;
+            color: var(--pos-danger);
+            cursor: pointer;
+        }
+
+        .invoice-footer {
+            border-top: 1px solid var(--pos-border);
+            padding: 14px 16px;
+            background: #fff;
+            box-shadow: 0 -2px 8px rgba(15, 23, 42, 0.04);
+        }
+
+        .totals { margin-bottom: 12px; }
+
+        .totals .row-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: var(--pos-muted);
+        }
+
+        .totals .row-line strong {
+            color: var(--pos-text);
+            font-weight: 600;
+        }
+
+        .totals .row-line.big {
+            font-size: 17px;
+            color: var(--pos-text);
+            font-weight: 700;
+            border-top: 1px dashed var(--pos-border);
+            padding-top: 10px;
+            margin-top: 8px;
+        }
+
+        .totals .row-line.big strong {
+            color: var(--pos-primary);
+            font-size: 20px;
+        }
+
+        .btn-checkout {
+            width: 100%;
+            background: var(--pos-primary);
+            color: #fff;
+            border: 0;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.15s;
+        }
+
+        .btn-checkout:hover { background: var(--pos-primary-dark); }
+        .btn-checkout:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-clear {
+            width: 100%;
+            background: #fff;
+            color: var(--pos-danger);
+            border: 1px solid var(--pos-danger);
+            padding: 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+
+        /* ===== RIGHT: PRODUCT PANEL ===== */
+        .pos-right {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            overflow: hidden;
+            background: var(--pos-bg);
+        }
+
+        .filter-bar {
+            background: #fff;
+            padding: 12px 18px;
+            border-bottom: 1px solid var(--pos-border);
+            display: grid;
+            grid-template-rows: auto auto;
+            gap: 10px;
+        }
+
+        .filter-bar .search-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .filter-bar .input-group-text {
+            background: #f1f5f9;
+            border-right: 0;
+            color: var(--pos-muted);
+        }
+
+        .filter-bar .form-control {
+            border-left: 0;
+            font-size: 14px;
+            height: 40px;
+        }
+
+        .filter-bar .form-control:focus { box-shadow: none; border-color: var(--pos-border); }
+
+        .category-chips {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 2px;
+        }
+
+        .chip {
+            padding: 7px 16px;
+            border-radius: 999px;
+            border: 1px solid var(--pos-border);
+            background: #fff;
+            color: var(--pos-text);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: 0.15s;
+        }
+
+        .chip:hover { border-color: var(--pos-primary); color: var(--pos-primary); }
+
+        .chip.active {
+            background: var(--pos-primary);
+            color: #fff;
+            border-color: var(--pos-primary);
+        }
+
+        .product-grid {
+            overflow-y: auto;
+            padding: 14px 18px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            gap: 14px;
+            align-content: start;
+        }
+
+        .product-card {
+            background: #fff;
+            border: 1px solid var(--pos-border);
+            border-radius: var(--pos-radius);
+            overflow: hidden;
+            cursor: pointer;
+            transition: 0.15s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--pos-shadow);
+            border-color: var(--pos-primary);
+        }
+
+        .product-card .img-wrap {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background: #f8fafc;
+            overflow: hidden;
+        }
+
+        .product-card .img-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .product-card .img-wrap .no-img {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #cbd5e1;
+            font-size: 32px;
+        }
+
+        .product-card .badge-promo {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            background: var(--pos-danger);
+            color: #fff;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .product-card .badge-stock {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .product-card .info {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .product-card .info .name {
+            font-weight: 600;
+            font-size: 13px;
+            line-height: 1.3;
+            margin-bottom: 6px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 34px;
+        }
+
+        .product-card .info .price {
+            color: var(--pos-primary);
+            font-weight: 800;
+            font-size: 15px;
+        }
+
+        .product-card .info .barcode {
+            color: var(--pos-muted);
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        .product-card.out-of-stock { opacity: 0.55; cursor: not-allowed; }
+
+        .product-grid-empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 16px;
+            color: var(--pos-muted);
+        }
+
+        .product-grid-empty i { font-size: 42px; opacity: 0.4; margin-bottom: 12px; }
+
+        /* ===== TOAST ===== */
+        .pos-toast {
+            position: fixed;
+            top: 80px;
+            right: 22px;
+            background: #16a34a;
+            color: #fff;
+            padding: 12px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 13px;
+            z-index: 9999;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: 0.2s;
+            pointer-events: none;
+        }
+
+        .pos-toast.show { opacity: 1; transform: translateY(0); }
+        .pos-toast.error { background: var(--pos-danger); }
+        .pos-toast.warn { background: var(--pos-warning); }
+
+        /* ===== SUGGESTION DROPDOWN ===== */
+        .suggest-box {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid var(--pos-border);
+            border-top: 0;
+            border-radius: 0 0 10px 10px;
+            max-height: 240px;
+            overflow-y: auto;
+            z-index: 50;
+            display: none;
+            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+        }
+
+        .suggest-box.show { display: block; }
+
+        .suggest-item {
+            padding: 9px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
+        }
+
+        .suggest-item:hover { background: var(--pos-primary-light); }
+        .suggest-item:last-child { border-bottom: 0; }
+
+        .suggest-item .name { font-weight: 600; }
+        .suggest-item .meta { color: var(--pos-muted); font-size: 11px; }
+
+        .suggest-wrap { position: relative; }
+
+        /* ===== PAYMENT MODAL ===== */
+        .payment-methods {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .pay-method {
+            border: 1px solid var(--pos-border);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            background: #fff;
+            transition: 0.15s;
+        }
+
+        .pay-method:hover { border-color: var(--pos-primary); }
+
+        .pay-method.active {
+            border-color: var(--pos-primary);
+            background: var(--pos-primary-light);
+            color: var(--pos-primary-dark);
+            font-weight: 700;
+        }
+
+        .pay-method i { font-size: 22px; display: block; margin-bottom: 6px; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1100px) {
+            .pos-main { grid-template-columns: 380px 1fr; }
+        }
+
+        @media (max-width: 900px) {
+            .pos-main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+            .pos-left { border-right: 0; border-bottom: 1px solid var(--pos-border); }
+        }
+
+        .scroll-thin::-webkit-scrollbar { width: 6px; }
+        .scroll-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+        .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+    </style>
+</head>
+<body>
+<div class="pos-shell">
+    <header class="pos-header">
+        <div class="logo">
+            <i class="fa-solid fa-cash-register"></i>
+            <span>SmartMart POS</span>
+        </div>
+        <div class="meta">
+            <span class="ca-badge"><i class="fa-regular fa-clock me-1"></i>Ca: {{ $caHienTai->ten_ca ?? '—' }} @if(isset($caHienTai->gio_bat_dau)) ({{ substr($caHienTai->gio_bat_dau,0,5) }} - {{ substr($caHienTai->gio_ket_thuc,0,5) }}) @endif</span>
+            <span class="live-clock" id="liveClock"></span>
+        </div>
+        <div class="user-block">
+            <div>
+                <div style="font-weight: 600;">{{ $nguoiDung->ho_ten ?? 'Nhân viên' }}</div>
+                <div style="font-size: 11px; opacity: 0.85;">{{ $nguoiDung->email ?? '' }}</div>
+            </div>
+            <div class="avatar">{{ mb_substr($nguoiDung->ho_ten ?? 'U', 0, 1) }}</div>
+        </div>
+    </header>
+
+    <main class="pos-main">
+        <!-- LEFT -->
+        <aside class="pos-left">
+            <div class="invoice-tabs" id="invoiceTabs"></div>
+
+            <div class="search-panels">
+                <div class="suggest-wrap">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+                        <input id="searchCustomer" class="form-control" placeholder="Tìm khách hàng (tên / SĐT)..." autocomplete="off">
+                    </div>
+                    <div class="suggest-box" id="customerSuggest"></div>
+                </div>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa-solid fa-barcode"></i></span>
+                    <input id="barcodeInput" class="form-control" placeholder="Quét mã vạch / Enter để thêm nhanh..." autocomplete="off">
+                </div>
+            </div>
+
+            <div class="customer-info" id="customerInfo">
+                <div>
+                    <div class="name" id="customerName">—</div>
+                    <div class="points"><i class="fa-solid fa-star me-1"></i><span id="customerPoints">0</span> điểm</div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger" id="btnRemoveCustomer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="invoice-items scroll-thin" id="invoiceItems">
+                <div class="invoice-empty">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <p class="mt-2 mb-0">Chưa có sản phẩm trong hóa đơn</p>
+                    <small>Bấm vào sản phẩm bên phải để thêm</small>
+                </div>
+            </div>
+
+            <div class="invoice-footer">
+                <div class="totals">
+                    <div class="row-line"><span>Tạm tính</span><strong id="subtotal">0 đ</strong></div>
+                    <div class="row-line"><span>Giảm giá</span><strong id="discount">0 đ</strong></div>
+                    <div class="row-line"><span>Điểm sử dụng</span><strong id="pointUse">0 đ</strong></div>
+                    <div class="row-line big"><span>Khách cần trả</span><strong id="total">0 đ</strong></div>
+                </div>
+                <button class="btn-clear" id="btnClearCart">
+                    <i class="fa-solid fa-trash-can me-1"></i> Xóa toàn bộ
+                </button>
+                <button class="btn-checkout" id="btnCheckout">
+                    <i class="fa-solid fa-credit-card"></i> Thanh toán
+                </button>
+            </div>
+        </aside>
+
+        <!-- RIGHT -->
+        <section class="pos-right">
+            <div class="filter-bar">
+                <div class="search-row">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-search"></i></span>
+                        <input id="searchProduct" class="form-control" placeholder="Tìm sản phẩm theo tên / mã vạch...">
+                    </div>
+                    <div>
+                        <select id="sellerSelect" class="form-select" style="height: 40px; font-size: 13px;">
+                            <option value="">-- Người bán --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="category-chips" id="categoryChips">
+                    <button class="chip active" data-id="">Tất cả</button>
+                    @foreach($danhSachDanhMuc as $dm)
+                        <button class="chip" data-id="{{ $dm->id }}">{{ $dm->ten_danh_muc }}</button>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="product-grid scroll-thin" id="productGrid">
+                <div class="product-grid-empty">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    <p class="mt-2 mb-0">Đang tải sản phẩm...</p>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div class="pos-toast" id="posToast"><i class="fa-solid fa-circle-check me-2"></i><span id="toastMessage">OK</span></div>
+
+<!-- Payment modal -->
+<div class="modal fade" id="checkoutModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: var(--pos-primary); color: #fff;">
+                <h5 class="modal-title"><i class="fa-solid fa-cash-register me-2"></i>Thanh toán hóa đơn</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-7">
+                        <div class="border rounded p-3" style="background: #f8fafc;">
+                            <h6 class="fw-bold mb-2">Sản phẩm</h6>
+                            <div id="checkoutItems" style="max-height: 200px; overflow-y: auto;"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="border rounded p-3" style="background: #f8fafc;">
+                            <div class="d-flex justify-content-between mb-1"><span>Tạm tính</span><strong id="ckSubtotal">0 đ</strong></div>
+                            <div class="d-flex justify-content-between mb-1"><span>Giảm giá SP</span><strong id="ckDiscount">0 đ</strong></div>
+                            <div class="d-flex justify-content-between mb-1"><span>Voucher KM</span>
+                                <select id="ckVoucher" style="width: 140px; font-size: 12px;" class="form-select form-select-sm"></select>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1"><span>Giảm voucher</span><strong id="ckVoucherDiscount">0 đ</strong></div>
+                            <div class="d-flex justify-content-between mb-1"><span>Khách hàng</span>
+                                <span class="text-primary fw-bold" id="ckCustomer">Khách lẻ</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1"><span>Điểm dùng (×100đ)</span>
+                                <input id="ckUsePoint" type="number" min="0" value="0" style="width: 80px;" class="form-control form-control-sm">
+                            </div>
+                            <div class="d-flex justify-content-between mb-1"><span>Giảm từ điểm</span><strong id="ckPointDiscount">0 đ</strong></div>
+                            <hr>
+                            <div class="d-flex justify-content-between"><span class="fw-bold">Khách cần trả</span>
+                                <strong class="text-primary" style="font-size: 20px;" id="ckTotal">0 đ</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold mt-3">Phương thức thanh toán</h6>
+                <div class="payment-methods">
+                    <div class="pay-method active" data-method="cash">
+                        <i class="fa-solid fa-money-bill-wave"></i>
+                        <div>Tiền mặt</div>
+                    </div>
+                    <div class="pay-method" data-method="vietqr">
+                        <i class="fa-solid fa-qrcode"></i>
+                        <div>VietQR</div>
+                    </div>
+                    <div class="pay-method" data-method="payos">
+                        <i class="fa-solid fa-mobile-screen"></i>
+                        <div>PayOS</div>
+                    </div>
+                </div>
+
+                <div id="cashBox">
+                    <label class="form-label fw-bold">Tiền khách đưa</label>
+                    <div class="input-group">
+                        <input id="customerMoney" type="text" class="form-control" placeholder="0">
+                        <span class="input-group-text">đ</span>
+                    </div>
+                    <div class="d-flex gap-2 mt-2 flex-wrap">
+                        <button class="btn btn-outline-secondary btn-sm quick-money" data-amt="50000">50.000</button>
+                        <button class="btn btn-outline-secondary btn-sm quick-money" data-amt="100000">100.000</button>
+                        <button class="btn btn-outline-secondary btn-sm quick-money" data-amt="200000">200.000</button>
+                        <button class="btn btn-outline-secondary btn-sm quick-money" data-amt="500000">500.000</button>
+                        <button class="btn btn-outline-secondary btn-sm quick-money" id="quickMoneyExact">Bằng tổng</button>
+                    </div>
+                    <div class="mt-2">Tiền thừa: <strong id="changeMoney" class="text-success">0 đ</strong></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button class="btn btn-primary" id="btnConfirmPay"><i class="fa-solid fa-check me-1"></i>Xác nhận thanh toán</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+const productListUrl = '{{ route('nhan-vien.ban-hang.san-pham') }}';
+const categoryListUrl = '{{ route('nhan-vien.ban-hang.danh-muc') }}';
+const checkoutUrl = '{{ route('nhan-vien.ban-hang.thanh-toan') }}';
+const customerListUrl = '{{ route('nhan-vien.ban-hang.khach-hang') }}';
+const promotionListUrl = '{{ route('nhan-vien.ban-hang.khuyen-mai') }}';
+const sellerListUrl = '{{ route('nhan-vien.ban-hang.nhan-vien') }}';
+const payOSCreateUrl = '{{ route('payos.create') }}';
+const invoicePrintUrl = '{{ url('/hoa-don') }}';
+
+const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Number(n || 0)) + ' đ';
+const parseMoney = (v) => parseInt(String(v || '').replace(/\D/g, ''), 10) || 0;
+
+// =========================================================
+// STATE
+// =========================================================
+let allProducts = [];
+let allCategories = [];
+let allPromotions = [];
+let allSellers = [];
+
+let currentCategory = '';
+let searchKeyword = '';
+
+let invoices = [];           // multi tab
+let activeInvoiceIdx = 0;
+let selectedCustomer = null; // global mặc định
+let selectedPayment = 'cash';
+let selectedVoucherId = null;
+
+// =========================================================
+// INVOICE TABS
+// =========================================================
+function newInvoice() {
+    return {
+        items: [],            // {id, ten_san_pham, gia_ban, qty, hinh_anh, ma_vach, ...}
+        customer: null,
+        usePoint: 0,
+        voucherId: null,
+        voucherDiscount: 0,
+        sellerId: '',
+    };
+}
+
+function renderInvoiceTabs() {
+    if (invoices.length === 0) invoices.push(newInvoice());
+
+    const box = document.getElementById('invoiceTabs');
+    box.innerHTML = '';
+
+    invoices.forEach((inv, idx) => {
+        const tab = document.createElement('button');
+        tab.className = 'invoice-tab' + (idx === activeInvoiceIdx ? ' active' : '');
+        const itemCount = inv.items.length;
+        tab.innerHTML = `#${idx + 1} ${itemCount > 0 ? '(' + itemCount + ')' : ''} <span class="close-tab" data-idx="${idx}">×</span>`;
+        tab.onclick = (e) => {
+            if (e.target.classList.contains('close-tab')) return;
+            activeInvoiceIdx = idx;
+            applyActiveInvoice();
+        };
+        const closeBtn = tab.querySelector('.close-tab');
+        closeBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (invoices.length === 1) {
+                invoices[0] = newInvoice();
+            } else {
+                invoices.splice(idx, 1);
+                if (activeInvoiceIdx >= invoices.length) activeInvoiceIdx = invoices.length - 1;
+            }
+            renderInvoiceTabs();
+            applyActiveInvoice();
+        };
+        box.appendChild(tab);
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'invoice-tab-add';
+    addBtn.innerHTML = '<i class="fa-solid fa-plus"></i>';
+    addBtn.onclick = () => {
+        if (invoices.length >= 5) {
+            showToast('Tối đa 5 hóa đơn cùng lúc', 'warn');
+            return;
+        }
+        invoices.push(newInvoice());
+        activeInvoiceIdx = invoices.length - 1;
+        renderInvoiceTabs();
+        applyActiveInvoice();
+    };
+    box.appendChild(addBtn);
+}
+
+function getActiveInvoice() {
+    if (!invoices[activeInvoiceIdx]) {
+        invoices[activeInvoiceIdx] = newInvoice();
+    }
+    return invoices[activeInvoiceIdx];
+}
+
+function applyActiveInvoice() {
+    selectedCustomer = getActiveInvoice().customer;
+    document.getElementById('ckUsePoint') && (document.getElementById('ckUsePoint').value = getActiveInvoice().usePoint || 0);
+    selectedVoucherId = getActiveInvoice().voucherId || null;
+    renderCustomerInfo();
+    renderInvoiceItems();
+    renderTotals();
+    renderInvoiceTabs();
+}
+
+// =========================================================
+// CATEGORIES & PRODUCTS
+// =========================================================
+async function loadCategories() {
+    try {
+        const res = await fetch(categoryListUrl, { headers: { 'Accept': 'application/json' } });
+        allCategories = await res.json();
+        renderCategories();
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+function renderCategories() {
+    const wrap = document.getElementById('categoryChips');
+    wrap.innerHTML = '<button class="chip active" data-id="">Tất cả</button>';
+    allCategories.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'chip';
+        btn.dataset.id = c.id;
+        btn.textContent = c.ten_danh_muc;
+        btn.onclick = () => {
+            currentCategory = c.id;
+            wrap.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
+            btn.classList.add('active');
+            loadProducts();
+        };
+        wrap.insertBefore(btn, wrap.lastChild.nextSibling);
+    });
+    wrap.querySelector('.chip[data-id=""]').onclick = (e) => {
+        currentCategory = '';
+        wrap.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
+        e.target.classList.add('active');
+        loadProducts();
+    };
+}
+
+async function loadProducts() {
+    const grid = document.getElementById('productGrid');
+    grid.innerHTML = '<div class="product-grid-empty"><i class="fa-solid fa-spinner fa-spin"></i><p class="mt-2 mb-0">Đang tải sản phẩm...</p></div>';
+
+    try {
+        const params = new URLSearchParams();
+        if (currentCategory) params.set('id_danh_muc', currentCategory);
+        if (searchKeyword) params.set('q', searchKeyword);
+        const url = productListUrl + (params.toString() ? '?' + params.toString() : '');
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        allProducts = await res.json();
+        renderProducts();
+    } catch (err) {
+        console.error(err);
+        grid.innerHTML = '<div class="product-grid-empty"><i class="fa-solid fa-circle-exclamation"></i><p>Lỗi tải sản phẩm</p></div>';
+    }
+}
+
+function renderProducts() {
+    const grid = document.getElementById('productGrid');
+    if (!allProducts || allProducts.length === 0) {
+        grid.innerHTML = '<div class="product-grid-empty"><i class="fa-solid fa-box-open"></i><p>Không có sản phẩm</p></div>';
+        return;
+    }
+    grid.innerHTML = allProducts.map(p => {
+        const oos = p.so_luong_ton_kho <= 0;
+        const imgHtml = p.hinh_anh
+            ? `<img src="${p.hinh_anh}" alt="${p.ten_san_pham}" onerror="this.outerHTML='<div class=\\'no-img\\'><i class=\\'fa-solid fa-box\\'></i></div>'">`
+            : `<div class="no-img"><i class="fa-solid fa-box"></i></div>`;
+        return `
+            <div class="product-card ${oos ? 'out-of-stock' : ''}" data-id="${p.id}">
+                <div class="img-wrap">
+                    ${imgHtml}
+                    ${oos ? '<div class="badge-stock" style="background: var(--pos-danger);">Hết hàng</div>' : `<div class="badge-stock">Kho: ${p.so_luong_ton_kho}</div>`}
+                </div>
+                <div class="info">
+                    <div class="name">${p.ten_san_pham || ''}</div>
+                    <div class="price">${fmt(p.gia_ban)}</div>
+                    ${p.ma_vach ? `<div class="barcode"><i class="fa-solid fa-barcode me-1"></i>${p.ma_vach}</div>` : ''}
+                </div>
+            </div>`;
+    }).join('');
+
+    grid.querySelectorAll('.product-card').forEach(card => {
+        card.onclick = () => {
+            if (card.classList.contains('out-of-stock')) {
+                showToast('Sản phẩm đã hết hàng', 'warn');
+                return;
+            }
+            const id = parseInt(card.dataset.id, 10);
+            addToCart(id);
+        };
+    });
+}
+
+// =========================================================
+// CART
+// =========================================================
+function addToCart(productId) {
+    const p = allProducts.find(x => x.id === productId);
+    if (!p) return;
+
+    const inv = getActiveInvoice();
+    const existing = inv.items.find(x => x.id === productId);
+    if (existing) {
+        existing.qty += 1;
+    } else {
+        inv.items.push({
+            id: p.id,
+            id_san_pham: p.id_san_pham,
+            ten_san_pham: p.ten_san_pham,
+            hinh_anh: p.hinh_anh,
+            gia_ban: p.gia_ban,
+            ma_vach: p.ma_vach,
+            qty: 1,
+        });
+    }
+    showToast('Đã thêm: ' + p.ten_san_pham);
+    renderInvoiceItems();
+    renderTotals();
+    renderInvoiceTabs();
+}
+
+function removeFromCart(productId) {
+    const inv = getActiveInvoice();
+    inv.items = inv.items.filter(x => x.id !== productId);
+    renderInvoiceItems();
+    renderTotals();
+    renderInvoiceTabs();
+}
+
+function updateQty(productId, newQty) {
+    const inv = getActiveInvoice();
+    const it = inv.items.find(x => x.id === productId);
+    if (!it) return;
+    it.qty = Math.max(1, newQty);
+    renderInvoiceItems();
+    renderTotals();
+}
+
+function renderInvoiceItems() {
+    const box = document.getElementById('invoiceItems');
+    const inv = getActiveInvoice();
+    if (inv.items.length === 0) {
+        box.innerHTML = `<div class="invoice-empty">
+            <i class="fa-solid fa-cart-shopping"></i>
+            <p class="mt-2 mb-0">Chưa có sản phẩm trong hóa đơn</p>
+            <small>Bấm vào sản phẩm bên phải để thêm</small>
+        </div>`;
+        return;
+    }
+    box.innerHTML = inv.items.map(it => {
+        const img = it.hinh_anh
+            ? `<img src="${it.hinh_anh}" onerror="this.outerHTML='<div class=\\'no-img\\' style=\\'background:#e2e8f0;width:56px;height:56px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:#94a3b8;\\'><i class=\\'fa-solid fa-box\\'></i></div>'">`
+            : `<div style="background:#e2e8f0;width:56px;height:56px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:#94a3b8;"><i class="fa-solid fa-box"></i></div>`;
+        return `
+        <div class="invoice-item" data-id="${it.id}">
+            ${img}
+            <div>
+                <div class="name">${it.ten_san_pham}</div>
+                <div class="price">${fmt(it.gia_ban)}</div>
+                <div class="qty-control">
+                    <button class="qty-btn" onclick="updateQty(${it.id}, ${it.qty - 1})">−</button>
+                    <input class="qty-input" type="number" min="1" value="${it.qty}" onchange="updateQty(${it.id}, parseInt(this.value||1))">
+                    <button class="qty-btn" onclick="updateQty(${it.id}, ${it.qty + 1})">+</button>
+                </div>
+            </div>
+            <div>
+                <div class="total">${fmt(it.gia_ban * it.qty)}</div>
+                <span class="remove-btn" onclick="removeFromCart(${it.id})"><i class="fa-solid fa-trash-can me-1"></i>Xóa</span>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// =========================================================
+// TOTALS
+// =========================================================
+function calcTotals() {
+    const inv = getActiveInvoice();
+    const subtotal = inv.items.reduce((s, x) => s + x.gia_ban * x.qty, 0);
+    const productDiscount = calcProductDiscount(inv.items);
+    const pointDiscount = (Number(inv.usePoint) || 0) * 100;
+    const voucherDiscount = Number(inv.voucherDiscount) || 0;
+    const total = Math.max(0, subtotal - productDiscount - voucherDiscount - pointDiscount);
+    return { subtotal, productDiscount, pointDiscount, voucherDiscount, total };
+}
+
+function calcProductDiscount(items) {
+    let discount = 0;
+    items.forEach(it => {
+        const sp = (allPromotions || []).filter(km => {
+            if (km.trang_thai !== 1 && km.trang_thai !== true) return false;
+            if (km.loai_giam_gia === 'bogo') return false;
+            const ids = km.id_san_phams || [];
+            const bts = km.id_bien_thes || [];
+            return ids.includes(it.id_san_pham) || bts.includes(it.id);
+        });
+        sp.forEach(km => {
+            let giam = 0;
+            if (km.loai_giam_gia === 'phan_tram') {
+                giam = it.gia_ban * it.qty * Number(km.gia_tri_giam) / 100;
+                if (km.giam_toi_da) giam = Math.min(giam, Number(km.giam_toi_da));
+            } else if (km.loai_giam_gia === 'amount') {
+                giam = Math.min(it.gia_ban * it.qty, Number(km.gia_tri_giam));
+            }
+            discount += giam;
+        });
+    });
+    return discount;
+}
+
+function renderTotals() {
+    const t = calcTotals();
+    document.getElementById('subtotal').textContent = fmt(t.subtotal);
+    document.getElementById('discount').textContent = fmt(t.productDiscount + t.voucherDiscount);
+    document.getElementById('pointUse').textContent = fmt(t.pointDiscount);
+    document.getElementById('total').textContent = fmt(t.total);
+    document.getElementById('btnCheckout').disabled = (getActiveInvoice().items.length === 0);
+}
+
+// =========================================================
+// CUSTOMER
+// =========================================================
+document.getElementById('searchCustomer').addEventListener('input', async function() {
+    const kw = this.value.trim();
+    const box = document.getElementById('customerSuggest');
+    if (kw.length < 1) { box.classList.remove('show'); box.innerHTML = ''; return; }
+    try {
+        const res = await fetch(customerListUrl + '?q=' + encodeURIComponent(kw), { headers: { 'Accept': 'application/json' } });
+        const list = await res.json();
+        if (!list || list.length === 0) {
+            box.innerHTML = '<div class="suggest-item text-muted">Không tìm thấy khách hàng</div>';
+            box.classList.add('show');
+            return;
+        }
+        box.innerHTML = list.map(c => `
+            <div class="suggest-item" data-id="${c.id}">
+                <div class="name">${c.ten_khach_hang} ${c.so_dien_thoai ? '(' + c.so_dien_thoai + ')' : ''}</div>
+                <div class="meta"><i class="fa-solid fa-star me-1"></i>${c.diem_tich_luy || 0} điểm · Chi tiêu: ${fmt(c.tong_chi_tieu || 0)}</div>
+            </div>
+        `).join('');
+        box.classList.add('show');
+        box.querySelectorAll('.suggest-item').forEach(it => {
+            if (it.dataset.id) {
+                it.onclick = () => selectCustomer(JSON.parse(it.dataset.c || 'null'));
+            }
+        });
+        // Pass via dataset object
+        box.querySelectorAll('.suggest-item').forEach((it, idx) => {
+            const c = list[idx];
+            if (!c) return;
+            it.onclick = () => {
+                selectCustomer(c);
+                box.classList.remove('show');
+            };
+        });
+    } catch (err) { console.error(err); }
+});
+
+function selectCustomer(c) {
+    selectedCustomer = c;
+    getActiveInvoice().customer = c;
+    renderCustomerInfo();
+    document.getElementById('searchCustomer').value = c.ten_khach_hang + (c.so_dien_thoai ? ' (' + c.so_dien_thoai + ')' : '');
+}
+
+function renderCustomerInfo() {
+    const info = document.getElementById('customerInfo');
+    if (selectedCustomer) {
+        info.classList.add('show');
+        document.getElementById('customerName').textContent = selectedCustomer.ten_khach_hang + (selectedCustomer.so_dien_thoai ? ' - ' + selectedCustomer.so_dien_thoai : '');
+        document.getElementById('customerPoints').textContent = selectedCustomer.diem_tich_luy || 0;
+    } else {
+        info.classList.remove('show');
+    }
+}
+
+document.getElementById('btnRemoveCustomer').onclick = () => {
+    selectedCustomer = null;
+    getActiveInvoice().customer = null;
+    document.getElementById('searchCustomer').value = '';
+    renderCustomerInfo();
+};
+
+// =========================================================
+// BARCODE SCAN
+// =========================================================
+document.getElementById('barcodeInput').addEventListener('keydown', async function(e) {
+    if (e.key !== 'Enter') return;
+    const code = this.value.trim();
+    if (!code) return;
+    try {
+        const res = await fetch(productListUrl + '?q=' + encodeURIComponent(code), { headers: { 'Accept': 'application/json' } });
+        const list = await res.json();
+        if (list && list.length > 0) {
+            addToCart(list[0].id);
+            this.value = '';
+        } else {
+            showToast('Không tìm thấy sản phẩm với mã: ' + code, 'error');
+        }
+    } catch (err) { console.error(err); }
+});
+
+// =========================================================
+// PRODUCT SEARCH
+// =========================================================
+let searchTimer;
+document.getElementById('searchProduct').addEventListener('input', function() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+        searchKeyword = this.value.trim();
+        loadProducts();
+    }, 300);
+});
+
+// =========================================================
+// PROMOTIONS
+// =========================================================
+async function loadPromotions() {
+    try {
+        const res = await fetch(promotionListUrl, { headers: { 'Accept': 'application/json' } });
+        allPromotions = await res.json();
+    } catch (err) { console.error(err); }
+}
+
+// =========================================================
+// SELLERS
+// =========================================================
+async function loadSellers() {
+    try {
+        const res = await fetch(sellerListUrl, { headers: { 'Accept': 'application/json' } });
+        allSellers = await res.json();
+        const sel = document.getElementById('sellerSelect');
+        sel.innerHTML = '<option value="">-- Người bán --</option>';
+        allSellers.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = s.ho_ten + (s.ten_vai_tro ? ' (' + s.ten_vai_tro + ')' : '');
+            sel.appendChild(opt);
+        });
+        // Mặc định chọn người đang đăng nhập
+        const me = '{{ $nguoiDung->id ?? '' }}';
+        if (me) sel.value = me;
+    } catch (err) { console.error(err); }
+}
+
+document.getElementById('sellerSelect').addEventListener('change', function() {
+    getActiveInvoice().sellerId = this.value;
+});
+
+// =========================================================
+// CHECKOUT MODAL
+// =========================================================
+document.getElementById('btnCheckout').onclick = () => {
+    const inv = getActiveInvoice();
+    if (inv.items.length === 0) {
+        showToast('Chưa có sản phẩm trong hóa đơn', 'warn');
+        return;
+    }
+    populateCheckout();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('checkoutModal')).show();
+};
+
+function populateCheckout() {
+    const inv = getActiveInvoice();
+    const itemsBox = document.getElementById('checkoutItems');
+    itemsBox.innerHTML = inv.items.map(it => `
+        <div class="d-flex justify-content-between border-bottom py-1">
+            <div>${it.ten_san_pham} <small class="text-muted">×${it.qty}</small></div>
+            <strong>${fmt(it.gia_ban * it.qty)}</strong>
+        </div>
+    `).join('');
+
+    // Voucher dropdown
+    const voucherSel = document.getElementById('ckVoucher');
+    voucherSel.innerHTML = '<option value="">-- Không áp dụng --</option>';
+    (allPromotions || []).filter(km => !km.la_khuyen_mai_san_pham).forEach(km => {
+        const opt = document.createElement('option');
+        opt.value = km.id;
+        let label = km.ten_chuong_trinh;
+        if (km.loai_giam_gia === 'phan_tram') label += ` (-${km.gia_tri_giam}%)`;
+        else if (km.loai_giam_gia === 'amount') label += ` (-${fmt(km.gia_tri_giam)})`;
+        opt.textContent = label;
+        voucherSel.appendChild(opt);
+    });
+    if (inv.voucherId) voucherSel.value = inv.voucherId;
+
+    document.getElementById('ckUsePoint').value = inv.usePoint || 0;
+    document.getElementById('ckCustomer').textContent = (inv.customer && inv.customer.ten_khach_hang) || 'Khách lẻ';
+
+    recomputeCheckout();
+
+    document.getElementById('customerMoney').value = '';
+    updateChange();
+}
+
+function recomputeCheckout() {
+    const inv = getActiveInvoice();
+    const t = calcTotals();
+    document.getElementById('ckSubtotal').textContent = fmt(t.subtotal);
+    document.getElementById('ckDiscount').textContent = fmt(t.productDiscount);
+    document.getElementById('ckVoucherDiscount').textContent = fmt(t.voucherDiscount);
+    document.getElementById('ckPointDiscount').textContent = fmt(t.pointDiscount);
+    document.getElementById('ckTotal').textContent = fmt(t.total);
+    updateChange();
+}
+
+document.getElementById('ckVoucher').addEventListener('change', function() {
+    const inv = getActiveInvoice();
+    inv.voucherId = this.value || null;
+    const km = (allPromotions || []).find(x => String(x.id) === String(this.value));
+    let vd = 0;
+    if (km) {
+        const t = calcTotals();
+        if (km.loai_giam_gia === 'phan_tram') {
+            vd = Math.max(0, (t.subtotal - t.productDiscount) * Number(km.gia_tri_giam) / 100);
+            if (km.giam_toi_da) vd = Math.min(vd, Number(km.giam_toi_da));
+        } else if (km.loai_giam_gia === 'amount') {
+            vd = Math.min(t.subtotal - t.productDiscount, Number(km.gia_tri_giam));
+        }
+    }
+    inv.voucherDiscount = vd;
+    recomputeCheckout();
+});
+
+document.getElementById('ckUsePoint').addEventListener('input', function() {
+    const inv = getActiveInvoice();
+    let val = parseInt(this.value || 0, 10);
+    if (val < 0) val = 0;
+    if (selectedCustomer) val = Math.min(val, Number(selectedCustomer.diem_tich_luy || 0));
+    inv.usePoint = val;
+    this.value = val;
+    recomputeCheckout();
+});
+
+document.querySelectorAll('.pay-method').forEach(el => {
+    el.onclick = () => {
+        document.querySelectorAll('.pay-method').forEach(x => x.classList.remove('active'));
+        el.classList.add('active');
+        selectedPayment = el.dataset.method;
+        document.getElementById('cashBox').style.display = (selectedPayment === 'cash') ? '' : 'none';
+    };
+});
+
+document.querySelectorAll('.quick-money').forEach(btn => {
+    btn.onclick = () => {
+        const amt = btn.dataset.amt;
+        if (amt) {
+            document.getElementById('customerMoney').value = amt;
+        } else {
+            const t = calcTotals().total;
+            document.getElementById('customerMoney').value = t;
+        }
+        updateChange();
+    };
+});
+
+document.getElementById('customerMoney').addEventListener('input', updateChange);
+
+function updateChange() {
+    const t = calcTotals().total;
+    const given = parseMoney(document.getElementById('customerMoney').value);
+    const change = Math.max(0, given - t);
+    document.getElementById('changeMoney').textContent = fmt(change);
+}
+
+// =========================================================
+// CONFIRM PAYMENT
+// =========================================================
+document.getElementById('btnConfirmPay').onclick = async () => {
+    const inv = getActiveInvoice();
+    if (inv.items.length === 0) {
+        showToast('Giỏ hàng trống', 'error');
+        return;
+    }
+
+    const t = calcTotals();
+    let customerMoney = parseMoney(document.getElementById('customerMoney').value);
+    if (selectedPayment === 'cash') {
+        if (customerMoney < t.total) {
+            showToast('Tiền khách đưa chưa đủ', 'error');
+            return;
+        }
+    } else {
+        customerMoney = t.total;
+    }
+
+    const idNguoiBan = document.getElementById('sellerSelect').value || null;
+
+    const body = {
+        cart: inv.items.map(it => ({ id: it.id, qty: it.qty })),
+        id_khach_hang: inv.customer ? inv.customer.id : null,
+        id_nguoi_ban: idNguoiBan,
+        id_khuyen_mai: inv.voucherId || null,
+        tien_khach_dua: customerMoney,
+        phuong_thuc_thanh_toan: selectedPayment,
+        diem_su_dung: Number(inv.usePoint) || 0,
+    };
+
+    try {
+        document.getElementById('btnConfirmPay').disabled = true;
+        const res = await fetch(checkoutUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            showToast(data.message || 'Thanh toán thất bại!', 'error');
+            document.getElementById('btnConfirmPay').disabled = false;
+            return;
+        }
+
+        const hoaDonId = data.hoa_don_id;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('checkoutModal')).hide();
+        document.getElementById('btnConfirmPay').disabled = false;
+
+        // Reset tab
+        invoices[activeInvoiceIdx] = newInvoice();
+        renderInvoiceTabs();
+        applyActiveInvoice();
+
+        showToast('Thanh toán thành công! #' + hoaDonId);
+
+        if (data.redirect_to_payos) {
+            await redirectToPayOS(hoaDonId);
+            return;
+        }
+
+        // In hóa đơn
+        setTimeout(() => {
+            window.open(invoicePrintUrl + '/' + hoaDonId + '?print=1', '_blank');
+        }, 400);
+
+        loadProducts();
+    } catch (err) {
+        console.error(err);
+        showToast('Lỗi kết nối máy chủ!', 'error');
+        document.getElementById('btnConfirmPay').disabled = false;
+    }
+};
+
+async function redirectToPayOS(hoaDonId) {
+    try {
+        const res = await fetch(payOSCreateUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ hoa_don_id: hoaDonId }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success || !data.checkout_url) {
+            showToast(data.message || 'Không tạo được link PayOS', 'error');
+            return;
+        }
+        window.open(data.checkout_url, '_blank');
+    } catch (err) {
+        console.error(err);
+        showToast('Lỗi khi tạo link PayOS', 'error');
+    }
+}
+
+// =========================================================
+// CLEAR CART
+// =========================================================
+document.getElementById('btnClearCart').onclick = () => {
+    const inv = getActiveInvoice();
+    if (inv.items.length === 0) return;
+    if (!confirm('Xóa toàn bộ sản phẩm trong hóa đơn này?')) return;
+    inv.items = [];
+    inv.customer = null;
+    inv.usePoint = 0;
+    inv.voucherId = null;
+    inv.voucherDiscount = 0;
+    selectedCustomer = null;
+    document.getElementById('searchCustomer').value = '';
+    renderCustomerInfo();
+    renderInvoiceItems();
+    renderTotals();
+};
+
+// =========================================================
+// LIVE CLOCK
+// =========================================================
+function tickClock() {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const days = ['CN','T2','T3','T4','T5','T6','T7'];
+    document.getElementById('liveClock').textContent =
+        `${days[now.getDay()]} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} - ${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+// =========================================================
+// TOAST
+// =========================================================
+function showToast(message, type = 'success') {
+    const t = document.getElementById('posToast');
+    const msg = document.getElementById('toastMessage');
+    msg.textContent = message;
+    t.classList.remove('error', 'warn');
+    if (type === 'error') t.classList.add('error');
+    else if (type === 'warn') t.classList.add('warn');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// =========================================================
+// INIT
+// =========================================================
+renderInvoiceTabs();
+applyActiveInvoice();
+loadCategories();
+loadProducts();
+loadPromotions();
+loadSellers();
+</script>
+</body>
+</html>

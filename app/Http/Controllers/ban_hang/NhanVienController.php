@@ -155,6 +155,30 @@ class NhanVienController extends Controller
     );
 }
 
+public function banHangMoi()
+{
+    $nguoiDung = Auth::user();
+
+    if (!$nguoiDung) {
+        return redirect()
+            ->route('admin.login')
+            ->with('error', 'Vui lòng đăng nhập.');
+    }
+
+    $caHienTai = $this->timCaLamViecHienTai();
+
+    $danhSachDanhMuc = DanhMucSanPham::query()
+        ->where('trang_thai', 1)
+        ->orderBy('id', 'asc')
+        ->get();
+
+    return view('ban_hang.pos_moi', compact(
+        'nguoiDung',
+        'caHienTai',
+        'danhSachDanhMuc'
+    ));
+}
+
 public function donChoThanhToan(Request $request): \Illuminate\Http\JsonResponse
 {
     // Lấy tất cả hoá đơn đang chờ thanh toán, kèm giao dịch PayOS còn `cho_xac_nhan`
