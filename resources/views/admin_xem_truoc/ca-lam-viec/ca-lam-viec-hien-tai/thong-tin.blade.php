@@ -106,55 +106,7 @@
             </div>
         </div>
 
-        @if($ca_hien_tai)
-
         <div class="col-md-3">
-            <div class="card info-card">
-                <div class="card-body d-flex align-items-center">
-                    <div class="icon-box icon-warning me-3">
-                        <i class="bi bi-alarm-fill"></i>
-                    </div>
-
-                    <div>
-                        <div class="text-muted">Ca hiện tại</div>
-                        <h4 class="mb-0">
-                            {{ $ca_hien_tai->ten_ca }}
-                        </h4>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card info-card">
-                <div class="card-body d-flex align-items-center">
-                    <div class="icon-box icon-danger me-3">
-                        <i class="bi bi-cash-stack"></i>
-                    </div>
-
-                    <div>
-                        <div class="text-muted">
-                            Doanh thu ca
-                        </div>
-
-                        <h5 class="mb-0 text-danger">
-                            {{ number_format($tong_doanh_thu_cua_ca) }}đ
-                        </h5>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        @endif
-
-    </div>
-
-    @if($ca_hien_tai)
-
-    {{-- Thống kê --}}
-    <div class="row g-4 mb-4">
-
-        <div class="col-md-6">
             <div class="card info-card">
                 <div class="card-body d-flex align-items-center">
 
@@ -176,24 +128,116 @@
             </div>
         </div>
 
-        <div class="col-md-6">
+        @if($ca_hien_tai)
+
+        
+
+        <div class="col-md-3">
             <div class="card info-card">
                 <div class="card-body d-flex align-items-center">
-
-                    <div class="icon-box icon-primary me-3">
-                        <i class="bi bi-people-fill"></i>
+                    <div class="icon-box icon-danger me-3">
+                        <i class="bi bi-receipt-cutoff"></i>
                     </div>
 
                     <div>
                         <div class="text-muted">
-                            Tổng nhân viên
+                            Số hóa đơn bị hủy trong ca
+                        </div>
+
+                        <h5 class="mb-0 text-danger">
+                            {{ number_format($cac_hoa_don_bi_huy_trong_ca) }}
+                        </h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        @endif
+
+    </div>
+
+    @if($ca_hien_tai)
+
+    {{-- Thống kê --}}
+    <div class="row g-4 mb-4">
+
+        <div class="col-md-3">
+            <div class="card info-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="icon-box icon-success me-3">
+                        <i class="bi bi-cash-stack"></i>
+                    </div>
+
+                    <div>
+                        <div class="text-muted">
+                            Doanh thu ca
+                        </div>
+
+                        <h5 class="mb-0 text-success">
+                            {{ number_format($tong_doanh_thu_cua_ca) }}đ
+                        </h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card info-card">
+                <div class="card-body d-flex align-items-center">
+
+                    <div class="icon-box icon-primary me-3">
+                        <i class="bi bi-credit-card-2-front-fill"></i>
+                    </div>
+
+                    <div>
+                        <div class="text-muted">
+                            Doanh thu chuyển khoản 
                         </div>
 
                         <h3 class="mb-0">
-                            {{ $tong_nhan_vien_cua_ca }}
+                            {{ number_format($tong_doanh_thu_chuyen_khoan_cua_ca, 0, ',', '.') }}đ
                         </h3>
                     </div>
 
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card info-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="icon-box icon-danger me-3">
+                        <i class="bi bi-cash-stack"></i>
+                    </div>
+
+                    <div>
+                        <div class="text-muted">
+                            Doanh thu ca tiền mặt
+                        </div>
+
+                        <h5 class="mb-0 text-danger">
+                            {{ number_format($tong_doanh_thu_tien_mat_cua_ca) }}đ
+                        </h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-md-3">
+            <div class="card info-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="icon-box icon-warning me-3">
+                        <i class="bi bi-alarm-fill"></i>
+                    </div>
+
+                    <div>
+                        <div class="text-muted">Ca hiện tại</div>
+                        <h4 class="mb-0">
+                            {{ $ca_hien_tai->ten_ca }}
+                        </h4>
+                    </div>
                 </div>
             </div>
         </div>

@@ -118,9 +118,10 @@ class SanPhamApiController extends Controller
         $to = now()->endOfDay();
         $from = now()->subDays($days - 1)->startOfDay();
 
-        $baseQuery = DB::table('chi_tiet_hoa_don as cth')
+        $baseQuery = DB::table('bien_the_san_pham as v')
+            ->join('chi_tiet_hoa_don as cth', 'cth.id_bien_the_san_pham', '=', 'v.id')
             ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
-            ->where('cth.id_san_pham', $product->id)
+            ->where('v.product_id', $product->id)
             ->where('hd.trang_thai', 'Hoàn thành');
 
         $summary = (clone $baseQuery)
@@ -152,13 +153,12 @@ class SanPhamApiController extends Controller
         }
 
         $topVariants = (clone $baseQuery)
-            ->leftJoin('bien_the_san_pham as v', 'cth.id_chi_tiet_phieu', '=', 'v.id')
             ->whereBetween('hd.created_at', [$from, $to])
-            ->selectRaw('COALESCE(cth.id_chi_tiet_phieu, 0) as variant_id')
+            ->selectRaw('v.id as variant_id')
             ->selectRaw('COALESCE(v.ten_bien_the, v.ten_don_vi, ?) as variant_name', [$product->ten_san_pham])
             ->selectRaw('COALESCE(SUM(cth.so_luong), 0) as quantity')
             ->selectRaw('COALESCE(SUM(cth.thanh_tien), 0) as revenue')
-            ->groupBy('cth.id_chi_tiet_phieu', 'variant_name')
+            ->groupBy('v.id', 'variant_name')
             ->orderByDesc('quantity')
             ->limit(5)
             ->get()
@@ -170,9 +170,10 @@ class SanPhamApiController extends Controller
             ])->values()->all();
 
         $recentOrders = DB::table('chi_tiet_hoa_don as cth')
+            ->join('bien_the_san_pham as v', 'cth.id_bien_the_san_pham', '=', 'v.id')
             ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
             ->leftJoin('khach_hang as kh', 'hd.id_khach_hang', '=', 'kh.id')
-            ->where('cth.id_san_pham', $product->id)
+            ->where('v.product_id', $product->id)
             ->where('hd.trang_thai', 'Hoàn thành')
             ->whereBetween('hd.created_at', [$from, $to])
             ->selectRaw('cth.id_hoa_don as order_id')
@@ -229,30 +230,6 @@ class SanPhamApiController extends Controller
         $requestedVariantId = request()->query('variant_id');
         $requestedUnitId = request()->query('unit_id');
         $isMaster = request()->query('is_master') === '1';
-        // #region agent log
-        try {
-            $logPath = base_path('debug-80bdd0.log');
-            $payload = [
-                'sessionId' => '80bdd0',
-                'id' => 'log_' . time() . '_' . substr(md5(uniqid()), 0, 6),
-                'timestamp' => (int)(microtime(true) * 1000),
-                'location' => 'SanPhamApiController.php:231',
-                'message' => 'show() entry',
-                'data' => [
-                    'route' => 'san-pham.api.show',
-                    'id' => $id,
-                    'variant_id' => $requestedVariantId,
-                    'unit_id' => $requestedUnitId,
-                    'is_master' => $isMaster,
-                    'method' => request()->method(),
-                    'ip' => request()->ip(),
-                ],
-                'runId' => 'post-fix',
-                'hypothesisId' => 'H1',
-            ];
-            file_put_contents($logPath, json_encode($payload, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND | LOCK_EX);
-        } catch (\Throwable $logEx) {}
-        // #endregion
         \Log::info('[SanPhamApi show] id=' . $id . ' variant_id=' . ($requestedVariantId ?? 'null') . ' unit_id=' . ($requestedUnitId ?? 'null') . ' is_master=' . ($isMaster ? '1' : '0'));
 
         $product = Product::with([
@@ -295,52 +272,8 @@ class SanPhamApiController extends Controller
         }
 
         if (!$variant || !$variant->product) {
-            // #region agent log
-            try {
-                $logPath = base_path('debug-80bdd0.log');
-                $payload = [
-                    'sessionId' => '80bdd0',
-                    'id' => 'log_' . time() . '_' . substr(md5(uniqid()), 0, 6),
-                    'timestamp' => (int)(microtime(true) * 1000),
-                    'location' => 'SanPhamApiController.php:298',
-                    'message' => '404 not found',
-                    'data' => [
-                        'id' => $id,
-                        'variant_is_null' => $variant === null,
-                    ],
-                    'runId' => 'initial',
-                    'hypothesisId' => 'H9',
-                ];
-                file_put_contents($logPath, json_encode($payload, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND | LOCK_EX);
-            } catch (\Throwable $logEx) {}
-            // #endregion
             return response()->json(['success' => false, 'message' => 'San pham khong ton tai.'], 404);
         }
-
-        // #region agent log
-        try {
-            $logPath = base_path('debug-80bdd0.log');
-            $payload = [
-                'sessionId' => '80bdd0',
-                'id' => 'log_' . time() . '_' . substr(md5(uniqid()), 0, 6),
-                'timestamp' => (int)(microtime(true) * 1000),
-                'location' => 'SanPhamApiController.php:303',
-                'message' => 'variant resolved',
-                'data' => [
-                    'id' => $id,
-                    'variant_id' => $variant->id,
-                    'product_id' => $variant->product_id,
-                    'product_deleted_at' => $variant->product->deleted_at,
-                    'requested_variant_id' => $requestedVariantId,
-                    'requested_unit_id' => $requestedUnitId,
-                    'has_units' => $variant->units->count(),
-                ],
-                'runId' => 'initial',
-                'hypothesisId' => 'H10',
-            ];
-            file_put_contents($logPath, json_encode($payload, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND | LOCK_EX);
-        } catch (\Throwable $logEx) {}
-        // #endregion
 
         $theKho = DB::table('phieu')
             ->join('chi_tiet_phieu', 'phieu.id', '=', 'chi_tiet_phieu.id_phieu')
@@ -464,25 +397,6 @@ class SanPhamApiController extends Controller
             ])->all(),
         ]);
 
-        // #region agent log
-        try {
-            $logPath = base_path('debug-80bdd0.log');
-            $payload = [
-                'sessionId' => '80bdd0',
-                'id' => 'log_' . time() . '_' . substr(md5(uniqid()), 0, 6),
-                'timestamp' => (int)(microtime(true) * 1000),
-                'location' => 'SanPhamApiController.php:455',
-                'message' => 'returning success response',
-                'data' => [
-                    'id' => $id,
-                    'variant_id' => $variant->id,
-                ],
-                'runId' => 'initial',
-                'hypothesisId' => 'H11',
-            ];
-            file_put_contents($logPath, json_encode($payload, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND | LOCK_EX);
-        } catch (\Throwable $logEx) {}
-        // #endregion
         return response()->json([
             'success' => true,
             'data' => [

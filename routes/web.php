@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\Api\PhieuXuatApiController;
 use App\Http\Controllers\Admin\Api\KiemKhoApiController;
 use App\Http\Controllers\Admin\KiemKho\KiemKhoController;
 use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
+use App\Http\Controllers\admin\KhoHang\HangLoiController;
 use App\Http\Controllers\admin\Api\ThuocTinhApiController;
 use App\Http\Controllers\admin\Api\SanPhamApiController;
 use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
@@ -252,6 +253,8 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::post('/admin/hoa-don/{id}/doi-tra', [HoaDonController::class, 'xuLyDoiTra'])->name('admin.hoa-don.xu-ly-doi-tra');
     Route::get('/admin/hoa-don/{id}', [HoaDonController::class, 'show'])->name('admin.hoa-don.show');
     Route::post('/admin/hoa-don/{id}/huy', [HoaDonController::class, 'huy'])->name('admin.hoa-don.huy');
+    Route::get('/admin/hang-loi', [HangLoiController::class, 'index'])->name('admin.hang-loi.index');
+    Route::post('/admin/hang-loi/{id}/xac-nhan-tieu-huy', [HangLoiController::class, 'xacNhanTieuHuy'])->name('admin.hang-loi.xac-nhan-tieu-huy');
 
     // Trang kho hang
     Route::get('/admin/kho-hang', function () {
@@ -307,6 +310,8 @@ Route::middleware([KTVaiTro::class])->group(function () {
         Route::get('/chi-tiet-hoa-don/{id_hoadon}',[CaLam::class, 'show'])->name('chi-tiet-hoa-don.show')->middleware('permission:quan_ly_ca_lam');
         //lịch sử ca làm
         Route::get('/lich-su-ca-lam-viec',[LichSuCaLam::class, 'index'])->name('lich-su-ca-lam-viec.index')->middleware('permission:quan_ly_ca_lam');
+        Route::get('/cac-hoa-don-cua-ca-hoan-thanh/{ngay}/{id_ca}',[LichSuCaLam::class, 'hoa_don_cua_ca_hoan_thanh'])->name('hoa-don-cua-ca.hoan-thanh')->middleware('permission:quan_ly_ca_lam');
+        Route::get('/cac-hoa-don-cua-ca-huy/{ngay}/{id_ca}',[LichSuCaLam::class, 'hoa_don_cua_ca_huy'])->name('hoa-don-cua-ca.huy')->middleware('permission:quan_ly_ca_lam');
         // Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}',[LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:quan_ly_ca_lam');
         Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}/{id_ca?}',[LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:quan_ly_ca_lam');
 
@@ -375,4 +380,3 @@ Route::get('/payos/cancel', [PayOSController::class, 'cancel'])->name('payos.can
 Route::match(['get', 'post'], '/payos/webhook', [PayOSController::class, 'webhook'])
     ->name('payos.webhook')
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrf::class]);
-

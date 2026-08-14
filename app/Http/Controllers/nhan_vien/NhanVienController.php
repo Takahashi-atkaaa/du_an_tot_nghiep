@@ -7,6 +7,7 @@ use App\Http\Requests\DoiMatKhauRequest;
 use App\Models\ChiaCaLamViec;
 use App\Models\NguoiDung;
 use App\Models\SanPham;
+use App\Services\NhanSu\NhanSuStatService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -182,8 +183,17 @@ class NhanVienController extends Controller
         $nguoiDung = auth()->user();
         $nguoiDung->load('vaiTro');
 
+        $caGanNhat = NhanSuStatService::getCaGanNhat($nguoiDung->id);
+        $caHomNay  = NhanSuStatService::getCaHomNay($nguoiDung->id);
+        $hoaDonThang = NhanSuStatService::getThongKeHoaDonThang($nguoiDung->id);
+
         return view('nhan_vien.ho-so', [
             'nguoiDung' => $nguoiDung,
+            'caGanNhat' => $caGanNhat,
+            'caHomNay' => $caHomNay,
+            'tongHoaDonThang' => $hoaDonThang['tong_hoa_don'],
+            'tongDoanhThuThang' => $hoaDonThang['tong_doanh_thu'],
+            'ngayVaoLam' => $nguoiDung->created_at,
         ]);
     }
 

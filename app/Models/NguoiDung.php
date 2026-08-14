@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 // Su dung trait Authenticatable de ho tro xac thuc
 
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -95,5 +96,26 @@ public function setMatKhauAttribute($value)
     public function chiaCaLamViecs(): HasMany
     {
         return $this->hasMany(ChiaCaLamViec::class, 'id_nguoi_dung');
+    }
+
+    public function doiTras(): HasMany
+    {
+        return $this->hasMany(DoiTra::class, 'id_nguoi_dung');
+    }
+
+    public function hangLoisTieuHuy(): HasMany
+    {
+        return $this->hasMany(HangLoi::class, 'id_nguoi_dung_tieu_huy');
+    }
+
+    public function getHoTenKemVaiTroAttribute(): string
+    {
+        $tenVaiTro = trim((string) optional($this->vaiTro)->ten_vai_tro);
+
+        if ($tenVaiTro === '') {
+            return (string) $this->ho_ten;
+        }
+
+        return sprintf('%s (%s)', $this->ho_ten, Str::headline($tenVaiTro));
     }
 }

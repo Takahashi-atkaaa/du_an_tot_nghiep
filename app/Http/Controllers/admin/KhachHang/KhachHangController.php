@@ -4,6 +4,7 @@ namespace App\Http\Controllers\admin\KhachHang;
 
 use App\Http\Controllers\Controller;
 use App\Models\KhachHang;
+use App\Services\RevenueStatisticsService;
 use App\Http\Requests\KhachHang\CapNhatKhachHangRequest;
 use App\Http\Requests\KhachHang\ThemKhachHangRequest;
 use Illuminate\Http\RedirectResponse;
@@ -62,7 +63,7 @@ class KhachHangController extends Controller
 		return redirect()->route('khach-hang.index')->with('success', 'Đã thêm khách hàng mới.');
 	}
 
-	public function show(KhachHang $khachHang): View
+	public function show(KhachHang $khachHang, RevenueStatisticsService $revenueStatisticsService): View
 	{
 		$lichSuTichDiems = $khachHang->lichSuTichDiems()
 			->with('hoaDon')
@@ -70,11 +71,16 @@ class KhachHangController extends Controller
 			->paginate(8)
 			->withQueryString();
 
+		$tongTienDaMua = $revenueStatisticsService->sumInvoiceNetRevenue(
+			$revenueStatisticsService->invoiceNetRevenueQuery()
+				->where('hoa_don.id_khach_hang', $khachHang->id)
+		);
+
 		return view('admin_xem_truoc.khach-hang.show', [
 			'khachHang' => $khachHang,
 			'lichSuTichDiems' => $lichSuTichDiems,
 			'tongSoHoaDon' => $khachHang->hoaDons()->count(),
-			'tongTienDaMua' => $khachHang->hoaDons()->sum('khach_can_tra'),
+			'tongTienDaMua' => $tongTienDaMua,
 		]);
 	}
 

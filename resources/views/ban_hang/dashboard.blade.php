@@ -5,7 +5,7 @@
 @section('content')
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Dashboard</h1>
-    <span class="text-muted">Xin chào, Nhân viên Test</span>
+    <span class="text-muted">Xin chào, {{ Auth::user()->ho_ten }}</span>
 </div>
 
 {{-- Thống kê --}}
@@ -17,7 +17,7 @@
                     <i class="fas fa-file-invoice"></i>
                 </div>
                 <div>
-                    <h3 class="mb-0">12</h3>
+                    <h3 class="mb-0">{{ $dailyOrders ?? 0 }}</h3>
                     <small class="text-muted">Hóa đơn hôm nay</small>
                 </div>
             </div>
@@ -30,7 +30,7 @@
                     <i class="fas fa-coins"></i>
                 </div>
                 <div>
-                    <h3 class="mb-0">5.2M</h3>
+                    <h3 class="mb-0">{{ number_format($dailyRevenue ?? 0, 0, ',', '.') }} đ</h3>
                     <small class="text-muted">Doanh thu hôm nay</small>
                 </div>
             </div>
@@ -43,7 +43,7 @@
                     <i class="fas fa-users"></i>
                 </div>
                 <div>
-                    <h3 class="mb-0">8</h3>
+                    <h3 class="mb-0">{{ $dailyNewCustomers ?? 0 }}</h3>
                     <small class="text-muted">Khách hàng mới</small>
                 </div>
             </div>
@@ -56,7 +56,7 @@
                     <i class="fas fa-clock"></i>
                 </div>
                 <div>
-                    <h3 class="mb-0">8h</h3>
+                    <h3 class="mb-0">{{ $dailyHoursWorked ?? 0 }}h</h3>
                     <small class="text-muted">Giờ làm hôm nay</small>
                 </div>
             </div>
@@ -66,7 +66,7 @@
 
 <div class="row">
     {{-- Lịch làm việc hôm nay --}}
-    <div class="col-md-6 mb-4">
+    {{-- <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header bg-white">
                 <h5 class="mb-0"><i class="fas fa-calendar-alt me-2 text-success"></i>Lịch làm việc hôm nay</h5>
@@ -92,10 +92,10 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> --}}
 
     {{-- Hóa đơn gần đây --}}
-    <div class="col-md-6 mb-4">
+    {{-- <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-list me-2 text-success"></i>Hóa đơn gần đây</h5>
@@ -112,26 +112,22 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td><strong>#HD001</strong></td>
-                                <td>Nguyễn Văn A</td>
-                                <td><span class="text-success">350.000đ</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>#HD002</strong></td>
-                                <td>Trần Thị B</td>
-                                <td><span class="text-success">520.000đ</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>#HD003</strong></td>
-                                <td>Lê Văn C</td>
-                                <td><span class="text-success">180.000đ</span></td>
-                            </tr>
+                            @forelse($ as $)
+                                <tr>
+                                    <td><strong>{{ $invoice->ma_hd }}</strong></td>
+                                    <td>{{ $invoice->khach_hang->ho_ten ?? 'Khách lẻ' }}</td>
+                                    <td><span class="text-success">{{ number_format($invoice->tong_tien, 0, ',', '.') }}đ</span></td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">Chưa có hóa đơn gần đây.</td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
-    </div>
+    </div> --}}
 </div>
 @endsection

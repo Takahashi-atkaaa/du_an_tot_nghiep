@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ban_hang;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\BanHang\XuLyDoiTraRequest;
 use App\Http\Requests\DoiMatKhauRequest;
 use App\Models\ChiaCaLamViec;
 use App\Models\NguoiDung;
@@ -17,10 +18,42 @@ use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\KhachHang;
+use App\Services\DoiTraService;
 
 
 class NhanVienController extends Controller
 {
+    private function tenHienThiBienTheSelect(): \Illuminate\Database\Query\Expression
+    {
+        return DB::raw("
+            TRIM(
+                CONCAT(
+                    COALESCE(san_pham.ten_san_pham, ''),
+                    CASE
+                        WHEN COALESCE(
+                            CASE
+                                WHEN bien_the_san_pham.la_don_vi = 1 THEN NULLIF(bien_the_san_pham.ten_don_vi, '')
+                                ELSE NULLIF(bien_the_san_pham.ten_bien_the, '')
+                            END,
+                            NULLIF(bien_the_san_pham.ten_don_vi, '')
+                        ) IS NOT NULL
+                            THEN CONCAT(
+                                ' - ',
+                                COALESCE(
+                                    CASE
+                                        WHEN bien_the_san_pham.la_don_vi = 1 THEN NULLIF(bien_the_san_pham.ten_don_vi, '')
+                                        ELSE NULLIF(bien_the_san_pham.ten_bien_the, '')
+                                    END,
+                                    NULLIF(bien_the_san_pham.ten_don_vi, '')
+                                )
+                            )
+                        ELSE ''
+                    END
+                )
+            ) as ten_hien_thi_san_pham
+        ");
+    }
+
     private function timCaLamViecHienTai(): ?CaLamViec
 {
     $bayGio = Carbon::now();
@@ -184,10 +217,6 @@ public function donChoThanhToan(Request $request): \Illuminate\Http\JsonResponse
         ];
     });
 
-    // #region agent log
-    // instrumentation removed after successful verification
-    // #endregion agent log
-
     return response()->json([
         'success' => true,
         'data' => $data,
@@ -196,17 +225,26 @@ public function donChoThanhToan(Request $request): \Illuminate\Http\JsonResponse
 
 public function hoaDon(Request $request)
     {
+        $doiTraSummarySub = DB::table('doi_tra')
+            ->selectRaw('id_hoa_don, COUNT(*) as so_lan_doi_tra')
+            ->whereNull('deleted_at')
+            ->groupBy('id_hoa_don');
+
         $query = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
             ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
             ->leftJoin('ca_lam_viec', 'hoa_don.id_ca_lam_viec', '=', 'ca_lam_viec.id')
+            ->leftJoinSub($doiTraSummarySub, 'doi_tra_tong_hop', function ($join) {
+                $join->on('hoa_don.id', '=', 'doi_tra_tong_hop.id_hoa_don');
+            })
             ->select(
     'hoa_don.*',
     'khach_hang.ten_khach_hang',
     'nguoi_dung.ho_ten as ten_nhan_vien',
     'ca_lam_viec.ten_ca',
     'ca_lam_viec.gio_bat_dau',
-    'ca_lam_viec.gio_ket_thuc'
+    'ca_lam_viec.gio_ket_thuc',
+    DB::raw('COALESCE(doi_tra_tong_hop.so_lan_doi_tra, 0) as so_lan_doi_tra')
 )
             ->orderByDesc('hoa_don.id');
 
@@ -545,70 +583,298 @@ public function hoaDon(Request $request)
 
             $tienGiamGia = 0;
             $diemSuDung = (int)($request->diem_su_dung ?? 0);
+            // ===============================
+// KHUYẾN MÃI SẢN PHẨM TỰ ĐỘNG
+// ===============================
+foreach ($items as $item) {
 
+    $idSanPham = (int) $item['bien_the']->product_id;
+    $idBienThe = (int) $item['bien_the']->id;
+
+    $soLuong = (int) $item['so_luong'];
+    $giaBan = (float) $item['gia_ban'];
+    $thanhTien = (float) $item['thanh_tien'];
+
+    $khuyenMaisSanPham = DB::table('khuyen_mai')
+        ->join(
+            'khuyen_mai_san_pham',
+            'khuyen_mai.id',
+            '=',
+            'khuyen_mai_san_pham.id_khuyen_mai'
+        )
+        ->where('khuyen_mai.trang_thai', 1)
+        ->where('khuyen_mai.ngay_bat_dau', '<=', now())
+        ->where('khuyen_mai.ngay_ket_thuc', '>=', now())
+        ->where(function ($q) use ($idSanPham, $idBienThe) {
+
+            $q->where(function ($sub) use ($idSanPham) {
+                $sub->where(
+                    'khuyen_mai_san_pham.id_san_pham',
+                    $idSanPham
+                )
+                ->whereNull(
+                    'khuyen_mai_san_pham.id_bien_the_san_pham'
+                );
+            })
+
+            ->orWhere(
+                'khuyen_mai_san_pham.id_bien_the_san_pham',
+                $idBienThe
+            );
+        })
+        ->select('khuyen_mai.*')
+        ->get();
+
+    $giamTotNhat = 0;
+
+    foreach ($khuyenMaisSanPham as $km) {
+
+        $minQty = (int) ($km->so_luong_sp_toi_thieu ?? 0);
+
+        if ($minQty > 0 && $soLuong < $minQty) {
+            continue;
+        }
+
+        if (
+            $tongTienHang <
+            (float) ($km->don_hang_toi_thieu ?? 0)
+        ) {
+            continue;
+        }
+
+        $loai = Str::of((string) $km->loai_giam_gia)
+            ->trim()
+            ->lower()
+            ->ascii()
+            ->replace([' ', '-'], '_')
+            ->value();
+
+        $giaTri = (float) ($km->gia_tri_giam ?? 0);
+        $giamToiDa = (float) ($km->giam_toi_da ?? 0);
+
+        $giam = 0;
+
+        switch ($loai) {
+
+            case 'phan_tram':
+            case 'percent':
+            case 'percentage':
+
+                $giam =
+                    $thanhTien *
+                    $giaTri /
+                    100;
+
+                break;
+
+            case 'amount':
+            case 'fixed':
+            case 'tien_mat':
+            case 'so_tien':
+            case 'giam_tien':
+
+                // giảm theo từng sản phẩm
+                $giam = min(
+                    $giaTri * $soLuong,
+                    $thanhTien
+                );
+
+                break;
+
+            case 'bogo':
+            case 'mua_1_tang_1':
+
+                $giam =
+                    floor($soLuong / 2) *
+                    $giaBan;
+
+                break;
+        }
+
+        if ($giamToiDa > 0) {
+            $giam = min(
+                $giam,
+                $giamToiDa
+            );
+        }
+
+        $giam = min(
+            max(0, $giam),
+            $thanhTien
+        );
+
+        $giamTotNhat = max(
+            $giamTotNhat,
+            $giam
+        );
+    }
+
+    $tienGiamGia += $giamTotNhat;
+}
             if ($request->id_khuyen_mai) {
-                $khuyenMai = DB::table('khuyen_mai')
-                    ->where('id', $request->id_khuyen_mai)
-                    ->where('trang_thai', 1)
-                    ->first();
+    $khuyenMai = DB::table('khuyen_mai')
+        ->where('id', $request->id_khuyen_mai)
+        ->where('trang_thai', 1)
+        ->first();
 
-                if ($khuyenMai) {
-                    $tongSoLuong = collect($items)->sum('so_luong');
+    if ($khuyenMai) {
 
-                    if (
-                        $tongTienHang >= ($khuyenMai->don_hang_toi_thieu ?? 0) &&
-                        $tongSoLuong >= ($khuyenMai->so_luong_sp_toi_thieu ?? 0)
-                    ) {
-                        $loaiGiamGia = Str::of((string) $khuyenMai->loai_giam_gia)
-                            ->trim()
-                            ->lower()
-                            ->ascii()
-                            ->replace([' ', '-'], '_')
-                            ->value();
+        /*
+         * Lấy phạm vi áp dụng khuyến mãi.
+         */
+        $phamViKhuyenMai = DB::table('khuyen_mai_san_pham')
+            ->where('id_khuyen_mai', $khuyenMai->id)
+            ->get();
 
-                        $giaTriGiam = (float) ($khuyenMai->gia_tri_giam ?? 0);
-                        $giamToiDa = (float) ($khuyenMai->giam_toi_da ?? 0);
+        /*
+         * Sản phẩm được áp dụng toàn bộ biến thể.
+         */
+        $idSanPhamsApDung = $phamViKhuyenMai
+            ->whereNull('id_bien_the_san_pham')
+            ->pluck('id_san_pham')
+            ->map(fn ($id) => (int) $id)
+            ->all();
 
-                        switch ($loaiGiamGia) {
-                            case 'phan_tram':
-                            case 'percent':
-                                $tienGiamGia = $tongTienHang * $giaTriGiam / 100;
+        /*
+         * Những biến thể được áp dụng riêng.
+         */
+        $idBienThesApDung = $phamViKhuyenMai
+            ->whereNotNull('id_bien_the_san_pham')
+            ->pluck('id_bien_the_san_pham')
+            ->map(fn ($id) => (int) $id)
+            ->all();
 
-                                if ($giamToiDa > 0) {
-                                    $tienGiamGia = min($tienGiamGia, $giamToiDa);
-                                }
-                                break;
+        /*
+         * Lọc đúng các item được khuyến mãi.
+         */
+        $itemsDuocKhuyenMai = collect($items)
+            ->filter(function ($item) use (
+                $idSanPhamsApDung,
+                $idBienThesApDung
+            ) {
+                $idSanPham = (int) $item['bien_the']->product_id;
+                $idBienThe = (int) $item['bien_the']->id;
 
-                            case 'bogo':
-                            case 'mua_1_tang_1':
-                                foreach ($items as $item) {
-                                    $freeQty = floor($item['so_luong'] / 2);
-                                    $tienGiamGia += $freeQty * $item['gia_ban'];
-                                }
-                                break;
+                $apDungTheoSanPham = in_array(
+                    $idSanPham,
+                    $idSanPhamsApDung,
+                    true
+                );
 
-                            case 'tien_mat':
-                            case 'so_tien':
-                            case 'giam_tien':
-                            case 'fixed':
-                                $tienGiamGia = $giaTriGiam;
-                                break;
+                $apDungTheoBienThe = in_array(
+                    $idBienThe,
+                    $idBienThesApDung,
+                    true
+                );
 
-                            default:
-                                return response()->json([
-                                    'success' => false,
-                                    'message' => 'Loại giảm giá không hợp lệ: '
-                                        . $khuyenMai->loai_giam_gia
-                                ], 422);
-                        }
+                return $apDungTheoSanPham || $apDungTheoBienThe;
+            });
 
+        /*
+         * Tổng tiền chỉ của sản phẩm/biến thể được khuyến mãi.
+         */
+        $tongTienDuocKhuyenMai =
+            (float) $itemsDuocKhuyenMai->sum('thanh_tien');
+
+        /*
+         * Tổng số lượng chỉ của item được khuyến mãi.
+         */
+        $tongSoLuongDuocKhuyenMai =
+            (int) $itemsDuocKhuyenMai->sum('so_luong');
+
+        /*
+         * Chỉ tính khi trong giỏ thực sự có item
+         * thuộc chương trình khuyến mãi.
+         */
+        if (
+            $tongTienDuocKhuyenMai > 0 &&
+            $tongTienHang >= ($khuyenMai->don_hang_toi_thieu ?? 0) &&
+            $tongSoLuongDuocKhuyenMai >= ($khuyenMai->so_luong_sp_toi_thieu ?? 0)
+        ) {
+            $loaiGiamGia = Str::of(
+                (string) $khuyenMai->loai_giam_gia
+            )
+                ->trim()
+                ->lower()
+                ->ascii()
+                ->replace([' ', '-'], '_')
+                ->value();
+
+            $giaTriGiam =
+                (float) ($khuyenMai->gia_tri_giam ?? 0);
+
+            $giamToiDa =
+                (float) ($khuyenMai->giam_toi_da ?? 0);
+
+            switch ($loaiGiamGia) {
+
+                case 'phan_tram':
+                case 'percent':
+                case 'percentage':
+
+                    $tienGiamGia =
+                        $tongTienDuocKhuyenMai
+                        * $giaTriGiam
+                        / 100;
+
+                    if ($giamToiDa > 0) {
                         $tienGiamGia = min(
-                            max($tienGiamGia, 0),
-                            $tongTienHang
+                            $tienGiamGia,
+                            $giamToiDa
                         );
                     }
-                }
+
+                    break;
+
+                case 'bogo':
+                case 'mua_1_tang_1':
+
+                    foreach ($itemsDuocKhuyenMai as $item) {
+                        $freeQty = floor(
+                            $item['so_luong'] / 2
+                        );
+
+                        $tienGiamGia +=
+                            $freeQty * $item['gia_ban'];
+                    }
+
+                    break;
+
+              case 'amount':
+case 'tien_mat':
+case 'so_tien':
+case 'giam_tien':
+case 'fixed':
+
+    // Giảm tiền theo từng sản phẩm
+    $tienGiamGia = min(
+        $giaTriGiam * $tongSoLuongDuocKhuyenMai,
+        $tongTienDuocKhuyenMai
+    );
+
+    break;
+
+                default:
+
+                    return response()->json([
+                        'success' => false,
+                        'message' =>
+                            'Loại giảm giá không hợp lệ: '
+                            . $khuyenMai->loai_giam_gia
+                    ], 422);
             }
+
+            /*
+             * Không bao giờ được giảm quá số tiền
+             * của các item thuộc phạm vi khuyến mãi.
+             */
+            $tienGiamGia = min(
+                max($tienGiamGia, 0),
+                $tongTienDuocKhuyenMai
+            );
+        }
+    }
+}
 
             $khachHang = null;
 
@@ -739,8 +1005,7 @@ public function hoaDon(Request $request)
 
                 DB::table('chi_tiet_hoa_don')->insert([
                     'id_hoa_don' => $hoaDonId,
-                    'id_san_pham' => $item['bien_the']->product_id,
-                    'id_chi_tiet_phieu' => $item['bien_the']->id,
+                    'id_bien_the_san_pham' => $item['bien_the']->id,
                     'so_luong' => $item['so_luong'],
                     'gia_ban' => $item['gia_ban'],
                     'thanh_tien' => $item['thanh_tien'],
@@ -787,7 +1052,64 @@ public function hoaDon(Request $request)
             ]);
         });
     }
-    public function chiTietHoaDon($id)
+    private function ganThuocTinhBienTheChoChiTiet($chiTiet): void
+    {
+        if ($chiTiet->isEmpty()) {
+            return;
+        }
+
+        $variantIds = $chiTiet->pluck('id_bien_the_san_pham')->filter()->unique()->all();
+
+        $thuocTinhRows = DB::table('bien_the_san_pham')
+            ->whereIn('id', $variantIds)
+            ->select('id', 'thuoc_tinh_ids')
+            ->get()
+            ->keyBy('id');
+
+        $allAttrIds = $thuocTinhRows->pluck('thuoc_tinh_ids')
+            ->filter()
+            ->flatten()
+            ->map(fn ($x) => (int) $x)
+            ->unique()
+            ->all();
+
+        if (empty($allAttrIds)) {
+            foreach ($chiTiet as $item) {
+                $item->thuoc_tinh_hien_thi = [];
+            }
+            return;
+        }
+
+        $attrMap = DB::table('thuoc_tinh_san_pham')
+            ->whereIn('id', $allAttrIds)
+            ->select('id', 'ten_thuoc_tinh', 'thuoc_tinh_cha_id')
+            ->get()
+            ->keyBy('id');
+
+        foreach ($chiTiet as $item) {
+            $row = $thuocTinhRows->get($item->id_bien_the_san_pham);
+            $rawIds = $row->thuoc_tinh_ids ?? [];
+            $labels = [];
+
+            foreach ((array) $rawIds as $aid) {
+                $aid = (int) $aid;
+                if (! isset($attrMap[$aid])) {
+                    continue;
+                }
+                $attr = $attrMap[$aid];
+                $parentId = $attr->thuoc_tinh_cha_id ? (int) $attr->thuoc_tinh_cha_id : null;
+                if ($parentId && isset($attrMap[$parentId])) {
+                    $labels[] = $attrMap[$parentId]->ten_thuoc_tinh . ': ' . $attr->ten_thuoc_tinh;
+                } else {
+                    $labels[] = $attr->ten_thuoc_tinh;
+                }
+            }
+
+            $item->thuoc_tinh_hien_thi = array_values(array_filter($labels, fn ($v) => $v !== null && $v !== ''));
+        }
+    }
+
+    public function chiTietHoaDon($id, DoiTraService $doiTraService)
     {
         $hoaDon = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
@@ -807,14 +1129,71 @@ public function hoaDon(Request $request)
         abort_if(!$hoaDon, 404);
 
         $chiTiet = DB::table('chi_tiet_hoa_don')
-            ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
-            ->leftJoin('bien_the_san_pham', 'chi_tiet_hoa_don.id_chi_tiet_phieu', '=', 'bien_the_san_pham.id')
+            ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
+            ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
             ->select(
                 'chi_tiet_hoa_don.*',
                 'san_pham.ten_san_pham',
                 'bien_the_san_pham.ten_bien_the',
                 'bien_the_san_pham.ten_don_vi',
-                'bien_the_san_pham.ma_vach'
+                'bien_the_san_pham.ma_vach',
+                $this->tenHienThiBienTheSelect()
+            )
+            ->where('chi_tiet_hoa_don.id_hoa_don', $id)
+            ->get();
+
+        $returnSummary = $doiTraService->getInvoiceReturnSummary((int) $id);
+        $lichSuDoiTra = $returnSummary['lichSuDoiTra'];
+        $doiTraMoiNhat = session('last_doi_tra_id')
+            ? $lichSuDoiTra->firstWhere('id', (int) session('last_doi_tra_id'))
+            : null;
+        $tongHopDoiTra = $returnSummary['tongHopDoiTra'];
+        $chiTietTheoBienThe = $returnSummary['chiTietTheoBienThe'];
+
+        foreach ($chiTiet as $item) {
+            $returnItem = $chiTietTheoBienThe->get($item->id_bien_the_san_pham);
+            $item->tong_da_tra = (int) ($returnItem->tong_tra_hang ?? 0);
+            $item->tong_da_doi = (int) ($returnItem->tong_doi_hang ?? 0);
+            $item->tong_da_doi_tra = (int) ($returnItem->tong_doi_tra ?? 0);
+        }
+
+        $this->ganThuocTinhBienTheChoChiTiet($chiTiet);
+
+        return view('ban_hang.hoa-don.chi-tiet', compact(
+            'hoaDon',
+            'chiTiet',
+            'lichSuDoiTra',
+            'doiTraMoiNhat',
+            'tongHopDoiTra'
+        ))->with('auto_print', request()->boolean('print'));
+
+        $hoaDon = DB::table('hoa_don')
+            ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
+            ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
+            ->leftJoin('ca_lam_viec', 'hoa_don.id_ca_lam_viec', '=', 'ca_lam_viec.id')
+            ->select(
+                'hoa_don.*',
+                'khach_hang.ten_khach_hang',
+                'nguoi_dung.ho_ten as ten_nhan_vien',
+                'ca_lam_viec.ten_ca',
+                'ca_lam_viec.gio_bat_dau',
+                'ca_lam_viec.gio_ket_thuc'
+            )
+            ->where('hoa_don.id', $id)
+            ->first();
+
+        abort_if(!$hoaDon, 404);
+
+        $chiTiet = DB::table('chi_tiet_hoa_don')
+            ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
+            ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
+            ->select(
+                'chi_tiet_hoa_don.*',
+                'san_pham.ten_san_pham',
+                'bien_the_san_pham.ten_bien_the',
+                'bien_the_san_pham.ten_don_vi',
+                'bien_the_san_pham.ma_vach',
+                $this->tenHienThiBienTheSelect()
             )
             ->where('chi_tiet_hoa_don.id_hoa_don', $id)
             ->get();
@@ -837,8 +1216,19 @@ public function hoaDon(Request $request)
             ->with('auto_print', request()->boolean('print'));
     }
 
-    public function formDoiTra($id)
+    public function formDoiTra($id, DoiTraService $doiTraService)
     {
+        $data = $doiTraService->getInvoiceReturnData((int) $id);
+        $hoaDon = $data['hoaDon'];
+        $chiTiet = $data['chiTiet'];
+        $danhSachNguoiBan = $doiTraService->getEligibleSalesUsers();
+
+        if (in_array($hoaDon->trang_thai, ['Đã hủy', 'Đã trả toàn bộ'], true)) {
+            return back()->with('error', 'Hóa đơn này không thể đổi/trả hàng.');
+        }
+
+        return view('ban_hang.hoa-don.doi-tra', compact('hoaDon', 'chiTiet', 'danhSachNguoiBan'));
+
         $hoaDon = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
             ->select('hoa_don.*', 'khach_hang.ten_khach_hang')
@@ -852,8 +1242,8 @@ public function hoaDon(Request $request)
         }
 
         $chiTiet = DB::table('chi_tiet_hoa_don')
-            ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
-            ->leftJoin('bien_the_san_pham', 'chi_tiet_hoa_don.id_chi_tiet_phieu', '=', 'bien_the_san_pham.id')
+            ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
+            ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
             ->select(
                 'chi_tiet_hoa_don.*',
                 'san_pham.ten_san_pham',
@@ -880,7 +1270,7 @@ public function hoaDon(Request $request)
         return view('ban_hang.hoa-don.doi-tra', compact('hoaDon', 'chiTiet', 'daTra'));
     }
 
-    public function xuLyDoiTraNhanVien(Request $request, $id)
+    public function xuLyDoiTraNhanVien(XuLyDoiTraRequest $request, $id)
     {
         $adminController = app()->make(\App\Http\Controllers\admin\BanHang\HoaDonController::class);
         $response = app()->call([$adminController, 'xuLyDoiTra'], ['request' => $request, 'id' => $id]);
@@ -897,8 +1287,8 @@ public function hoaDon(Request $request)
             if (session()->has('message')) {
                 $redirect->with('message', session('message'));
             }
-            if (session()->has('return_invoice_id')) {
-                $redirect->with('return_invoice_id', session('return_invoice_id'));
+            if (session()->has('last_doi_tra_id')) {
+                $redirect->with('last_doi_tra_id', session('last_doi_tra_id'));
             }
             return $redirect;
         }
@@ -931,15 +1321,9 @@ public function hoaDon(Request $request)
                 ->get();
 
             foreach ($chiTiet as $item) {
-                if ($item->id_chi_tiet_phieu) {
-                    DB::table('bien_the_san_pham')
-                        ->where('id', $item->id_chi_tiet_phieu)
-                        ->increment('so_luong_ton', $item->so_luong);
-                } else {
-                    DB::table('san_pham')
-                        ->where('id', $item->id_san_pham)
-                        ->increment('so_luong_ton_kho', $item->so_luong);
-                }
+                DB::table('bien_the_san_pham')
+                    ->where('id', $item->id_bien_the_san_pham)
+                    ->increment('so_luong_ton', $item->so_luong);
             }
             if ($hoaDon->id_khach_hang && $hoaDon->diem_thu_duoc > 0) {
 
@@ -1021,22 +1405,53 @@ public function hoaDon(Request $request)
 {
     $khuyenMais = DB::table('khuyen_mai')
         ->where('trang_thai', 1)
-        ->whereDate('ngay_bat_dau', '<=', today())
-        ->whereDate('ngay_ket_thuc', '>=', today())
-        ->whereNull('deleted_at')
+        ->where('ngay_bat_dau', '<=', now())
+        ->where('ngay_ket_thuc', '>=', now())
+        ->select(
+            'id',
+            'ten_chuong_trinh',
+            'loai_giam_gia',
+            'gia_tri_giam',
+            'giam_toi_da',
+            'so_luong_sp_toi_thieu',
+            'don_hang_toi_thieu'
+        )
+        ->orderByDesc('id')
         ->get();
 
     foreach ($khuyenMais as $khuyenMai) {
-        $khuyenMai->id_san_phams =
-            DB::table('khuyen_mai_san_pham')
-                ->where(
-                    'id_khuyen_mai',
-                    $khuyenMai->id
-                )
-                ->pluck('id_san_pham')
-                ->map(fn ($id) => (int) $id)
-                ->values()
-                ->all();
+
+        $phamVi = DB::table('khuyen_mai_san_pham')
+            ->where('id_khuyen_mai', $khuyenMai->id)
+            ->get();
+
+        /*
+         * Có dữ liệu trong khuyen_mai_san_pham
+         * => đây là khuyến mãi sản phẩm.
+         */
+        $khuyenMai->la_khuyen_mai_san_pham =
+            $phamVi->isNotEmpty();
+
+        /*
+         * id_bien_the_san_pham = NULL
+         * => áp dụng toàn bộ biến thể của sản phẩm.
+         */
+        $khuyenMai->id_san_phams = $phamVi
+            ->whereNull('id_bien_the_san_pham')
+            ->pluck('id_san_pham')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        /*
+         * Khuyến mãi chỉ áp dụng riêng biến thể.
+         */
+        $khuyenMai->id_bien_thes = $phamVi
+            ->whereNotNull('id_bien_the_san_pham')
+            ->pluck('id_bien_the_san_pham')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
     }
 
     return response()->json($khuyenMais);

@@ -75,69 +75,189 @@ class KhuyenMaiController extends Controller
         'ten_san_pham'
     )
     ->get();
+    $bienThes = DB::table('bien_the_san_pham')
+    ->whereNull('deleted_at')
+    ->orderBy('product_id')
+    ->select(
+        'id',
+        'product_id',
+        'ten_bien_the',
+        'ma_hang',
+        'gia_ban'
+    )
+    ->get()
+    ->groupBy('product_id');
         return view(
             'admin_xem_truoc.khuyen-mai',
              compact(
-        'items',
-        'total',
-        'active',
-        'upcoming',
-        'ended',
-        'sanPhams'
-    )
+    'items',
+    'total',
+    'active',
+    'upcoming',
+    'ended',
+    'sanPhams',
+    'bienThes'
+)
         );
+        
     }
 
     // Thêm khuyến mãi
-    public function store(Request $request)
+   public function store(Request $request)
 {
     $data = $request->validate([
-        'ten_chuong_trinh' => 'required|string|max:255',
-        'loai_giam_gia' => 'required|string|max:50',
-        'gia_tri_giam' => 'required|numeric|min:0',
-        'giam_toi_da' => 'nullable|numeric|min:0',
-        'so_luong_sp_toi_thieu' => 'nullable|integer|min:0',
-        'don_hang_toi_thieu' => 'nullable|numeric|min:0',
-        'ngay_bat_dau' => 'nullable|date',
-        'ngay_ket_thuc' => 'nullable|date|after_or_equal:ngay_bat_dau',
-        'trang_thai' => 'sometimes|boolean',
-        'ghi_chu' => 'nullable|string',
+        'ten_chuong_trinh' =>
+            'required|string|max:255',
+
+        'loai_giam_gia' =>
+            'required|string|max:50',
+
+        'gia_tri_giam' =>
+            'required|numeric|min:0',
+
+        'giam_toi_da' =>
+            'nullable|numeric|min:0',
+
+        'so_luong_sp_toi_thieu' =>
+            'nullable|integer|min:0',
+
+        'don_hang_toi_thieu' =>
+            'nullable|numeric|min:0',
+
+        'ngay_bat_dau' =>
+            'nullable|date',
+
+        'ngay_ket_thuc' =>
+            'nullable|date|after_or_equal:ngay_bat_dau',
+
+        'trang_thai' =>
+            'sometimes|boolean',
+
+        'ghi_chu' =>
+            'nullable|string',
 
         'id_san_phams' => [
-            'required',
+            'nullable',
             'array',
-            'min:1',
         ],
 
         'id_san_phams.*' => [
             'integer',
             'exists:san_pham,id',
         ],
+
+        'id_bien_thes' => [
+            'nullable',
+            'array',
+        ],
+
+        'id_bien_thes.*' => [
+            'integer',
+            'exists:bien_the_san_pham,id',
+        ],
     ]);
 
-    $idSanPhams = $data['id_san_phams'];
+    $idSanPhams =
+        $data['id_san_phams'] ?? [];
 
-    unset($data['id_san_phams']);
+    $idBienThes =
+        $data['id_bien_thes'] ?? [];
 
-    $data['trang_thai'] = $request->boolean('trang_thai');
+    unset(
+        $data['id_san_phams'],
+        $data['id_bien_thes']
+    );
 
-    DB::transaction(function () use ($data, $idSanPhams) {
-        $khuyenMai = KhuyenMai::create($data);
+    if (
+        empty($idSanPhams) &&
+        empty($idBienThes)
+    ) {
+        return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+                'id_san_phams' =>
+                    'Bạn phải chọn ít nhất một sản phẩm hoặc biến thể.'
+            ]);
+    }
 
-        $rows = collect($idSanPhams)
-            ->unique()
-            ->map(function ($idSanPham) use ($khuyenMai) {
-                return [
-                    'id_khuyen_mai' => $khuyenMai->id,
-                    'id_san_pham' => $idSanPham,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            })
-            ->values()
-            ->all();
+    $data['trang_thai'] =
+        $request->boolean('trang_thai');
 
-        DB::table('khuyen_mai_san_pham')->insert($rows);
+    DB::transaction(function () use (
+        $data,
+        $idSanPhams,
+        $idBienThes
+    ) {
+
+        $khuyenMai =
+            KhuyenMai::create($data);
+
+        foreach (
+            array_unique($idSanPhams)
+            as $idSanPham
+        ) {
+
+            DB::table(
+                'khuyen_mai_san_pham'
+            )->insert([
+                'id_khuyen_mai' =>
+                    $khuyenMai->id,
+
+                'id_san_pham' =>
+                    $idSanPham,
+
+                'id_bien_the_san_pham' =>
+                    null,
+
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        foreach (
+            array_unique($idBienThes)
+            as $idBienThe
+        ) {
+
+            $bienThe =
+                DB::table('bien_the_san_pham')
+                    ->where('id', $idBienThe)
+                    ->first();
+
+            if (!$bienThe) {
+                continue;
+            }
+
+            if (
+                in_array(
+                    (int) $bienThe->product_id,
+                    array_map(
+                        'intval',
+                        $idSanPhams
+                    ),
+                    true
+                )
+            ) {
+                continue;
+            }
+
+            DB::table(
+                'khuyen_mai_san_pham'
+            )->insert([
+                'id_khuyen_mai' =>
+                    $khuyenMai->id,
+
+                'id_san_pham' =>
+                    $bienThe->product_id,
+
+                'id_bien_the_san_pham' =>
+                    $bienThe->id,
+
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
     });
 
     return redirect()
