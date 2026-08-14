@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Danh sách Hóa đơn</h1>
+    <h1 class="h2">Danh sách hóa đơn</h1>
 </div>
 
 @if(session('success'))
@@ -56,7 +56,7 @@
                         <th>Ngày tạo</th>
                         <th>Khách hàng</th>
                         <th>Nhân viên</th>
-                         <th>Ca làm việc</th>
+                        <th>Ca làm việc</th>
                         <th>Tổng tiền</th>
                         <th>Điểm nhận</th>
                         <th>Thanh toán</th>
@@ -69,53 +69,43 @@
                     @forelse($hoaDons as $hoaDon)
                         <tr>
                             <td><strong>#HD{{ str_pad($hoaDon->id, 4, '0', STR_PAD_LEFT) }}</strong></td>
-
                             <td>{{ \Carbon\Carbon::parse($hoaDon->created_at)->format('d/m/Y H:i') }}</td>
-
-                            <td>{{ $hoaDon->ten_khach_hang ?? 'Khách lẻ' }}</td>
-
+                            <td>
+                                {{ $hoaDon->ten_khach_hang ?? 'Khách lẻ' }}
+                                @if(($hoaDon->so_lan_doi_tra ?? 0) > 0)
+                                    <div class="small text-warning fw-semibold mt-1">
+                                        Có {{ $hoaDon->so_lan_doi_tra }} lần đổi/trả
+                                    </div>
+                                @endif
+                            </td>
                             <td>{{ $hoaDon->ten_nhan_vien ?? 'Nhân viên' }}</td>
-             <td>
-    @if($hoaDon->ten_ca)
-        <span class="badge bg-success">
-            {{ $hoaDon->ten_ca }}
-        </span>
-
-        <div class="small text-muted mt-1">
-            {{ \Carbon\Carbon::parse($hoaDon->gio_bat_dau)->format('H:i') }}
-            -
-            {{ \Carbon\Carbon::parse($hoaDon->gio_ket_thuc)->format('H:i') }}
-        </div>
-    @else
-        <span class="text-muted">
-            Chưa có ca
-        </span>
-    @endif
-</td>
                             <td>
-                                <strong>
-                                    {{ number_format($hoaDon->khach_can_tra, 0, ',', '.') }}đ
-                                </strong>
+                                @if($hoaDon->ten_ca)
+                                    <span class="badge bg-success">{{ $hoaDon->ten_ca }}</span>
+                                    <div class="small text-muted mt-1">
+                                        {{ \Carbon\Carbon::parse($hoaDon->gio_bat_dau)->format('H:i') }}
+                                        -
+                                        {{ \Carbon\Carbon::parse($hoaDon->gio_ket_thuc)->format('H:i') }}
+                                    </div>
+                                @else
+                                    <span class="text-muted">Chưa có ca</span>
+                                @endif
                             </td>
-
+                            <td><strong>{{ number_format($hoaDon->khach_can_tra, 0, ',', '.') }}đ</strong></td>
                             <td>
-                                <span class="badge bg-info">
-                                    +{{ $hoaDon->diem_thu_duoc ?? 0 }}
-                                </span>
+                                <span class="badge bg-info">+{{ $hoaDon->diem_thu_duoc ?? 0 }}</span>
                             </td>
-
-
-                            <td>@php
-$pttt = [
-                                         'cash' => 'Tiền mặt',
-                                         'transfer' => 'Chuyển khoản',
+                            <td>
+                                @php
+                                    $pttt = [
+                                        'cash' => 'Tiền mặt',
+                                        'transfer' => 'Chuyển khoản',
                                         'tien_mat' => 'Tiền mặt',
-                                         'chuyen_khoan' => 'Chuyển khoản',
+                                        'chuyen_khoan' => 'Chuyển khoản',
                                     ];
-                            @endphp
-
-                            {{ $pttt[$hoaDon->phuong_thuc_thanh_toan] ?? $hoaDon->phuong_thuc_thanh_toan }}</td>
-
+                                @endphp
+                                {{ $pttt[$hoaDon->phuong_thuc_thanh_toan] ?? $hoaDon->phuong_thuc_thanh_toan }}
+                            </td>
                             <td>
                                 @if($hoaDon->trang_thai === 'Đã hủy')
                                     <span class="badge bg-danger">Đã hủy</span>
@@ -123,35 +113,32 @@ $pttt = [
                                     <span class="badge bg-success">{{ $hoaDon->trang_thai }}</span>
                                 @endif
                             </td>
-
                             <td class="text-center">
                                 <a href="{{ route('nhan-vien.hoa-don.chi-tiet', $hoaDon->id) }}"
-                                   class="btn btn-sm btn-outline-primary">
+                                   class="btn btn-sm btn-outline-primary"
+                                   title="Xem hóa đơn">
                                     <i class="fas fa-eye"></i>
                                 </a>
 
                                 <a href="{{ route('nhan-vien.hoa-don.in', $hoaDon->id) }}"
                                    target="_blank"
-                                   class="btn btn-sm btn-outline-success">
+                                   class="btn btn-sm btn-outline-success"
+                                   title="In hóa đơn">
                                     <i class="fas fa-print"></i>
                                 </a>
 
-                                {{-- @if($hoaDon->trang_thai !== 'Đã hủy')
-                                    <form action="{{ route('nhan-vien.hoa-don.huy', $hoaDon->id) }}"
-                                          method="POST"
-                                          class="d-inline"
-                                          onsubmit="return confirm('Bạn có chắc muốn hủy hóa đơn này không? Tồn kho sẽ được hoàn lại.')">
-                                        @csrf
-                                        <button class="btn btn-sm btn-outline-danger">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    </form>
-                                @endif --}}
+                                @if(($hoaDon->so_lan_doi_tra ?? 0) > 0)
+                                    <a href="{{ route('nhan-vien.hoa-don.chi-tiet', $hoaDon->id) }}#chi-tiet-doi-tra"
+                                       class="btn btn-sm btn-outline-warning"
+                                       title="Chi tiết đổi/trả">
+                                        <i class="fas fa-rotate-left"></i>
+                                    </a>
+                                @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center py-4 text-muted">
+                            <td colspan="10" class="text-center py-4 text-muted">
                                 Chưa có hóa đơn nào
                             </td>
                         </tr>

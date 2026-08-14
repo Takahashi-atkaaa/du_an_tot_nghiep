@@ -4,6 +4,7 @@ namespace App\Services\NhanSu;
 
 use App\Models\ChiaCaLamViec;
 use App\Models\HoaDon;
+use App\Services\RevenueStatisticsService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -65,14 +66,16 @@ class NhanSuStatService
      */
     public static function getThongKeHoaDonThang(int $idNguoiDung): array
     {
-        $query = HoaDon::query()
-            ->where('id_nguoi_dung', $idNguoiDung)
-            ->whereMonth('created_at', Carbon::now()->month)
-            ->whereYear('created_at', Carbon::now()->year);
+        $revenueStatisticsService = app(RevenueStatisticsService::class);
+
+        $query = $revenueStatisticsService->invoiceNetRevenueQuery()
+            ->where('hoa_don.id_nguoi_dung', $idNguoiDung)
+            ->whereMonth('hoa_don.created_at', Carbon::now()->month)
+            ->whereYear('hoa_don.created_at', Carbon::now()->year);
 
         $tongHoaDon = (clone $query)->count();
 
-        $tongDoanhThu = (clone $query)->sum('khach_can_tra');
+        $tongDoanhThu = $revenueStatisticsService->sumInvoiceNetRevenue($query);
 
         return [
             'tong_hoa_don' => (int) $tongHoaDon,

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ban_hang;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\BanHang\XuLyDoiTraRequest;
 use App\Http\Requests\DoiMatKhauRequest;
 use App\Models\ChiaCaLamViec;
 use App\Models\NguoiDung;
@@ -17,10 +18,42 @@ use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\KhachHang;
+use App\Services\DoiTraService;
 
 
 class NhanVienController extends Controller
 {
+    private function tenHienThiBienTheSelect(): \Illuminate\Database\Query\Expression
+    {
+        return DB::raw("
+            TRIM(
+                CONCAT(
+                    COALESCE(san_pham.ten_san_pham, ''),
+                    CASE
+                        WHEN COALESCE(
+                            CASE
+                                WHEN bien_the_san_pham.la_don_vi = 1 THEN NULLIF(bien_the_san_pham.ten_don_vi, '')
+                                ELSE NULLIF(bien_the_san_pham.ten_bien_the, '')
+                            END,
+                            NULLIF(bien_the_san_pham.ten_don_vi, '')
+                        ) IS NOT NULL
+                            THEN CONCAT(
+                                ' - ',
+                                COALESCE(
+                                    CASE
+                                        WHEN bien_the_san_pham.la_don_vi = 1 THEN NULLIF(bien_the_san_pham.ten_don_vi, '')
+                                        ELSE NULLIF(bien_the_san_pham.ten_bien_the, '')
+                                    END,
+                                    NULLIF(bien_the_san_pham.ten_don_vi, '')
+                                )
+                            )
+                        ELSE ''
+                    END
+                )
+            ) as ten_hien_thi_san_pham
+        ");
+    }
+
     private function timCaLamViecHienTai(): ?CaLamViec
 {
     $bayGio = Carbon::now();
@@ -192,17 +225,26 @@ public function donChoThanhToan(Request $request): \Illuminate\Http\JsonResponse
 
 public function hoaDon(Request $request)
     {
+        $doiTraSummarySub = DB::table('doi_tra')
+            ->selectRaw('id_hoa_don, COUNT(*) as so_lan_doi_tra')
+            ->whereNull('deleted_at')
+            ->groupBy('id_hoa_don');
+
         $query = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
             ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
             ->leftJoin('ca_lam_viec', 'hoa_don.id_ca_lam_viec', '=', 'ca_lam_viec.id')
+            ->leftJoinSub($doiTraSummarySub, 'doi_tra_tong_hop', function ($join) {
+                $join->on('hoa_don.id', '=', 'doi_tra_tong_hop.id_hoa_don');
+            })
             ->select(
     'hoa_don.*',
     'khach_hang.ten_khach_hang',
     'nguoi_dung.ho_ten as ten_nhan_vien',
     'ca_lam_viec.ten_ca',
     'ca_lam_viec.gio_bat_dau',
-    'ca_lam_viec.gio_ket_thuc'
+    'ca_lam_viec.gio_ket_thuc',
+    DB::raw('COALESCE(doi_tra_tong_hop.so_lan_doi_tra, 0) as so_lan_doi_tra')
 )
             ->orderByDesc('hoa_don.id');
 
@@ -1010,7 +1052,7 @@ case 'fixed':
             ]);
         });
     }
-    public function chiTietHoaDon($id)
+    public function chiTietHoaDon($id, DoiTraService $doiTraService)
     {
         $hoaDon = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
@@ -1037,7 +1079,62 @@ case 'fixed':
                 'san_pham.ten_san_pham',
                 'bien_the_san_pham.ten_bien_the',
                 'bien_the_san_pham.ten_don_vi',
-                'bien_the_san_pham.ma_vach'
+                'bien_the_san_pham.ma_vach',
+                $this->tenHienThiBienTheSelect()
+            )
+            ->where('chi_tiet_hoa_don.id_hoa_don', $id)
+            ->get();
+
+        $returnSummary = $doiTraService->getInvoiceReturnSummary((int) $id);
+        $lichSuDoiTra = $returnSummary['lichSuDoiTra'];
+        $doiTraMoiNhat = session('last_doi_tra_id')
+            ? $lichSuDoiTra->firstWhere('id', (int) session('last_doi_tra_id'))
+            : null;
+        $tongHopDoiTra = $returnSummary['tongHopDoiTra'];
+        $chiTietTheoBienThe = $returnSummary['chiTietTheoBienThe'];
+
+        foreach ($chiTiet as $item) {
+            $returnItem = $chiTietTheoBienThe->get($item->id_bien_the_san_pham);
+            $item->tong_da_tra = (int) ($returnItem->tong_tra_hang ?? 0);
+            $item->tong_da_doi = (int) ($returnItem->tong_doi_hang ?? 0);
+            $item->tong_da_doi_tra = (int) ($returnItem->tong_doi_tra ?? 0);
+        }
+
+        return view('ban_hang.hoa-don.chi-tiet', compact(
+            'hoaDon',
+            'chiTiet',
+            'lichSuDoiTra',
+            'doiTraMoiNhat',
+            'tongHopDoiTra'
+        ))->with('auto_print', request()->boolean('print'));
+
+        $hoaDon = DB::table('hoa_don')
+            ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
+            ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
+            ->leftJoin('ca_lam_viec', 'hoa_don.id_ca_lam_viec', '=', 'ca_lam_viec.id')
+            ->select(
+                'hoa_don.*',
+                'khach_hang.ten_khach_hang',
+                'nguoi_dung.ho_ten as ten_nhan_vien',
+                'ca_lam_viec.ten_ca',
+                'ca_lam_viec.gio_bat_dau',
+                'ca_lam_viec.gio_ket_thuc'
+            )
+            ->where('hoa_don.id', $id)
+            ->first();
+
+        abort_if(!$hoaDon, 404);
+
+        $chiTiet = DB::table('chi_tiet_hoa_don')
+            ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
+            ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
+            ->select(
+                'chi_tiet_hoa_don.*',
+                'san_pham.ten_san_pham',
+                'bien_the_san_pham.ten_bien_the',
+                'bien_the_san_pham.ten_don_vi',
+                'bien_the_san_pham.ma_vach',
+                $this->tenHienThiBienTheSelect()
             )
             ->where('chi_tiet_hoa_don.id_hoa_don', $id)
             ->get();
@@ -1060,8 +1157,19 @@ case 'fixed':
             ->with('auto_print', request()->boolean('print'));
     }
 
-    public function formDoiTra($id)
+    public function formDoiTra($id, DoiTraService $doiTraService)
     {
+        $data = $doiTraService->getInvoiceReturnData((int) $id);
+        $hoaDon = $data['hoaDon'];
+        $chiTiet = $data['chiTiet'];
+        $danhSachNguoiBan = $doiTraService->getEligibleSalesUsers();
+
+        if (in_array($hoaDon->trang_thai, ['Đã hủy', 'Đã trả toàn bộ'], true)) {
+            return back()->with('error', 'Hóa đơn này không thể đổi/trả hàng.');
+        }
+
+        return view('ban_hang.hoa-don.doi-tra', compact('hoaDon', 'chiTiet', 'danhSachNguoiBan'));
+
         $hoaDon = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
             ->select('hoa_don.*', 'khach_hang.ten_khach_hang')
@@ -1103,7 +1211,7 @@ case 'fixed':
         return view('ban_hang.hoa-don.doi-tra', compact('hoaDon', 'chiTiet', 'daTra'));
     }
 
-    public function xuLyDoiTraNhanVien(Request $request, $id)
+    public function xuLyDoiTraNhanVien(XuLyDoiTraRequest $request, $id)
     {
         $adminController = app()->make(\App\Http\Controllers\admin\BanHang\HoaDonController::class);
         $response = app()->call([$adminController, 'xuLyDoiTra'], ['request' => $request, 'id' => $id]);
@@ -1120,8 +1228,8 @@ case 'fixed':
             if (session()->has('message')) {
                 $redirect->with('message', session('message'));
             }
-            if (session()->has('return_invoice_id')) {
-                $redirect->with('return_invoice_id', session('return_invoice_id'));
+            if (session()->has('last_doi_tra_id')) {
+                $redirect->with('last_doi_tra_id', session('last_doi_tra_id'));
             }
             return $redirect;
         }

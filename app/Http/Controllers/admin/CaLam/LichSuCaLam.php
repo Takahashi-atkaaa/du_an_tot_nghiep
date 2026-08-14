@@ -5,16 +5,15 @@ namespace App\Http\Controllers\admin\CaLam;
 use App\Http\Controllers\Controller;
 use App\Models\CaLamViec;
 use App\Models\ChiaCaLamViec;
-use App\Models\ChiTietHoaDon;
 use App\Models\GiaoCa;
 use App\Models\HoaDon;
 use App\Models\NguoiDung;
-use Illuminate\Support\Facades\Auth;
+use App\Services\RevenueStatisticsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class LichSuCaLam extends Controller
 {
-    // hiển thị các ca <= ngày hiện tại
     public function index(Request $request)
     {
         $ngayHienTai = now()->format('Y-m-d');
@@ -22,63 +21,56 @@ class LichSuCaLam extends Controller
         $query = ChiaCaLamViec::select('ngay')
             ->where('ngay', '<=', $ngayHienTai);
 
-        // Nếu có chọn ngày thì chỉ lấy ngày đó
         if ($request->filled('ngay')) {
             $query->whereDate('ngay', $request->ngay);
         }
 
-        $ngay2 = $query
-            ->distinct()
-            ->orderByDesc('ngay')
-            ->paginate(20)
-            ->withQueryString();
+        $ngay2 = $query->distinct()->orderByDesc('ngay')->paginate(20)->withQueryString();
 
-        return view(
-            'admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.lich-su-ca-lam',
-            compact('ngay2')
-        );
+        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.lich-su-ca-lam', compact('ngay2'));
     }
 
+    public function cacCa(RevenueStatisticsService $revenueStatisticsService, $ngay, $id_ca = null)
+    {
+        $revenueStatuses = $revenueStatisticsService->salesRevenueStatuses();
 
-    //các ca trong ngày
-    public function cacCa($ngay, $id_ca = null){
-        // Lấy danh sách các ca làm việc trong ngày
         $caLam = ChiaCaLamViec::with('caLamViec')
             ->where('ngay', $ngay)
             ->select('id_ca_lam_viec')
             ->distinct()
             ->get();
 
-        if ($id_ca == null) {
+        if ($id_ca === null) {
             $id_ca = $caLam->first()?->id_ca_lam_viec;
         }
 
-
-        /////////////////////////////////chi tiết từng ca
-        // $caChiTiet = CaLamViec::findOrFail($id_ca);
         $caDangChon = CaLamViec::findOrFail($id_ca);
 
         $danhSachHoaDon = HoaDon::whereDate('created_at', $ngay)
-           ->where('id_ca_lam_viec', $id_ca)
-           ->get();
+            ->where('id_ca_lam_viec', $id_ca)
+            ->get();
 
-        $doanhThuTienMatCuaCa = HoaDon::whereDate('created_at', $ngay)
-           ->where('id_ca_lam_viec', $id_ca)
-           ->where('phuong_thuc_thanh_toan','!=', 'payos')
-           ->where('trang_thai', 'Hoàn Thành')
-           ->sum('khach_can_tra');
+        $doanhThuTienMatCuaCa = $revenueStatisticsService->sumInvoiceNetRevenue(
+            $revenueStatisticsService->invoiceNetRevenueQuery()
+                ->whereDate('hoa_don.created_at', $ngay)
+                ->where('hoa_don.id_ca_lam_viec', $id_ca)
+                ->where('hoa_don.phuong_thuc_thanh_toan', '!=', 'payos')
+                ->whereIn('hoa_don.trang_thai', $revenueStatuses)
+        );
 
-        $doanhThuChuyenKhoan = HoaDon::whereDate('created_at', $ngay)
-           ->where('id_ca_lam_viec', $id_ca)
-           ->where('phuong_thuc_thanh_toan', 'payos')
-           ->where('trang_thai', 'Hoàn Thành')
-           ->sum('khach_can_tra');
+        $doanhThuChuyenKhoan = $revenueStatisticsService->sumInvoiceNetRevenue(
+            $revenueStatisticsService->invoiceNetRevenueQuery()
+                ->whereDate('hoa_don.created_at', $ngay)
+                ->where('hoa_don.id_ca_lam_viec', $id_ca)
+                ->where('hoa_don.phuong_thuc_thanh_toan', 'payos')
+                ->whereIn('hoa_don.trang_thai', $revenueStatuses)
+        );
 
         $tongDoanhThuCuaCa = $doanhThuTienMatCuaCa + $doanhThuChuyenKhoan;
 
         $tongHoaDoncuaCa = HoaDon::whereDate('created_at', $ngay)
-           ->where('id_ca_lam_viec', $id_ca)
-           ->count('id');
+            ->where('id_ca_lam_viec', $id_ca)
+            ->count('id');
 
         $danhSachNhanVienTrongCa = ChiaCaLamViec::with('nguoiDung')
             ->whereDate('ngay', $ngay)
@@ -101,42 +93,59 @@ class LichSuCaLam extends Controller
             ->whereDate('thoi_gian_bat_dau_ca', $ngay)
             ->first();
 
-        $ngay = $ngay;
+        $tongDoanhThuNgay = $revenueStatisticsService->sumInvoiceNetRevenue(
+            $revenueStatisticsService->invoiceNetRevenueQuery()
+                ->whereDate('hoa_don.created_at', $ngay)
+                ->whereIn('hoa_don.trang_thai', $revenueStatuses)
+        );
 
-        $tongDoanhThuNgay =HoaDon::whereDate('created_at', $ngay)
-            ->sum('khach_can_tra');
-
-        $tongSoHoaDonNgay =HoaDon::whereDate('created_at', $ngay)
-            ->count('id');
+        $tongSoHoaDonNgay = HoaDon::whereDate('created_at', $ngay)->count('id');
 
         $cacHoaDonBiHuyTrongCa = HoaDon::whereDate('created_at', $ngay)
             ->where('id_ca_lam_viec', $id_ca)
-            ->where('trang_thai','Hủy')
+            ->where('trang_thai', 'Hủy')
             ->count();
 
-        //trả dữ liệu về view
-        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.cac-ca-lam',compact(
-            'caLam','ngay','tongDoanhThuNgay','tongSoHoaDonNgay','caDangChon',
-            'danhSachHoaDon', 'tongDoanhThuCuaCa','tongHoaDoncuaCa','danhSachNhanVienTrongCa',
-            'tongNhanVienTrongCa', 'danhSachDiemDanh', 'danhSachTrongCaTrongCa','giaoCa', 
-            'cacHoaDonBiHuyTrongCa', 'doanhThuTienMatCuaCa', 'doanhThuChuyenKhoan'
-            )
-        );
+        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.cac-ca-lam', compact(
+            'caLam',
+            'ngay',
+            'tongDoanhThuNgay',
+            'tongSoHoaDonNgay',
+            'caDangChon',
+            'danhSachHoaDon',
+            'tongDoanhThuCuaCa',
+            'tongHoaDoncuaCa',
+            'danhSachNhanVienTrongCa',
+            'tongNhanVienTrongCa',
+            'danhSachDiemDanh',
+            'danhSachTrongCaTrongCa',
+            'giaoCa',
+            'cacHoaDonBiHuyTrongCa',
+            'doanhThuTienMatCuaCa',
+            'doanhThuChuyenKhoan'
+        ));
     }
 
+    public function tao_giao_ca($id_ca, $ngay, RevenueStatisticsService $revenueStatisticsService)
+    {
+        $revenueStatuses = $revenueStatisticsService->salesRevenueStatuses();
+        $ca = CaLamViec::findOrFail($id_ca);
 
-    //giao ca
-    public function tao_giao_ca($id_ca, $ngay){
-        $ca = CaLamViec::findOrfail($id_ca);
+        $tongTienMatCuaCa = $revenueStatisticsService->sumInvoiceNetRevenue(
+            $revenueStatisticsService->invoiceNetRevenueQuery()
+                ->whereDate('hoa_don.created_at', $ngay)
+                ->where('hoa_don.id_ca_lam_viec', $id_ca)
+                ->where('hoa_don.phuong_thuc_thanh_toan', '!=', 'payos')
+                ->whereIn('hoa_don.trang_thai', $revenueStatuses)
+        );
 
-        $tongTienMatCuaCa = HoaDon::whereDate('created_at', $ngay)
-            ->where('id_ca_lam_viec', $id_ca)
-            ->sum('khach_can_tra');
-
-        $tongTienChuyenKhoan = HoaDon::whereDate('created_at', $ngay)
-            ->where('id_ca_lam_viec', $id_ca)
-            ->where('phuong_thuc_thanh_toan', 'payos')
-            ->sum('khach_can_tra');
+        $tongTienChuyenKhoan = $revenueStatisticsService->sumInvoiceNetRevenue(
+            $revenueStatisticsService->invoiceNetRevenueQuery()
+                ->whereDate('hoa_don.created_at', $ngay)
+                ->where('hoa_don.id_ca_lam_viec', $id_ca)
+                ->where('hoa_don.phuong_thuc_thanh_toan', 'payos')
+                ->whereIn('hoa_don.trang_thai', $revenueStatuses)
+        );
 
         $danhSachNhanVienTrongCa = ChiaCaLamViec::with('nguoiDung')
             ->whereDate('ngay', $ngay)
@@ -149,164 +158,133 @@ class LichSuCaLam extends Controller
             ->get();
 
         $danhSachTruongCa = NguoiDung::where('id_vai_tro', 2)->get();
-
         $caLamViecs = CaLamViec::all();
 
-
-
-        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.tao-giao-ca', compact('ca', 'tongTienMatCuaCa', 'tongTienChuyenKhoan', 'danhSachNhanVienTrongCa', 'danhSachTrongCaTrongCa', 'ngay','danhSachTruongCa','caLamViecs'));
+        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.tao-giao-ca', compact(
+            'ca',
+            'tongTienMatCuaCa',
+            'tongTienChuyenKhoan',
+            'danhSachNhanVienTrongCa',
+            'danhSachTrongCaTrongCa',
+            'ngay',
+            'danhSachTruongCa',
+            'caLamViecs'
+        ));
     }
 
-
-    //tạo giao ca
-    public function giao_ca_store(Request $request){
+    public function giao_ca_store(Request $request)
+    {
         $request->validate([
             'id_truong_ca_ban_giao' => 'required|exists:nguoi_dung,id',
             'id_truong_ca_nhan_ca' => 'required|exists:nguoi_dung,id',
             'id_ca_lam_viec' => 'required|exists:ca_lam_viec,id',
-
             'tien_mat_dau_ca' => 'required|numeric|min:0',
             'tien_mat_cuoi_ca' => 'required|numeric|min:0',
             'doanh_thu_chuyen_khoan' => 'numeric|min:0',
-
             'thoi_gian_bat_dau_ca' => 'required|date',
             'thoi_gian_ket_thuc_ca' => 'required|date|after:thoi_gian_bat_dau_ca',
-
             'trang_thai' => 'required|in:0,1',
-
             'ghi_chu' => 'nullable|string|max:1000',
         ]);
 
         GiaoCa::create([
             'id_truong_ca_ban_giao' => $request->id_truong_ca_ban_giao,
-            'id_truong_ca_nhan_ca'  => $request->id_truong_ca_nhan_ca,
-            'id_ca_lam_viec'        => $request->id_ca_lam_viec,
-
-            'tien_mat_dau_ca'  => $request->tien_mat_dau_ca,
+            'id_truong_ca_nhan_ca' => $request->id_truong_ca_nhan_ca,
+            'id_ca_lam_viec' => $request->id_ca_lam_viec,
+            'tien_mat_dau_ca' => $request->tien_mat_dau_ca,
             'tien_mat_cuoi_ca' => $request->tien_mat_cuoi_ca,
             'doanh_thu_chuyen_khoan' => $request->doanh_thu_chuyen_khoan,
-            'chenh_lech'       => -($request->chenh_lech),
-
-            'thoi_gian_bat_dau_ca'  => $request->thoi_gian_bat_dau_ca,
+            'chenh_lech' => -($request->chenh_lech),
+            'thoi_gian_bat_dau_ca' => $request->thoi_gian_bat_dau_ca,
             'thoi_gian_ket_thuc_ca' => $request->thoi_gian_ket_thuc_ca,
-
             'trang_thai' => $request->trang_thai,
-            'ghi_chu'    => $request->ghi_chu,
+            'ghi_chu' => $request->ghi_chu,
         ]);
 
-        return redirect()->back()
-            ->with('success', 'Tạo phiếu giao ca thành công.');
+        return redirect()->back()->with('success', 'Tạo phiếu giao ca thành công.');
     }
 
+    public function giao_ca_chi_tiet($id)
+    {
+        $giaoCa = GiaoCa::with(['truongCaBanGiao', 'truongCaNhanCa', 'caLamViec'])->findOrFail($id);
 
-    // chi tiết giao ca
-    public function giao_ca_chi_tiet($id){
-        $giaoCa = GiaoCa::with(['truongCaBanGiao', 'truongCaNhanCa', 'caLamViec'])
-            ->findOrFail($id);
         return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.chi-tiet-giao-ca', compact('giaoCa'));
     }
 
-
-    //sửa giao ca
     public function sua_giao_ca($id)
     {
-        $giaoCa = GiaoCa::with([
-            'truongCaBanGiao',
-            'truongCaNhanCa',
-            'caLamViec'
-        ])->findOrFail($id);
-
+        $giaoCa = GiaoCa::with(['truongCaBanGiao', 'truongCaNhanCa', 'caLamViec'])->findOrFail($id);
         $danhSachTruongCa = NguoiDung::whereHas('vaiTro', function ($query) {
             $query->where('ten_vai_tro', 'Trưởng ca');
         })->get();
 
-        return view(
-            'admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.sua-giao-ca',
-            compact('giaoCa', 'danhSachTruongCa')
-        );
+        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.sua-giao-ca', compact('giaoCa', 'danhSachTruongCa'));
     }
 
-    //cập nhật giao ca
     public function cap_nhat_giao_ca(Request $request, $id)
     {
         $request->validate([
-            'id_truong_ca_nhan_ca'  => 'required|exists:nguoi_dung,id',
-            'tien_mat_cuoi_ca'      => 'required|numeric|min:0',
-            'tien_mat_dau_ca'       => 'required|numeric|min:0',
-            'ghi_chu'               => 'nullable|string',
-            'thoi_gian_bat_dau_ca'  => 'required',
+            'id_truong_ca_nhan_ca' => 'required|exists:nguoi_dung,id',
+            'tien_mat_cuoi_ca' => 'required|numeric|min:0',
+            'tien_mat_dau_ca' => 'required|numeric|min:0',
+            'ghi_chu' => 'nullable|string',
+            'thoi_gian_bat_dau_ca' => 'required',
             'thoi_gian_ket_thuc_ca' => 'required',
         ]);
 
         $giaoCa = GiaoCa::findOrFail($id);
 
         $giaoCa->update([
-            'id_truong_ca_nhan_ca'  => $request->id_truong_ca_nhan_ca,
-            'tien_mat_cuoi_ca'      => $request->tien_mat_cuoi_ca,
-            'tien_mat_dau_ca'       => $request->tien_mat_dau_ca,
-            'chenh_lech'            => $request->chenh_lech,
-            'ghi_chu'               => $request->ghi_chu,
-            'thoi_gian_bat_dau_ca'  => $request->thoi_gian_bat_dau_ca,
+            'id_truong_ca_nhan_ca' => $request->id_truong_ca_nhan_ca,
+            'tien_mat_cuoi_ca' => $request->tien_mat_cuoi_ca,
+            'tien_mat_dau_ca' => $request->tien_mat_dau_ca,
+            'chenh_lech' => $request->chenh_lech,
+            'ghi_chu' => $request->ghi_chu,
+            'thoi_gian_bat_dau_ca' => $request->thoi_gian_bat_dau_ca,
             'thoi_gian_ket_thuc_ca' => $request->thoi_gian_ket_thuc_ca,
-            'trang_thai'            => 1,  
+            'trang_thai' => 1,
         ]);
 
-        return redirect()
-            ->back()
-            ->with('success', 'Cập nhật giao ca thành công.');
+        return redirect()->back()->with('success', 'Cập nhật giao ca thành công.');
     }
 
-
-
-    //xác nhận giao ca
     public function xac_nhan_giao_ca($id)
     {
         $giaoCa = GiaoCa::findOrFail($id);
 
-        // Chỉ xác nhận khi đang chờ
         if ($giaoCa->trang_thai == 1) {
             return back()->with('error', 'Giao ca đã được xác nhận.');
         }
 
-        // Kiểm tra quyền
         if (Auth::user()->id_vai_tro != 1 && Auth::id() != $giaoCa->id_truong_ca_nhan_ca) {
             abort(403, 'Bạn không có quyền xác nhận giao ca.');
         }
 
         $giaoCa->trang_thai = 1;
-
         $giaoCa->save();
 
-        return redirect()
-            ->back()
-            ->with('success', 'Xác nhận giao ca thành công.');
+        return redirect()->back()->with('success', 'Xác nhận giao ca thành công.');
     }
 
     public function tu_choi_giao_ca($id)
     {
         $giaoCa = GiaoCa::findOrFail($id);
 
-        // Chỉ xác nhận khi đang chờ
         if ($giaoCa->trang_thai == 1) {
             return back()->with('error', 'Giao ca đã được xác nhận.');
         }
 
-        // Kiểm tra quyền
         if (Auth::user()->id_vai_tro != 1 && Auth::id() != $giaoCa->id_truong_ca_nhan_ca) {
             abort(403, 'Bạn không có quyền xác nhận giao ca.');
         }
 
         $giaoCa->trang_thai = 2;
-
         $giaoCa->save();
 
-        return redirect()
-            ->back()
-            ->with('success', 'Đã từ chối giao ca.');
+        return redirect()->back()->with('success', 'Đã từ chối giao ca.');
     }
 
-    //hóa đơn của ca
-        public function hoa_don_cua_ca_hoan_thanh(Request $request, $ngay, $id_ca)
+    public function hoa_don_cua_ca_hoan_thanh(Request $request, $ngay, $id_ca)
     {
         $tuKhoa = $request->input('tu_khoa');
 
@@ -321,14 +299,10 @@ class LichSuCaLam extends Controller
             ->latest('created_at')
             ->get();
 
-        return view(
-            'admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.danh-sach-hoa-don-ht',
-            compact('hoaDonCuaCa', 'ngay', 'id_ca', 'tuKhoa')
-        );
-    }    
+        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.danh-sach-hoa-don-ht', compact('hoaDonCuaCa', 'ngay', 'id_ca', 'tuKhoa'));
+    }
 
-    //hóa đơn của ca
-        public function hoa_don_cua_ca_huy(Request $request, $ngay, $id_ca)
+    public function hoa_don_cua_ca_huy(Request $request, $ngay, $id_ca)
     {
         $tuKhoa = $request->input('tu_khoa');
 
@@ -343,10 +317,6 @@ class LichSuCaLam extends Controller
             ->latest('created_at')
             ->get();
 
-        return view(
-            'admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.danh-sach-hoa-don-huy',
-            compact('hoaDonCuaCa', 'ngay', 'id_ca', 'tuKhoa')
-        );
-    }    
-        
+        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.danh-sach-hoa-don-huy', compact('hoaDonCuaCa', 'ngay', 'id_ca', 'tuKhoa'));
+    }
 }

@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\RevenueStatisticsService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, RevenueStatisticsService $revenueStatisticsService)
     {
         $quickFilter = $request->get('bo_loc');
 
@@ -69,25 +70,27 @@ if ($quickFilter === '3_ngay') {
             [$rangeStart, $rangeEnd] = [$rangeEnd, $rangeStart];
         }
 
-        $ordersQuery = DB::table('hoa_don')
-            ->whereBetween('created_at', [$rangeStart, $rangeEnd]);
+        $revenueStatuses = $revenueStatisticsService->salesRevenueStatuses();
 
-        $completedOrdersQuery = (clone $ordersQuery)
-            ->where('trang_thai', 'Hoàn thành');
+        $ordersQuery = $revenueStatisticsService->invoiceNetRevenueQuery()
+            ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd]);
+
+        $revenueOrdersQuery = (clone $ordersQuery)
+            ->whereIn('hoa_don.trang_thai', $revenueStatuses);
 
         $dailyRevenue = (clone $completedOrdersQuery)
             ->sum('khach_can_tra');
 
         $totalOrders = (clone $ordersQuery)->count();
-        $completedOrders = (clone $completedOrdersQuery)->count();
+        $completedOrders = (clone $revenueOrdersQuery)->count();
         $cancelledOrders = (clone $ordersQuery)
-            ->where('trang_thai', 'Đã hủy')
+            ->where('hoa_don.trang_thai', 'Đã hủy')
             ->count();
 
         $productsSold = DB::table('chi_tiet_hoa_don')
             ->join('hoa_don', 'chi_tiet_hoa_don.id_hoa_don', '=', 'hoa_don.id')
             ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
-            ->where('hoa_don.trang_thai', 'Hoàn thành')
+            ->whereIn('hoa_don.trang_thai', $revenueStatuses)
             ->sum('chi_tiet_hoa_don.so_luong');
 
         $uniqueCustomerCount = (clone $completedOrdersQuery)
@@ -117,7 +120,10 @@ $pointsUsed = (clone $completedOrdersQuery)
     ? round($dailyRevenue / $completedOrders)
     : 0;
 
-      
+        $invoiceNetRevenueExpression = $revenueStatisticsService->invoiceNetRevenueExpression();
+        $lineNetRevenueExpression = $revenueStatisticsService->lineNetRevenueExpression();
+        $returnedByInvoiceSub = $revenueStatisticsService->returnedAmountPerInvoiceSubquery();
+        $returnedByInvoiceVariantSub = $revenueStatisticsService->returnedAmountPerInvoiceVariantSubquery();
 
   $paymentRows = (clone $completedOrdersQuery)
     ->selectRaw("
@@ -251,14 +257,18 @@ if ($quickFilter === 'nam') {
             ->join('hoa_don', 'chi_tiet_hoa_don.id_hoa_don', '=', 'hoa_don.id')
             ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
             ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
+            ->leftJoinSub($returnedByInvoiceVariantSub, 'doi_tra_bien_the', function ($join) {
+                $join->on('chi_tiet_hoa_don.id_hoa_don', '=', 'doi_tra_bien_the.id_hoa_don')
+                    ->on('chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'doi_tra_bien_the.id_bien_the');
+            })
             ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
-            ->where('hoa_don.trang_thai', 'Hoàn thành')
+            ->whereIn('hoa_don.trang_thai', $revenueStatuses)
             ->groupBy('san_pham.id', 'san_pham.ten_san_pham')
             ->select(
                 'san_pham.id',
                 'san_pham.ten_san_pham',
                 DB::raw('SUM(chi_tiet_hoa_don.so_luong) as total_quantity'),
-                DB::raw('SUM(chi_tiet_hoa_don.thanh_tien) as total_revenue')
+                DB::raw("SUM({$lineNetRevenueExpression}) as total_revenue")
             )
             ->orderByDesc('total_quantity')
             ->limit(10)
@@ -268,14 +278,18 @@ if ($quickFilter === 'nam') {
             ->join('hoa_don', 'chi_tiet_hoa_don.id_hoa_don', '=', 'hoa_don.id')
             ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
             ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
+            ->leftJoinSub($returnedByInvoiceVariantSub, 'doi_tra_bien_the', function ($join) {
+                $join->on('chi_tiet_hoa_don.id_hoa_don', '=', 'doi_tra_bien_the.id_hoa_don')
+                    ->on('chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'doi_tra_bien_the.id_bien_the');
+            })
             ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
-            ->where('hoa_don.trang_thai', 'Hoàn thành')
+            ->whereIn('hoa_don.trang_thai', $revenueStatuses)
             ->groupBy('san_pham.id', 'san_pham.ten_san_pham')
             ->select(
                 'san_pham.id',
                 'san_pham.ten_san_pham',
                 DB::raw('SUM(chi_tiet_hoa_don.so_luong) as total_quantity'),
-                DB::raw('SUM(chi_tiet_hoa_don.thanh_tien) as total_revenue')
+                DB::raw("SUM({$lineNetRevenueExpression}) as total_revenue")
             )
             ->orderBy('total_quantity', 'asc')
             ->limit(10)
@@ -283,13 +297,16 @@ if ($quickFilter === 'nam') {
 
         $topCustomers = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
+            ->leftJoinSub($returnedByInvoiceSub, 'doi_tra_tra_hang', function ($join) {
+                $join->on('hoa_don.id', '=', 'doi_tra_tra_hang.id_hoa_don');
+            })
             ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
-            ->where('hoa_don.trang_thai', 'Hoàn thành')
+            ->whereIn('hoa_don.trang_thai', $revenueStatuses)
             ->groupBy('hoa_don.id_khach_hang', 'khach_hang.ten_khach_hang')
             ->select(
                 'hoa_don.id_khach_hang as customer_id',
                 DB::raw("COALESCE(khach_hang.ten_khach_hang, 'Khách lẻ') as ten_khach_hang"),
-                DB::raw('SUM(hoa_don.khach_can_tra) as total_revenue'),
+                DB::raw("SUM({$invoiceNetRevenueExpression}) as total_revenue"),
                 DB::raw('COUNT(*) as order_count')
             )
             ->orderByDesc('total_revenue')
@@ -298,8 +315,11 @@ if ($quickFilter === 'nam') {
 
         $staffPerformance = DB::table('hoa_don')
             ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
+            ->leftJoinSub($returnedByInvoiceSub, 'doi_tra_tra_hang', function ($join) {
+                $join->on('hoa_don.id', '=', 'doi_tra_tra_hang.id_hoa_don');
+            })
             ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
-            ->where('hoa_don.trang_thai', 'Hoàn thành')
+            ->whereIn('hoa_don.trang_thai', $revenueStatuses)
             ->groupBy('hoa_don.id_nguoi_dung', 'nguoi_dung.ho_ten')
             ->select(
                 'hoa_don.id_nguoi_dung as staff_id',

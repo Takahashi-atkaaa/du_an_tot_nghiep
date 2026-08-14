@@ -63,6 +63,21 @@ class BienTheSanPham extends BaseModel
             ->where('so_luong_ton', '>', 0);
     }
 
+    public function chiTietDoiTras()
+    {
+        return $this->hasMany(ChiTietDoiTra::class, 'id_bien_the');
+    }
+
+    public function chiTietDoiTraThayThe()
+    {
+        return $this->hasMany(ChiTietDoiTra::class, 'id_bien_the_thay_the');
+    }
+
+    public function hangLois()
+    {
+        return $this->hasMany(HangLoi::class, 'id_bien_the');
+    }
+
     // ============================================================
     // ACCESSOR donVi: trả về thông tin đơn vị CƠ BẢN của variant
     // Chỉ dùng cho Blade: $bienThe->donVi->ten_don_vi
@@ -128,5 +143,65 @@ class BienTheSanPham extends BaseModel
             }
         }
         return $labels;
+    }
+
+    public static function placeholderImageUrl(): string
+    {
+        return asset('images/product-placeholder.svg');
+    }
+
+    public static function hasImageFile(?string $path): bool
+    {
+        $normalized = self::normalizeImagePath($path);
+
+        if ($normalized === null) {
+            return false;
+        }
+
+        if (preg_match('/^https?:\/\//i', $normalized)) {
+            return true;
+        }
+
+        return file_exists(public_path($normalized));
+    }
+
+    public static function resolveImageUrl(?string $path): string
+    {
+        $normalized = self::normalizeImagePath($path);
+
+        if ($normalized === null) {
+            return self::placeholderImageUrl();
+        }
+
+        if (preg_match('/^https?:\/\//i', $normalized)) {
+            return $normalized;
+        }
+
+        if (file_exists(public_path($normalized))) {
+            return asset($normalized);
+        }
+
+        return self::placeholderImageUrl();
+    }
+
+    private static function normalizeImagePath(?string $path): ?string
+    {
+        $value = trim((string) $path);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match('/^https?:\/\//i', $value)) {
+            return $value;
+        }
+
+        $value = preg_replace('#^/+?#', '', $value);
+
+        if (str_starts_with($value, 'public/')) {
+            $value = substr($value, 7);
+        }
+
+        return $value !== '' ? $value : null;
     }
 }
