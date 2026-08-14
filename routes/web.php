@@ -285,12 +285,18 @@ Route::middleware([KTVaiTro::class])->group(function () {
 
     // Trang khuyen mai
     Route::get('/admin/khuyen-mai', [KhuyenMaiController::class, 'index'])->name('khuyen-mai.index')->middleware('permission:quan_ly_khuyen_mai');
+    Route::get('/admin/khuyen-mai/create', [KhuyenMaiController::class, 'create'])
+    ->name('khuyen-mai.create')
+    ->middleware('permission:quan_ly_khuyen_mai');
     Route::post('/admin/khuyen-mai', [KhuyenMaiController::class, 'store'])->name('khuyen-mai.store')->middleware('permission:quan_ly_khuyen_mai');
     Route::get('/admin/khuyen-mai/thung-rac', [KhuyenMaiController::class, 'trash'])->name('khuyen-mai.trash')->middleware('permission:quan_ly_khuyen_mai');
     Route::post('/admin/khuyen-mai/{id}/toggle', [KhuyenMaiController::class, 'toggle'])->name('khuyen-mai.toggle')->middleware('permission:quan_ly_khuyen_mai');
     Route::post('/admin/khuyen-mai/{id}/ajax-toggle', [KhuyenMaiController::class, 'ajaxToggle'])->name('khuyen-mai.ajaxToggle')->middleware('permission:quan_ly_khuyen_mai');
     Route::post('/admin/khuyen-mai/{id}/restore', [KhuyenMaiController::class, 'restore'])->name('khuyen-mai.restore')->middleware('permission:quan_ly_khuyen_mai');
     Route::delete('/admin/khuyen-mai/{id}/force', [KhuyenMaiController::class, 'forceDelete'])->name('khuyen-mai.forceDelete')->middleware('permission:quan_ly_khuyen_mai');
+    Route::get('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'show'])
+    ->name('khuyen-mai.show')
+    ->middleware('permission:quan_ly_khuyen_mai');
     Route::get('/admin/khuyen-mai/{id}/edit', [KhuyenMaiController::class, 'edit'])->name('khuyen-mai.edit')->middleware('permission:quan_ly_khuyen_mai');
     Route::put('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'update'])->name('khuyen-mai.update')->middleware('permission:quan_ly_khuyen_mai');
     Route::delete('/admin/khuyen-mai/{id}', [KhuyenMaiController::class, 'destroy'])->name('khuyen-mai.destroy')->middleware('permission:quan_ly_khuyen_mai');

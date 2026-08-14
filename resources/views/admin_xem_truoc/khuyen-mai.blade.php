@@ -36,9 +36,11 @@
             <i class="fas fa-trash me-2"></i>Thùng rác
         </a>
 
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPromotionModal">
-            <i class="fas fa-plus me-2"></i>Tạo khuyến mãi
-        </button>
+        <a href="{{ route('khuyen-mai.create') }}"
+   class="btn btn-primary">
+    <i class="fas fa-plus me-2"></i>
+    Tạo khuyến mãi
+</a>
     </div>
 </div>
 
@@ -231,6 +233,12 @@
                                     </small>
 
                                     <div>
+                                        {{-- Xem chi tiết --}}
+                                            <a href="{{ route('khuyen-mai.show', $promo->id) }}"
+                                            class="btn btn-sm btn-outline-info"
+                                            title="Xem chi tiết">
+                                                <i class="fas fa-eye"></i>
+                                            </a>    
                                         <a href="{{ route('khuyen-mai.edit', $promo->id) }}" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-edit"></i>
                                         </a>
@@ -268,9 +276,11 @@
                             </div>
                             <h5 class="mb-2">Tạo khuyến mãi mới</h5>
                             <p class="text-muted mb-3">Thêm chương trình khuyến mãi mới</p>
-                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPromotionModal">
-                                <i class="fas fa-plus me-2"></i>Tạo mới
-                            </button>
+                            <a href="{{ route('khuyen-mai.create') }}"
+   class="btn btn-primary">
+    <i class="fas fa-plus me-2"></i>
+    Tạo mới
+</a>
                         </div>
                     </div>
                 </div>
@@ -279,9 +289,11 @@
                     <div class="card table-admin">
                         <div class="card-body text-center">
                             <p class="mb-0">Chưa có chương trình khuyến mãi nào.</p>
-                            <button class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addPromotionModal">
-                                Tạo khuyến mãi mới
-                            </button>
+                            <a href="{{ route('khuyen-mai.create') }}"
+   class="btn btn-primary mt-3">
+    <i class="fas fa-plus me-2"></i>
+    Tạo khuyến mãi mới
+</a>
                         </div>
                     </div>
                 </div>

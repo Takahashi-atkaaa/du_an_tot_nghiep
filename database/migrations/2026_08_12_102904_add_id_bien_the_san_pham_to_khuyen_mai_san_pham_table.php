@@ -7,18 +7,18 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     public function up(): void
-    {
+{
+    if (!Schema::hasColumn(
+        'khuyen_mai_san_pham',
+        'id_bien_the_san_pham'
+    )) {
         Schema::table('khuyen_mai_san_pham', function (Blueprint $table) {
             $table->unsignedBigInteger('id_bien_the_san_pham')
                 ->nullable()
                 ->after('id_san_pham');
-
-            $table->foreign('id_bien_the_san_pham')
-                ->references('id')
-                ->on('bien_the_san_pham')
-                ->onDelete('cascade');
         });
     }
+}
 
     public function down(): void
     {
