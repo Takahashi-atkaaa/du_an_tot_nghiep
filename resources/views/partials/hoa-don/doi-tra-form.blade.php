@@ -331,6 +331,39 @@ $nguoiBanMacDinh = old(
 
         recalcTotals();
 
+        let isSubmittingMixedDoiTra = false;
+
+        form.addEventListener('submit', function (event) {
+            if (isSubmittingMixedDoiTra) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopImmediatePropagation();
+
+            const activeRows = rows.filter((row) => (row.querySelector('.action-radio:checked')?.value || 'none') !== 'none');
+
+            if (activeRows.length === 0) {
+                alert('Vui lòng chọn ít nhất một dòng để đổi hoặc trả hàng.');
+                return;
+            }
+
+            const invalidRow = activeRows.find((row) => !validateRow(row));
+            if (invalidRow) {
+                alert('Có dòng đổi/trả chưa hợp lệ. Vui lòng kiểm tra lại số lượng, trạng thái hàng lỗi và tồn kho của đúng biến thể.');
+                return;
+            }
+
+            const submitButton = document.getElementById('btnSubmit');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Đang xử lý...';
+            }
+
+            isSubmittingMixedDoiTra = true;
+            form.submit();
+        }, true);
+
         form.addEventListener('submit', function (event) {
             const activeRows = rows.filter((row) => (row.querySelector('.action-radio:checked')?.value || 'none') !== 'none');
 
