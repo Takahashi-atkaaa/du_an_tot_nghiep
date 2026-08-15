@@ -497,18 +497,12 @@ function loadDanhMucXuat() {
 }
 
 function searchProductsXuat(q, danhMuc) {
-    // #region agent log
-    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b085c7'},body:JSON.stringify({sessionId:'b085c7',location:'kho-hang.js:searchProductsXuat',message:'PX search fired',data:{q,danhMuc,emptyQ:!q,emptyDm:!danhMuc},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     if (!q && !danhMuc) {
         $('#px-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-search fs-4 mb-2 d-block"></i>Nhập tên hoặc mã vạch để tìm sản phẩm</div>');
         return;
     }
     $('#px-sp-results').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-muted fs-4"></i></div>');
     $.get('/admin/api/san-pham', { q: q || '', danh_muc: danhMuc || '' }, res => {
-        // #region agent log
-        fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b085c7'},body:JSON.stringify({sessionId:'b085c7',location:'kho-hang.js:searchProductsXuat.onSuccess',message:'PX search response',data:{success:res.success,productsLen:res.data?.length,hasDanhMucList:!!res.danh_muc_list},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         if (!res.success || !res.data.length) {
             $('#px-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-box-open fs-4 mb-2 d-block text-secondary"></i>Không tìm thấy sản phẩm nào.</div>');
             return;
@@ -634,9 +628,6 @@ $(document).on('click', '.btn-chon-sp-xuat', function () {
         vach: readStr('data-vach'),
         ton: parseInt($btn.attr('data-ton')) || 0,
     };
-    // #region agent log
-    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b085c7'},body:JSON.stringify({sessionId:'b085c7',location:'kho-hang.js:btn-chon-sp-xuat.click',message:'PX select click',data:{id,alreadyInSet:selectedPxProducts.has(id),displayInfo,displayInfoTypes:{tenSp:typeof displayInfo.tenSp,tenBt:typeof displayInfo.tenBt,attrs:typeof displayInfo.attrs,vach:typeof displayInfo.vach,ton:typeof displayInfo.ton},sanPhamAllIncludes:sanPhamAll.find(x=>x.id==id)?.id||null},timestamp:Date.now(),hypothesisId:'F'})}).catch(()=>{});
-    // #endregion
     if (!id) return;
     if (selectedPxProducts.has(id)) return;
     selectedPxProducts.add(id);
@@ -1307,9 +1298,6 @@ function spOptions(existingId) {
 }
 
 function addPxRow(id, sl, displayInfo) {
-    // #region agent log
-    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b085c7'},body:JSON.stringify({sessionId:'b085c7',location:'kho-hang.js:addPxRow',message:'addPxRow start',data:{id,sl,hasDisplayInfo:!!displayInfo,sanPhamAllLen:sanPhamAll.length,foundSp:!!sanPhamAll.find(x=>x.id==id),displayInfo},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
     const idx = pxIdx++;
     let opts;
     let selectTon = 0;
@@ -1417,9 +1405,6 @@ $(document).on('change', '.px-lo-select', function () {
 });
 
 function loadLoOptions(row, idSp) {
-    // #region agent log
-    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b085c7'},body:JSON.stringify({sessionId:'b085c7',location:'kho-hang.js:loadLoOptions',message:'loadLoOptions called from PX',data:{idSp},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
     const loSelect = row.find('.px-lo-select');
     const info = row.find('.px-lo-info');
     if (!idSp) {
@@ -1575,10 +1560,6 @@ function submitPhieuNhap() {
 }
 
 function submitPhieuXuat() {
-    // #region agent log
-    const rowsLog = $('#px-ds-sp tr').toArray().map(r => ({id:r.id,dataset:r.dataset.spId||null,isEmpty:r.id==='px-empty-row'}));
-    fetch('http://127.0.0.1:7359/ingest/002bc91b-88fd-46aa-85b0-ce56b4017dd2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b085c7'},body:JSON.stringify({sessionId:'b085c7',location:'kho-hang.js:submitPhieuXuat',message:'PX submit start',data:{rowsLog},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
     const chiTiet = [];
     let hasError = false;
     $('#px-ds-sp tr').each(function () {

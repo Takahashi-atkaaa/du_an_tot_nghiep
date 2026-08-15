@@ -480,28 +480,6 @@ function toggleSection(headerEl) {
         window.productDetailCache = window.productDetailCache || {};
         var cached = window.productDetailCache[productId];
         var requestedVariant = variantId ? String(variantId) : null;
-        // #region agent log
-        try {
-            fetch('http://127.0.0.1:7558/ingest/906698ea-056c-47c1-9c64-a9f766f588e7', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '80bdd0' },
-                body: JSON.stringify({
-                    sessionId: '80bdd0',
-                    location: 'san-pham.js:451',
-                    message: 'loadProductDetail called',
-                    data: {
-                        productId: productId,
-                        requestedVariant: requestedVariant,
-                        hasCached: !!cached,
-                        cachedVariantId: cached ? String(cached.variantId) : null,
-                    },
-                    runId: 'initial',
-                    hypothesisId: 'H2',
-                    timestamp: Date.now(),
-                }),
-            }).catch(() => {});
-        } catch (e) {}
-        // #endregion
         if (cached && (!requestedVariant || String(cached.variantId) === requestedVariant)) {
             return cached.data;
         }
@@ -515,75 +493,12 @@ function toggleSection(headerEl) {
         try {
             res = await fetch(url);
         } catch (networkErr) {
-            // #region agent log
-            try {
-                fetch('http://127.0.0.1:7558/ingest/906698ea-056c-47c1-9c64-a9f766f588e7', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '80bdd0' },
-                    body: JSON.stringify({
-                        sessionId: '80bdd0',
-                        location: 'san-pham.js:fetch-network',
-                        message: 'fetch network error',
-                        data: {
-                            url: url,
-                            error: String(networkErr),
-                        },
-                        runId: 'initial',
-                        hypothesisId: 'H3',
-                        timestamp: Date.now(),
-                    }),
-                }).catch(() => {});
-            } catch (e) {}
-            // #endregion
             throw new Error('Lỗi mạng: ' + networkErr.message);
         }
-        // #region agent log
-        try {
-            fetch('http://127.0.0.1:7558/ingest/906698ea-056c-47c1-9c64-a9f766f588e7', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '80bdd0' },
-                body: JSON.stringify({
-                    sessionId: '80bdd0',
-                    location: 'san-pham.js:fetch-response',
-                    message: 'fetch response',
-                    data: {
-                        url: url,
-                        status: res.status,
-                        ok: res.ok,
-                        contentType: res.headers.get('content-type'),
-                    },
-                    runId: 'initial',
-                    hypothesisId: 'H4',
-                    timestamp: Date.now(),
-                }),
-            }).catch(() => {});
-        } catch (e) {}
-        // #endregion
         if (!res.ok) {
             // Try to read body to see what error
             let bodyText = '';
             try { bodyText = await res.text(); } catch (e) {}
-            // #region agent log
-            try {
-                fetch('http://127.0.0.1:7558/ingest/906698ea-056c-47c1-9c64-a9f766f588e7', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '80bdd0' },
-                    body: JSON.stringify({
-                        sessionId: '80bdd0',
-                        location: 'san-pham.js:fetch-not-ok',
-                        message: 'fetch !res.ok',
-                        data: {
-                            url: url,
-                            status: res.status,
-                            bodyPreview: bodyText.substring(0, 500),
-                        },
-                        runId: 'initial',
-                        hypothesisId: 'H5',
-                        timestamp: Date.now(),
-                    }),
-                }).catch(() => {});
-            } catch (e) {}
-            // #endregion
             throw new Error('Không tải được dữ liệu sản phẩm.');
         }
         var json = await res.json();
@@ -612,23 +527,6 @@ function toggleSection(headerEl) {
             content.innerHTML = buildVariantsHtml(data);
             panel.dataset.loadedVariants = '1';
         } catch (e) {
-            // #region agent log
-            try {
-                fetch('http://127.0.0.1:7558/ingest/906698ea-056c-47c1-9c64-a9f766f588e7', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '80bdd0' },
-                    body: JSON.stringify({
-                        sessionId: '80bdd0',
-                        location: 'san-pham.js:loadProductVariants-err',
-                        message: 'loadProductVariants threw',
-                        data: { productId: productId, error: String(e), errorMsg: e.message },
-                        runId: 'initial',
-                        hypothesisId: 'H6',
-                        timestamp: Date.now(),
-                    }),
-                }).catch(() => {});
-            } catch (ex) {}
-            // #endregion
             content.innerHTML = '<div class="text-danger">Lỗi tải biến thể: ' + (e.message || 'Không xác định') + '</div>';
         }
     };
@@ -649,23 +547,6 @@ function toggleSection(headerEl) {
             content.innerHTML = buildStockHtml(productId, data);
             panel.dataset.loadedStock = '1';
         } catch (e) {
-            // #region agent log
-            try {
-                fetch('http://127.0.0.1:7558/ingest/906698ea-056c-47c1-9c64-a9f766f588e7', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '80bdd0' },
-                    body: JSON.stringify({
-                        sessionId: '80bdd0',
-                        location: 'san-pham.js:loadProductStock-err',
-                        message: 'loadProductStock threw',
-                        data: { productId: productId, variantId: variantId, error: String(e), errorMsg: e.message },
-                        runId: 'initial',
-                        hypothesisId: 'H7',
-                        timestamp: Date.now(),
-                    }),
-                }).catch(() => {});
-            } catch (ex) {}
-            // #endregion
             content.innerHTML = '<div class="text-danger">Lỗi tải kho: ' + (e.message || 'Không xác định') + '</div>';
         }
     };

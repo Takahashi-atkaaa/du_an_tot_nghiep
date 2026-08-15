@@ -3,23 +3,67 @@
 namespace App\Http\Controllers\admin\BanHang;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Http\Requests\BanHang\XuLyDoiTraRequest;
+use App\Models\HoaDon;
+use App\Services\DoiTraService;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class HoaDonController extends Controller
 {
+    private function tenHienThiBienTheSelect(): \Illuminate\Database\Query\Expression
+    {
+        return DB::raw("
+            TRIM(
+                CONCAT(
+                    COALESCE(san_pham.ten_san_pham, ''),
+                    CASE
+                        WHEN COALESCE(
+                            CASE
+                                WHEN bien_the_san_pham.la_don_vi = 1 THEN NULLIF(bien_the_san_pham.ten_don_vi, '')
+                                ELSE NULLIF(bien_the_san_pham.ten_bien_the, '')
+                            END,
+                            NULLIF(bien_the_san_pham.ten_don_vi, '')
+                        ) IS NOT NULL
+                            THEN CONCAT(
+                                ' - ',
+                                COALESCE(
+                                    CASE
+                                        WHEN bien_the_san_pham.la_don_vi = 1 THEN NULLIF(bien_the_san_pham.ten_don_vi, '')
+                                        ELSE NULLIF(bien_the_san_pham.ten_bien_the, '')
+                                    END,
+                                    NULLIF(bien_the_san_pham.ten_don_vi, '')
+                                )
+                            )
+                        ELSE ''
+                    END
+                )
+            ) as ten_hien_thi_san_pham
+        ");
+    }
+
     public function index(Request $request)
     {
+        $doiTraSummarySub = DB::table('doi_tra')
+            ->selectRaw('id_hoa_don, COUNT(*) as so_lan_doi_tra')
+            ->whereNull('deleted_at')
+            ->groupBy('id_hoa_don');
+
         $query = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
             ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
             ->leftJoin('ca_lam_viec', 'hoa_don.id_ca_lam_viec', '=', 'ca_lam_viec.id')
+            ->leftJoinSub($doiTraSummarySub, 'doi_tra_tong_hop', function ($join) {
+                $join->on('hoa_don.id', '=', 'doi_tra_tong_hop.id_hoa_don');
+            })
             ->select(
                 'hoa_don.*',
                 'khach_hang.ten_khach_hang',
                 'nguoi_dung.ho_ten as ten_nhan_vien',
-                'ca_lam_viec.ten_ca as ten_ca'
+                'ca_lam_viec.ten_ca as ten_ca',
+                DB::raw('COALESCE(doi_tra_tong_hop.so_lan_doi_tra, 0) as so_lan_doi_tra')
             )
             ->orderByDesc('hoa_don.id');
 
@@ -72,7 +116,7 @@ class HoaDonController extends Controller
         return view('admin_xem_truoc.hoa-don', compact('hoaDons', 'caLamViecs'));
     }
 
-    public function show($id)
+    public function show($id, DoiTraService $doiTraService)
     {
         $hoaDon = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
@@ -91,14 +135,15 @@ class HoaDonController extends Controller
         abort_if(!$hoaDon, 404);
 
         $chiTiet = DB::table('chi_tiet_hoa_don')
-            ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
-            ->leftJoin('bien_the_san_pham', 'chi_tiet_hoa_don.id_chi_tiet_phieu', '=', 'bien_the_san_pham.id')
+            ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
+            ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
             ->select(
                 'chi_tiet_hoa_don.*',
                 'san_pham.ten_san_pham',
                 'bien_the_san_pham.ten_bien_the',
                 'bien_the_san_pham.ten_don_vi',
-                'bien_the_san_pham.ma_vach'
+                'bien_the_san_pham.ma_vach',
+                $this->tenHienThiBienTheSelect()
             )
             ->where('chi_tiet_hoa_don.id_hoa_don', $id)
             ->get();
@@ -108,24 +153,34 @@ class HoaDonController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
 
-        $return_invoice_id = session('return_invoice_id');
-        $phieuDoiTra = null;
-        if ($return_invoice_id) {
-            $phieuDoiTra = DB::table('phieu')->where('id', $return_invoice_id)->first();
-            if ($phieuDoiTra) {
-                $phieuDoiTra->chi_tiet = DB::table('chi_tiet_phieu')
-                    ->join('san_pham', 'chi_tiet_phieu.id_san_pham', '=', 'san_pham.id')
-                    ->leftJoin('bien_the_san_pham', 'chi_tiet_phieu.variant_id', '=', 'bien_the_san_pham.id')
-                    ->select('chi_tiet_phieu.*', 'san_pham.ten_san_pham', 'bien_the_san_pham.ten_bien_the', 'bien_the_san_pham.ten_don_vi')
-                    ->where('id_phieu', $return_invoice_id)
-                    ->get();
-            }
+        $returnSummary = $doiTraService->getInvoiceReturnSummary((int) $id);
+        $lichSuDoiTra = $returnSummary['lichSuDoiTra'];
+        $doiTraMoiNhat = session('last_doi_tra_id')
+            ? $lichSuDoiTra->firstWhere('id', (int) session('last_doi_tra_id'))
+            : null;
+        $tongHopDoiTra = $returnSummary['tongHopDoiTra'];
+        $chiTietTheoBienThe = $returnSummary['chiTietTheoBienThe'];
+
+        foreach ($chiTiet as $item) {
+            $returnItem = $chiTietTheoBienThe->get($item->id_bien_the_san_pham);
+            $item->tong_da_tra = (int) ($returnItem->tong_tra_hang ?? 0);
+            $item->tong_da_doi = (int) ($returnItem->tong_doi_hang ?? 0);
+            $item->tong_da_doi_tra = (int) ($returnItem->tong_doi_tra ?? 0);
         }
 
-        return view('admin_xem_truoc.hoa-don-chi-tiet', compact('hoaDon', 'chiTiet', 'diemTichDiems', 'phieuDoiTra'));
+        $this->ganThuocTinhBienTheChoChiTiet($chiTiet);
+
+        return view('admin_xem_truoc.hoa-don-chi-tiet', compact(
+            'hoaDon',
+            'chiTiet',
+            'diemTichDiems',
+            'lichSuDoiTra',
+            'doiTraMoiNhat',
+            'tongHopDoiTra'
+        ));
     }
 
-    public function showModal($id)
+    public function showModal($id, DoiTraService $doiTraService)
     {
         $hoaDon = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
@@ -144,14 +199,15 @@ class HoaDonController extends Controller
         abort_if(!$hoaDon, 404);
 
         $chiTiet = DB::table('chi_tiet_hoa_don')
-            ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
-            ->leftJoin('bien_the_san_pham', 'chi_tiet_hoa_don.id_chi_tiet_phieu', '=', 'bien_the_san_pham.id')
+            ->join('bien_the_san_pham', 'chi_tiet_hoa_don.id_bien_the_san_pham', '=', 'bien_the_san_pham.id')
+            ->join('san_pham', 'bien_the_san_pham.product_id', '=', 'san_pham.id')
             ->select(
                 'chi_tiet_hoa_don.*',
                 'san_pham.ten_san_pham',
                 'bien_the_san_pham.ten_bien_the',
                 'bien_the_san_pham.ten_don_vi',
-                'bien_the_san_pham.ma_vach'
+                'bien_the_san_pham.ma_vach',
+                $this->tenHienThiBienTheSelect()
             )
             ->where('chi_tiet_hoa_don.id_hoa_don', $id)
             ->get();
@@ -161,8 +217,87 @@ class HoaDonController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
 
-        return view('admin_xem_truoc.partials.hoa-don-modal-content', compact('hoaDon', 'chiTiet', 'diemTichDiems'));
+        $returnSummary = $doiTraService->getInvoiceReturnSummary((int) $id);
+        $chiTietTheoBienThe = $returnSummary['chiTietTheoBienThe'];
+
+        foreach ($chiTiet as $item) {
+            $returnItem = $chiTietTheoBienThe->get($item->id_bien_the_san_pham);
+            $item->tong_da_tra = (int) ($returnItem->tong_tra_hang ?? 0);
+            $item->tong_da_doi = (int) ($returnItem->tong_doi_hang ?? 0);
+            $item->tong_da_doi_tra = (int) ($returnItem->tong_doi_tra ?? 0);
+        }
+
+        $lichSuDoiTra = $returnSummary['lichSuDoiTra'];
+        $tongHopDoiTra = $returnSummary['tongHopDoiTra'];
+
+        $this->ganThuocTinhBienTheChoChiTiet($chiTiet);
+
+        return view('admin_xem_truoc.partials.hoa-don-modal-content', compact(
+            'hoaDon',
+            'chiTiet',
+            'diemTichDiems',
+            'lichSuDoiTra',
+            'tongHopDoiTra'
+        ));
     }
+
+    private function ganThuocTinhBienTheChoChiTiet($chiTiet): void
+    {
+        if ($chiTiet->isEmpty()) {
+            return;
+        }
+
+        $variantIds = $chiTiet->pluck('id_bien_the_san_pham')->filter()->unique()->all();
+
+        $thuocTinhRows = DB::table('bien_the_san_pham')
+            ->whereIn('id', $variantIds)
+            ->select('id', 'thuoc_tinh_ids')
+            ->get()
+            ->keyBy('id');
+
+        $allAttrIds = $thuocTinhRows->pluck('thuoc_tinh_ids')
+            ->filter()
+            ->flatten()
+            ->map(fn ($x) => (int) $x)
+            ->unique()
+            ->all();
+
+        if (empty($allAttrIds)) {
+            foreach ($chiTiet as $item) {
+                $item->thuoc_tinh_hien_thi = [];
+            }
+            return;
+        }
+
+        $attrMap = DB::table('thuoc_tinh_san_pham')
+            ->whereIn('id', $allAttrIds)
+            ->select('id', 'ten_thuoc_tinh', 'thuoc_tinh_cha_id')
+            ->get()
+            ->keyBy('id');
+
+        foreach ($chiTiet as $item) {
+            $row = $thuocTinhRows->get($item->id_bien_the_san_pham);
+            $rawIds = $row->thuoc_tinh_ids ?? [];
+            $labels = [];
+
+            foreach ((array) $rawIds as $aid) {
+                $aid = (int) $aid;
+                if (! isset($attrMap[$aid])) {
+                    continue;
+                }
+                $attr = $attrMap[$aid];
+                $parentId = $attr->thuoc_tinh_cha_id ? (int) $attr->thuoc_tinh_cha_id : null;
+                if ($parentId && isset($attrMap[$parentId])) {
+                    $labels[] = $attrMap[$parentId]->ten_thuoc_tinh . ': ' . $attr->ten_thuoc_tinh;
+                } else {
+                    $labels[] = $attr->ten_thuoc_tinh;
+                }
+            }
+
+            $item->thuoc_tinh_hien_thi = array_values(array_filter($labels, fn ($v) => $v !== null && $v !== ''));
+        }
+    }
+
     public function huy($id)
     {
         return DB::transaction(function () use ($id) {
@@ -184,15 +319,9 @@ class HoaDonController extends Controller
                 ->get();
 
             foreach ($chiTiet as $item) {
-                if ($item->id_chi_tiet_phieu) {
-                    DB::table('bien_the_san_pham')
-                        ->where('id', $item->id_chi_tiet_phieu)
-                        ->increment('so_luong_ton', $item->so_luong);
-                } else {
-                    DB::table('san_pham')
-                        ->where('id', $item->id_san_pham)
-                        ->increment('so_luong_ton_kho', $item->so_luong);
-                }
+                DB::table('bien_the_san_pham')
+                    ->where('id', $item->id_bien_the_san_pham)
+                    ->increment('so_luong_ton', $item->so_luong);
             }
 
             DB::table('hoa_don')
@@ -220,7 +349,8 @@ class HoaDonController extends Controller
                 'bien_the_san_pham.ten_don_vi',
                 'bien_the_san_pham.ma_vach',
                 'bien_the_san_pham.gia_ban',
-                'bien_the_san_pham.so_luong_ton'
+                'bien_the_san_pham.so_luong_ton',
+                $this->tenHienThiBienTheSelect()
             )
             ->where('bien_the_san_pham.trang_thai', 1);
 
@@ -232,242 +362,44 @@ class HoaDonController extends Controller
             });
         }
 
-        $products = $query->limit(20)->get();
-
-        return response()->json($products);
+        return response()->json($query->limit(20)->get());
     }
 
-    public function formDoiTra($id)
+    public function formDoiTra($id, DoiTraService $doiTraService)
     {
-        $hoaDon = DB::table('hoa_don')
-            ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
-            ->select('hoa_don.*', 'khach_hang.ten_khach_hang')
-            ->where('hoa_don.id', $id)
-            ->first();
+        $data = $doiTraService->getInvoiceReturnData((int) $id);
+        $hoaDon = $data['hoaDon'];
+        $chiTiet = $data['chiTiet'];
+        $danhSachNguoiBan = $doiTraService->getEligibleSalesUsers();
 
-        abort_if(!$hoaDon, 404);
-
-        if (in_array($hoaDon->trang_thai, ['Đã hủy', 'Đã trả toàn bộ'])) {
+        if (in_array($hoaDon->trang_thai, ['Đã hủy', 'Đã trả toàn bộ'], true)) {
             return back()->with('error', 'Hóa đơn này không thể đổi/trả hàng.');
         }
 
-        $chiTiet = DB::table('chi_tiet_hoa_don')
-            ->join('san_pham', 'chi_tiet_hoa_don.id_san_pham', '=', 'san_pham.id')
-            ->leftJoin('bien_the_san_pham', 'chi_tiet_hoa_don.id_chi_tiet_phieu', '=', 'bien_the_san_pham.id')
-            ->select(
-                'chi_tiet_hoa_don.*',
-                'san_pham.ten_san_pham',
-                'bien_the_san_pham.ten_bien_the',
-                'bien_the_san_pham.ten_don_vi',
-                'bien_the_san_pham.ma_vach',
-                'bien_the_san_pham.gia_ban as gia_ban_hien_tai'
-            )
-            ->where('chi_tiet_hoa_don.id_hoa_don', $id)
-            ->get();
-
-        $daTra = DB::table('phieu')
-            ->join('chi_tiet_phieu', 'phieu.id', '=', 'chi_tiet_phieu.id_phieu')
-            ->where('phieu.id_hoa_don', $id)
-            ->where('phieu.loai_phieu', 'Đổi / Trả hàng')
-            ->where('chi_tiet_phieu.ghi_chu', 'like', 'Hàng khách trả%')
-            ->select(
-                DB::raw('COALESCE(chi_tiet_phieu.variant_id, chi_tiet_phieu.id_san_pham) as key_id'),
-                DB::raw('SUM(chi_tiet_phieu.so_luong) as tong_da_tra')
-            )
-            ->groupBy('key_id')
-            ->pluck('tong_da_tra', 'key_id');
-
-        return view('admin_xem_truoc.hoa-don-doi-tra', compact('hoaDon', 'chiTiet', 'daTra'));
+        return view('admin_xem_truoc.hoa-don-doi-tra', compact('hoaDon', 'chiTiet', 'danhSachNguoiBan'));
     }
 
-    public function xuLyDoiTra(Request $request, $id)
+    public function xuLyDoiTra(XuLyDoiTraRequest $request, $id, DoiTraService $doiTraService)
     {
-        $request->validate([
-            'items_tra' => 'nullable|array',
-            'items_tra.*.id' => 'required|integer',
-            'items_tra.*.so_luong' => 'required|integer|min:1',
-            'items_tra.*.is_loi' => 'nullable|boolean',
-            'items_tra.*.so_luong_loi' => 'nullable|integer|min:0',
-            'items_doi' => 'nullable|array',
-            'items_doi.*.variant_id' => 'required|integer',
-            'items_doi.*.so_luong' => 'required|integer|min:1',
-            'ly_do' => 'nullable|string|max:1000',
-        ]);
+        $processedTokens = session()->get('processed_doi_tra_tokens', []);
+        $requestToken = $request->string('request_token')->toString();
 
-        $itemsTra = $request->items_tra ?? [];
-        $itemsDoi = $request->items_doi ?? [];
-
-        if (count($itemsTra) === 0 && count($itemsDoi) === 0) {
-            return back()->with('error', 'Vui lòng chọn ít nhất một sản phẩm để trả hoặc đổi.');
+        if (in_array($requestToken, $processedTokens, true)) {
+            return back()->with('error', 'Yêu cầu đổi/trả này đã được xử lý trước đó.');
         }
 
-        return DB::transaction(function () use ($request, $id, $itemsTra, $itemsDoi) {
-            $hoaDon = DB::table('hoa_don')->where('id', $id)->lockForUpdate()->first();
-            if (!$hoaDon || in_array($hoaDon->trang_thai, ['Đã hủy', 'Đã trả toàn bộ'])) {
-                return back()->with('error', 'Hóa đơn không hợp lệ.');
-            }
+        $hoaDon = HoaDon::query()->findOrFail($id);
+        $doiTra = $doiTraService->process($hoaDon, $request->validated(), Auth::user());
 
-            $chiTietHoaDon = DB::table('chi_tiet_hoa_don')->where('id_hoa_don', $id)->get()->keyBy('id');
+        $processedTokens[] = $requestToken;
+        session()->put('processed_doi_tra_tokens', array_slice(array_unique($processedTokens), -20));
 
-            $daTraTheoSanPham = DB::table('phieu')
-                ->join('chi_tiet_phieu', 'phieu.id', '=', 'chi_tiet_phieu.id_phieu')
-                ->where('phieu.id_hoa_don', $id)
-                ->where('phieu.loai_phieu', 'Đổi / Trả hàng')
-                ->where('chi_tiet_phieu.ghi_chu', 'like', 'Hàng khách trả%')
-                ->select(
-                    DB::raw('COALESCE(chi_tiet_phieu.variant_id, chi_tiet_phieu.id_san_pham) as key_id'),
-                    DB::raw('SUM(chi_tiet_phieu.so_luong) as tong_da_tra')
-                )
-                ->groupBy('key_id')
-                ->pluck('tong_da_tra', 'key_id');
+        $thongBao = $doiTra->Loai === 'tra_hang'
+            ? 'Đã xử lý trả hàng thành công.'
+            : 'Đã xử lý đổi hàng lỗi thành công.';
 
-            $tongTienTra = 0;
-            $danhSachTra = [];
-            foreach ($itemsTra as $reqItem) {
-                $ct = $chiTietHoaDon[$reqItem['id']] ?? null;
-                if (!$ct) return back()->with('error', 'Sản phẩm trả không hợp lệ.');
-
-                $key = $ct->id_chi_tiet_phieu ?: $ct->id_san_pham;
-                $daTra = (int) ($daTraTheoSanPham[$key] ?? 0);
-                $conDuocTra = $ct->so_luong - $daTra;
-                if ($reqItem['so_luong'] > $conDuocTra) {
-                    return back()->with('error', 'Số lượng trả vượt quá số lượng còn được trả.');
-                }
-
-                $soLuongLoi = isset($reqItem['so_luong_loi']) ? (int) $reqItem['so_luong_loi'] : 0;
-                if (!empty($reqItem['is_loi']) && $soLuongLoi === 0) {
-                    $soLuongLoi = $reqItem['so_luong'];
-                }
-                if ($soLuongLoi < 0) {
-                    return back()->with('error', 'Số lượng hàng lỗi không được âm.');
-                }
-                if ($soLuongLoi > $reqItem['so_luong']) {
-                    return back()->with('error', 'Số lượng hàng lỗi không được lớn hơn số lượng trả.');
-                }
-
-                $tongTienTra += $reqItem['so_luong'] * $ct->gia_ban;
-                $danhSachTra[] = [
-                    'ct' => $ct,
-                    'so_luong' => $reqItem['so_luong'],
-                    'so_luong_loi' => $soLuongLoi,
-                    'so_luong_tot' => $reqItem['so_luong'] - $soLuongLoi,
-                    'is_loi' => !empty($reqItem['is_loi']),
-                    'gia_ban' => $ct->gia_ban
-                ];
-            }
-
-            $tongTienDoi = 0;
-            $danhSachDoi = [];
-            if (count($itemsDoi) > 0) {
-                $variantIds = array_column($itemsDoi, 'variant_id');
-                $variants = DB::table('bien_the_san_pham')
-                    ->whereIn('id', $variantIds)
-                    ->get()
-                    ->keyBy('id');
-
-                foreach ($itemsDoi as $reqItem) {
-                    $variant = $variants[$reqItem['variant_id']] ?? null;
-                    if (!$variant) return back()->with('error', 'Sản phẩm đổi không tồn tại.');
-                    if ($variant->so_luong_ton < $reqItem['so_luong']) {
-                        return back()->with('error', 'Sản phẩm ' . $variant->ten_bien_the . ' không đủ tồn kho.');
-                    }
-
-                    $tongTienDoi += $reqItem['so_luong'] * $variant->gia_ban;
-                    $danhSachDoi[] = [
-                        'variant' => $variant,
-                        'so_luong' => $reqItem['so_luong']
-                    ];
-                }
-            }
-
-            $tienChenhLech = $tongTienDoi - $tongTienTra;
-            $ghiChu = ($request->ly_do ?? '') . ' | Chênh lệch: ' . number_format($tienChenhLech, 0, ',', '.') . 'đ';
-
-            $phieuId = DB::table('phieu')->insertGetId([
-                'loai_phieu' => 'Đổi / Trả hàng',
-                'id_nguoi_dung' => $hoaDon->id_nguoi_dung,
-                'id_nha_cung_cap' => null,
-                'id_hoa_don' => $hoaDon->id,
-                'ghi_chu' => trim($ghiChu),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            foreach ($danhSachTra as $item) {
-                if ($item['so_luong_tot'] > 0) {
-                    DB::table('chi_tiet_phieu')->insert([
-                        'id_phieu' => $phieuId,
-                        'id_san_pham' => $item['ct']->id_san_pham,
-                        'variant_id' => $item['ct']->id_chi_tiet_phieu,
-                        'so_luong' => $item['so_luong_tot'],
-                        'gia_nhap' => $item['gia_ban'],
-                        'ghi_chu' => 'Hàng khách trả',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-
-                    if ($item['so_luong_tot'] > 0) {
-                        if ($item['ct']->id_chi_tiet_phieu) {
-                            DB::table('bien_the_san_pham')
-                                ->where('id', $item['ct']->id_chi_tiet_phieu)
-                                ->increment('so_luong_ton', $item['so_luong_tot']);
-                        } else {
-                            DB::table('san_pham')
-                                ->where('id', $item['ct']->id_san_pham)
-                                ->increment('so_luong_ton_kho', $item['so_luong_tot']);
-                        }
-                    }
-                }
-
-                if ($item['so_luong_loi'] > 0) {
-                    DB::table('chi_tiet_phieu')->insert([
-                        'id_phieu' => $phieuId,
-                        'id_san_pham' => $item['ct']->id_san_pham,
-                        'variant_id' => $item['ct']->id_chi_tiet_phieu,
-                        'so_luong' => $item['so_luong_loi'],
-                        'gia_nhap' => $item['gia_ban'],
-                        'ghi_chu' => 'Hàng khách trả - Lỗi (Không hoàn kho)',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                }
-            }
-
-            foreach ($danhSachDoi as $item) {
-                DB::table('chi_tiet_phieu')->insert([
-                    'id_phieu' => $phieuId,
-                    'id_san_pham' => $item['variant']->product_id,
-                    'variant_id' => $item['variant']->id,
-                    'so_luong' => $item['so_luong'],
-                    'gia_nhap' => $item['variant']->gia_ban,
-                    'ghi_chu' => 'Hàng đổi mới',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-
-                DB::table('bien_the_san_pham')
-                    ->where('id', $item['variant']->id)
-                    ->decrement('so_luong_ton', $item['so_luong']);
-            }
-
-            $tongDaMua = DB::table('chi_tiet_hoa_don')->where('id_hoa_don', $id)->sum('so_luong');
-            $tongDaTraSau = DB::table('phieu')
-                ->join('chi_tiet_phieu', 'phieu.id', '=', 'chi_tiet_phieu.id_phieu')
-                ->where('phieu.id_hoa_don', $id)
-                ->where('phieu.loai_phieu', 'Đổi / Trả hàng')
-                ->where('chi_tiet_phieu.ghi_chu', 'like', 'Hàng khách trả%')
-                ->sum('chi_tiet_phieu.so_luong');
-
-            $trangThaiMoi = $tongDaTraSau >= $tongDaMua ? 'Đã trả toàn bộ' : 'Đã đổi/trả hàng';
-
-            DB::table('hoa_don')->where('id', $id)->update([
-                'trang_thai' => $trangThaiMoi,
-                'updated_at' => now(),
-            ]);
-
-            return redirect()->route('admin.hoa-don.show', $id)
-                ->with('success', 'Đã xử lý Giao dịch Đổi/Trả hàng. Chênh lệch: ' . number_format($tienChenhLech, 0, ',', '.') . 'đ')
-                ->with('return_invoice_id', $phieuId);
-        });
+        return redirect()->route('admin.hoa-don.show', $id)
+            ->with('success', $thongBao)
+            ->with('last_doi_tra_id', $doiTra->id);
     }
 }

@@ -7,6 +7,7 @@ use App\Models\NguoiDung;
 use App\Models\Quyen;
 use App\Http\Requests\NhanSu\CapNhatNhanVienRequest;
 use App\Http\Requests\NhanSu\ThemNhanVienRequest;
+use App\Services\NhanSu\NhanSuStatService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -117,8 +118,17 @@ class NguoiDungController extends Controller
 
     public function show(NguoiDung $nguoiDung): View
     {
+        $caGanNhat = NhanSuStatService::getCaGanNhat($nguoiDung->id);
+        $caHomNay  = NhanSuStatService::getCaHomNay($nguoiDung->id);
+        $hoaDonThang = NhanSuStatService::getThongKeHoaDonThang($nguoiDung->id);
+
         return view('admin_xem_truoc.nhan-su.show', [
             'nguoiDung' => $nguoiDung,
+            'caGanNhat' => $caGanNhat,
+            'caHomNay' => $caHomNay,
+            'tongHoaDonThang' => $hoaDonThang['tong_hoa_don'],
+            'tongDoanhThuThang' => $hoaDonThang['tong_doanh_thu'],
+            'ngayVaoLam' => $nguoiDung->created_at,
         ]);
     }
 

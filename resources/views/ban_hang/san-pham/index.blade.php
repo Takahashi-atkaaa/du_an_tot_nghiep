@@ -130,9 +130,9 @@
                     @forelse ($sanPhams as $sanPham)
                         <tr>
                             <td>
-                                @if ($sanPham->hinh_anh_hien_thi)
+                                @if ($sanPham->hinh_anh_hien_thi && \App\Models\BienTheSanPham::hasImageFile($sanPham->hinh_anh_hien_thi))
                                     <img
-                                        src="{{ asset($sanPham->hinh_anh_hien_thi) }}"
+                                        src="{{ \App\Models\BienTheSanPham::resolveImageUrl($sanPham->hinh_anh_hien_thi) }}"
                                         alt="Hình ảnh {{ $sanPham->ten_san_pham }}"
                                         class="product-image"
                                     >

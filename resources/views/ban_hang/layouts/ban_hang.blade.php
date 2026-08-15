@@ -176,7 +176,7 @@
     <nav class="sidebar" id="sidebar">
         <div class="logo">
             <h4>Smart<span>Mart</span></h4>
-            <small class="text-light opacity-75">Nhân viên</small>
+            <small class="text-light opacity-75">Bán hàng </small>
         </div>
         <ul class="nav flex-column mt-3">
 
@@ -236,12 +236,12 @@
         <!-- Topbar -->
         <header class="topbar">
             <div class="d-flex align-items-center">
-                <h5 class="mb-0 text-secondary"> Giao diện nhân viên</h5>
+                <h5 class="mb-0 text-secondary"> Giao diện bán hàng </h5>
             </div>
             <div class="user-info">
                 <div class="dropdown">
                     <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown">
-                        <div class="user-avatar">NV</div>
+                        <div class="user-avatar">BH</div>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="{{ url('nhan-vien/ho-so') }}"><i class="fas fa-user me-2"></i>Hồ sơ</a></li>

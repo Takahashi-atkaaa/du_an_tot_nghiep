@@ -75,79 +75,495 @@ class KhuyenMaiController extends Controller
         'ten_san_pham'
     )
     ->get();
+    $bienThes = DB::table('bien_the_san_pham')
+    ->whereNull('deleted_at')
+    ->orderBy('product_id')
+    ->select(
+        'id',
+        'product_id',
+        'ten_bien_the',
+        'ma_hang',
+        'gia_ban'
+    )
+    ->get()
+    ->groupBy('product_id');
         return view(
             'admin_xem_truoc.khuyen-mai',
              compact(
-        'items',
-        'total',
-        'active',
-        'upcoming',
-        'ended',
-        'sanPhams'
-    )
+    'items',
+    'total',
+    'active',
+    'upcoming',
+    'ended',
+    'sanPhams',
+    'bienThes'
+)
         );
+        
     }
 
     // Thêm khuyến mãi
-    public function store(Request $request)
+    public function create()
+{
+    $sanPhams = DB::table('san_pham')
+        ->whereNull('deleted_at')
+        ->orderBy('ten_san_pham')
+        ->select(
+            'id',
+            'ten_san_pham'
+        )
+        ->get();
+
+    $bienThes = DB::table('bien_the_san_pham')
+        ->whereNull('deleted_at')
+        ->orderBy('product_id')
+        ->select(
+            'id',
+            'product_id',
+            'ten_bien_the',
+            'ma_hang',
+            'gia_ban'
+        )
+        ->get()
+        ->groupBy('product_id');
+
+    return view(
+        'admin_xem_truoc.khuyen-mai-create',
+        compact('sanPhams', 'bienThes')
+    );
+}
+   public function store(Request $request)
 {
     $data = $request->validate([
-        'ten_chuong_trinh' => 'required|string|max:255',
-        'loai_giam_gia' => 'required|string|max:50',
-        'gia_tri_giam' => 'required|numeric|min:0',
-        'giam_toi_da' => 'nullable|numeric|min:0',
-        'so_luong_sp_toi_thieu' => 'nullable|integer|min:0',
-        'don_hang_toi_thieu' => 'nullable|numeric|min:0',
-        'ngay_bat_dau' => 'nullable|date',
-        'ngay_ket_thuc' => 'nullable|date|after_or_equal:ngay_bat_dau',
-        'trang_thai' => 'sometimes|boolean',
-        'ghi_chu' => 'nullable|string',
+        'ten_chuong_trinh' =>
+            'required|string|max:255',
 
+        'loai_giam_gia' =>
+            'required|string|max:50',
+
+        'gia_tri_giam' =>
+            'required|numeric|min:0',
+
+        'giam_toi_da' =>
+            'nullable|numeric|min:0',
+
+        'so_luong_sp_toi_thieu' =>
+            'nullable|integer|min:0',
+
+        'don_hang_toi_thieu' =>
+            'nullable|numeric|min:0',
+
+        'ngay_bat_dau' =>
+            'nullable|date',
+
+        'ngay_ket_thuc' =>
+            'nullable|date|after_or_equal:ngay_bat_dau',
+
+        'trang_thai' =>
+            'sometimes|boolean',
+
+        'ghi_chu' =>
+            'nullable|string',
+
+        // Phạm vi áp dụng
+        'pham_vi' =>
+            'required|in:hoa_don,san_pham',
+
+        // Sản phẩm
         'id_san_phams' => [
-            'required',
+            'nullable',
             'array',
-            'min:1',
         ],
 
         'id_san_phams.*' => [
             'integer',
             'exists:san_pham,id',
         ],
+
+        // Biến thể
+        'id_bien_thes' => [
+            'nullable',
+            'array',
+        ],
+
+        'id_bien_thes.*' => [
+            'integer',
+            'exists:bien_the_san_pham,id',
+        ],
     ]);
 
-    $idSanPhams = $data['id_san_phams'];
 
-    unset($data['id_san_phams']);
+    /*
+     * ================================
+     * LẤY PHẠM VI
+     * ================================
+     */
 
-    $data['trang_thai'] = $request->boolean('trang_thai');
+    $phamVi = $data['pham_vi'];
 
-    DB::transaction(function () use ($data, $idSanPhams) {
-        $khuyenMai = KhuyenMai::create($data);
+    $idSanPhams =
+        $data['id_san_phams'] ?? [];
 
-        $rows = collect($idSanPhams)
-            ->unique()
-            ->map(function ($idSanPham) use ($khuyenMai) {
-                return [
-                    'id_khuyen_mai' => $khuyenMai->id,
-                    'id_san_pham' => $idSanPham,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            })
-            ->values()
-            ->all();
+    $idBienThes =
+        $data['id_bien_thes'] ?? [];
 
-        DB::table('khuyen_mai_san_pham')->insert($rows);
+
+    /*
+     * ================================
+     * NẾU LÀ KHUYẾN MÃI SẢN PHẨM
+     * THÌ PHẢI CHỌN ÍT NHẤT 1 SP
+     * ================================
+     */
+
+    if (
+        $phamVi === 'san_pham' &&
+        empty($idSanPhams) &&
+        empty($idBienThes)
+    ) {
+
+        return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+                'id_san_phams' =>
+                    'Bạn phải chọn ít nhất một sản phẩm hoặc biến thể.'
+            ]);
+    }
+
+
+    /*
+     * ================================
+     * KHÔNG LƯU CÁC FIELD NÀY
+     * VÀO BẢNG khuyen_mai
+     * ================================
+     */
+
+    unset(
+        $data['pham_vi'],
+        $data['id_san_phams'],
+        $data['id_bien_thes']
+    );
+
+
+    /*
+     * Checkbox không tick thì request
+     * không gửi lên nên dùng boolean()
+     */
+    $data['trang_thai'] =
+        $request->boolean('trang_thai');
+
+
+    DB::transaction(function () use (
+        $data,
+        $phamVi,
+        $idSanPhams,
+        $idBienThes
+    ) {
+
+        /*
+         * ================================
+         * TẠO KHUYẾN MÃI
+         * ================================
+         */
+
+        $khuyenMai =
+            KhuyenMai::create($data);
+
+
+        /*
+         * ================================
+         * KHUYẾN MÃI TOÀN HÓA ĐƠN
+         * ================================
+         *
+         * Không thêm dữ liệu vào
+         * khuyen_mai_san_pham.
+         *
+         * Sau này POS dựa vào việc
+         * không có sản phẩm liên kết
+         * để biết đây là voucher hóa đơn.
+         */
+
+        if ($phamVi === 'hoa_don') {
+            return;
+        }
+
+
+        /*
+         * ================================
+         * KHUYẾN MÃI SẢN PHẨM
+         * ================================
+         *
+         * Nếu chọn sản phẩm cha:
+         * id_bien_the_san_pham = NULL
+         *
+         * => áp dụng toàn bộ biến thể
+         */
+
+        foreach (
+            array_unique($idSanPhams)
+            as $idSanPham
+        ) {
+
+            DB::table(
+                'khuyen_mai_san_pham'
+            )->insert([
+
+                'id_khuyen_mai' =>
+                    $khuyenMai->id,
+
+                'id_san_pham' =>
+                    $idSanPham,
+
+                'id_bien_the_san_pham' =>
+                    null,
+
+                'created_at' => now(),
+
+                'updated_at' => now(),
+
+            ]);
+        }
+
+
+        /*
+         * ================================
+         * BIẾN THỂ ĐƯỢC CHỌN RIÊNG
+         * ================================
+         */
+
+        foreach (
+            array_unique($idBienThes)
+            as $idBienThe
+        ) {
+
+            $bienThe =
+                DB::table(
+                    'bien_the_san_pham'
+                )
+                ->where(
+                    'id',
+                    $idBienThe
+                )
+                ->first();
+
+
+            if (!$bienThe) {
+                continue;
+            }
+
+
+            /*
+             * Nếu đã chọn cả sản phẩm cha
+             * thì không cần lưu biến thể
+             * của sản phẩm đó nữa.
+             */
+            if (
+                in_array(
+                    (int) $bienThe->product_id,
+                    array_map(
+                        'intval',
+                        $idSanPhams
+                    ),
+                    true
+                )
+            ) {
+                continue;
+            }
+
+
+            DB::table(
+                'khuyen_mai_san_pham'
+            )->insert([
+
+                'id_khuyen_mai' =>
+                    $khuyenMai->id,
+
+                'id_san_pham' =>
+                    $bienThe->product_id,
+
+                'id_bien_the_san_pham' =>
+                    $bienThe->id,
+
+                'created_at' => now(),
+
+                'updated_at' => now(),
+
+            ]);
+        }
+
     });
 
+
     return redirect()
-        ->back()
+        ->route('khuyen-mai.index')
         ->with(
             'success',
             'Tạo chương trình khuyến mãi thành công'
         );
 }
+public function show($id)
+{
+    $khuyenMai = KhuyenMai::findOrFail($id);
 
+    $sanPhamApDung = DB::table('khuyen_mai_san_pham')
+        ->join(
+            'san_pham',
+            'khuyen_mai_san_pham.id_san_pham',
+            '=',
+            'san_pham.id'
+        )
+        ->leftJoin(
+            'bien_the_san_pham',
+            'khuyen_mai_san_pham.id_bien_the_san_pham',
+            '=',
+            'bien_the_san_pham.id'
+        )
+        ->where('khuyen_mai_san_pham.id_khuyen_mai', $id)
+        ->select(
+            'khuyen_mai_san_pham.id_san_pham',
+            'khuyen_mai_san_pham.id_bien_the_san_pham',
+            'san_pham.ten_san_pham',
+            'bien_the_san_pham.ten_bien_the',
+            'bien_the_san_pham.ma_hang',
+            'bien_the_san_pham.gia_ban'
+        )
+        ->get();
+
+    $laKhuyenMaiHoaDon = $sanPhamApDung->isEmpty();
+
+    // ===============================
+    // THỐNG KÊ SỬ DỤNG KHUYẾN MÃI
+    // ===============================
+    $thongKe = DB::table('hoa_don_khuyen_mai')
+        ->join(
+            'hoa_don',
+            'hoa_don_khuyen_mai.id_hoa_don',
+            '=',
+            'hoa_don.id'
+        )
+        ->where(
+            'hoa_don_khuyen_mai.id_khuyen_mai',
+            $id
+        )
+        ->whereNotIn('hoa_don.trang_thai', [
+            'Đã hủy',
+            'Hủy',
+            'da_huy',
+            'huy'
+        ])
+        ->selectRaw('
+            COUNT(DISTINCT hoa_don.id) as so_hoa_don,
+            COUNT(*) as so_luot_ap_dung,
+            COALESCE(SUM(hoa_don_khuyen_mai.tien_giam), 0) as tong_tien_giam
+        ')
+        ->first();
+
+    // ===============================
+    // TÍNH DOANH THU CHÍNH XÁC
+    // ===============================
+    $doanhThu = DB::table('hoa_don')
+        ->whereIn(
+            'id',
+            DB::table('hoa_don_khuyen_mai')
+                ->where('id_khuyen_mai', $id)
+                ->select('id_hoa_don')
+        )
+        ->whereNotIn('trang_thai', [
+            'Đã hủy',
+            'Hủy',
+            'da_huy',
+            'huy'
+        ])
+        ->sum('khach_can_tra');
+
+    $thongKe->doanh_thu = $doanhThu;
+
+    // Giá trị hóa đơn trung bình
+    $thongKe->gia_tri_trung_binh =
+        $thongKe->so_hoa_don > 0
+            ? $thongKe->doanh_thu / $thongKe->so_hoa_don
+            : 0;
+
+    // Tiền giảm trung bình mỗi lượt
+    $thongKe->giam_trung_binh =
+        $thongKe->so_luot_ap_dung > 0
+            ? $thongKe->tong_tien_giam / $thongKe->so_luot_ap_dung
+            : 0;
+
+    // ===============================
+    // 5 HÓA ĐƠN GẦN NHẤT
+    // ===============================
+   // ===============================
+// DANH SÁCH HÓA ĐƠN + BỘ LỌC
+// ===============================
+$hoaDonQuery = DB::table('hoa_don_khuyen_mai')
+    ->join(
+        'hoa_don',
+        'hoa_don_khuyen_mai.id_hoa_don',
+        '=',
+        'hoa_don.id'
+    )
+    ->where(
+        'hoa_don_khuyen_mai.id_khuyen_mai',
+        $id
+    )
+    ->whereNotIn('hoa_don.trang_thai', [
+        'Đã hủy',
+        'Hủy',
+        'da_huy',
+        'huy'
+    ]);
+
+// Lọc từ ngày
+if (request('tu_ngay')) {
+    $hoaDonQuery->whereDate(
+        'hoa_don.created_at',
+        '>=',
+        request('tu_ngay')
+    );
+}
+
+// Lọc đến ngày
+if (request('den_ngay')) {
+    $hoaDonQuery->whereDate(
+        'hoa_don.created_at',
+        '<=',
+        request('den_ngay')
+    );
+}
+
+// Lọc theo loại áp dụng
+if (request('loai_ap_dung')) {
+    $hoaDonQuery->where(
+        'hoa_don_khuyen_mai.loai_ap_dung',
+        request('loai_ap_dung')
+    );
+}
+
+// Phân trang 10 hóa đơn / trang
+$hoaDonGanDay = $hoaDonQuery
+    ->select(
+        'hoa_don.id',
+        'hoa_don.khach_can_tra',
+        'hoa_don.created_at',
+        'hoa_don_khuyen_mai.tien_giam',
+        'hoa_don_khuyen_mai.loai_ap_dung'
+    )
+    ->orderByDesc('hoa_don.created_at')
+    ->paginate(10)
+    ->withQueryString();;
+
+    return view(
+        'admin_xem_truoc.khuyen-mai-show',
+        compact(
+            'khuyenMai',
+            'sanPhamApDung',
+            'laKhuyenMaiHoaDon',
+            'thongKe',
+            'hoaDonGanDay'
+        )
+    );
+}
     // Xóa mềm khuyến mãi
     public function destroy($id)
     {

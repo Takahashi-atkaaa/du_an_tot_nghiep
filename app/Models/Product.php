@@ -41,7 +41,7 @@ class Product extends BaseModel
     }
 
     /**
-     * Chi tiết hóa đơn thuộc về sản phẩm này (qua các biến thể).
+     * Chi tiết hóa đơn thuộc về sản phẩm này (qua biến thể bien_the_san_pham.product_id).
      * Dùng để tính tổng số lượng đã bán (withSum) hoặc truy vấn thống kê.
      */
     public function chiTietHoaDons()
@@ -50,7 +50,7 @@ class Product extends BaseModel
             ChiTietHoaDon::class,
             BienTheSanPham::class,
             'product_id',
-            'variant_id',
+            'id_bien_the_san_pham',
             'id',
             'id'
         );
@@ -69,9 +69,9 @@ class Product extends BaseModel
     public function scopeWithTongDaBan($query)
     {
         return $query->addSelect([
-            'tong_da_ban' => DB::table('chi_tiet_hoa_don as cth')
+            'tong_da_ban' => DB::table('bien_the_san_pham as v')
+                ->join('chi_tiet_hoa_don as cth', 'cth.id_bien_the_san_pham', '=', 'v.id')
                 ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
-                ->join('bien_the_san_pham as v', 'cth.variant_id', '=', 'v.id')
                 ->whereColumn('v.product_id', 'san_pham.id')
                 ->where('hd.trang_thai', 'Hoàn thành')
                 ->whereNull('hd.deleted_at')
@@ -280,7 +280,9 @@ class Product extends BaseModel
             'defaultPrice' => $first->gia_ban ?? 0,
             'defaultCost' => $first->gia_von ?? 0,
             'defaultMinStock' => $first->dinh_muc_toi_thieu ?? 0,
-            'imagePreview' => $first->hinh_anh ? asset($first->hinh_anh) : '',
+            'imagePreview' => $first->hinh_anh
+                ? \App\Models\BienTheSanPham::resolveImageUrl($first->hinh_anh)
+                : \App\Models\BienTheSanPham::placeholderImageUrl(),
         ];
 
         // Tập tên các đơn vị quy đổi (DonViQuyDoi) để phân biệt với đơn vị cơ bản.

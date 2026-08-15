@@ -162,8 +162,8 @@
                             <input type="checkbox" class="form-check-input product-checkbox" value="{{ $sanPham->id }}">
                         </td>
                         <td onclick="event.stopPropagation();">
-                            @if($sanPham->hinh_anh)
-                                <img src="{{ asset($sanPham->hinh_anh) }}"
+                            @if($sanPham->hinh_anh && \App\Models\BienTheSanPham::hasImageFile($sanPham->hinh_anh))
+                                <img src="{{ \App\Models\BienTheSanPham::resolveImageUrl($sanPham->hinh_anh) }}"
                                      alt="{{ $sanPham->ten_san_pham }}"
                                      style="width:48px; height:48px; object-fit:cover; border-radius:6px;">
                             @else
@@ -233,8 +233,8 @@
                     <tr class="variant-child-row" id="variantRow{{ $sanPham->id }}_{{ $bienThe->id }}" style="display:none; background:#fafafa;" data-product-id="{{ $sanPham->id }}" data-target-id="{{ $bienThe->id }}" data-row-type="goc">
                         <td></td>
                         <td onclick="event.stopPropagation();">
-                            @if($bienThe->hinh_anh)
-                                <img src="{{ asset($bienThe->hinh_anh) }}" alt="" style="width:36px; height:36px; object-fit:cover; border-radius:4px; border:1px solid #eee;">
+                            @if($bienThe->hinh_anh && \App\Models\BienTheSanPham::hasImageFile($bienThe->hinh_anh))
+                                <img src="{{ \App\Models\BienTheSanPham::resolveImageUrl($bienThe->hinh_anh) }}" alt="" style="width:36px; height:36px; object-fit:cover; border-radius:4px; border:1px solid #eee;">
                             @else
                                 <div style="width:36px; height:36px; border-radius:4px; background:#eee; display:flex; align-items:center; justify-content:center;">
                                     <i class="fas fa-image text-muted" style="font-size:0.7rem;"></i>
@@ -1834,4 +1834,3 @@
 
 <script>/* Product detail drawer removed */</script>
 @endsection
-

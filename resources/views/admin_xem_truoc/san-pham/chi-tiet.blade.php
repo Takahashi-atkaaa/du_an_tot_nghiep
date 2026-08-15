@@ -49,12 +49,13 @@
             <div class="detail-card-header">
                 <h6><i class="fas fa-info-circle text-blue-600 me-2"></i>Thông tin sản phẩm</h6>
             </div>
-            <div class="detail-card-body">
-                {{-- Ảnh sản phẩm (khung viền) --}}
-                <div class="product-image-frame mb-4">
-                    @if($product->variants->count() > 0 && $product->variants->first()->hinh_anh)
-                        <img src="{{ asset($product->variants->first()->hinh_anh) }}"
-                             alt="{{ $product->ten_san_pham }}">
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    @if($product->variants->count() > 0 && $product->variants->first()->hinh_anh && \App\Models\BienTheSanPham::hasImageFile($product->variants->first()->hinh_anh))
+                        <img src="{{ \App\Models\BienTheSanPham::resolveImageUrl($product->variants->first()->hinh_anh) }}"
+                             alt="{{ $product->ten_san_pham }}"
+                             class="rounded-3 shadow-sm"
+                             style="width: 100%; max-height: 260px; object-fit: cover;">
                     @else
                         <div class="product-image-placeholder">
                             <i class="fas fa-image"></i>
@@ -182,135 +183,78 @@
     </div>
 
     <div class="col-lg-8">
-        {{-- ============================================================
-            CỘT PHẢI: 1 DETAIL-CARD DUY NHẤT chứa nav-tabs-modern + 4 tab panes
-            ------------------------------------------------------------
-            Gom 4 chức năng (Biến thể / Lịch sử bán hàng / Lịch sử
-            Kho / Quản lý Lô hàng) vào cùng 1 detail-card để giao
-            diện gọn gàng, đỡ phải scroll dọc giữa các card.
-            ============================================================ --}}
-        @php
-            // Helpers giữ nguyên như phiên trước
-            $loaiPhieuGroups = [
-                'mua'  => ['tokens' => ['nhập hàng', 'nhập kiểm kê', 'mua', 'nhập']],
-                'tra'  => ['tokens' => ['trả hàng', 'trả ncc', 'trả', 'đổi / trả hàng', 'trả hàng từ khách']],
-                'tieu' => ['tokens' => ['tiêu hủy', 'xuất hủy', 'xuất']],
-                'kiem' => ['tokens' => ['kiểm kho', 'kiểm']],
-            ];
-            $categorizeLoaiPhieu = function (?string $raw) use ($loaiPhieuGroups): string {
-                $haystack = mb_strtolower(trim((string) $raw));
-                if ($haystack === '') return 'khac';
-                foreach ($loaiPhieuGroups as $key => $group) {
-                    foreach ($group['tokens'] as $token) {
-                        if (str_contains($haystack, $token)) return $key;
-                    }
-                }
-                return 'khac';
-            };
-        @endphp
-
-        <div class="detail-card">
-            {{-- MODERN NAV TABS (Tailwind-style) --}}
-            <ul class="nav-tabs-modern" id="productDetailTabs" role="tablist">
-                <li role="presentation">
-                    <button class="nav-link active" id="tab-bien-the-tab" data-bs-toggle="tab"
-                            data-bs-target="#tab-bien-the" type="button" role="tab"
-                            aria-controls="tab-bien-the" aria-selected="true">
-                        <i class="fas fa-layer-group"></i>Biến thể
-                        <span class="nav-counter">{{ $product->variants->count() }}</span>
-                    </button>
-                </li>
-                <li role="presentation">
-                    <button class="nav-link" id="tab-lich-su-ban-hang-tab" data-bs-toggle="tab"
-                            data-bs-target="#tab-lich-su-ban-hang" type="button" role="tab"
-                            aria-controls="tab-lich-su-ban-hang" aria-selected="false">
-                        <i class="fas fa-receipt"></i>Lịch sử bán hàng
-                    </button>
-                </li>
-                <li role="presentation">
-                    <button class="nav-link" id="tab-lich-su-kho-tab" data-bs-toggle="tab"
-                            data-bs-target="#tab-lich-su-kho" type="button" role="tab"
-                            aria-controls="tab-lich-su-kho" aria-selected="false">
-                        <i class="fas fa-history"></i>Lịch sử Kho
-                        <span class="nav-counter">{{ count($theKho) }}</span>
-                    </button>
-                </li>
-                <li role="presentation">
-                    <button class="nav-link" id="tab-quan-ly-lo-hang-tab" data-bs-toggle="tab"
-                            data-bs-target="#tab-quan-ly-lo-hang" type="button" role="tab"
-                            aria-controls="tab-quan-ly-lo-hang" aria-selected="false">
-                        <i class="fas fa-boxes-stacked"></i>Quản lý Lô hàng
-                        <span class="nav-counter">{{ count($loHang) }}</span>
-                    </button>
-                </li>
-            </ul>
-
-            <div class="tab-content" id="productDetailTabsContent">
-
-                    {{-- ============================================================
-                        TAB 1: BIẾN THỂ
-                        ============================================================ --}}
-                    <div class="tab-pane fade show active" id="tab-bien-the"
-                         role="tabpanel" aria-labelledby="tab-bien-the-tab">
-                        <div class="detail-card-header">
-                            <div>
-                                <h6 class="mb-1"><i class="fas fa-layer-group text-blue-600 me-2"></i>Danh sách biến thể</h6>
-                                <div class="text-gray-500" style="font-size:0.78rem;">Quản lý chi tiết các biến thể, đơn vị quy đổi, thuộc tính của sản phẩm.</div>
-                            </div>
-                            <a href="{{ url('admin/san-pham/edit/' . $product->id) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-plus me-1"></i>Thêm biến thể
-                            </a>
-                        </div>
-
-                        {{-- ========================================================
-                             KPI WIDGETS: Biến thể
-                             (Tính server-side ở SanPhamController::show())
-                             ======================================================== --}}
-                        @php
-                            $vkTongBT   = $variantKpis['tong_bien_the']      ?? 0;
-                            $vkTonMax   = $variantKpis['ton_nhieu_nhat'];
-                            $vkSapHet   = $variantKpis['sap_het_hang']       ?? collect();
-                            $vkSoSapHet = $variantKpis['so_bien_the_sap_het'] ?? 0;
-                            $vkTonMaxTen = $vkTonMax?->ten_bien_the ?: ($vkTonMax?->ma_hang ?: '—');
-                            $vkTonMaxSL = (int) ($vkTonMax?->so_luong_ton ?? 0);
-                            $vkFirstSapHet = $vkSapHet->first();
-                        @endphp
-                        <div class="px-3 pt-3">
-                            <div class="kpi-grid kpi-grid--3">
-                                <div class="kpi-card">
-                                    <div class="kpi-head">
-                                        <span class="kpi-label">Tổng số biến thể</span>
-                                        <span class="kpi-icon kpi-icon--blue"><i class="fas fa-layer-group"></i></span>
-                                    </div>
-                                    <div class="kpi-value">{{ number_format($vkTongBT) }} <span class="text-gray-500" style="font-size:0.85rem;font-weight:500;">biến thể</span></div>
-                                    <div class="kpi-sub">Đang quản lý trong hệ thống</div>
-                                </div>
-                                <div class="kpi-card">
-                                    <div class="kpi-head">
-                                        <span class="kpi-label">Tồn nhiều nhất</span>
-                                        <span class="kpi-icon kpi-icon--green"><i class="fas fa-cubes"></i></span>
-                                    </div>
-                                    <div class="kpi-value" style="font-size:1.25rem;">{{ \Illuminate\Support\Str::limit($vkTonMaxTen, 22) }}</div>
-                                    <div class="kpi-sub"><strong>{{ number_format($vkTonMaxSL) }}</strong> sản phẩm trong kho</div>
-                                </div>
-                                <div class="kpi-card" style="{{ $vkSoSapHet > 0 ? 'border-color:#fecaca;' : '' }}">
-                                    <div class="kpi-head">
-                                        <span class="kpi-label">Sắp hết hàng</span>
-                                        <span class="kpi-icon kpi-icon--{{ $vkSoSapHet > 0 ? 'red' : 'gray' }}"><i class="fas fa-exclamation-triangle"></i></span>
-                                    </div>
-                                    <div class="kpi-value">
-                                        {{ number_format($vkSoSapHet) }}
-                                        <span class="text-gray-500" style="font-size:0.85rem;font-weight:500;">
-                                            / {{ number_format($vkTongBT) }} biến thể
-                                        </span>
-                                        @if($vkSoSapHet > 0)
-                                            <span class="kpi-trend kpi-trend--down">
-                                                <i class="fas fa-arrow-down"></i> {{ $vkTongBT > 0 ? round($vkSoSapHet / max($vkTongBT,1) * 100) : 0 }}%
-                                            </span>
-                                        @endif
-                                    </div>
-                                    <div class="kpi-sub">
-                                        @if($vkFirstSapHet)
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="fas fa-layer-group me-2 text-danger"></i>Danh sách biến thể</h5>
+                <a href="{{ url('admin/san-pham/edit/' . $product->id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-plus me-1"></i>Thêm biến thể
+                </a>
+            </div>
+            <div class="card-body p-0">
+                @if($product->variants->count() > 0)
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-uppercase small fw-semibold" style="width:40px;">#</th>
+                                    <th class="text-uppercase small fw-semibold">Biến thể</th>
+                                    <th class="text-uppercase small fw-semibold text-center">Mã vạch</th>
+                                    <th class="text-uppercase small fw-semibold text-end">Giá vốn</th>
+                                    <th class="text-uppercase small fw-semibold text-end">Giá bán</th>
+                                    <th class="text-uppercase small fw-semibold text-center">Tồn kho</th>
+                                    <th class="text-uppercase small fw-semibold">Thuộc tính</th>
+                                    <th class="text-uppercase small fw-semibold text-center">Đơn vị</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($product->variants as $index => $variant)
+                                    <tr>
+                                        <td class="text-center text-muted">{{ $index + 1 }}</td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                @if($variant->hinh_anh && \App\Models\BienTheSanPham::hasImageFile($variant->hinh_anh))
+                                                    <img src="{{ \App\Models\BienTheSanPham::resolveImageUrl($variant->hinh_anh) }}"
+                                                         alt="{{ $variant->ten_bien_the }}"
+                                                         class="rounded"
+                                                         style="width:40px;height:40px;object-fit:cover;">
+                                                @else
+                                                    <div class="rounded bg-light d-flex align-items-center justify-content-center"
+                                                         style="width:40px;height:40px;">
+                                                        <i class="fas fa-box text-muted"></i>
+                                                    </div>
+                                                @endif
+                                                <div>
+                                                    <span class="fw-semibold small">{{ $variant->ten_bien_the ?: 'Mặc định' }}</span>
+                                                    @if($variant->ma_hang)
+                                                        <div class="text-muted" style="font-size:0.72rem;">MH: {{ $variant->ma_hang }}</div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="small text-muted font-monospace">{{ $variant->ma_vach ?: '-' }}</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <span class="fw-semibold text-secondary">{{ number_format((float)$variant->gia_von, 0, ',', '.') }} đ</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <span class="fw-bold text-primary">{{ number_format((float)$variant->gia_ban, 0, ',', '.') }} đ</span>
+                                        </td>
+                                        <td class="text-center">
+                                            @php
+                                                $dinhMuc = $variant->dinh_muc_toi_thieu ?? 0;
+                                                $tonKho = $variant->so_luong_ton ?? 0;
+                                            @endphp
+                                            @if($tonKho <= 0)
+                                                <span class="badge bg-secondary">Hết</span>
+                                            @elseif($tonKho <= $dinhMuc)
+                                                <span class="badge bg-warning text-dark">Sắp hết</span>
+                                            @else
+                                                <span class="badge bg-success">Còn</span>
+                                            @endif
+                                            <span class="d-block small text-muted mt-1">{{ number_format($tonKho) }}</span>
+                                        </td>
+                                        <td>
                                             @php
                                                 $tonTmp = (int) ($vkFirstSapHet->so_luong_ton ?? 0);
                                                 $dinhMucTmp = (int) ($vkFirstSapHet->dinh_muc_toi_thieu ?? 0);

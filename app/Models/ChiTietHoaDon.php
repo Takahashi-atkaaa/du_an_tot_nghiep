@@ -9,34 +9,52 @@ class ChiTietHoaDon extends Model
 {
     use HasFactory;
 
+    protected $appends = [
+        'ten_hien_thi_san_pham',
+    ];
+
     protected $table = 'chi_tiet_hoa_don';
 
-    /**
-     * Cấu trúc bảng mới: cột `id_san_pham` đã được thay thế bằng `variant_id`
-     * (tham chiếu tới bảng bien_the_san_pham).
-     */
     protected $fillable = [
         'id_hoa_don',
-        'variant_id',
-        'id_chi_tiet_phieu',
+        'id_bien_the_san_pham',
         'so_luong',
         'gia_ban',
         'thanh_tien',
     ];
 
-    public function chiTietPhieu(){
-        return $this->belongsTo(ChiTietPhieu::class, 'id_chi_tiet_phieu');
-    }
-
-    public function hoaDon(){
+    public function hoaDon()
+    {
         return $this->belongsTo(HoaDon::class, 'id_hoa_don');
     }
 
-    /**
-     * Mỗi chi tiết hóa đơn giờ trỏ về biến thể (bien_the_san_pham)
-     * thay vì trỏ thẳng về sản phẩm cha.
-     */
-    public function bienThe(){
-        return $this->belongsTo(BienTheSanPham::class, 'variant_id');
+    public function bienTheSanPham()
+    {
+        return $this->belongsTo(BienTheSanPham::class, 'id_bien_the_san_pham');
+    }
+
+    public function sanPham()
+    {
+        return $this->hasOneThrough(
+            SanPham::class,
+            BienTheSanPham::class,
+            'id',
+            'id',
+            'id_bien_the_san_pham',
+            'product_id'
+        );
+    }
+
+    public function getTenHienThiSanPhamAttribute(): string
+    {
+        $bienThe = $this->bienTheSanPham;
+
+        if (!$bienThe) {
+            return '';
+        }
+
+        return $bienThe->ten_hien_thi
+            ?? $bienThe->product?->ten_san_pham
+            ?? '';
     }
 }

@@ -22,30 +22,167 @@
 </div>
 
 <div class="card table-admin mb-4">
-    <div class="card-body">
+    <div class="card-body py-3">
+
         <form method="GET" action="{{ url('admin/dashboard') }}">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label">Từ ngày</label>
-                    <input type="date" name="tu_ngay" class="form-control" value="{{ old('tu_ngay', $selectedStartDate ?? now()->toDateString()) }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Đến ngày</label>
-                    <input type="date" name="den_ngay" class="form-control" value="{{ old('den_ngay', $selectedEndDate ?? now()->toDateString()) }}">
-                </div>
-                <div class="col-md-2">
-                    <button class="btn btn-primary w-100">
-                        <i class="fas fa-filter me-2"></i>Lọc theo khoảng thời gian
+
+            {{-- BỘ LỌC NHANH --}}
+            <div class="mb-3">
+
+                <label class="form-label fw-semibold mb-2">
+                    <i class="fas fa-bolt text-warning me-1"></i>
+                    Bộ lọc nhanh
+                </label>
+
+                <div class="d-flex flex-wrap gap-2">
+
+                    {{-- 3 ngày --}}
+                    <button
+                        type="submit"
+                        name="bo_loc"
+                        value="3_ngay"
+                        class="btn {{ ($quickFilter ?? '') === '3_ngay'
+                            ? 'btn-primary'
+                            : 'btn-outline-primary' }}"
+                    >
+                        <i class="fas fa-calendar-day me-1"></i>
+                        3 ngày
                     </button>
-                </div>
-                <div class="col-md-4 text-end">
-                    <div class="text-muted mb-2">
-                        Thống kê: <strong>{{ $dailyStats['range_label'] ?? now()->format('d/m/Y') }}</strong>
-                    </div>
-                    <a href="{{ url('admin/hoa-don?tu_ngay=' . $selectedStartDate . '&den_ngay=' . $selectedEndDate) }}" class="btn btn-outline-secondary btn-sm">Xem chi tiết đơn hàng</a>
+
+                    {{-- 7 ngày --}}
+                    <button
+                        type="submit"
+                        name="bo_loc"
+                        value="7_ngay"
+                        class="btn {{ ($quickFilter ?? '') === '7_ngay'
+                            ? 'btn-primary'
+                            : 'btn-outline-primary' }}"
+                    >
+                        <i class="fas fa-calendar-week me-1"></i>
+                        7 ngày
+                    </button>
+
+                    {{-- Tháng --}}
+                    <button
+                        type="submit"
+                        name="bo_loc"
+                        value="thang"
+                        class="btn {{ ($quickFilter ?? '') === 'thang'
+                            ? 'btn-primary'
+                            : 'btn-outline-primary' }}"
+                    >
+                        <i class="fas fa-calendar-alt me-1"></i>
+                        Tháng này
+                    </button>
+
+                    {{-- Năm --}}
+                    <button
+                        type="submit"
+                        name="bo_loc"
+                        value="nam"
+                        class="btn {{ ($quickFilter ?? '') === 'nam'
+                            ? 'btn-primary'
+                            : 'btn-outline-primary' }}"
+                    >
+                        <i class="fas fa-calendar me-1"></i>
+                        Năm nay
+                    </button>
+
+                    {{-- Hôm nay --}}
+                    <a
+                        href="{{ url('admin/dashboard') }}"
+                        class="btn btn-outline-secondary"
+                    >
+                        <i class="fas fa-sync-alt me-1"></i>
+                        Hôm nay
+                    </a>
+
                 </div>
             </div>
+
+
+            {{-- LỌC THEO KHOẢNG NGÀY --}}
+            <div class="row g-3 align-items-end">
+
+                {{-- Từ ngày --}}
+                <div class="col-12 col-md-3">
+
+                    <label class="form-label fw-semibold mb-2">
+                        Từ ngày
+                    </label>
+
+                    <input
+                        type="date"
+                        name="tu_ngay"
+                        class="form-control"
+                        value="{{ $selectedStartDate ?? now()->toDateString() }}"
+                    >
+
+                </div>
+
+
+                {{-- Đến ngày --}}
+                <div class="col-12 col-md-3">
+
+                    <label class="form-label fw-semibold mb-2">
+                        Đến ngày
+                    </label>
+
+                    <input
+                        type="date"
+                        name="den_ngay"
+                        class="form-control"
+                        value="{{ $selectedEndDate ?? now()->toDateString() }}"
+                    >
+
+                </div>
+
+
+                {{-- Nút lọc --}}
+                <div class="col-12 col-md-2">
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary w-100"
+                    >
+                        <i class="fas fa-filter me-2"></i>
+                        Lọc
+                    </button>
+
+                </div>
+
+
+                {{-- Thông tin khoảng thời gian --}}
+                <div class="col-12 col-md-4">
+
+                    <div class="d-flex flex-wrap justify-content-md-end align-items-center gap-2">
+
+                        <div class="text-muted small">
+
+                            Thống kê:
+
+                            <strong class="text-dark">
+                                {{ $dailyStats['range_label'] ?? now()->format('d/m/Y') }}
+                            </strong>
+
+                        </div>
+
+                        <a
+                            href="{{ url('admin/hoa-don?tu_ngay=' . $selectedStartDate . '&den_ngay=' . $selectedEndDate) }}"
+                            class="btn btn-outline-secondary btn-sm"
+                        >
+                            <i class="fas fa-file-invoice me-1"></i>
+                            Xem đơn hàng
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
         </form>
+
     </div>
 </div>
 
@@ -180,10 +317,11 @@
     <div class="col-xl-6">
         <div class="card table-admin h-100">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold">Doanh thu theo giờ</h5>
-            </div>
+<h5 class="mb-0 fw-bold">
+    {{ $chartTitle ?? 'Doanh thu' }}
+</h5>            </div>
             <div class="card-body">
-                <canvas id="hourlyRevenueChart" height="160"></canvas>
+                <canvas id="revenueChart"></canvas>
             </div>
         </div>
     </div>
@@ -209,45 +347,7 @@
     </div>
 </div>
 
-{{-- <div class="card table-admin mb-4">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h5 class="mb-0 fw-bold">3 ngày gần nhất</h5>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle">
-                <thead>
-                    <tr>
-                        <th>Ngày</th>
-                        <th>Doanh thu</th>
-                        <th>Số đơn</th>
-                        <th>Hoàn thành</th>
-                        <th>Đã hủy</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($last3DaysStats as $dayStat)
-                        <tr>
-                            <td>{{ $dayStat['label'] }}</td>
-                            <td>{{ number_format($dayStat['revenue'], 0, ',', '.') }} đ</td>
-                            <td>{{ number_format($dayStat['orders']) }}</td>
-                            <td>{{ number_format($dayStat['completed']) }}</td>
-                            <td>{{ number_format($dayStat['cancelled']) }}</td>
-                            <td>
-                                <a href="{{ url('admin/hoa-don?ngay=' . $dayStat['date']) }}" class="btn btn-sm btn-outline-primary">Xem</a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">Chưa có dữ liệu.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div> --}}
+
 
 <div class="row g-4 mb-4">
     <div class="col-xl-6">
@@ -425,42 +525,71 @@
 @endsection
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const hourlyChart = document.getElementById('hourlyRevenueChart');
-        if (hourlyChart) {
-            new Chart(hourlyChart, {
-                type: 'line',
-                data: {
-                    labels: @json($hourLabels),
-                    datasets: [{
-                        label: 'Doanh thu theo giờ',
-                        data: @json(array_values($hourlyRevenue)),
-                        borderColor: '#0d6efd',
-                        backgroundColor: 'rgba(13,110,253,0.2)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.3
-                    }]
+document.addEventListener('DOMContentLoaded', function () {
+
+    const chartElement = document.getElementById('revenueChart');
+
+    if (!chartElement) {
+        return;
+    }
+
+    new Chart(chartElement, {
+        type: 'line',
+
+        data: {
+            labels: @json($chartLabels ?? []),
+
+            datasets: [{
+                label: @json($chartTitle ?? 'Doanh thu'),
+
+                data: @json($chartData ?? []),
+
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.15)',
+
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+
+                pointRadius: 3,
+                pointHoverRadius: 5
+            }]
+        },
+
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+
+            plugins: {
+                legend: {
+                    display: true
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: true }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return new Intl.NumberFormat('vi-VN').format(value);
-                                }
-                            }
+
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return new Intl.NumberFormat('vi-VN')
+                                .format(context.raw) + ' đ';
                         }
                     }
                 }
-            });
+            },
+
+            scales: {
+                y: {
+                    beginAtZero: true,
+
+                    ticks: {
+                        callback: function(value) {
+                            return new Intl.NumberFormat('vi-VN')
+                                .format(value) + ' đ';
+                        }
+                    }
+                }
+            }
         }
     });
+});
 </script>

@@ -103,6 +103,67 @@
             </div>
         </div>
 
+        <div class="card table-admin mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold">Thông tin làm việc</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <div class="text-muted small mb-1">Ca làm việc gần nhất</div>
+                            @if($caGanNhat && $caGanNhat->caLamViec)
+                                <div class="fw-semibold">
+                                    {{ $caGanNhat->caLamViec->ten_ca }}
+                                    ({{ \Carbon\Carbon::parse($caGanNhat->caLamViec->gio_bat_dau)->format('H:i') }}-{{ \Carbon\Carbon::parse($caGanNhat->caLamViec->gio_ket_thuc)->format('H:i') }})
+                                </div>
+                                <div class="small text-muted">{{ $caGanNhat->ngay ? \Carbon\Carbon::parse($caGanNhat->ngay)->format('d/m/Y') : '-' }}</div>
+                            @else
+                                <div class="fw-semibold text-muted">Chưa có</div>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <div class="text-muted small mb-1">Ca làm việc hôm nay</div>
+                            @if($caHomNay && $caHomNay->count() > 0)
+                                <div class="fw-semibold">{{ $caHomNay->count() }} ca</div>
+                                <div class="small text-muted">
+                                    @foreach($caHomNay as $index => $ca)
+                                        @if($ca->caLamViec)
+                                            {{ $ca->caLamViec->ten_ca }}@if(!$loop->last), @endif
+                                        @endif
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="fw-semibold text-muted">Chưa có ca</div>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <div class="text-muted small mb-1">Tổng số hóa đơn trong tháng</div>
+                            <div class="fw-semibold">{{ number_format($tongHoaDonThang) }}</div>
+                            <div class="small text-muted">Gồm cả hóa đơn hủy</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <div class="text-muted small mb-1">Tổng doanh thu trong tháng</div>
+                            <div class="fw-semibold">{{ number_format($tongDoanhThuThang, 0, ',', '.') }}đ</div>
+                            <div class="small text-muted">Tháng {{ \Carbon\Carbon::now()->format('m/Y') }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <div class="text-muted small mb-1">Ngày vào làm</div>
+                            <div class="fw-semibold">{{ $ngayVaoLam ? \Carbon\Carbon::parse($ngayVaoLam)->format('d/m/Y') : '-' }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="card table-admin">
             <div class="card-header bg-white py-3">
                 <h5 class="mb-0 fw-bold">Ảnh giấy tờ</h5>

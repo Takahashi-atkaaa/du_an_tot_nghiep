@@ -69,4 +69,9 @@ class HoaDon extends Model
 	{
 		return $this->hasMany(GiaoDich::class, 'id_hoa_don');
 	}
+
+	public function doiTras()
+	{
+		return $this->hasMany(DoiTra::class, 'id_hoa_don');
+	}
 }

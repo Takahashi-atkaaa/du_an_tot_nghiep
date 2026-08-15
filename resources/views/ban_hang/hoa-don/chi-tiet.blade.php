@@ -12,34 +12,37 @@
         });
     </script>
 @endif
+
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         {{ session('success') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 @endif
+
 @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         {{ session('error') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 @endif
+
 <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Chi tiết hóa đơn #HD{{ str_pad($hoaDon->id, 4, '0', STR_PAD_LEFT) }}</h1>
 
     <div>
-        <a href="{{ route('nhan-vien.hoa-don') }}" class="btn btn-secondary">
-            Quay lại
-        </a>
-
-
-
+        <a href="{{ route('nhan-vien.hoa-don') }}" class="btn btn-secondary">Quay lại</a>
         <button onclick="window.print()" class="btn btn-success">
             <i class="fas fa-print me-1"></i> In hóa đơn
         </button>
-                <a href="{{ route('nhan-vien.hoa-don.doi-tra', $hoaDon->id) }}" class="btn btn-warning">
+        <a href="{{ route('nhan-vien.hoa-don.doi-tra', $hoaDon->id) }}" class="btn btn-warning">
             <i class="fas fa-undo me-1"></i> Đổi / Trả hàng
         </a>
+        @if(isset($lichSuDoiTra) && $lichSuDoiTra->count())
+            <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#chiTietDoiTraModal">
+                <i class="fas fa-rotate-left me-1"></i> Chi tiết đổi/trả
+            </button>
+        @endif
     </div>
 </div>
 
@@ -58,50 +61,10 @@
                 <p><strong>Ngày tạo:</strong> {{ \Carbon\Carbon::parse($hoaDon->created_at)->format('d/m/Y H:i') }}</p>
                 <p><strong>Nhân viên:</strong> {{ $hoaDon->ten_nhan_vien ?? 'Nhân viên' }}</p>
             </div>
-            <div class="mt-2">
-    <strong>Ca làm việc:</strong>
-
-    @if($hoaDon->ten_ca)
-        {{ $hoaDon->ten_ca }}
-
-        <span class="text-muted">
-            (
-            {{ \Carbon\Carbon::parse($hoaDon->gio_bat_dau)->format('H:i') }}
-            -
-            {{ \Carbon\Carbon::parse($hoaDon->gio_ket_thuc)->format('H:i') }}
-            )
-        </span>
-    @else
-        <span class="text-muted">
-            Chưa xác định
-        </span>
-    @endif
-</div>
             <div class="col-md-6">
-               <p>
-                <strong>Khách hàng:</strong>
-                {{ $hoaDon->ten_khach_hang ?? 'Khách lẻ' }}
-            </p>
-
-            @if(isset($hoaDon->diem_tich_luy))
-            <p>
-                <strong>Điểm hiện có:</strong>
-                {{ number_format($hoaDon->diem_tich_luy) }} điểm
-            </p>
-            @endif
-               @php
-    $phuongThucThanhToan = [
-        'cash' => 'Tiền mặt',
-        'transfer' => 'Chuyển khoản',
-        'tien_mat' => 'Tiền mặt',
-        'chuyen_khoan' => 'Chuyển khoản',
-    ];
-@endphp
-
-<p>
-    <strong>Thanh toán:</strong>
-    {{ $phuongThucThanhToan[$hoaDon->phuong_thuc_thanh_toan] ?? $hoaDon->phuong_thuc_thanh_toan }}
-</p>
+                <p><strong>Khách hàng:</strong> {{ $hoaDon->ten_khach_hang ?? 'Khách lẻ' }}</p>
+                <p><strong>Thanh toán:</strong> {{ $hoaDon->phuong_thuc_thanh_toan }}</p>
+                <p><strong>Trạng thái:</strong> {{ $hoaDon->trang_thai }}</p>
             </div>
         </div>
 
@@ -113,144 +76,115 @@
                     <th class="text-center">SL</th>
                     <th class="text-end">Giá bán</th>
                     <th class="text-end">Thành tiền</th>
+                    <th class="text-center">Đổi / Trả</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($chiTiet as $item)
                     <tr>
                         <td>
-                            {{ $item->ten_san_pham }}
-                            @php
-                                $variantName = $item->ten_don_vi ?: $item->ten_bien_the;
-                            @endphp
-                            @if($variantName)
-                                <br><small class="text-muted">({{ $variantName }})</small>
+                            {{ $item->ten_hien_thi_san_pham ?: $item->ten_san_pham }}
+                            @if(!empty($item->thuoc_tinh_hien_thi))
+                                <br><small class="text-muted">
+                                    <i class="fas fa-tags"></i> {{ implode(' • ', $item->thuoc_tinh_hien_thi) }}
+                                </small>
                             @endif
                         </td>
                         <td>{{ $item->ma_vach }}</td>
                         <td class="text-center">{{ $item->so_luong }}</td>
                         <td class="text-end">{{ number_format($item->gia_ban, 0, ',', '.') }}đ</td>
                         <td class="text-end">{{ number_format($item->thanh_tien, 0, ',', '.') }}đ</td>
+                        <td class="text-center">
+                            @if(($item->tong_da_tra ?? 0) > 0)
+                                <span class="badge bg-danger">Đã trả {{ $item->tong_da_tra }}/{{ $item->so_luong }}</span>
+                            @endif
+                            @if(($item->tong_da_doi ?? 0) > 0)
+                                <span class="badge bg-warning text-dark">Đã đổi {{ $item->tong_da_doi }}/{{ $item->so_luong }}</span>
+                            @endif
+                            @if(($item->tong_da_doi_tra ?? 0) === 0)
+                                <span class="text-muted">Chưa phát sinh</span>
+                            @endif
+                        </td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
+    </div>
+</div>
 
-        <div class="row justify-content-end">
-            <div class="col-md-5">
-                <div class="d-flex justify-content-between mb-2">
-                    <span>Tổng tiền hàng:</span>
-                    <strong>{{ number_format($hoaDon->tong_tien_hang, 0, ',', '.') }}đ</strong>
+@if(isset($lichSuDoiTra) && $lichSuDoiTra->count())
+    <div class="modal fade" id="chiTietDoiTraModal" tabindex="-1" aria-labelledby="chiTietDoiTraModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content" id="chi-tiet-doi-tra">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="chiTietDoiTraModalLabel">Chi tiết đổi/trả của hóa đơn #HD{{ str_pad($hoaDon->id, 4, '0', STR_PAD_LEFT) }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                 </div>
+                <div class="modal-body">
+                    @foreach($lichSuDoiTra as $doiTra)
+                        <div class="border rounded p-3 mb-3">
+                            <div class="d-flex justify-content-between flex-wrap gap-2 mb-3">
+                                <div>
+                                    <div class="fw-bold">
+                                        {{ $doiTra->Loai === 'tra_hang' ? 'Trả hàng' : 'Đổi hàng' }}
+                                        #DT{{ str_pad($doiTra->id, 4, '0', STR_PAD_LEFT) }}
+                                    </div>
+                                    <div class="small text-muted">
+                                        Ngày thực hiện: {{ optional($doiTra->ngay)->format('d/m/Y H:i') }}
+                                    </div>
+                                    <div class="small text-muted">
+                                        Nhân viên: {{ $doiTra->nguoiDung->ho_ten ?? 'N/A' }}
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge {{ $doiTra->Loai === 'tra_hang' ? 'bg-danger' : 'bg-warning text-dark' }}">
+                                        {{ $doiTra->Loai === 'tra_hang' ? 'Trả hàng' : 'Đổi hàng' }}
+                                    </span>
+                                    <div class="small mt-2">
+                                        Trừ điểm khách:
+                                        <strong>{{ $doiTra->tru_diem_cua_khach ? 'Có' : 'Không' }}</strong>
+                                    </div>
+                                    <div class="small mt-1">
+                                        Hàng lỗi:
+                                        <strong>{{ $doiTra->hang_loi ? 'Có' : 'Không' }}</strong>
+                                    </div>
+                                </div>
+                            </div>
 
-                <div class="d-flex justify-content-between mb-2">
-                    <span>Giảm giá:</span>
-                    <strong>{{ number_format($hoaDon->tien_giam_gia, 0, ',', '.') }}đ</strong>
-                </div>
+                            <div class="mb-3">
+                                <strong>Lý do:</strong> {{ $doiTra->ly_do ?: 'Không có' }}
+                            </div>
 
-                <div class="d-flex justify-content-between mb-2 fs-5 text-success">
-                    <span>Khách cần trả:</span>
-                    <strong>{{ number_format($hoaDon->khach_can_tra, 0, ',', '.') }}đ</strong>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Sản phẩm / biến thể</th>
+                                            <th class="text-center">Số lượng</th>
+                                            <th class="text-end">Giá lúc mua</th>
+                                            <th class="text-end">Thành tiền</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($doiTra->chiTietDoiTras as $chiTietDoiTra)
+                                            <tr>
+                                                <td>
+                                                    {{ $chiTietDoiTra->bienTheSanPham->ten_hien_thi ?? ($chiTietDoiTra->bienTheSanPham->product->ten_san_pham ?? 'Sản phẩm') }}
+                                                </td>
+                                                <td class="text-center">{{ $chiTietDoiTra->so_luong }}</td>
+                                                <td class="text-end">{{ number_format($chiTietDoiTra->gia_ban, 0, ',', '.') }}đ</td>
+                                                <td class="text-end">{{ number_format($chiTietDoiTra->thanh_tien, 0, ',', '.') }}đ</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
-
-                <div class="d-flex justify-content-between mb-2">
-                    <span>Khách đưa:</span>
-                    <strong>{{ number_format($hoaDon->tien_khach_dua, 0, ',', '.') }}đ</strong>
-                </div>
-
-                <div class="d-flex justify-content-between">
-                    <span>Tiền thừa:</span>
-                    <strong>{{ number_format($hoaDon->tien_thua, 0, ',', '.') }}đ</strong>
-                </div>
-                 @if($hoaDon->id_khach_hang)
-                <div class="d-flex justify-content-between text-primary">
-                    <span>Điểm tích lũy nhận được:</span>
-                    <strong>+{{ $hoaDon->diem_thu_duoc ?? 0 }} điểm</strong>
-                </div>
-                @endif
-
-               
-
-                @if(($hoaDon->diem_su_dung ?? 0) > 0)
-                <div class="d-flex justify-content-between">
-                    <span>Điểm đã dùng:</span>
-                    <strong class="text-danger">
-                        -{{ number_format($hoaDon->diem_su_dung) }} điểm
-                    </strong>
-                </div>
-                @endif
             </div>
         </div>
-
-        <hr>
-
-        <p class="text-center mb-0">Cảm ơn quý khách!</p>
     </div>
-</div>
-
-@if(isset($phieuDoiTra) && $phieuDoiTra)
-<div class="text-center mt-4 mb-4 d-print-none">
-    <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#modalPhieuDoiTra">
-        <i class="fas fa-file-invoice me-2"></i> Hóa đơn đổi trả sản phẩm
-    </button>
-</div>
-
-<!-- Modal Hóa đơn đổi trả -->
-<div class="modal fade" id="modalPhieuDoiTra" tabindex="-1" aria-labelledby="modalPhieuDoiTraLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title" id="modalPhieuDoiTraLabel">Chi tiết Phiếu Đổi/Trả #PT{{ str_pad($phieuDoiTra->id, 4, '0', STR_PAD_LEFT) }}</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-            <strong>Ghi chú:</strong> {{ $phieuDoiTra->ghi_chu }} <br>
-            <strong>Ngày thực hiện:</strong> {{ \Carbon\Carbon::parse($phieuDoiTra->created_at)->format('d/m/Y H:i') }}
-        </div>
-        <table class="table table-bordered">
-            <thead class="table-light">
-                <tr>
-                    <th>Sản phẩm</th>
-                    <th>Phân loại</th>
-                    <th class="text-center">Số lượng</th>
-                    <th class="text-end">Đơn giá</th>
-                    <th class="text-end">Thành tiền</th>
-                    <th>Loại</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($phieuDoiTra->chi_tiet as $ct)
-                @php
-                    $isTra = str_contains($ct->ghi_chu, 'Hàng khách trả');
-                @endphp
-                <tr>
-                    <td>{{ $ct->ten_san_pham }}</td>
-                    <td>{{ $ct->ten_don_vi ?: $ct->ten_bien_the }}</td>
-                    <td class="text-center">{{ $ct->so_luong }}</td>
-                    <td class="text-end">{{ number_format($ct->gia_nhap, 0, ',', '.') }}đ</td>
-                    <td class="text-end">{{ number_format($ct->so_luong * $ct->gia_nhap, 0, ',', '.') }}đ</td>
-                    <td>
-                        @if($isTra)
-                            <span class="badge bg-danger">Trả hàng</span>
-                            @if(str_contains($ct->ghi_chu, 'Lỗi'))
-                                <span class="badge bg-warning text-dark">Hàng lỗi</span>
-                            @endif
-                        @else
-                            <span class="badge bg-success">Đổi mới</span>
-                        @endif
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-      </div>
-    </div>
-  </div>
-</div>
 @endif
 
 <style>
@@ -275,6 +209,5 @@
         display: none !important;
     }
 }
-
 </style>
 @endsection
