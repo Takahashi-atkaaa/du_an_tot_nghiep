@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,155 +19,162 @@
             --sidebar-hover: #2e7d32;
             --sidebar-active: #4caf50;
         }
+
         body {
             font-family: 'Roboto', sans-serif;
             background-color: #f5f6fa;
         }
-        .sidebar{
+
+        .sidebar {
             position: fixed;
-            top:0;
-            left:0;
-            width:260px;
-            height:100vh;
-            background:var(--sidebar-bg);
-            z-index:1050;
-            transition:all .3s ease;
-        }
-.topbar{
-    background:#fff;
-    padding:15px 25px;
-    box-shadow:0 2px 10px rgba(0,0,0,.1);
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-.logo{
-    padding:20px;
-    text-align:center;
-    border-bottom:1px solid rgba(255,255,255,.1);
-}
-
-.logo h4{
-    color:#fff;
-    margin:0;
-}
-
-.logo span{
-    color:#81c784;
-}
-.sidebar .nav-item{
-    margin:6px 10px;
-}
-
-.sidebar .nav-link{
-    color:#c8e6c9;
-    padding:12px 15px;
-    display:flex;
-    align-items:center;
-    gap:10px;
-    border-radius:8px;
-    transition:.3s;
-    text-decoration:none;
-}
-
-.sidebar .nav-link:hover{
-    background:#2e7d32;
-    color:#fff;
-}
-
-.sidebar .nav-link.active{
-    background:#4caf50;
-    color:#fff;
-}
-.user-info{
-    display:flex;
-    align-items:center;
-}
-
-.user-avatar{
-    width:40px;
-    height:40px;
-    border-radius:50%;
-    background:#2e7d32;
-    color:white;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    font-weight:bold;
-}
-
-        .main-content{
-            margin-left:260px;
-            min-height:100vh;
-            transition:.3s;
+            top: 0;
+            left: 0;
+            width: 260px;
+            height: 100vh;
+            background: var(--sidebar-bg);
+            z-index: 1050;
+            transition: all .3s ease;
         }
 
-        .overlay{
-            position:fixed;
-            inset:0;
-            background:rgba(0,0,0,.4);
-            z-index:1049;
-            display:none;
+        .topbar {
+            background: #fff;
+            padding: 15px 25px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, .1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .overlay.show{
-            display:block;
+        .logo {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, .1);
         }
-        @media(max-width:768px){
 
-            .sidebar{
-                transform:translateX(-100%);
+        .logo h4 {
+            color: #fff;
+            margin: 0;
+        }
+
+        .logo span {
+            color: #81c784;
+        }
+
+        .sidebar .nav-item {
+            margin: 6px 10px;
+        }
+
+        .sidebar .nav-link {
+            color: #c8e6c9;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-radius: 8px;
+            transition: .3s;
+            text-decoration: none;
+        }
+
+        .sidebar .nav-link:hover {
+            background: #2e7d32;
+            color: #fff;
+        }
+
+        .sidebar .nav-link.active {
+            background: #4caf50;
+            color: #fff;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #2e7d32;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            min-height: 100vh;
+            transition: .3s;
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .4);
+            z-index: 1049;
+            display: none;
+        }
+
+        .overlay.show {
+            display: block;
+        }
+
+        @media(max-width:768px) {
+
+            .sidebar {
+                transform: translateX(-100%);
             }
 
-            .sidebar.show{
-                transform:translateX(0);
+            .sidebar.show {
+                transform: translateX(0);
             }
 
-            .main-content{
-                margin-left:0;
+            .main-content {
+                margin-left: 0;
             }
 
-            .topbar{
-                padding:12px 15px;
+            .topbar {
+                padding: 12px 15px;
             }
 
-            .content-wrapper{
-                padding:15px;
+            .content-wrapper {
+                padding: 15px;
             }
         }
     </style>
     @yield('styles')
 </head>
+
 <body>
     <div class="overlay" id="overlay"></div>
     <!-- Sidebar -->
     <nav class="sidebar" id="sidebar">
-<div class="logo d-flex justify-content-between align-items-center px-3">
+        <div class="logo d-flex justify-content-between align-items-center px-3">
 
-    <div>
-    <h4>Smart<span>Mart</span></h4>
-    <small class="text-light opacity-75">
-    Nhân viên
-    </small>
-    </div>
+            <div>
+                <h4>Smart<span>Mart</span></h4>
+                <small class="text-light opacity-75">
+                    Nhân viên
+                </small>
+            </div>
 
-    <button
-    id="closeSidebar"
-    class="btn btn-sm btn-light d-md-none">
+            <button id="closeSidebar" class="btn btn-sm btn-light d-md-none">
 
-    <i class="fas fa-times"></i>
+                <i class="fas fa-times"></i>
 
-    </button>
+            </button>
 
-    </div>
+        </div>
         <ul class="nav flex-column mt-3">
             <li class="nav-item">
-                <a href="{{ url('trang-chu/') }}" class="nav-link {{ request()->is('nhan-vien') || request()->is('nhan-vien/') ? 'active' : '' }}">
+                <a href="{{ url('trang-chu/') }}"
+                    class="nav-link {{ request()->is('nhan-vien') || request()->is('nhan-vien/') ? 'active' : '' }}">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>Trang chủ</span>
                 </a>
             </li>
-            @if(auth()->user()->id_vai_tro == 4)
+            @if (auth()->user()->id_vai_tro == 4)
                 <li class="nav-item">
                     <a href="{{ url('/ban-hang') }}" class="nav-link {{ request()->is('/ban-hang') ? 'active' : '' }}">
                         <i class="fas fa-cash-register"></i>
@@ -176,7 +184,8 @@
             @endif
 
             <li class="nav-item">
-                <a href="{{ url('/lich-lam-viec/tuan') }}" class="nav-link {{ request()->is('lich-lam-viec*') ? 'active' : '' }}">
+                <a href="{{ url('/lich-lam-viec/tuan') }}"
+                    class="nav-link {{ request()->is('lich-lam-viec*') ? 'active' : '' }}">
                     <i class="fas fa-calendar-alt"></i>
                     <span>Lịch làm việc</span>
                 </a>
@@ -197,9 +206,7 @@
 
             <div class="d-flex align-items-center">
 
-                <button
-                    id="sidebar-toggle"
-                    class="btn btn-success me-3 d-md-none">
+                <button id="sidebar-toggle" class="btn btn-success me-3 d-md-none">
 
                     <i class="fas fa-bars"></i>
 
@@ -232,7 +239,9 @@
                             </a>
                         </li>
 
-                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
 
                         <li>
                             <a class="dropdown-item" href="{{ url('admin/logout') }}">
@@ -259,7 +268,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Font Awesome JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
-    
+
     <script>
         // Sidebar toggle for mobile
         document.getElementById('sidebar-toggle')?.addEventListener('click', function() {
@@ -279,7 +288,7 @@
 
         const closeSidebar = document.getElementById("closeSidebar");
 
-        toggle?.addEventListener("click",()=>{
+        toggle?.addEventListener("click", () => {
 
             sidebar.classList.add("show");
 
@@ -287,7 +296,7 @@
 
         });
 
-        closeSidebar?.addEventListener("click",()=>{
+        closeSidebar?.addEventListener("click", () => {
 
             sidebar.classList.remove("show");
 
@@ -295,7 +304,7 @@
 
         });
 
-        overlay.addEventListener("click",()=>{
+        overlay.addEventListener("click", () => {
 
             sidebar.classList.remove("show");
 
@@ -304,4 +313,5 @@
         });
     </script>
 </body>
+
 </html>

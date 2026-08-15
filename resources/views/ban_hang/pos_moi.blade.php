@@ -113,6 +113,220 @@
             font-size: 15px;
         }
 
+        /* ===== SIDEBAR (toggleable) ===== */
+        .pos-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 260px;
+            background: var(--pos-primary-dark);
+            color: #dbeafe;
+            padding-top: 0;
+            z-index: 1100;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 24px rgba(0,0,0,0.18);
+        }
+
+        .pos-sidebar.open {
+            transform: translateX(0);
+        }
+
+        .pos-sidebar .sidebar-logo {
+            padding: 22px 20px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .pos-sidebar .sidebar-logo h4 {
+            color: #fff;
+            font-weight: 800;
+            margin: 0;
+            font-size: 18px;
+            letter-spacing: 0.3px;
+        }
+
+        .pos-sidebar .sidebar-logo h4 span { color: #93c5fd; }
+
+        .pos-sidebar .sidebar-logo small {
+            color: rgba(255,255,255,0.6);
+            font-size: 11px;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .pos-sidebar .sidebar-logo .close-sidebar {
+            margin-left: auto;
+            background: rgba(255,255,255,0.1);
+            border: 0;
+            color: #fff;
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pos-sidebar .sidebar-logo .close-sidebar:hover { background: rgba(255,255,255,0.18); }
+
+        .pos-sidebar .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 10px 20px;
+        }
+
+        .pos-sidebar .nav-item {
+            margin: 4px 0;
+        }
+
+        .pos-sidebar .nav-link {
+            color: #dbeafe;
+            padding: 11px 14px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .pos-sidebar .nav-link:hover {
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+        }
+
+        .pos-sidebar .nav-link.active {
+            background: var(--pos-primary);
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .pos-sidebar .nav-link i {
+            width: 20px;
+            text-align: center;
+            font-size: 15px;
+        }
+
+        .pos-sidebar .nav-link .badge-pill {
+            margin-left: auto;
+            background: rgba(255,255,255,0.18);
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+        }
+
+        .pos-sidebar .sidebar-divider {
+            height: 1px;
+            background: rgba(255,255,255,0.1);
+            margin: 14px 10px;
+        }
+
+        .pos-sidebar .sidebar-footer {
+            padding: 12px 16px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            background: rgba(0,0,0,0.15);
+        }
+
+        .pos-sidebar .sidebar-footer .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--pos-primary);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .pos-sidebar .sidebar-footer .info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .pos-sidebar .sidebar-footer .info .name {
+            color: #fff;
+            font-weight: 600;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pos-sidebar .sidebar-footer .info .role {
+            color: rgba(255,255,255,0.6);
+            font-size: 11px;
+        }
+
+        .pos-sidebar .sidebar-footer .logout-btn {
+            background: rgba(239,68,68,0.18);
+            border: 0;
+            color: #fecaca;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .pos-sidebar .sidebar-footer .logout-btn:hover {
+            background: rgba(239,68,68,0.35);
+            color: #fff;
+        }
+
+        .sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            z-index: 1050;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .sidebar-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .btn-toggle-sidebar {
+            background: rgba(255,255,255,0.18);
+            border: 0;
+            color: #fff;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            margin-right: 8px;
+            transition: background 0.2s;
+        }
+
+        .btn-toggle-sidebar:hover { background: rgba(255,255,255,0.3); }
+
         /* ===== MAIN LAYOUT ===== */
         .pos-main {
             display: grid;
@@ -664,11 +878,93 @@
     </style>
 </head>
 <body>
+<!-- SIDEBAR -->
+<aside class="pos-sidebar" id="posSidebar">
+    <div class="sidebar-logo">
+        <div>
+            <h4>Smart<span>Mart</span></h4>
+            <small>Bán hàng POS</small>
+        </div>
+        <button class="close-sidebar" id="btnCloseSidebar" type="button" aria-label="Đóng menu">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <nav class="sidebar-nav">
+        @if (isset($nguoiDung->id_vai_tro) && in_array($nguoiDung->id_vai_tro, [1, 2]))
+        <div class="nav-item">
+            <a href="{{ url('/admin/dashboard') }}" class="nav-link">
+                <i class="fa-solid fa-gauge-high"></i>
+                <span>Trang quản trị</span>
+            </a>
+        </div>
+        @endif
+
+        <div class="sidebar-divider"></div>
+
+        <div class="nav-item">
+            <a href="{{ url('/ban-hang') }}" class="nav-link active">
+                <i class="fa-solid fa-cash-register"></i>
+                <span>Bán hàng</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="{{ url('/hoa-don') }}" class="nav-link">
+                <i class="fa-solid fa-file-invoice"></i>
+                <span>Hóa đơn</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="{{ url('/san-pham') }}" class="nav-link">
+                <i class="fa-solid fa-box"></i>
+                <span>Sản phẩm</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="{{ url('/khach-hang') }}" class="nav-link">
+                <i class="fa-solid fa-users"></i>
+                <span>Khách hàng</span>
+            </a>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        @auth
+            @if(auth()->user()->id_vai_tro != 1 && auth()->user()->id_vai_tro != 2 && auth()->user()->id_vai_tro != 4)
+                <div class="nav-item">
+                    <a href="{{ url('/lich-lam-viec') }}" class="nav-link">
+                        <i class="fa-solid fa-calendar-days"></i>
+                        <span>Lịch làm việc</span>
+                    </a>
+                </div>
+            @endif
+        @endauth
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="avatar">{{ mb_substr($nguoiDung->ho_ten ?? 'U', 0, 1) }}</div>
+        <div class="info">
+            <div class="name">{{ $nguoiDung->ho_ten ?? 'Nhân viên' }}</div>
+            <div class="role">{{ $nguoiDung->email ?? '' }}</div>
+        </div>
+        <a class="logout-btn" href="{{ url('admin/logout') }}" title="Đăng xuất">
+            <i class="fa-solid fa-right-from-bracket"></i>
+        </a>
+    </div>
+</aside>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
 <div class="pos-shell">
     <header class="pos-header">
-        <div class="logo">
-            <i class="fa-solid fa-cash-register"></i>
-            <span>SmartMart POS</span>
+        <div class="d-flex align-items-center">
+            <button class="btn-toggle-sidebar" id="btnOpenSidebar" type="button" aria-label="Mở menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="logo">
+                <i class="fa-solid fa-cash-register"></i>
+                <span>SmartMart POS</span>
+            </div>
         </div>
         <div class="meta">
             <span class="ca-badge"><i class="fa-regular fa-clock me-1"></i>Ca: {{ $caHienTai->ten_ca ?? '—' }} @if(isset($caHienTai->gio_bat_dau)) ({{ substr($caHienTai->gio_bat_dau,0,5) }} - {{ substr($caHienTai->gio_ket_thuc,0,5) }}) @endif</span>
@@ -863,6 +1159,7 @@ const invoicePrintUrl = '{{ url('/hoa-don') }}';
 
 const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Number(n || 0)) + ' đ';
 const parseMoney = (v) => parseInt(String(v || '').replace(/\D/g, ''), 10) || 0;
+const SELLER_STORAGE_KEY = 'smartmart_pos_seller_id';
 
 // =========================================================
 // STATE
@@ -1006,6 +1303,10 @@ async function loadProducts() {
         if (searchKeyword) params.set('q', searchKeyword);
         const url = productListUrl + (params.toString() ? '?' + params.toString() : '');
         const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) {
+            grid.innerHTML = '<div class="product-grid-empty"><i class="fa-solid fa-circle-exclamation"></i><p>Lỗi tải sản phẩm (HTTP ' + res.status + ')</p></div>';
+            return;
+        }
         allProducts = await res.json();
         renderProducts();
     } catch (err) {
@@ -1297,14 +1598,37 @@ async function loadSellers() {
             opt.textContent = s.ho_ten + (s.ten_vai_tro ? ' (' + s.ten_vai_tro + ')' : '');
             sel.appendChild(opt);
         });
-        // Mặc định chọn người đang đăng nhập
+        // Chọn giá trị theo thứ tự ưu tiên:
+        //  1) Lựa chọn đã ghi nhớ trong localStorage (nếu còn hợp lệ).
+        //  2) Người đang đăng nhập.
+        //  3) Để trống.
         const me = '{{ $nguoiDung->id ?? '' }}';
-        if (me) sel.value = me;
+        const remembered = localStorage.getItem(SELLER_STORAGE_KEY);
+        let chosen = '';
+        if (remembered && allSellers.some(s => String(s.id) === String(remembered))) {
+            chosen = remembered;
+        } else if (me && allSellers.some(s => String(s.id) === String(me))) {
+            chosen = me;
+            // id cũ không còn hợp lệ -> đồng bộ lại localStorage
+            if (remembered && remembered !== me) {
+                localStorage.setItem(SELLER_STORAGE_KEY, me);
+            }
+        } else if (remembered) {
+            // id trong localStorage không còn trong danh sách -> xóa đi
+            localStorage.removeItem(SELLER_STORAGE_KEY);
+        }
+        sel.value = chosen;
+        getActiveInvoice().sellerId = sel.value;
     } catch (err) { console.error(err); }
 }
 
 document.getElementById('sellerSelect').addEventListener('change', function() {
     getActiveInvoice().sellerId = this.value;
+    if (this.value) {
+        localStorage.setItem(SELLER_STORAGE_KEY, this.value);
+    } else {
+        localStorage.removeItem(SELLER_STORAGE_KEY);
+    }
 });
 
 // =========================================================
@@ -1467,7 +1791,16 @@ document.getElementById('btnConfirmPay').onclick = async () => {
             },
             body: JSON.stringify(body),
         });
-        const data = await res.json();
+
+        let data;
+        try {
+            const rawText = await res.text();
+            data = JSON.parse(rawText);
+        } catch (parseErr) {
+            showToast('Phản hồi server không hợp lệ. Vui lòng thử lại.', 'error');
+            document.getElementById('btnConfirmPay').disabled = false;
+            return;
+        }
 
         if (!res.ok || !data.success) {
             showToast(data.message || 'Thanh toán thất bại!', 'error');
@@ -1545,6 +1878,33 @@ document.getElementById('btnClearCart').onclick = () => {
     renderInvoiceItems();
     renderTotals();
 };
+
+// =========================================================
+// SIDEBAR TOGGLE
+// =========================================================
+const sidebarEl = document.getElementById('posSidebar');
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+function openSidebar() {
+    sidebarEl.classList.add('open');
+    sidebarOverlay.classList.add('show');
+}
+
+function closeSidebar() {
+    sidebarEl.classList.remove('open');
+    sidebarOverlay.classList.remove('show');
+}
+
+document.getElementById('btnOpenSidebar').addEventListener('click', openSidebar);
+document.getElementById('btnCloseSidebar').addEventListener('click', closeSidebar);
+sidebarOverlay.addEventListener('click', closeSidebar);
+
+// Đóng sidebar khi bấm phím Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && sidebarEl.classList.contains('open')) {
+        closeSidebar();
+    }
+});
 
 // =========================================================
 // LIVE CLOCK

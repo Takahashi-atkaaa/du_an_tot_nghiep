@@ -149,10 +149,16 @@ class NhanVienController extends Controller
      */
     $caHienTai = $this->timCaLamViecHienTai();
 
-    return view(
-        'ban_hang.pos',
-        compact('caHienTai')
-    );
+    $danhSachDanhMuc = DanhMucSanPham::query()
+        ->where('trang_thai', 1)
+        ->orderBy('id', 'asc')
+        ->get();
+
+    return view('ban_hang.pos_moi', compact(
+        'nguoiDung',
+        'caHienTai',
+        'danhSachDanhMuc'
+    ));
 }
 
 public function banHangMoi()
