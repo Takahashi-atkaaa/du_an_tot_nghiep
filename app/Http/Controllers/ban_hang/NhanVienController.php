@@ -613,7 +613,11 @@ public function hoaDon(Request $request)
 
             $tienGiamGia = 0;
             $diemSuDung = (int)($request->diem_su_dung ?? 0);
+            $khuyenMaiDaApDung = [];
             // ===============================
+// KHUYẾN MÃI SẢN PHẨM TỰ ĐỘNG
+// ===============================
+// ===============================
 // KHUYẾN MÃI SẢN PHẨM TỰ ĐỘNG
 // ===============================
 foreach ($items as $item) {
@@ -656,6 +660,7 @@ foreach ($items as $item) {
         ->get();
 
     $giamTotNhat = 0;
+    $idKhuyenMaiTotNhat = null;
 
     foreach ($khuyenMaisSanPham as $km) {
 
@@ -689,12 +694,7 @@ foreach ($items as $item) {
             case 'phan_tram':
             case 'percent':
             case 'percentage':
-
-                $giam =
-                    $thanhTien *
-                    $giaTri /
-                    100;
-
+                $giam = $thanhTien * $giaTri / 100;
                 break;
 
             case 'amount':
@@ -702,22 +702,17 @@ foreach ($items as $item) {
             case 'tien_mat':
             case 'so_tien':
             case 'giam_tien':
-
-                // giảm theo từng sản phẩm
                 $giam = min(
                     $giaTri * $soLuong,
                     $thanhTien
                 );
-
                 break;
 
             case 'bogo':
             case 'mua_1_tang_1':
-
                 $giam =
                     floor($soLuong / 2) *
                     $giaBan;
-
                 break;
         }
 
@@ -733,178 +728,236 @@ foreach ($items as $item) {
             $thanhTien
         );
 
-        $giamTotNhat = max(
-            $giamTotNhat,
-            $giam
-        );
+        // Chọn KM giảm nhiều nhất
+        if ($giam > $giamTotNhat) {
+
+            $giamTotNhat = $giam;
+
+            $idKhuyenMaiTotNhat =
+                (int) $km->id;
+        }
+    }
+
+    // Lưu lại KM thắng của item này
+    if (
+        $idKhuyenMaiTotNhat !== null &&
+        $giamTotNhat > 0
+    ) {
+
+        if (!isset(
+            $khuyenMaiDaApDung[$idKhuyenMaiTotNhat]
+        )) {
+
+            $khuyenMaiDaApDung[$idKhuyenMaiTotNhat] = [
+                'id_khuyen_mai' =>
+                    $idKhuyenMaiTotNhat,
+
+                'tien_giam' => 0,
+
+                'loai_ap_dung' =>
+                    'san_pham',
+            ];
+        }
+
+        $khuyenMaiDaApDung[
+            $idKhuyenMaiTotNhat
+        ]['tien_giam'] +=
+            $giamTotNhat;
     }
 
     $tienGiamGia += $giamTotNhat;
 }
-            if ($request->id_khuyen_mai) {
+            // ==========================================
+// VOUCHER / KHUYẾN MÃI ĐƯỢC CHỌN TẠI POS
+// ==========================================
+
+$tienGiamVoucher = 0;
+
+if ($request->id_khuyen_mai) {
+
     $khuyenMai = DB::table('khuyen_mai')
         ->where('id', $request->id_khuyen_mai)
         ->where('trang_thai', 1)
+        ->where('ngay_bat_dau', '<=', now())
+        ->where('ngay_ket_thuc', '>=', now())
         ->first();
 
     if ($khuyenMai) {
 
         /*
-         * Lấy phạm vi áp dụng khuyến mãi.
+         * Kiểm tra khuyến mãi này có gắn sản phẩm không.
+         *
+         * Không có dòng nào:
+         * => voucher toàn hóa đơn.
+         *
+         * Có dòng:
+         * => khuyến mãi sản phẩm.
          */
         $phamViKhuyenMai = DB::table('khuyen_mai_san_pham')
             ->where('id_khuyen_mai', $khuyenMai->id)
             ->get();
 
-        /*
-         * Sản phẩm được áp dụng toàn bộ biến thể.
-         */
-        $idSanPhamsApDung = $phamViKhuyenMai
-            ->whereNull('id_bien_the_san_pham')
-            ->pluck('id_san_pham')
-            ->map(fn ($id) => (int) $id)
-            ->all();
 
-        /*
-         * Những biến thể được áp dụng riêng.
-         */
-        $idBienThesApDung = $phamViKhuyenMai
-            ->whereNotNull('id_bien_the_san_pham')
-            ->pluck('id_bien_the_san_pham')
-            ->map(fn ($id) => (int) $id)
-            ->all();
+        // ======================================
+        // CHỈ XỬ LÝ VOUCHER TOÀN HÓA ĐƠN Ở ĐÂY
+        // ======================================
 
-        /*
-         * Lọc đúng các item được khuyến mãi.
-         */
-        $itemsDuocKhuyenMai = collect($items)
-            ->filter(function ($item) use (
-                $idSanPhamsApDung,
-                $idBienThesApDung
-            ) {
-                $idSanPham = (int) $item['bien_the']->product_id;
-                $idBienThe = (int) $item['bien_the']->id;
+        if ($phamViKhuyenMai->isEmpty()) {
 
-                $apDungTheoSanPham = in_array(
-                    $idSanPham,
-                    $idSanPhamsApDung,
-                    true
-                );
+            $tongSoLuong = collect($items)
+                ->sum('so_luong');
 
-                $apDungTheoBienThe = in_array(
-                    $idBienThe,
-                    $idBienThesApDung,
-                    true
-                );
+            $donHangToiThieu =
+                (float) ($khuyenMai->don_hang_toi_thieu ?? 0);
 
-                return $apDungTheoSanPham || $apDungTheoBienThe;
-            });
+            $soLuongToiThieu =
+                (int) ($khuyenMai->so_luong_sp_toi_thieu ?? 0);
 
-        /*
-         * Tổng tiền chỉ của sản phẩm/biến thể được khuyến mãi.
-         */
-        $tongTienDuocKhuyenMai =
-            (float) $itemsDuocKhuyenMai->sum('thanh_tien');
-
-        /*
-         * Tổng số lượng chỉ của item được khuyến mãi.
-         */
-        $tongSoLuongDuocKhuyenMai =
-            (int) $itemsDuocKhuyenMai->sum('so_luong');
-
-        /*
-         * Chỉ tính khi trong giỏ thực sự có item
-         * thuộc chương trình khuyến mãi.
-         */
-        if (
-            $tongTienDuocKhuyenMai > 0 &&
-            $tongTienHang >= ($khuyenMai->don_hang_toi_thieu ?? 0) &&
-            $tongSoLuongDuocKhuyenMai >= ($khuyenMai->so_luong_sp_toi_thieu ?? 0)
-        ) {
-            $loaiGiamGia = Str::of(
-                (string) $khuyenMai->loai_giam_gia
-            )
-                ->trim()
-                ->lower()
-                ->ascii()
-                ->replace([' ', '-'], '_')
-                ->value();
-
-            $giaTriGiam =
-                (float) ($khuyenMai->gia_tri_giam ?? 0);
-
-            $giamToiDa =
-                (float) ($khuyenMai->giam_toi_da ?? 0);
-
-            switch ($loaiGiamGia) {
-
-                case 'phan_tram':
-                case 'percent':
-                case 'percentage':
-
-                    $tienGiamGia =
-                        $tongTienDuocKhuyenMai
-                        * $giaTriGiam
-                        / 100;
-
-                    if ($giamToiDa > 0) {
-                        $tienGiamGia = min(
-                            $tienGiamGia,
-                            $giamToiDa
-                        );
-                    }
-
-                    break;
-
-                case 'bogo':
-                case 'mua_1_tang_1':
-
-                    foreach ($itemsDuocKhuyenMai as $item) {
-                        $freeQty = floor(
-                            $item['so_luong'] / 2
-                        );
-
-                        $tienGiamGia +=
-                            $freeQty * $item['gia_ban'];
-                    }
-
-                    break;
-
-              case 'amount':
-case 'tien_mat':
-case 'so_tien':
-case 'giam_tien':
-case 'fixed':
-
-    // Giảm tiền theo từng sản phẩm
-    $tienGiamGia = min(
-        $giaTriGiam * $tongSoLuongDuocKhuyenMai,
-        $tongTienDuocKhuyenMai
-    );
-
-    break;
-
-                default:
-
-                    return response()->json([
-                        'success' => false,
-                        'message' =>
-                            'Loại giảm giá không hợp lệ: '
-                            . $khuyenMai->loai_giam_gia
-                    ], 422);
-            }
 
             /*
-             * Không bao giờ được giảm quá số tiền
-             * của các item thuộc phạm vi khuyến mãi.
+             * Kiểm tra điều kiện đơn hàng.
              */
-            $tienGiamGia = min(
-                max($tienGiamGia, 0),
-                $tongTienDuocKhuyenMai
-            );
+            if (
+                $tongTienHang >= $donHangToiThieu &&
+                $tongSoLuong >= $soLuongToiThieu
+            ) {
+
+                $loaiGiamGia = Str::of(
+                    (string) $khuyenMai->loai_giam_gia
+                )
+                    ->trim()
+                    ->lower()
+                    ->ascii()
+                    ->replace([' ', '-'], '_')
+                    ->value();
+
+
+                $giaTriGiam =
+                    (float) ($khuyenMai->gia_tri_giam ?? 0);
+
+                $giamToiDa =
+                    (float) ($khuyenMai->giam_toi_da ?? 0);
+
+
+                switch ($loaiGiamGia) {
+
+                    /*
+                     * Giảm phần trăm toàn hóa đơn.
+                     */
+                    case 'phan_tram':
+                    case 'percent':
+                    case 'percentage':
+
+                        $tienGiamVoucher =
+                            $tongTienHang
+                            * $giaTriGiam
+                            / 100;
+
+                        break;
+
+
+                    /*
+                     * Giảm số tiền cố định toàn hóa đơn.
+                     *
+                     * Ví dụ:
+                     * đơn từ 300k giảm 50k
+                     */
+                    case 'amount':
+                    case 'fixed':
+                    case 'tien_mat':
+                    case 'so_tien':
+                    case 'giam_tien':
+
+                        $tienGiamVoucher =
+                            $giaTriGiam;
+
+                        break;
+
+
+                    /*
+                     * Nếu vẫn muốn cho BOGO ở cấp hóa đơn.
+                     */
+                    case 'bogo':
+                    case 'mua_1_tang_1':
+
+                        foreach ($items as $item) {
+
+                            $freeQty =
+                                floor(
+                                    $item['so_luong'] / 2
+                                );
+
+                            $tienGiamVoucher +=
+                                $freeQty
+                                * $item['gia_ban'];
+                        }
+
+                        break;
+
+
+                    default:
+
+                        return response()->json([
+                            'success' => false,
+                            'message' =>
+                                'Loại giảm giá không hợp lệ: '
+                                . $khuyenMai->loai_giam_gia
+                        ], 422);
+                }
+
+
+                /*
+                 * Giảm tối đa.
+                 */
+                if ($giamToiDa > 0) {
+
+                    $tienGiamVoucher = min(
+                        $tienGiamVoucher,
+                        $giamToiDa
+                    );
+                }
+
+
+                /*
+                 * Không giảm quá tổng hóa đơn.
+                 */
+                $tienGiamVoucher = min(
+                    max(0, $tienGiamVoucher),
+                    $tongTienHang
+                );
+            }
         }
     }
 }
+
+
+/*
+ * $tienGiamGia phía trên đã chứa
+ * khuyến mãi sản phẩm tự động.
+ *
+ * Bây giờ cộng thêm voucher hóa đơn.
+ */
+// Ghi nhận voucher toàn hóa đơn
+if (
+    $request->id_khuyen_mai &&
+    $tienGiamVoucher > 0
+) {
+
+    $idVoucher =
+        (int) $request->id_khuyen_mai;
+
+    $khuyenMaiDaApDung[$idVoucher] = [
+        'id_khuyen_mai' =>
+            $idVoucher,
+
+        'tien_giam' =>
+            $tienGiamVoucher,
+
+        'loai_ap_dung' =>
+            'hoa_don',
+    ];
+}
+$tienGiamGia += $tienGiamVoucher;
 
             $khachHang = null;
 
@@ -974,6 +1027,18 @@ case 'fixed':
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+            // Lưu các khuyến mãi đã áp dụng vào hóa đơn
+foreach ($khuyenMaiDaApDung as $kmDaDung) {
+
+    DB::table('hoa_don_khuyen_mai')->insert([
+        'id_hoa_don' => $hoaDonId,
+        'id_khuyen_mai' => $kmDaDung['id_khuyen_mai'],
+        'tien_giam' => $kmDaDung['tien_giam'],
+        'loai_ap_dung' => $kmDaDung['loai_ap_dung'],
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
 
             if ($khachHang) {
                 if ($isPayOS) {
