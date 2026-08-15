@@ -41,12 +41,19 @@ class Product extends BaseModel
     }
 
     /**
-     * Chi tiết hóa đơn thuộc về sản phẩm này (qua FK id_san_pham).
+     * Chi tiết hóa đơn thuộc về sản phẩm này (qua các biến thể).
      * Dùng để tính tổng số lượng đã bán (withSum) hoặc truy vấn thống kê.
      */
     public function chiTietHoaDons()
     {
-        return $this->hasMany(ChiTietHoaDon::class, 'id_san_pham');
+        return $this->hasManyThrough(
+            ChiTietHoaDon::class,
+            BienTheSanPham::class,
+            'product_id',
+            'variant_id',
+            'id',
+            'id'
+        );
     }
 
     /**
@@ -56,13 +63,16 @@ class Product extends BaseModel
      * Lưu ý: Dùng subquery (không join) để tránh nhân bản dòng khi paginate.
      * Dùng DB::table với alias thủ công vì Eloquent Model::query()->join() không
      * giữ alias trong FROM clause, gây lỗi "Unknown column 'cth.so_luong'".
+     *
+     * Cấu trúc mới: chi_tiet_hoa_don.variant_id → bien_the_san_pham.id → san_pham.id
      */
     public function scopeWithTongDaBan($query)
     {
         return $query->addSelect([
             'tong_da_ban' => DB::table('chi_tiet_hoa_don as cth')
                 ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
-                ->whereColumn('cth.id_san_pham', 'san_pham.id')
+                ->join('bien_the_san_pham as v', 'cth.variant_id', '=', 'v.id')
+                ->whereColumn('v.product_id', 'san_pham.id')
                 ->where('hd.trang_thai', 'Hoàn thành')
                 ->whereNull('hd.deleted_at')
                 ->selectRaw('COALESCE(SUM(cth.so_luong), 0)'),

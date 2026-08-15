@@ -1226,8 +1226,8 @@ class SanPhamController extends Controller
 
             $row = DB::table('chi_tiet_hoa_don as cth')
                 ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
-                ->leftJoin('bien_the_san_pham as v', 'cth.id_chi_tiet_phieu', '=', 'v.id')
-                ->where('cth.id_san_pham', $product->id)
+                ->join('bien_the_san_pham as v', 'cth.variant_id', '=', 'v.id')
+                ->where('v.product_id', $product->id)
                 ->where('hd.trang_thai', 'Hoàn thành')
                 ->whereBetween('hd.created_at', [$from, $to])
                 ->selectRaw('COALESCE(SUM(cth.so_luong), 0)            as total_quantity')
@@ -1276,7 +1276,16 @@ class SanPhamController extends Controller
             $variantKpis['so_bien_the_sap_het'] = $sapHetHang->count();
         }
 
-        return view('admin_xem_truoc.san-pham.chi-tiet', compact('product', 'theKho', 'loHang', 'ordersSummary', 'variantKpis'));
+        // ============================================================
+        // LỊCH SỬ BÁN HÀNG (phân trang) — dùng HasManyThrough qua bien_the_san_pham
+        // Bảng chi_tiet_hoa_don đã thay id_san_pham bằng variant_id.
+        // ============================================================
+        $lichSuBanHang = $product->chiTietHoaDons()
+            ->with(['hoaDon', 'bienThe'])
+            ->latest('chi_tiet_hoa_don.created_at')
+            ->paginate(10);
+
+        return view('admin_xem_truoc.san-pham.chi-tiet', compact('product', 'theKho', 'loHang', 'ordersSummary', 'variantKpis', 'lichSuBanHang'));
     }
 
     protected function uploadImage($file, string $subDir = 'san-pham'): string

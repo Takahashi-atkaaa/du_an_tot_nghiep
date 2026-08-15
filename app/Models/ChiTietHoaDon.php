@@ -1,36 +1,42 @@
 <?php
 
-    namespace App\Models;
+namespace App\Models;
 
-    use Illuminate\Database\Eloquent\Factories\HasFactory;
-    use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
-    class ChiTietHoaDon extends Model
-    {
-        use HasFactory;
+class ChiTietHoaDon extends Model
+{
+    use HasFactory;
 
-        protected $table = 'chi_tiet_hoa_don';
+    protected $table = 'chi_tiet_hoa_don';
 
-        protected $fillable = [
-            'id_hoa_don',
-            'id_san_pham',
-            'id_chi_tiet_phieu',
-            'so_luong',
-            'gia_ban',
-            'thanh_tien',
-        ];
+    /**
+     * Cấu trúc bảng mới: cột `id_san_pham` đã được thay thế bằng `variant_id`
+     * (tham chiếu tới bảng bien_the_san_pham).
+     */
+    protected $fillable = [
+        'id_hoa_don',
+        'variant_id',
+        'id_chi_tiet_phieu',
+        'so_luong',
+        'gia_ban',
+        'thanh_tien',
+    ];
 
-        public function chiTietPhieu(){
-            return $this->belongsTo(ChiTietPhieu::class, 'id_chi_tiet_phieu');
-        }
-
-        public function hoaDon(){
-            return $this->belongsTo(HoaDon::class, 'id_hoa_don');
-        }
-
-        public function sanPham(){
-            return $this->belongsTo(SanPham::class, 'id_san_pham');
-        }
-
-
+    public function chiTietPhieu(){
+        return $this->belongsTo(ChiTietPhieu::class, 'id_chi_tiet_phieu');
     }
+
+    public function hoaDon(){
+        return $this->belongsTo(HoaDon::class, 'id_hoa_don');
+    }
+
+    /**
+     * Mỗi chi tiết hóa đơn giờ trỏ về biến thể (bien_the_san_pham)
+     * thay vì trỏ thẳng về sản phẩm cha.
+     */
+    public function bienThe(){
+        return $this->belongsTo(BienTheSanPham::class, 'variant_id');
+    }
+}
