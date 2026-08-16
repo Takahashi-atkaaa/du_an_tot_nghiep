@@ -1,7 +1,7 @@
 /* ============================================================
  *  PayOS Module – POS
  *  File: public/js/pos/payos.js
- *  Phụ thuộc (do pos.blade.php cung cấp):
+ *  Phụ thuộc (do pos_moi.blade.php cung cấp):
  *      - bootstrap (Modal)
  *      - showToast(msg, type)
  *      - closePaidInvoiceTab()  (gọi sau khi tạo link PayOS thành công)

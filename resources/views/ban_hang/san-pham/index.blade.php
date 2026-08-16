@@ -2,7 +2,7 @@
 
 @section('title', 'Tra cứu sản phẩm')
 
-@section('styles')
+@push('head')
 <style>
     .search-card,
     .product-card {
@@ -68,7 +68,7 @@
         }
     }
 </style>
-@endsection
+@endpush
 
 @section('content')
 <div class="d-flex justify-content-between flex-wrap align-items-center gap-2 pt-3 pb-2 mb-3 border-bottom">
