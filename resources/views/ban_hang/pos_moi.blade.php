@@ -1314,41 +1314,390 @@ async function loadProducts() {
         grid.innerHTML = '<div class="product-grid-empty"><i class="fa-solid fa-circle-exclamation"></i><p>Lỗi tải sản phẩm</p></div>';
     }
 }
+function getBestPromotionForProduct(product, qty = 1) {
+    if (!Array.isArray(allPromotions) || allPromotions.length === 0) {
+        return {
+            promotion: null,
+            discount: 0
+        };
+    }
+
+    const productId = Number(
+        product.product_id ??
+        product.id_san_pham ??
+        0
+    );
+
+    const variantId = Number(
+        product.id ??
+        product.id_bien_the ??
+        0
+    );
+
+    const price = Number(
+        product.gia_ban ??
+        product.gia ??
+        product.gia_ban_le ??
+        0
+    );
+
+    const itemTotal = price * Number(qty || 1);
+
+    let bestPromotion = null;
+    let bestDiscount = 0;
+
+   allPromotions.forEach(km => {
+
+        // Chỉ xét khuyến mãi sản phẩm
+        if (!km.la_khuyen_mai_san_pham) {
+            return;
+        }
+
+        const productIds = Array.isArray(km.id_san_phams)
+            ? km.id_san_phams.map(Number)
+            : [];
+
+        const variantIds = Array.isArray(km.id_bien_thes)
+            ? km.id_bien_thes.map(Number)
+            : [];
+
+        const applies =
+            productIds.includes(productId) ||
+            variantIds.includes(variantId);
+
+        if (!applies) {
+            return;
+        }
+
+        // Kiểm tra số lượng tối thiểu
+        const minQty = Number(
+            km.so_luong_sp_toi_thieu || 0
+        );
+
+        if (
+            minQty > 0 &&
+            Number(qty) < minQty
+        ) {
+            return;
+        }
+
+        const type = String(
+            km.loai_giam_gia || ''
+        )
+            .trim()
+            .toLowerCase();
+
+        const value = Number(
+            km.gia_tri_giam || 0
+        );
+
+        let discount = 0;
+
+        // Giảm %
+        if (
+            [
+                'percent',
+                'phan_tram',
+                'percentage'
+            ].includes(type)
+        ) {
+            discount =
+                itemTotal *
+                value /
+                100;
+        }
+
+        // Giảm tiền
+        else if (
+            [
+                'amount',
+                'fixed',
+                'tien_mat',
+                'so_tien',
+                'giam_tien'
+            ].includes(type)
+        ) {
+            discount = Math.min(
+                value * Number(qty),
+                itemTotal
+            );
+        }
+
+        // Mua 1 tặng 1
+        else if (
+            [
+                'bogo',
+                'mua_1_tang_1'
+            ].includes(type)
+        ) {
+            const freeQty =
+                Math.floor(
+                    Number(qty) / 2
+                );
+
+            discount =
+                freeQty *
+                price;
+        }
+
+        // Giảm tối đa
+        const maxDiscount = Number(
+            km.giam_toi_da || 0
+        );
+
+        if (maxDiscount > 0) {
+            discount = Math.min(
+                discount,
+                maxDiscount
+            );
+        }
+
+        // Không được giảm âm
+        // và không vượt tổng tiền
+        discount = Math.min(
+            Math.max(0, discount),
+            itemTotal
+        );
+
+        // Nếu có nhiều KM,
+        // lấy KM giảm nhiều nhất
+        if (discount > bestDiscount) {
+            bestDiscount = discount;
+            bestPromotion = km;
+        }
+    });
+
+    return {
+        promotion: bestPromotion,
+        discount: bestDiscount
+    };
+}
 
 function renderProducts() {
     const grid = document.getElementById('productGrid');
+
     if (!allProducts || allProducts.length === 0) {
-        grid.innerHTML = '<div class="product-grid-empty"><i class="fa-solid fa-box-open"></i><p>Không có sản phẩm</p></div>';
+        grid.innerHTML = `
+            <div class="product-grid-empty">
+                <i class="fa-solid fa-box-open"></i>
+                <p>Không có sản phẩm</p>
+            </div>
+        `;
         return;
     }
+
     grid.innerHTML = allProducts.map(p => {
-        const oos = p.so_luong_ton_kho <= 0;
+
+        const oos = Number(p.so_luong_ton_kho) <= 0;
+
         const imgHtml = p.hinh_anh
-            ? `<img src="${p.hinh_anh}" alt="${p.ten_san_pham}" onerror="this.outerHTML='<div class=\\'no-img\\'><i class=\\'fa-solid fa-box\\'></i></div>'">`
-            : `<div class="no-img"><i class="fa-solid fa-box"></i></div>`;
+            ? `
+                <img
+                    src="${p.hinh_anh}"
+                    alt="${p.ten_san_pham}"
+                    onerror="this.outerHTML='<div class=\\'no-img\\'><i class=\\'fa-solid fa-box\\'></i></div>'"
+                >
+            `
+            : `
+                <div class="no-img">
+                    <i class="fa-solid fa-box"></i>
+                </div>
+            `;
+
+
+        // =====================================
+        // KIỂM TRA KHUYẾN MÃI CỦA SẢN PHẨM
+        // =====================================
+
+        const result = getBestPromotionForProduct(p, 1);
+
+        const promotion = result.promotion;
+        const promotionDiscount = Number(result.discount || 0);
+
+        const giaGoc = Number(p.gia_ban || 0);
+
+        const giaSauGiam = Math.max(
+            0,
+            giaGoc - promotionDiscount
+        );
+
+
+        // =====================================
+        // NHÃN KHUYẾN MÃI
+        // =====================================
+
+        let promotionBadge = '';
+
+        if (promotion && promotionDiscount > 0) {
+
+            const type = String(
+                promotion.loai_giam_gia || ''
+            )
+                .trim()
+                .toLowerCase();
+
+            if (
+                [
+                    'percent',
+                    'phan_tram',
+                    'percentage'
+                ].includes(type)
+            ) {
+
+                promotionBadge = `
+                    <div
+                        class="badge-stock"
+                        style="
+                            background:#dc3545;
+                            left:6px;
+                            right:auto;
+                        "
+                    >
+                        Giảm ${Number(
+                            promotion.gia_tri_giam || 0
+                        )}%
+                    </div>
+                `;
+
+            } else {
+
+                promotionBadge = `
+                    <div
+                        class="badge-stock"
+                        style="
+                            background:#dc3545;
+                            left:6px;
+                            right:auto;
+                        "
+                    >
+                        Giảm ${fmt(promotionDiscount)}
+                    </div>
+                `;
+
+            }
+        }
+
+
+        // =====================================
+        // HIỂN THỊ GIÁ
+        // =====================================
+
+        let priceHtml = '';
+
+        if (promotion && promotionDiscount > 0) {
+
+            priceHtml = `
+                <div class="price">
+
+                    <span
+                        style="
+                            text-decoration: line-through;
+                            color:#8b95a5;
+                            font-size:12px;
+                            margin-right:5px;
+                        "
+                    >
+                        ${fmt(giaGoc)}
+                    </span>
+
+                    <span>
+                        ${fmt(giaSauGiam)}
+                    </span>
+
+                </div>
+            `;
+
+        } else {
+
+            priceHtml = `
+                <div class="price">
+                    ${fmt(giaGoc)}
+                </div>
+            `;
+        }
+
+
         return `
-            <div class="product-card ${oos ? 'out-of-stock' : ''}" data-id="${p.id}">
+            <div
+                class="product-card ${oos ? 'out-of-stock' : ''}"
+                data-id="${p.id}"
+            >
+
                 <div class="img-wrap">
+
                     ${imgHtml}
-                    ${oos ? '<div class="badge-stock" style="background: var(--pos-danger);">Hết hàng</div>' : `<div class="badge-stock">Kho: ${p.so_luong_ton_kho}</div>`}
+
+                    ${promotionBadge}
+
+                    ${
+                        oos
+                            ? `
+                                <div
+                                    class="badge-stock"
+                                    style="background:var(--pos-danger);"
+                                >
+                                    Hết hàng
+                                </div>
+                            `
+                            : `
+                                <div class="badge-stock">
+                                    Kho: ${p.so_luong_ton_kho}
+                                </div>
+                            `
+                    }
+
                 </div>
+
                 <div class="info">
-                    <div class="name">${p.ten_san_pham || ''}</div>
-                    <div class="price">${fmt(p.gia_ban)}</div>
-                    ${p.ma_vach ? `<div class="barcode"><i class="fa-solid fa-barcode me-1"></i>${p.ma_vach}</div>` : ''}
+
+                    <div class="name">
+                        ${p.ten_san_pham || ''}
+                    </div>
+
+                    ${priceHtml}
+
+                    ${
+                        p.ma_vach
+                            ? `
+                                <div class="barcode">
+                                    <i class="fa-solid fa-barcode me-1"></i>
+                                    ${p.ma_vach}
+                                </div>
+                            `
+                            : ''
+                    }
+
                 </div>
-            </div>`;
+
+            </div>
+        `;
     }).join('');
 
+
+    // =====================================
+    // CLICK SẢN PHẨM
+    // =====================================
+
     grid.querySelectorAll('.product-card').forEach(card => {
+
         card.onclick = () => {
+
             if (card.classList.contains('out-of-stock')) {
-                showToast('Sản phẩm đã hết hàng', 'warn');
+                showToast(
+                    'Sản phẩm đã hết hàng',
+                    'warn'
+                );
                 return;
             }
-            const id = parseInt(card.dataset.id, 10);
+
+            const id = parseInt(
+                card.dataset.id,
+                10
+            );
+
             addToCart(id);
         };
+
     });
 }
 
@@ -1446,27 +1795,22 @@ function calcTotals() {
 }
 
 function calcProductDiscount(items) {
-    let discount = 0;
+    let totalDiscount = 0;
+
     items.forEach(it => {
-        const sp = (allPromotions || []).filter(km => {
-            if (km.trang_thai !== 1 && km.trang_thai !== true) return false;
-            if (km.loai_giam_gia === 'bogo') return false;
-            const ids = km.id_san_phams || [];
-            const bts = km.id_bien_thes || [];
-            return ids.includes(it.id_san_pham) || bts.includes(it.id);
-        });
-        sp.forEach(km => {
-            let giam = 0;
-            if (km.loai_giam_gia === 'phan_tram') {
-                giam = it.gia_ban * it.qty * Number(km.gia_tri_giam) / 100;
-                if (km.giam_toi_da) giam = Math.min(giam, Number(km.giam_toi_da));
-            } else if (km.loai_giam_gia === 'amount') {
-                giam = Math.min(it.gia_ban * it.qty, Number(km.gia_tri_giam));
-            }
-            discount += giam;
-        });
+
+        const result = getBestPromotionForProduct(
+            it,
+            Number(it.qty || 1)
+        );
+
+        totalDiscount += Number(
+            result.discount || 0
+        );
+
     });
-    return discount;
+
+    return totalDiscount;
 }
 
 function renderTotals() {
@@ -1578,9 +1922,43 @@ document.getElementById('searchProduct').addEventListener('input', function() {
 // =========================================================
 async function loadPromotions() {
     try {
-        const res = await fetch(promotionListUrl, { headers: { 'Accept': 'application/json' } });
+        const res = await fetch(
+            promotionListUrl,
+            {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            }
+        );
+
+        if (!res.ok) {
+            throw new Error(
+                'Không tải được khuyến mãi: HTTP ' + res.status
+            );
+        }
+
         allPromotions = await res.json();
-    } catch (err) { console.error(err); }
+
+        console.log(
+            'Khuyến mãi POS:',
+            allPromotions
+        );
+
+        // Nếu sản phẩm đã tải rồi
+        // thì render lại để hiện giá khuyến mãi
+        if (
+            Array.isArray(allProducts) &&
+            allProducts.length > 0
+        ) {
+            renderProducts();
+        }
+
+    } catch (err) {
+        console.error(
+            'Lỗi tải khuyến mãi:',
+            err
+        );
+    }
 }
 
 // =========================================================
