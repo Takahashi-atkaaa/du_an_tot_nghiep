@@ -179,6 +179,8 @@ class SanPhamApiController extends Controller
             ->selectRaw('cth.id_hoa_don as order_id')
             ->selectRaw("CONCAT('#', hd.id) as ma_hoa_don")
             ->selectRaw('hd.created_at as order_date')
+            ->selectRaw('cth.id_bien_the_san_pham as variant_id')
+            ->selectRaw('COALESCE(v.ten_bien_the, v.ten_don_vi, ?) as variant_name', [$product->ten_san_pham])
             ->selectRaw('cth.so_luong as quantity')
             ->selectRaw('cth.thanh_tien as revenue')
             ->selectRaw('kh.ten_khach_hang as customer_name')
@@ -189,6 +191,8 @@ class SanPhamApiController extends Controller
                 'order_id' => $row->order_id,
                 'ma_hoa_don' => $row->ma_hoa_don,
                 'order_date' => $row->order_date,
+                'variant_id' => $row->variant_id,
+                'variant_name' => $row->variant_name,
                 'quantity' => (int) $row->quantity,
                 'revenue' => (float) $row->revenue,
                 'customer_name' => $row->customer_name,
@@ -540,7 +544,8 @@ class SanPhamApiController extends Controller
         // Gom số lượng + doanh thu theo ngày (chỉ tính hóa đơn Hoàn thành)
         $rows = DB::table('chi_tiet_hoa_don as cth')
             ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
-            ->where('cth.id_san_pham', $product->id)
+            ->join('bien_the_san_pham as v', 'cth.id_bien_the_san_pham', '=', 'v.id')
+            ->where('v.product_id', $product->id)
             ->where('hd.trang_thai', 'Hoàn thành')
             ->whereBetween('hd.created_at', [$from, $to])
             ->selectRaw('DATE(hd.created_at) as ngay')

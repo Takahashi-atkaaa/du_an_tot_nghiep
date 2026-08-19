@@ -451,12 +451,59 @@ tr.is-unit-switched .js-donvi {
 .bg-orange-50  { background-color: #fff7ed; }
 .bg-green-50   { background-color: #ecfdf5; }
 .bg-red-50     { background-color: #fef2f2; }
+.bg-red-100    { background-color: #fee2e2 !important; }
+.bg-amber-100  { background-color: #fef3c7 !important; }
+.bg-green-100  { background-color: #d1fae5 !important; }
 .text-blue-600 { color: #2563eb !important; }
 .text-blue-700 { color: #1d4ed8 !important; }
 .text-orange-600 { color: #ea580c !important; }
 .text-orange-700 { color: #c2410c !important; }
 .text-green-700 { color: #15803d !important; }
 .text-red-700  { color: #b91c1c !important; }
+
+/* ====== Spacing & sizing utilities (Tailwind-inspired) ====== */
+.text-xs       { font-size: 0.75rem !important; }
+.text-sm       { font-size: 0.875rem !important; }
+.font-medium   { font-weight: 500 !important; }
+.font-semibold { font-weight: 600 !important; }
+.font-bold     { font-weight: 700 !important; }
+.uppercase     { text-transform: uppercase !important; }
+.tracking-wider{ letter-spacing: 0.05em !important; }
+.rounded-md    { border-radius: 0.375rem !important; }
+.rounded-lg    { border-radius: 0.5rem !important; }
+.break-words   { word-break: break-word; overflow-wrap: break-word; }
+.align-middle  { vertical-align: middle !important; }
+.p-3           { padding: 0.75rem !important; }
+.p-4           { padding: 1rem !important; }
+.p-5           { padding: 1.25rem !important; }
+.px-3          { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+.px-4          { padding-left: 1rem !important; padding-right: 1rem !important; }
+.px-5          { padding-left: 1.25rem !important; padding-right: 1.25rem !important; }
+.py-2          { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+.py-3          { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+.py-4          { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+.pb-3          { padding-bottom: 0.75rem !important; }
+.pb-5          { padding-bottom: 1.25rem !important; }
+.mt-1          { margin-top: 0.25rem !important; }
+.mt-4          { margin-top: 1rem !important; }
+.mt-6          { margin-top: 1.5rem !important; }
+.mb-2          { margin-bottom: 0.5rem !important; }
+.mb-4          { margin-bottom: 1rem !important; }
+.w-full        { width: 100% !important; }
+.text-right    { text-align: right !important; }
+.text-center   { text-align: center !important; }
+.leading-relaxed { line-height: 1.625 !important; }
+.flex          { display: flex !important; }
+.flex-col      { flex-direction: column !important; }
+.items-start  { align-items: flex-start !important; }
+.items-end    { align-items: flex-end !important; }
+.items-center { align-items: center !important; }
+.justify-between { justify-content: space-between !important; }
+.border-top    { border-top: 1px solid #f3f4f6 !important; }
+.border-bottom { border-bottom: 1px solid #f3f4f6 !important; }
+
+/* Tailwind arbitrary max-width (max-w-[60%]) — cho info-value không chiếm full */
+.max-w-60      { max-width: 60% !important; }
 
 /* ====== Detail Card (đặc trưng cho trang chi tiết) ====== */
 .detail-card {
@@ -499,22 +546,29 @@ tr.is-unit-switched .js-donvi {
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
-    padding: 0.6rem 0;
-    border-bottom: 1px solid #f9fafb; /* border-gray-50 */
+    padding: 0.75rem 0;               /* py-3 */
+    border-bottom: 1px solid #f3f4f6;  /* border-b border-gray-100 */
     font-size: 0.875rem;              /* text-sm */
 }
 .info-row:last-child { border-bottom: 0; }
 .info-row .info-label {
     color: #6b7280;                   /* text-gray-500 */
-    font-size: 0.875rem;
+    font-size: 0.875rem;              /* text-sm */
+    font-weight: 500;                 /* font-medium */
     flex-shrink: 0;
+    letter-spacing: 0.02em;
 }
 .info-row .info-value {
     color: #111827;                   /* text-gray-900 */
-    font-weight: 500;
-    font-size: 0.875rem;
+    font-weight: 600;                 /* font-semibold */
+    font-size: 0.875rem;              /* text-sm */
     text-align: right;
+    max-width: 60%;                   /* max-w-[60%] */
+    word-break: break-word;
+    overflow-wrap: break-word;
+    display: inline-block;
 }
+.info-row .info-value .pill { float: right; }
 
 /* ====== Khung ảnh sản phẩm ====== */
 .product-image-frame {
@@ -729,25 +783,29 @@ tr.is-unit-switched .js-donvi {
 .detail-table thead th {
     background: #f9fafb;             /* bg-gray-50 */
     color: #6b7280;                  /* text-gray-500 */
-    font-size: 0.7rem;
-    font-weight: 600;
+    font-size: 0.75rem;              /* text-xs */
+    font-weight: 600;                /* font-semibold */
     text-transform: uppercase;
-    letter-spacing: 0.06em;           /* tracking-wider */
+    letter-spacing: 0.05em;          /* tracking-wider */
     padding: 0.7rem 0.85rem;
     border-bottom: 1px solid #e5e7eb;
     text-align: left;
     white-space: nowrap;
+    vertical-align: middle;
 }
 .detail-table thead th.text-end,
-.detail-table tbody td.text-end { text-align: right; }
+.detail-table tbody td.text-end,
+.detail-table thead th.text-right,
+.detail-table tbody td.text-right { text-align: right; }
 .detail-table thead th.text-center,
 .detail-table tbody td.text-center { text-align: center; }
 .detail-table tbody td {
     padding: 0.7rem 0.85rem;
     border-bottom: 1px solid #f3f4f6; /* border-gray-100 */
-    vertical-align: middle;
+    vertical-align: middle;            /* align-middle */
     color: #1f2937;
 }
+.detail-table tbody td.align-middle { vertical-align: middle; }
 .detail-table tbody tr {
     transition: background-color 0.12s ease;
 }
@@ -756,6 +814,27 @@ tr.is-unit-switched .js-donvi {
 }
 .detail-table tbody tr:last-child td {
     border-bottom: 0;
+}
+
+/* Stock badge nhỏ dùng trong cột Tồn kho (Tab biến thể) */
+.detail-table .stock-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+.detail-table .stock-badge--danger  { background: #fee2e2; color: #b91c1c; }
+.detail-table .stock-badge--warning { background: #fef3c7; color: #92400e; }
+.detail-table .stock-badge--success { background: #d1fae5; color: #047857; }
+.detail-table .stock-number {
+    font-weight: 500;
+    color: #111827;
+    font-size: 0.85rem;
 }
 
 /* Pill badge nhỏ cho danh mục, trạng thái */
@@ -947,3 +1026,55 @@ tr.is-unit-switched .js-donvi {
 .chart-empty-overlay i { font-size: 1.4rem; }
 .chart-error-overlay i { color: #ef4444; }
 .chart-empty-overlay i { color: #9ca3af; }
+
+/* =========================================================
+   QUICK VIEW - STOCK TAB: Variant filter buttons
+   ========================================================= */
+.quickview-stock-root .qv-variant-buttons {
+    align-items: center;
+}
+.quickview-stock-root .qv-variant-btn {
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    user-select: none;
+}
+.quickview-stock-root .qv-variant-btn.btn-outline-secondary {
+    background: #ffffff;
+    border-color: #d1d5db;
+    color: #4b5563;
+}
+.quickview-stock-root .qv-variant-btn.btn-outline-secondary:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #1f2937;
+}
+.quickview-stock-root .qv-variant-btn.btn-dark {
+    background: #374151;
+    border-color: #374151;
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.quickview-stock-root .qv-variant-btn.btn-dark:hover {
+    background: #1f2937;
+    border-color: #1f2937;
+}
+.quickview-stock-root .qv-variant-btn i {
+    color: inherit;
+    opacity: 0.7;
+}
+.quickview-stock-root .qv-variant-btn.btn-dark i {
+    opacity: 1;
+    color: #10b981;
+}
+
+/* Smooth transition cho rows khi filter */
+.quickview-stock-root tbody tr[data-variant-id] {
+    transition: opacity 0.15s ease;
+}

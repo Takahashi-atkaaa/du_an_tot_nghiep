@@ -3,30 +3,16 @@
 @section('title', 'Quản lý Sản phẩm - SmartMart')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h4 class="fw-bold mb-1">Quản lý Sản phẩm</h4>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url('admin/dashboard') }}">Admin</a></li>
-                <li class="breadcrumb-item active">Sản phẩm</li>
-            </ol>
-        </nav>
-    </div>
-    <div class="d-flex gap-2">
-        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#importProductModal">
-            <i class="fas fa-file-import me-2"></i>Import
-        </button>
-        <button class="btn btn-outline-success" id="btnExportExcel">
-            <i class="fas fa-file-export me-2"></i>Export
-        </button>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
-            <i class="fas fa-plus me-2"></i>Thêm sản phẩm
-        </button>
-        <a href="{{ url('admin/san-pham/trash') }}" class="btn btn-outline-danger">
-            <i class="fas fa-trash me-2"></i>Thùng rác
-        </a>
-    </div>
+{{-- Breadcrumb + tiêu đề trang. Các nút hành động được gom vào thanh công cụ phía dưới
+   để tạo thành 1 thanh ngang duy nhất: [Tìm kiếm] [Lọc nâng cao] [Hành động]. --}}
+<div class="mb-3">
+    <h4 class="fw-bold mb-1">Quản lý Sản phẩm</h4>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url('admin/dashboard') }}">Admin</a></li>
+            <li class="breadcrumb-item active">Sản phẩm</li>
+        </ol>
+    </nav>
 </div>
 
 @if(session('success'))
@@ -36,35 +22,181 @@
     <div class="alert alert-danger">{{ session('error') }}</div>
 @endif
 
-<div class="card table-admin mb-4">
-    <div class="card-body">
+<div class="card table-admin mb-4 search-filter-card" x-data="{ showFilter: @js(($activeFiltersCount ?? 0) > 0) }">
+    <div class="card-body p-3">
         <form id="searchProductForm" action="{{ url('admin/san-pham') }}" method="GET">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <div class="input-group">
-                        <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" id="searchKeywordInput" class="form-control" name="keyword" value="{{ $keyword ?? '' }}" placeholder="Tìm kiếm sản phẩm...">
+            {{-- ============================================================
+                THANH CÔNG CỤ CHÍNH (Luôn hiển thị)
+                Layout: [ Ô tìm kiếm rộng ] [ Nút Lọc nâng cao ] [ Nhóm Action ]
+                ============================================================ --}}
+            <div class="d-flex flex-wrap align-items-center gap-2">
+
+                {{-- 1) Ô TÌM KIẾM CHÍNH --}}
+                <div class="flex-grow-1" style="min-width: 260px;">
+                    <div class="input-group search-input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text"
+                               id="searchKeywordInput"
+                               class="form-control border-start-0"
+                               name="keyword"
+                               value="{{ $keyword ?? '' }}"
+                               placeholder="Tìm kiếm theo tên, mã sản phẩm, mã vạch...">
+                        @if(!empty($keyword))
+                            <button type="button"
+                                    class="btn btn-outline-secondary border-start-0 border-end-0"
+                                    onclick="document.getElementById('searchKeywordInput').value=''; document.getElementById('searchKeywordInput').focus();"
+                                    title="Xóa từ khóa">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        @endif
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <select class="form-select" name="danh_muc">
-                        <option value="">Tất cả danh mục</option>
-                        @foreach($danhMucs as $danhMuc)
-                            <option value="{{ $danhMuc->id }}" {{ (string)$danhMuc->id === (string)($danhMucId ?? '') ? 'selected' : '' }}>{{ $danhMuc->ten_danh_muc }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select class="form-select" name="trang_thai">
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="1" {{ $trangThai === '1' || $trangThai === 1 ? 'selected' : '' }}>Đang bán</option>
-                        <option value="0" {{ $trangThai === '0' || $trangThai === 0 ? 'selected' : '' }}>Ngừng bán</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-outline-secondary w-100">
-                        <i class="fas fa-filter me-2"></i>Lọc
+
+                {{-- 2) NÚT "LỌC NÂNG CAO" --}}
+                <button type="button"
+                        class="btn btn-advanced-filter"
+                        :class="{ 'active': showFilter }"
+                        @click="showFilter = !showFilter"
+                        aria-expanded="false"
+                        :aria-expanded="showFilter.toString()">
+                    <i class="fas fa-filter me-1"></i>
+                    <span>Lọc nâng cao</span>
+                    @if(($activeFiltersCount ?? 0) > 0)
+                        <span class="badge bg-primary ms-2 filter-badge">{{ $activeFiltersCount ?? 0 }}</span>
+                    @endif
+                    <i class="fas fa-chevron-down ms-2 chevron-icon"
+                       :class="{ 'rotated': showFilter }"></i>
+                </button>
+
+                {{-- 3) NHÓM ACTION --}}
+                <div class="d-flex gap-2 action-group">
+                    <button type="button"
+                            class="btn btn-success action-btn"
+                            data-bs-toggle="modal"
+                            data-bs-target="#importProductModal">
+                        <i class="fas fa-file-import me-2"></i>Import
                     </button>
+                    <a href="{{ route('san-pham.create') }}" class="btn btn-primary action-btn">
+                        <i class="fas fa-plus me-2"></i>Thêm sản phẩm
+                    </a>
+                    <a href="{{ url('admin/san-pham/trash') }}" class="btn btn-outline-danger action-btn">
+                        <i class="fas fa-trash me-2"></i>Thùng rác
+                    </a>
+                </div>
+            </div>
+
+            {{-- ============================================================
+                PANEL LỌC NÂNG CAO (Dropdown Collapse - Mặc định ẩn)
+                Hiệu ứng: max-height transition để mượt mà, không bị giật
+                ============================================================ --}}
+            <div class="filter-panel-wrapper"
+                 x-ref="filterPanel"
+                 x-cloak
+                 x-show="showFilter"
+                 x-transition:enter="filter-enter"
+                 x-transition:enter-start="filter-enter-start"
+                 x-transition:enter-end="filter-enter-end"
+                 x-transition:leave="filter-leave"
+                 x-transition:leave-start="filter-leave-start"
+                 x-transition:leave-end="filter-leave-end">
+                <div class="filter-panel mt-2">
+                    <div class="row g-3">
+                        {{-- Danh mục --}}
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <label class="form-label filter-label">Danh mục</label>
+                            <select class="form-select form-select-sm filter-select" name="danh_muc">
+                                <option value="">Tất cả danh mục</option>
+                                @foreach($danhMucs as $danhMuc)
+                                    <option value="{{ $danhMuc->id }}" {{ (string)$danhMuc->id === (string)($danhMucId ?? '') ? 'selected' : '' }}>{{ $danhMuc->ten_danh_muc }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- Thương hiệu --}}
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <label class="form-label filter-label">Thương hiệu</label>
+                            <select class="form-select form-select-sm filter-select" name="thuong_hieu">
+                                <option value="">Tất cả thương hiệu</option>
+                                @forelse(($thuongHieus ?? []) as $th)
+                                    <option value="{{ $th }}" {{ (string)$th === (string)($thuongHieu ?? '') ? 'selected' : '' }}>{{ $th }}</option>
+                                @empty
+                                @endforelse
+                            </select>
+                        </div>
+
+                        {{-- Trạng thái kinh doanh --}}
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <label class="form-label filter-label">Trạng thái kinh doanh</label>
+                            <select class="form-select form-select-sm filter-select" name="trang_thai">
+                                <option value="">Tất cả</option>
+                                <option value="1" {{ $trangThai === '1' || $trangThai === 1 ? 'selected' : '' }}>Đang bán</option>
+                                <option value="0" {{ $trangThai === '0' || $trangThai === 0 ? 'selected' : '' }}>Ngừng bán</option>
+                            </select>
+                        </div>
+
+                        {{-- Trạng thái tồn kho --}}
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <label class="form-label filter-label">Trạng thái tồn kho</label>
+                            <select class="form-select form-select-sm filter-select" name="ton_kho">
+                                <option value="">Tất cả</option>
+                                <option value="con_hang" {{ ($tonKho ?? '') === 'con_hang' ? 'selected' : '' }}>Còn hàng</option>
+                                <option value="het_hang" {{ ($tonKho ?? '') === 'het_hang' ? 'selected' : '' }}>Hết hàng</option>
+                                <option value="duoi_dinh_muc" {{ ($tonKho ?? '') === 'duoi_dinh_muc' ? 'selected' : '' }}>Dưới định mức</option>
+                            </select>
+                        </div>
+
+                        {{-- Khoảng giá (Giá Từ - Giá Đến) --}}
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <label class="form-label filter-label">Khoảng giá bán</label>
+                            <div class="d-flex gap-2 align-items-center">
+                                <input type="number"
+                                       class="form-control form-control-sm filter-input"
+                                       name="gia_tu"
+                                       value="{{ $giaTu ?? '' }}"
+                                       placeholder="Từ"
+                                       min="0"
+                                       step="1000">
+                                <span class="text-muted small">—</span>
+                                <input type="number"
+                                       class="form-control form-control-sm filter-input"
+                                       name="gia_den"
+                                       value="{{ $giaDen ?? '' }}"
+                                       placeholder="Đến"
+                                       min="0"
+                                       step="1000">
+                            </div>
+                        </div>
+
+                        {{-- Sắp xếp --}}
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <label class="form-label filter-label">Sắp xếp theo</label>
+                            <select class="form-select form-select-sm filter-select" name="sap_xep">
+                                <option value="">Mặc định</option>
+                                <option value="moi_nhat" {{ ($sapXep ?? '') === 'moi_nhat' ? 'selected' : '' }}>Mới nhất</option>
+                                <option value="ban_chay" {{ ($sapXep ?? '') === 'ban_chay' ? 'selected' : '' }}>Bán chạy nhất</option>
+                                <option value="ton_kho_nhieu" {{ ($sapXep ?? '') === 'ton_kho_nhieu' ? 'selected' : '' }}>Tồn kho nhiều nhất</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {{-- Footer: Nút Reset + Áp dụng --}}
+                    <div class="filter-panel-footer">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{{ url('admin/san-pham') }}"
+                               class="btn btn-reset-filter"
+                               @click.prevent="window.location.href='{{ url('admin/san-pham') }}'">
+                                <i class="fas fa-undo me-1"></i>Thiết lập lại
+                            </a>
+                            <button type="submit" class="btn btn-apply-filter">
+                                <i class="fas fa-check me-1"></i>Áp dụng lọc
+                                @if(($activeFiltersCount ?? 0) > 0)
+                                    <span class="badge bg-light text-primary ms-2">{{ $activeFiltersCount ?? 0 }}</span>
+                                @endif
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </form>
@@ -180,7 +312,14 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
 
                             // Trạng thái tổng hợp cho sản phẩm
                             $trangThaiSP = $sp->trang_thai;
-                            $tongTonKho = $sp->variants->sum('so_luong_ton');
+                            // Tổng tồn kho = SUM(so_luong_ton) của TẤT CẢ biến thể
+                            // thuộc sản phẩm. Ưu tiên dùng thuộc tính sinh ra từ
+                            // withSum('variants', 'so_luong_ton') ở controller
+                            // ($sp->variants_sum_so_luong_ton) — chính xác về mặt
+                            // SQL, không phụ thuộc vào relation đã eager load.
+                            // Fallback: tính từ collection đã load (giữ tương thích
+                            // với code cũ, test/debug).
+                            $tongTonKho = (int) ($sp->variants_sum_so_luong_ton ?? $sp->variants->sum('so_luong_ton'));
                             $hasManyVariants = $variantAttrRows->count() > 0 || $countQuyDoi > 0;
 
                             // Đơn vị cơ bản (CHA): lấy từ master variant
@@ -209,8 +348,7 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                         @endphp
 
                         {{-- DÒNG CHÍNH (dòng đầu tiên) --}}
-                        <tr class="product-parent-row {{ !$firstRow->trang_thai ? 'table-secondary opacity-50' : '' }}"
-                            style="cursor:pointer;"
+                        <tr class="product-parent-row cursor-pointer hover:bg-gray-50 transition-colors {{ !$firstRow->trang_thai ? 'table-secondary opacity-50' : '' }}"
                             data-id="{{ $sp->id }}"
                             data-variant-id="{{ $firstVariant?->id ?? '' }}"
                             data-unit-id=""
@@ -222,23 +360,18 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                             data-ton-kho-goc="{{ $baseTonKhoGoc }}"
                             onclick="window.toggleVariants && window.toggleVariants({{ $sp->id }})">
 
-                            {{-- Toggle expand --}}
+                            {{-- Cột đầu: chỉ giữ ô Checkbox.
+                                Icon mũi tên xổ xuống (chevron) đã được loại bỏ để
+                                giao diện gọn gàng hơn. Mở/đóng Dropdown xem nhanh
+                                bằng cách click vào bất kỳ vùng nào khác trên dòng.
+                                Checkbox dùng event.stopPropagation() để không kích
+                                hoạt click mở dropdown khi người dùng tick chọn. --}}
                             <td onclick="event.stopPropagation();">
-                                <div class="d-flex align-items-center gap-1">
-                                    @if($variantAttrRows->count() > 0)
-                                        <button class="btn btn-sm btn-light p-0 border-0 expand-btn"
-                                                id="expandBtn{{ $sp->id }}"
-                                                onclick="event.stopPropagation(); window.toggleVariants && window.toggleVariants({{ $sp->id }})"
-                                                title="Mở rộng">
-                                            <i class="fas fa-chevron-down" style="font-size:0.7rem; transition:transform 0.2s;"></i>
-                                        </button>
-                                    @endif
-                                    <input type="checkbox" class="form-check-input product-checkbox"
-                                           value="{{ $sp->id }}"
-                                           data-product-id="{{ $sp->id }}"
-                                           data-type="goc"
-                                           onclick="event.stopPropagation();">
-                                </div>
+                                <input type="checkbox" class="form-check-input product-checkbox"
+                                       value="{{ $sp->id }}"
+                                       data-product-id="{{ $sp->id }}"
+                                       data-type="goc"
+                                       onclick="event.stopPropagation();">
                             </td>
 
                             {{-- Hình ảnh (lấy ảnh variant đầu) --}}
@@ -312,34 +445,39 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                                 <span class="js-daban text-muted small fw-medium" data-daban="{{ (int)($sp->tong_da_ban ?? 0) }}">{{ (int)($sp->tong_da_ban ?? 0) }}</span>
                             </td>
 
-                            {{-- Tồn kho --}}
+                            {{-- Tồn kho (TỔNG tồn kho của TẤT CẢ biến thể) --}}
                             <td class="text-center align-middle">
-                                <span class="js-tonkho {{ $baseTonKhoGoc <= 0 ? 'text-danger' : ($baseTonKhoGoc <= 10 ? 'text-warning' : 'text-muted') }} small fw-medium"
-                                      data-base-tonkho="{{ (int)$baseTonKhoGoc }}">
-                                    {{ (int)$baseTonKhoGoc }}
+                                {{--
+                                    Hiển thị tổng tồn kho (sum trên toàn bộ biến
+                                    thể), không phải tồn kho của 1 biến thể đại
+                                    diện. data-base-tonkho vẫn giữ theo biến thể
+                                    CHA để JS recalcRow() dùng khi user đổi đơn vị
+                                    quy đổi (tỷ lệ chia). Hai giá trị này phục
+                                    vụ 2 mục đích khác nhau:
+                                      - Display     = tổng thực tế trong kho
+                                      - data-base-* = gốc để quy đổi đơn vị
+                                --}}
+                                <span class="js-tonkho font-semibold {{ $tongTonKho <= 0 ? 'text-danger' : ($tongTonKho <= 10 ? 'text-warning' : 'text-muted') }} small"
+                                      data-base-tonkho="{{ (int)$baseTonKhoGoc }}"
+                                      data-tong-tonkho="{{ (int)$tongTonKho }}"
+                                      title="Tổng tồn kho của tất cả biến thể">
+                                    {{ number_format($tongTonKho) }}
                                 </span>
                             </td>
 
-                            {{-- Trạng thái --}}
+                            {{-- Trạng thái (dựa trên TỔNG tồn kho của tất cả biến thể) --}}
                             <td class="text-center align-middle">
                                 @if(!$firstRow->trang_thai)
                                     <span class="badge bg-danger">Ngừng bán</span>
-                                @elseif($hasManyVariants)
-                                    @if($tongTonKho <= 0)
-                                        <span class="badge bg-secondary">Hết hàng</span>
-                                    @elseif($tongTonKho <= 10)
-                                        <span class="badge bg-warning text-dark">Sắp hết</span>
-                                    @else
-                                        <span class="badge bg-success">Còn hàng</span>
-                                    @endif
+                                @elseif($tongTonKho <= 0)
+                                    {{-- Tổng tồn kho <= 0: Hết hàng (mọi biến thể đều rỗng) --}}
+                                    <span class="badge bg-secondary">Hết hàng</span>
+                                @elseif($tongTonKho <= 10)
+                                    {{-- Sắp hết: tổng tồn kho còn dưới ngưỡng cảnh báo --}}
+                                    <span class="badge bg-warning text-dark">Sắp hết</span>
                                 @else
-                                    @if($baseTonKhoGoc <= 0)
-                                        <span class="badge bg-secondary">Hết hàng</span>
-                                    @elseif($baseTonKhoGoc <= 10)
-                                        <span class="badge bg-warning text-dark">Sắp hết</span>
-                                    @else
-                                        <span class="badge bg-success">Còn hàng</span>
-                                    @endif
+                                    {{-- Tổng tồn kho > 0: Còn hàng --}}
+                                    <span class="badge bg-success">Còn hàng</span>
                                 @endif
                             </td>
                         </tr>
@@ -555,143 +693,218 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
 })();
 </script>
 
-<div class="modal fade" id="addProductModal" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-fullheight">
-        <div class="modal-content">
-            <div class="modal-header" style="background:linear-gradient(135deg,#0d6efd 0%,#0b5ed7 100%);color:white;">
-                <div>
-                    <h5 class="modal-title fw-bold mb-0"><i class="fas fa-box-open me-2"></i>THÊM SẢN PHẨM</h5>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ url('admin/san-pham') }}" method="POST" enctype="multipart/form-data" id="productForm">
-                @csrf
-                <input type="file" name="hinh_anh" id="nativeHinhAnhInput" class="d-none" accept="image/*">
-                <div class="modal-body p-0" id="addProductModalBody">
-                    <div id="createProductApp" v-cloak></div>
-                </div>
-                <div class="modal-footer bg-light flex-column align-items-stretch">
-                    <div id="formErrorBox" class="alert alert-danger py-2 px-3 mb-2 small d-none" role="alert" style="white-space:pre-line;"></div>
-                    {{-- ============================================================
-                    YÊU CẦU 2: CẢNH BÁO TRÙNG NHÓM THUỘC TÍNH (FRONTEND)
-                    ============================================================ --}}
-                    <div id="duplicateAttrGroupWarning" class="alert alert-danger py-2 px-3 mb-2 small d-none" role="alert" style="white-space:pre-line;">
-                        <i class="fas fa-exclamation-circle me-1"></i>
-                    </div>
-                    {{-- ============================================================
-                    YÊU CẦU 2: CẢNH BÁO TRÙNG LẶP BIẾN THỂ (FRONTEND)
-                    ============================================================ --}}
-                    <div id="duplicateVariantWarning" class="alert alert-warning py-2 px-3 mb-2 small d-none" role="alert" style="white-space:pre-line;">
-                        <i class="fas fa-exclamation-triangle me-1"></i>
-                    </div>
-                    <div class="d-flex justify-content-between w-100 align-items-center">
-                        <span class="text-muted small"><i class="fas fa-info-circle me-1"></i> Điền đầy đủ thông tin trước khi lưu</span>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
-                            <button type="button" class="btn btn-success px-4" id="btnLuuSanPham">
-                                <span class="spinner-border spinner-border-sm me-1 d-none" id="btnLuuSpinner" role="status"></span>
-                                <i class="fas fa-save me-1" id="btnLuuIcon"></i>Lưu sản phẩm
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+@include('admin_xem_truoc.san-pham._import-modal')
 @endsection
 
 @section('page_scripts')
-<script src="https://unpkg.com/vue@3.4.27/dist/vue.global.prod.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
-@php
-    $attrsPayload = $thuocTinhChas->map(function ($g) {
-        return [
-            'id' => $g->id,
-            'name' => $g->ten_thuoc_tinh,
-            'values' => $g->thuocTinhCons->map(function ($v) {
-                return ['id' => $v->id, 'label' => $v->ten_thuoc_tinh];
-            })->values()->all(),
-        ];
-    })->values()->all();
-$unitsPayload = $donViMacDinhs->map(fn($u) => [
-    'id'   => $u->id,
-    'name' => $u->ten_hien_thi, // "Thùng 24"
-    'qty'  => $u->so_luong_san_pham_trong_don_vi,
-])->values()->all();
-@endphp
-<script>
-    // Bridge data từ Blade sang Vue 3
-    window.__CREATE_PRODUCT_DATA__ = {
-        danhMucs: @json($danhMucs->map(fn($d) => ['id' => $d->id, 'ten' => $d->ten_danh_muc])),
-        csrfToken: document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}',
-        availableAttributes: @json($attrsPayload),
-        availableUnits: @json($unitsPayload)
-    };
-</script>
-<script src="{{ asset('js/admin/san-pham-create-vue.js') }}"></script>
+{{-- Alpine.js dùng cho collapse panel lọc nâng cao + toggle trạng thái nút --}}
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+{{-- san-pham.js cung cấp: toggleVariants, switchProductTab, deleteProductByUrl, ... cho Expandable Row / Quick View --}}
 <script src="{{ asset('js/admin/san-pham.js') }}?v={{ time() }}"></script>
 @endsection
-
-<!-- ===================== IMPORT MODAL ===================== -->
-<div class="modal fade" id="importProductModal" tabindex="-1" aria-labelledby="importProductModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header" style="background:linear-gradient(135deg,#198754 0%,#157347 100%);color:white;">
-                <div>
-                    <h5 class="modal-title fw-bold mb-0" id="importProductModalLabel">
-                        <i class="fas fa-file-import me-2"></i>Nhập dữ liệu sản phẩm
-                    </h5>
-                    <small class="text-white-50">Từ file CSV (.csv)</small>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{{ url('admin/san-pham/import') }}" method="POST" enctype="multipart/form-data" id="importProductForm">
-                @csrf
-                <input type="hidden" name="_action" value="import">
-                <div class="modal-body">
-                    <div class="text-center mb-4">
-                        <i class="fas fa-file-csv fa-4x text-success mb-3"></i>
-                        <h5>Chọn file CSV để import</h5>
-                        <p class="text-muted small mb-2">File phải có định dạng <strong>.csv</strong> (UTF-8).</p>
-                        <a href="{{ url('admin/san-pham/export-template') }}" class="btn btn-outline-success btn-sm">
-                            <i class="fas fa-download me-1"></i>Tải mẫu import
-                        </a>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="importFileInput" class="form-label fw-semibold">Chọn file CSV</label>
-                        <input type="file" class="form-control" id="importFileInput" name="excel_file" accept=".csv,text/csv">
-                        <div class="form-text">Dung lượng tối đa: 5MB</div>
-                    </div>
-
-                    <!-- Preview section -->
-                    <div id="importPreviewSection" class="d-none">
-                        <hr>
-                        <h6 class="mb-2"><i class="fas fa-eye me-1"></i>Xem trước dữ liệu (5 dòng đầu tiên)</h6>
-                        <div class="table-responsive border rounded">
-                            <table class="table table-sm table-bordered table-hover mb-0" id="importPreviewTable">
-                                <thead class="table-light"></thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
-                    <button type="submit" class="btn btn-success" id="btnImportSubmit">
-                        <i class="fas fa-upload me-1"></i>Import sản phẩm
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 @section('styles')
 <link rel="stylesheet" href="{{ asset('css/admin/san-pham.css') }}">
 <style>
     [v-cloak] { display: none !important; }
+
+    /* =========================================================
+       Utility classes bổ sung cho dòng sản phẩm trong bảng danh sách
+       (cursor-pointer, hover highlight mềm, transition mượt).
+       Bootstrap không cung cấp sẵn nên khai báo tại đây.
+       ========================================================= */
+    .cursor-pointer { cursor: pointer; }
+    .hover\:bg-gray-50:hover > td { background-color: #f9fafb !important; }
+    .transition-colors { transition: background-color 0.15s ease, color 0.15s ease; }
+
+    /* =========================================================
+       YÊU CẦU MỚI: KHỐI TÌM KIẾM & LỌC (BASIC SEARCH + ADVANCED FILTER)
+       Mô hình: Thanh công cụ luôn hiển thị, Panel lọc nâng cao dạng collapse
+       ========================================================= */
+    .search-filter-card {
+        border: 1px solid #f1f3f5;
+        border-radius: 12px;
+        box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+    }
+
+    /* Ô tìm kiếm chính - bo góc + focus state */
+    .search-input-group {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        overflow: hidden;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .search-input-group:focus-within {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    }
+    .search-input-group .input-group-text {
+        padding-left: 0.85rem;
+        padding-right: 0.5rem;
+    }
+    .search-input-group .form-control {
+        border-left: 0;
+        padding-left: 0.25rem;
+        font-size: 0.9rem;
+    }
+    .search-input-group .form-control:focus {
+        box-shadow: none;
+        border-color: transparent;
+    }
+
+    /* Nút "Lọc nâng cao" - toggle panel */
+    .btn-advanced-filter {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        color: #374151;
+        font-weight: 500;
+        font-size: 0.875rem;
+        padding: 0.5rem 0.9rem;
+        border-radius: 10px;
+        transition: all 0.15s ease;
+        white-space: nowrap;
+    }
+    .btn-advanced-filter:hover {
+        background: #f9fafb;
+        border-color: #d1d5db;
+        color: #1f2937;
+    }
+    .btn-advanced-filter.active {
+        background: #eff6ff;
+        border-color: #93c5fd;
+        color: #1d4ed8;
+    }
+    .btn-advanced-filter .filter-badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.2rem 0.45rem;
+        border-radius: 999px;
+    }
+    .btn-advanced-filter .chevron-icon {
+        font-size: 0.7rem;
+        transition: transform 0.25s ease;
+    }
+    .btn-advanced-filter .chevron-icon.rotated {
+        transform: rotate(180deg);
+    }
+
+    /* Nhóm nút action bên phải */
+    .action-group .action-btn {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.85rem;
+        border-radius: 10px;
+        white-space: nowrap;
+        transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    .action-group .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(15,23,42,0.08);
+    }
+    /* Trên mobile: padding nhỏ lại cho nút action để gọn hơn */
+    @media (max-width: 575.98px) {
+        .action-group .action-btn {
+            padding: 0.5rem 0.65rem;
+        }
+    }
+
+    /* Panel lọc nâng cao - hiệu ứng collapse mượt */
+    .filter-panel-wrapper {
+        overflow: hidden;
+    }
+    .filter-panel {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 1rem 1rem 0.5rem;
+        box-shadow: 0 2px 8px rgba(15,23,42,0.05);
+    }
+    .filter-panel-wrapper.filter-enter {
+        transition: max-height 0.35s ease, opacity 0.25s ease;
+    }
+    .filter-panel-wrapper.filter-enter-start {
+        max-height: 0;
+        opacity: 0;
+    }
+    .filter-panel-wrapper.filter-enter-end {
+        max-height: 600px;
+        opacity: 1;
+    }
+    .filter-panel-wrapper.filter-leave {
+        transition: max-height 0.3s ease, opacity 0.2s ease;
+    }
+    .filter-panel-wrapper.filter-leave-start {
+        max-height: 600px;
+        opacity: 1;
+    }
+    .filter-panel-wrapper.filter-leave-end {
+        max-height: 0;
+        opacity: 0;
+    }
+
+    /* Label + input/select trong panel */
+    .filter-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #4b5563;
+        margin-bottom: 0.35rem;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+    .filter-select,
+    .filter-input {
+        font-size: 0.875rem;
+        border-radius: 8px;
+        border-color: #e5e7eb;
+    }
+    .filter-select:focus,
+    .filter-input:focus {
+        border-color: #93c5fd;
+        box-shadow: 0 0 0 3px rgba(147,197,253,0.25);
+    }
+
+    /* Footer của panel (nút Reset + Áp dụng) */
+    .filter-panel-footer {
+        margin-top: 1rem;
+        padding-top: 0.85rem;
+        border-top: 1px dashed #e5e7eb;
+    }
+    .btn-reset-filter {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        color: #4b5563;
+        font-size: 0.85rem;
+        padding: 0.45rem 0.9rem;
+        border-radius: 8px;
+        transition: all 0.15s ease;
+    }
+    .btn-reset-filter:hover {
+        background: #f3f4f6;
+        color: #1f2937;
+        border-color: #d1d5db;
+    }
+    .btn-apply-filter {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        border: 1px solid #1d4ed8;
+        color: #ffffff;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.45rem 1.1rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(37,99,235,0.25);
+        transition: all 0.15s ease;
+    }
+    .btn-apply-filter:hover {
+        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(37,99,235,0.35);
+    }
+    .btn-apply-filter .badge {
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
 
     /* =========================================================
        BẢNG SẢN PHẨM - LAYOUT FIXED ĐỂ CỘT KHÔNG BỊ DỒN VỀ TRÁI
