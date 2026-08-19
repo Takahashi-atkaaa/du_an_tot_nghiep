@@ -18,6 +18,8 @@ use App\Http\Controllers\Admin\Api\KiemKhoApiController;
 use App\Http\Controllers\Admin\KiemKho\KiemKhoController;
 use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
 use App\Http\Controllers\admin\KhoHang\HangLoiController;
+use App\Http\Controllers\admin\KhoHang\PhieuNhapController;
+use App\Http\Controllers\admin\KhoHang\KhoHangController;
 use App\Http\Controllers\admin\Api\ThuocTinhApiController;
 use App\Http\Controllers\admin\Api\SanPhamApiController;
 use App\Http\Controllers\admin\CaiDat\ThietLapSanPhamController;
@@ -211,18 +213,17 @@ Route::middleware([KTVaiTro::class])->group(function () {
 
     //quản lý sản phẩm
     Route::get('/admin/san-pham', [SanPhamController::class, 'index'])->middleware('permission:quan_ly_san_pham')->name('san-pham.index');
-    Route::post('/admin/san-pham', [SanPhamController::class, 'store'])->middleware('permission:quan_ly_san_pham');
+    Route::get('/admin/san-pham/create', [SanPhamController::class, 'create'])->middleware('permission:them_san_pham')->name('san-pham.create');
+    Route::post('/admin/san-pham', [SanPhamController::class, 'store'])->middleware('permission:them_san_pham')->name('san-pham.store');
     Route::post('/admin/san-pham/bulk-action', [SanPhamController::class, 'bulkAction'])->middleware('permission:sua_san_pham');
     Route::get('/admin/san-pham/trash', [SanPhamController::class, 'trash'])->middleware('permission:xoa_san_pham')->name('san-pham.trash');
     Route::post('/admin/san-pham/bulk-restore', [SanPhamController::class, 'bulkRestore'])->middleware('permission:xoa_san_pham');
     Route::delete('/admin/san-pham/bulk-force', [SanPhamController::class, 'bulkForceDelete'])->middleware('permission:xoa_san_pham');
-    Route::get('/admin/san-pham/export', [SanPhamController::class, 'export'])->middleware('permission:xem_san_pham');
-    Route::get('/admin/san-pham/export-template', [SanPhamController::class, 'exportTemplate'])->middleware('permission:xem_san_pham');
     Route::post('/admin/san-pham/import', [SanPhamController::class, 'import'])->middleware('permission:them_san_pham');
     Route::post('/admin/san-pham/{id}/restore', [SanPhamController::class, 'restore'])->middleware('permission:xoa_san_pham');
     Route::delete('/admin/san-pham/{id}/force', [SanPhamController::class, 'forceDelete'])->middleware('permission:xoa_san_pham');
     Route::get('/admin/san-pham/{id}/edit', [SanPhamController::class, 'edit'])->middleware('permission:sua_san_pham')->name('san-pham.edit');
-    Route::put('/admin/san-pham/{id}', [SanPhamController::class, 'update'])->middleware('permission:sua_san_pham');
+    Route::put('/admin/san-pham/{id}', [SanPhamController::class, 'update'])->middleware('permission:sua_san_pham')->name('san-pham.update');
     Route::delete('/admin/san-pham/{id}', [SanPhamController::class, 'destroy'])->middleware('permission:xoa_san_pham')->name('san-pham.destroy');
     Route::get('/admin/san-pham/{id}', [SanPhamController::class, 'show'])->middleware('permission:xem_san_pham');
 
@@ -257,14 +258,14 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::post('/admin/hang-loi/{id}/xac-nhan-tieu-huy', [HangLoiController::class, 'xacNhanTieuHuy'])->name('admin.hang-loi.xac-nhan-tieu-huy');
 
     // Trang kho hang
-    Route::get('/admin/kho-hang', function () {
-        $nhaCungCaps = NhaCungCap::orderBy('id', 'asc')->get();
-        return view('admin_xem_truoc.kho-hang.index', compact('nhaCungCaps'));
-    });
+    Route::get('/admin/kho-hang', [KhoHangController::class, 'index']);
     Route::get('/admin/kho-hang/lo-hang', function () { return view('admin_xem_truoc.warehouse.lo-hang');});
     Route::get('/admin/kho-hang/phieu-nhap', function () { return view('admin_xem_truoc.warehouse.phieu-nhap');});
     Route::get('/admin/kho-hang/phieu-xuat', function () { return view('admin_xem_truoc.warehouse.phieu-xuat');});
 
+    // Trang tạo phiếu nhập (chuyển từ modal sang trang riêng)
+    Route::get('/admin/kho-hang/phieu-nhap/create', [PhieuNhapController::class, 'create'])
+        ->name('phieu-nhap.create');
 
     // Quan ly khach hang
     Route::get('/admin/khach-hang', [KhachHangController::class, 'index'])->name('khach-hang.index')->middleware('permission:quan_ly_khach_hang');

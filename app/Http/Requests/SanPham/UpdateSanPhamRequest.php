@@ -60,7 +60,9 @@ class UpdateSanPhamRequest extends FormRequest
                 'string',
                 'max:255',
             ],
-            'bien_the.*.hinh_anh' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            // Ảnh biến thể giờ gửi qua Base64.
+            'bien_the.*.hinh_anh_base64' => 'nullable|string',
+            'bien_the.*.hinh_anh_action' => 'nullable|string|in:replace,delete,keep',
             'bien_the.*.trang_thai' => 'sometimes|boolean',
 
             // Biến thể đơn vị (la_don_vi = true khi sp chỉ có đơn vị)
@@ -83,7 +85,8 @@ class UpdateSanPhamRequest extends FormRequest
                 'nullable',
                 'string',
             ],
-            'bien_the.*.units.*.hinh_anh' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'bien_the.*.units.*.hinh_anh_base64' => 'nullable|string',
+            'bien_the.*.units.*.hinh_anh_action' => 'nullable|string|in:replace,delete,keep',
 
             // Thuộc tính mới: thuoc_tinh do user gõ tạo mới
             'new_attributes' => 'sometimes|array',

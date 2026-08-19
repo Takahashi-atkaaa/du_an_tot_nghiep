@@ -35,6 +35,7 @@ class SanPhamController extends Controller
             ->get();
 
         $sanPhams = Product::with(['danhMuc', 'bienThe.units'])
+            ->withSum('variants', 'so_luong_ton')
             ->withTongDaBan()
             ->whereNull('deleted_at')
             ->whereHas('variants', fn($q) => $q->whereNull('deleted_at'))
@@ -80,6 +81,28 @@ class SanPhamController extends Controller
         ]);
     }
 
+    public function create(): View
+    {
+        $danhMucs = DanhMucSanPham::query()->orderBy('ten_danh_muc')->get();
+
+        $thuocTinhChas = ThuocTinhSanPham::whereNull('thuoc_tinh_cha_id')
+            ->where('trang_thai', true)
+            ->orderBy('ten_thuoc_tinh')
+            ->with(['thuocTinhCons' => fn($q) => $q->where('trang_thai', true)->orderBy('ten_thuoc_tinh')])
+            ->get();
+
+        $danhMucDonVis = DanhMucDonVi::where('trang_thai', true)
+            ->orderBy('ten_don_vi')
+            ->orderBy('so_luong_san_pham_trong_don_vi')
+            ->get();
+
+        return view('admin_xem_truoc.san-pham.create', [
+            'danhMucs' => $danhMucs,
+            'thuocTinhChas' => $thuocTinhChas,
+            'danhMucDonVis' => $danhMucDonVis,
+        ]);
+    }
+
     public function store(StoreSanPhamRequest $request): RedirectResponse
     {
         \Log::info('Data store:', $request->all());
@@ -95,11 +118,6 @@ class SanPhamController extends Controller
             // 1b. Kiểm tra trùng lặp với các biến thể ĐÃ TỒN TẠI trong DB cho sản phẩm này
             // (Trường hợp update, cần truyền product_id; trong store thì là sản phẩm mới nên bỏ qua)
 
-            $imagePath = null;
-            if ($request->hasFile('hinh_anh')) {
-                $imagePath = $this->uploadImage($request->file('hinh_anh'));
-            }
-
             // Validate ma_vach khong trung
             $barcodes = array_filter(array_column($data['bien_the'] ?? [], 'ma_vach'));
             if (!empty($barcodes) && BienTheSanPham::whereIn('ma_vach', $barcodes)->exists()) {
@@ -110,9 +128,16 @@ class SanPhamController extends Controller
             $newAttrMap = $this->processNewAttributes($data['new_attributes'] ?? []);
             $data['bien_the'] = $this->resolveThuocTinhIdsWithNew($data['bien_the'] ?? [], $newAttrMap);
 
+            // ============================================================
+            // Xử lý Đơn vị mới on-the-fly (don_vi_co_ban + don_vi_quy_doi):
+            // - Tạo record trong bảng danh_muc_don_vi cho từng tên mới.
+            // - Map tên về don_vi_chuan_id để insert đúng.
+            // ============================================================
+            $data['bien_the'] = $this->processOnTheFlyDonViForBienThe($data['bien_the'] ?? []);
+
             // return bên trong DB::transaction() sẽ throw, thoát closure và return từ store luôn.
             // Nếu closure throw exception → Laravel tự động rollBack + propagate exception ra ngoài catch.
-            return DB::transaction(function () use ($data, $request, $imagePath) {
+            return DB::transaction(function () use ($data, $request) {
             // 1. Tạo Product (thông tin chung)
             $product = Product::create([
                 'id_danh_muc' => $data['id_danh_muc'],
@@ -127,19 +152,30 @@ class SanPhamController extends Controller
             // FIX: Inject đường dẫn ảnh upload TRƯỚC KHI gom nhóm để tránh lệch index.
             // Trước đây $variantImages[$idx] dùng index của mảng $bienThe SAU KHI gom nhóm,
             // dẫn đến ảnh upload bị gán nhầm variant. Giờ gắn thẳng path vào $item.
+            // ẢNH GIỜ LÀ BASE64: decode ngay tại đây thành file vật lý rồi lưu path.
             foreach ($bienThe as $idx => &$item) {
-                if ($request->hasFile("bien_the.{$idx}.hinh_anh")) {
-                    $item['uploaded_image_path'] = $this->uploadImage(
-                        $request->file("bien_the.{$idx}.hinh_anh")
-                    );
-                } else {
-                    $item['uploaded_image_path'] = null;
+                $item['uploaded_image_path'] = $this->resolveVariantImage(
+                    $item['hinh_anh_base64'] ?? null,
+                    $item['hinh_anh_action'] ?? 'replace',
+                    null
+                );
+                // Cũng decode ảnh cho units[] của dòng này (nếu có)
+                if (!empty($item['units']) && is_array($item['units'])) {
+                    foreach ($item['units'] as $uIdx => &$unit) {
+                        $unit['uploaded_image_path'] = $this->resolveVariantImage(
+                            $unit['hinh_anh_base64'] ?? null,
+                            $unit['hinh_anh_action'] ?? 'replace',
+                            null
+                        );
+                    }
+                    unset($unit);
                 }
             }
             unset($item); // hủy reference để tránh side-effect
 
             if (empty($bienThe)) {
                 // 2a. Không có biến thể → tạo 1 variant mặc định
+                // Mặc định: KHÔNG gán ảnh chính nào. Nếu sau này có ảnh chính qua base64, sẽ thêm sau.
                 BienTheSanPham::create([
                     'product_id' => $product->id,
                     'ten_bien_the' => null,
@@ -148,7 +184,7 @@ class SanPhamController extends Controller
                     'gia_von' => 0,
                     'gia_ban' => 0,
                     'so_luong_ton' => 0,
-                    'hinh_anh' => $imagePath,
+                    'hinh_anh' => null,
                     'thuoc_tinh_ids' => null,
                     'trang_thai' => $data['trang_thai'] ?? true,
                 ]);
@@ -165,12 +201,12 @@ class SanPhamController extends Controller
                 // Trong nhóm, dòng ty_le=1 → base variant; các dòng ty_le>1 → DonViQuyDoi
                 // gắn vào variant đó.
                 //
-                // Ảnh: ưu tiên uploaded_image_path (đã inject ở trên) → fallback ảnh chính.
+                // Ảnh: ưu tiên uploaded_image_path (đã inject ở trên). KHÔNG fallback ảnh chính SP.
                 // ============================================================
                 $groupedVariants = [];
                 foreach ($bienThe as $idx => $item) {
-                    // Ưu tiên ảnh upload đã inject; nếu không có thì fallback ảnh chính SP
-                    $item['_variantImage'] = $item['uploaded_image_path'] ?? $imagePath;
+                    // Ưu tiên ảnh upload đã inject; nếu không có thì null
+                    $item['_variantImage'] = $item['uploaded_image_path'] ?? null;
                     $ids = $this->normalizeThuocTinhIds($item['thuoc_tinh_ids'] ?? null);
                     $attrKey = !empty($ids) ? implode(',', $ids) : 'no_attr';
                     if (!isset($groupedVariants[$attrKey])) {
@@ -238,7 +274,8 @@ class SanPhamController extends Controller
                         'gia_ban' => $baseVariantData['gia_ban'] ?? 0,
                         'so_luong_ton' => $baseVariantData['so_luong_ton'] ?? 0,
                         'dinh_muc_toi_thieu' => $baseVariantData['dinh_muc_toi_thieu'] ?? 0,
-                        'hinh_anh' => $baseVariantData['_variantImage'] ?? $imagePath,
+                        // FIX: KHÔNG fallback $imagePath. Nếu không có ảnh base64 → null.
+                        'hinh_anh' => $baseVariantData['_variantImage'] ?? null,
                         'thuoc_tinh_ids' => $thuocTinhIds,
                         'trang_thai' => $data['trang_thai'] ?? true,
                     ]);
@@ -255,7 +292,9 @@ class SanPhamController extends Controller
                         DonViQuyDoi::create([
                             'variant_id' => $createdVariant->id, // BẮT BUỘC KHÓA NGOẠI
                             'product_id' => $product->id,
-                            'don_vi_chuan_id' => null,
+                            'don_vi_chuan_id' => !empty($unitItem['don_vi_chuan_id'])
+                                ? (int) $unitItem['don_vi_chuan_id']
+                                : null,
                             // SAFETY: dùng !empty() để tránh tạo đơn vị với tên rỗng
                             'ten_don_vi' => !empty($unitItem['ten_don_vi_bien_the'])
                                 ? $unitItem['ten_don_vi_bien_the']
@@ -268,7 +307,8 @@ class SanPhamController extends Controller
                             'gia_von_quy_doi' => $unitItem['gia_von'] ?? ($unitItem['gia_von_quy_doi'] ?? 0),
                             'gia_ban_quy_doi' => $unitItem['gia_ban'] ?? ($unitItem['gia_ban_quy_doi'] ?? 0),
                             'gia_ban_si' => $unitItem['gia_ban_si'] ?? null,
-                            'hinh_anh' => $unitItem['_variantImage'] ?? $imagePath,
+                            // FIX: KHÔNG fallback ảnh chính SP. Dùng ảnh riêng của unit (nếu có).
+                            'hinh_anh' => $unitItem['uploaded_image_path'] ?? null,
                             'la_don_vi_mac_dinh' => false,
                         ]);
                     }
@@ -283,7 +323,9 @@ class SanPhamController extends Controller
                             DonViQuyDoi::create([
                                 'variant_id' => $createdVariant->id,
                                 'product_id' => $product->id,
-                                'don_vi_chuan_id' => $unit['don_vi_chuan_id'] ?? null,
+                                'don_vi_chuan_id' => !empty($unit['don_vi_chuan_id'])
+                                    ? (int) $unit['don_vi_chuan_id']
+                                    : null,
                                 // SAFETY: bỏ qua tạo nếu thiếu tên hợp lệ
                                 'ten_don_vi' => !empty($unit['ten_don_vi']) ? $unit['ten_don_vi'] : 'Đơn vị',
                                 'so_luong_san_pham_trong_don_vi' => (float) ($unit['so_luong_san_pham_trong_don_vi'] ?? 1),
@@ -292,7 +334,7 @@ class SanPhamController extends Controller
                                 'gia_von_quy_doi' => $unit['gia_von_quy_doi'] ?? 0,
                                 'gia_ban_quy_doi' => $unit['gia_ban_quy_doi'] ?? 0,
                                 'gia_ban_si' => $unit['gia_ban_si'] ?? null,
-                                'hinh_anh' => $baseVariantData['_variantImage'] ?? $imagePath,
+                                'hinh_anh' => $unit['uploaded_image_path'] ?? null,
                                 'la_don_vi_mac_dinh' => false,
                             ]);
                         }
@@ -363,34 +405,43 @@ class SanPhamController extends Controller
         $newAttrMap = $this->processNewAttributes($data['new_attributes'] ?? []);
         $data['bien_the'] = $this->resolveThuocTinhIdsWithNew($data['bien_the'] ?? [], $newAttrMap);
 
-        // 1. Upload anh bien the (ngoai transaction de tranh rollback file)
-        $variantImages = [];
-        if ($request->hasFile('bien_the')) {
-            foreach ($request->file('bien_the') as $idx => $files) {
-                if (isset($files['hinh_anh']) && $files['hinh_anh']) {
-                    $variantImages[$idx] = $this->uploadImage($files['hinh_anh']);
-                }
-            }
-        }
+        // Xử lý Đơn vị mới on-the-fly (don_vi_co_ban + don_vi_quy_doi) – trước transaction
+        $data['bien_the'] = $this->processOnTheFlyDonViForBienThe($data['bien_the'] ?? []);
 
-        // Upload anh chinh cua san pham (truong hinh_anh tren form)
-        $mainImage = null;
-        if ($request->hasFile('hinh_anh')) {
-            $mainImage = $this->uploadImage($request->file('hinh_anh'));
-        }
-
-        // FIX: Inject đường dẫn ảnh upload TRƯỚC KHI gom nhóm để tránh lệch index.
-        // $variantImages[$idx] bên trên dùng index từ $request->file('bien_the') (flat),
-        // còn $idx bên dưới khi gom nhóm lại là index của $data['bien_the'] (theo nhóm).
-        // Hai index này KHÔNG khớp nhau khi frontend gửi mảng lồng nhau → ảnh upload bị gán nhầm.
-        // Giải pháp: gắn path thẳng vào $data['bien_the'] theo đúng index gốc.
+        // FIX: Inject ảnh biến thể từ Base64 TRƯỚC KHI gom nhóm để tránh lệch index.
+        // Ảnh biến thể giờ gửi qua Base64 + action flag, KHÔNG dùng FormData multipart.
+        // Nếu action='replace' + có base64 → decode thành file vật lý mới.
+        // Nếu action='delete' → set null + xóa file cũ.
+        // Nếu action='keep' → giữ nguyên file cũ.
         foreach ($data['bien_the'] ?? [] as $idx => &$item) {
-            if ($request->hasFile("bien_the.{$idx}.hinh_anh")) {
-                $item['uploaded_image_path'] = $this->uploadImage(
-                    $request->file("bien_the.{$idx}.hinh_anh")
-                );
-            } else {
-                $item['uploaded_image_path'] = null;
+            $existingImage = null;
+            $existingId = $item['id'] ?? null;
+            if ($existingId) {
+                $existingVariant = BienTheSanPham::find($existingId);
+                $existingImage = $existingVariant?->hinh_anh;
+            }
+            $item['uploaded_image_path'] = $this->resolveVariantImage(
+                $item['hinh_anh_base64'] ?? null,
+                $item['hinh_anh_action'] ?? 'keep',
+                $existingImage
+            );
+
+            // Cũng xử lý ảnh cho units[] trong cùng biến thể
+            if (!empty($item['units']) && is_array($item['units'])) {
+                foreach ($item['units'] as $uIdx => &$unit) {
+                    $existingUnitImage = null;
+                    $existingUnitId = $unit['id'] ?? null;
+                    if ($existingUnitId) {
+                        $existingUnit = DonViQuyDoi::find($existingUnitId);
+                        $existingUnitImage = $existingUnit?->hinh_anh;
+                    }
+                    $unit['uploaded_image_path'] = $this->resolveVariantImage(
+                        $unit['hinh_anh_base64'] ?? null,
+                        $unit['hinh_anh_action'] ?? 'keep',
+                        $existingUnitImage
+                    );
+                }
+                unset($unit);
             }
         }
         unset($item);
@@ -412,8 +463,8 @@ class SanPhamController extends Controller
         $deletedVariantsList = [];
         $updatedVariantsList = [];
         $createdVariantsList = [];
- 
-        return DB::transaction(function () use ($product, $data, $request, $variantImages, $mainImage, &$deletedVariantsList, &$updatedVariantsList, &$createdVariantsList) {
+
+        return DB::transaction(function () use ($product, $data, $request, &$deletedVariantsList, &$updatedVariantsList, &$createdVariantsList) {
             // 2. Cap nhat thong tin chung
             $product->update([
                 'id_danh_muc' => $data['id_danh_muc'],
@@ -517,8 +568,10 @@ class SanPhamController extends Controller
                 if ($existingId && $product->variants->contains('id', $existingId)) {
                     // Cập nhật variant hiện có
                     $existingVariant = BienTheSanPham::find($existingId);
-                    // Ưu tiên: ảnh variant > ảnh chính > ảnh cũ của variant
-                    $finalImage = $variantImage ?? $mainImage ?? $existingVariant->hinh_anh;
+                    // ẢNH ĐÃ ĐƯỢC RESOLVE TỪ BASE64 Ở NGOÀI TRANSACTION (xem upload block trên).
+                    // uploaded_image_path đã tính đúng action (replace/delete/keep) với ảnh cũ.
+                    // KHÔNG fallback $mainImage (đã bỏ). Tôn trọng quyết định của user.
+                    $finalImage = $variantImage;
 
                     $thuocTinhIds = $this->normalizeThuocTinhIds($baseVariantData['thuoc_tinh_ids'] ?? null) ?: null;
 
@@ -590,8 +643,10 @@ class SanPhamController extends Controller
                     $tenBienThe = $laDonVi
                         ? null
                         : (!empty($baseVariantData['ten_bien_the']) ? $baseVariantData['ten_bien_the'] : null);
-                    // Ưu tiên: ảnh variant > ảnh chính
-                    $finalImage = $variantImage ?? $mainImage;
+                    // FIX: Ảnh đã được resolve từ Base64. KHÔNG fallback $mainImage.
+                    // - Nếu có base64: variant MỚI sẽ có ảnh (replace).
+                    // - Nếu không có base64: variant MỚI sẽ có hinh_anh = null (TUYỆT ĐỐI KHÔNG gán $mainImage đè).
+                    $finalImage = $variantImage;
 
                     // Auto-generate ma_hang chỉ khi rỗng
                     $maHang = !empty($variant['ma_hang']) ? $variant['ma_hang'] : $this->generateUniqueMaHang();
@@ -1297,6 +1352,131 @@ class SanPhamController extends Controller
         $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9\.\-_]/', '_', $file->getClientOriginalName());
         $file->move($dir, $filename);
         return "uploads/{$subDir}/" . $filename;
+    }
+
+    /**
+     * Decode chuỗi Base64 (data:image/...;base64,...) thành file vật lý trong public/uploads/$subDir.
+     * Trả về đường dẫn tương đối để lưu vào DB (VD: "uploads/san-pham/xxx.jpg"), hoặc null nếu input không hợp lệ.
+     */
+    protected function decodeBase64ToFile(?string $base64, string $subDir = 'san-pham'): ?string
+    {
+        if (empty($base64)) {
+            return null;
+        }
+        if (!preg_match('#^data:image/(\w+);base64,(.*)$#s', $base64, $m)) {
+            return null;
+        }
+        $ext = strtolower($m[1]);
+        // Whitelist các định dạng an toàn
+        if (!in_array($ext, ['jpeg', 'jpg', 'png', 'gif', 'webp'], true)) {
+            $ext = 'jpg';
+        }
+        $data = base64_decode($m[2], true);
+        if ($data === false) {
+            return null;
+        }
+        $dir = public_path("uploads/{$subDir}");
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $fullPath = $dir . DIRECTORY_SEPARATOR . $filename;
+        if (file_put_contents($fullPath, $data) === false) {
+            return null;
+        }
+        return "uploads/{$subDir}/{$filename}";
+    }
+
+    /**
+     * Xử lý ảnh biến thể theo action flag:
+     *  - 'replace' + có base64: decode base64 thành file mới, trả về path mới.
+     *  - 'replace' + không có base64: bỏ qua (giữ null).
+     *  - 'delete': trả về null (và xóa file cũ nếu có).
+     *  - 'keep' hoặc action không hợp lệ: giữ nguyên path cũ (existingImagePath).
+     *
+     * @param string|null $existingImagePath  Đường dẫn ảnh cũ trong DB (khi update).
+     * @return string|null  Đường dẫn mới sẽ lưu vào DB.
+     */
+    protected function resolveVariantImage(?string $base64, ?string $action, ?string $existingImagePath = null): ?string
+    {
+        $action = $action ?: 'keep';
+
+        if ($action === 'replace') {
+            if (!empty($base64)) {
+                $newPath = $this->decodeBase64ToFile($base64);
+                // Xóa file cũ nếu khác file mới (tránh xóa nhầm)
+                if (!empty($existingImagePath) && $newPath !== $existingImagePath && str_starts_with($existingImagePath, 'uploads/')) {
+                    @unlink(public_path($existingImagePath));
+                }
+                return $newPath;
+            }
+            // replace nhưng không có base64 → giữ nguyên
+            return $existingImagePath;
+        }
+
+        if ($action === 'delete') {
+            if (!empty($existingImagePath) && str_starts_with($existingImagePath, 'uploads/')) {
+                @unlink(public_path($existingImagePath));
+            }
+            return null;
+        }
+
+        // 'keep' hoặc mặc định: giữ nguyên ảnh cũ
+        return $existingImagePath;
+    }
+
+    /**
+     * Xử lý đơn vị mới on-the-fly trong mảng bien_the + units:
+     * - Nếu ten_don_vi là string (chưa tồn tại) → tạo mới trong danh_muc_don_vi, gán don_vi_chuan_id.
+     * - Nếu đã có don_vi_chuan_id → giữ nguyên.
+     * Trả về mảng bien_the đã được enrich.
+     */
+    protected function processOnTheFlyDonViForBienThe(array $bienThe): array
+    {
+        foreach ($bienThe as &$item) {
+            // 1. Đơn vị cơ bản của variant (ten_don_vi): nếu không có id trong danh_muc_don_vi, tạo mới.
+            $tenDonViBase = trim((string) ($item['ten_don_vi'] ?? ''));
+            if ($tenDonViBase !== '' && empty($item['don_vi_chuan_id'])) {
+                $item['_don_vi_chuan_id_resolved'] = $this->ensureDanhMucDonVi($tenDonViBase);
+            }
+
+            // 2. Units[] (đơn vị quy đổi): xử lý từng unit.
+            if (!empty($item['units']) && is_array($item['units'])) {
+                foreach ($item['units'] as &$unit) {
+                    $tenDonViUnit = trim((string) ($unit['ten_don_vi'] ?? ''));
+                    if ($tenDonViUnit !== '' && empty($unit['don_vi_chuan_id'])) {
+                        $unit['don_vi_chuan_id'] = $this->ensureDanhMucDonVi($tenDonViUnit);
+                    }
+                }
+                unset($unit);
+            }
+
+            // 3. Trường hợp base variant là "don_vi" (không có thuộc tính) + user gõ tên đơn vị
+            //    trong ten_don_vi_bien_the → cũng tạo mới đơn vị.
+            $tenDonViBienThe = trim((string) ($item['ten_don_vi_bien_the'] ?? ''));
+            if ($tenDonViBienThe !== '' && empty($item['don_vi_chuan_id'])) {
+                $item['don_vi_chuan_id'] = $this->ensureDanhMucDonVi($tenDonViBienThe);
+            }
+        }
+        unset($item);
+        return $bienThe;
+    }
+
+    /**
+     * Tìm hoặc tạo mới Đơn vị trong bảng danh_muc_don_vi dựa trên tên.
+     * Trả về id của đơn vị. Nếu tên rỗng → trả về null.
+     */
+    protected function ensureDanhMucDonVi(?string $tenDonVi): ?int
+    {
+        $tenDonVi = trim((string) $tenDonVi);
+        if ($tenDonVi === '') {
+            return null;
+        }
+        $row = DanhMucDonVi::firstOrCreate(
+            ['ten_don_vi' => $tenDonVi],
+            ['so_luong_san_pham_trong_don_vi' => 1, 'trang_thai' => true]
+        );
+        return $row->id;
     }
 
     protected function deleteImageIfUnused(?string $imagePath, ?int $excludeId = null): void

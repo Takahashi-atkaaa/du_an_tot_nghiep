@@ -18,9 +18,6 @@
         <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#importProductModal">
             <i class="fas fa-file-import me-2"></i>Import
         </button>
-        <button class="btn btn-outline-success btn-sm" id="btnExportExcel">
-            <i class="fas fa-file-export me-2"></i>Export
-        </button>
         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addProductModal">
             <i class="fas fa-plus me-2"></i>Thêm sản phẩm
         </button>
@@ -1763,16 +1760,6 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-medium small">Tải file mẫu</label>
-                        <div>
-                            <a href="{{ url('admin/san-pham/export-template') }}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-download me-1"></i>Tải file Excel mẫu (.xlsx)
-                            </a>
-                            <a href="{{ url('admin/san-pham/export-template?type=csv') }}" class="btn btn-sm btn-outline-secondary ms-2">
-                                <i class="fas fa-download me-1"></i>Tải file CSV mẫu
-                            </a>
-                        </div>
-                    </div>
 
                     <div id="importPreviewSection" class="d-none">
                         <label class="form-label fw-medium small">Xem trước dữ liệu (5 dòng đầu tiên)</label>

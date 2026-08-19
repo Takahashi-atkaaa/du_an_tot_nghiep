@@ -36,7 +36,11 @@ class StoreSanPhamRequest extends FormRequest
                 'string',
                 Rule::unique('bien_the_san_pham', 'ma_vach'),
             ],
-            'bien_the.*.hinh_anh' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            // Ảnh biến thể giờ gửi qua Base64 để tránh lỗi Vue Proxy + PHP Multipart.
+            // - hinh_anh_base64: chuỗi data:image/...;base64,...
+            // - hinh_anh_action: replace | delete | keep
+            'bien_the.*.hinh_anh_base64' => 'nullable|string',
+            'bien_the.*.hinh_anh_action' => 'nullable|string|in:replace,delete,keep',
 
             // Biến thể đơn vị (la_don_vi = true khi sp chỉ có đơn vị)
             'bien_the.*.la_don_vi' => 'nullable|boolean',
@@ -59,7 +63,8 @@ class StoreSanPhamRequest extends FormRequest
                 'string',
                 Rule::unique('don_vi_quy_doi', 'ma_vach'),
             ],
-            'bien_the.*.units.*.hinh_anh' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'bien_the.*.units.*.hinh_anh_base64' => 'nullable|string',
+            'bien_the.*.units.*.hinh_anh_action' => 'nullable|string|in:replace,delete,keep',
 
             // Thuộc tính mới: thuoc_tinh do user gõ tạo mới
             'new_attributes' => 'sometimes|array',
