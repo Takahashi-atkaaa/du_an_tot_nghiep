@@ -646,7 +646,7 @@
                                             </div>
                                             <div class="shift-info">
                                                 <i class="fas fa-user"></i>
-                                                <span>{{ $vaiTroTrongCa }}</span>
+                                                <span>{{ $vaiTroTrongCa }}{{ isset($caChinh->nguoiDung->ho_ten) ? ' - ' . $caChinh->nguoiDung->ho_ten : '' }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -689,7 +689,7 @@
                                                             </div>
                                                             <div class="modal-shift-role">
                                                                 <i class="fas fa-user"></i>
-                                                                <span>{{ $vaiTroCaModal }}</span>
+                                                                <span>{{ $vaiTroCaModal }}{{ isset($caModal->nguoiDung->ho_ten) ? ' - ' . $caModal->nguoiDung->ho_ten : '' }}</span>
                                                             </div>
                                                         </div>
                                                     @endforeach

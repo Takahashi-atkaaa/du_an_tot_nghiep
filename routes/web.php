@@ -63,7 +63,9 @@ Route::get('/admin/doi-mat-khau', [AuthController::class, 'showDoiMatKhau'])->na
 Route::post('/admin/doi-mat-khau', [AuthController::class, 'doiMatKhau'])->name('admin.doi-mat-khau.submit');
 
 
-Route::get('/admin/cai-dat', function () { return view('admin_xem_truoc.cai-dat');});
+Route::get('/admin/cai-dat', function () {
+    return view('admin_xem_truoc.cai-dat');
+});
 
 // Lô hàng
 Route::get('/admin/api/lo-hang', [LoHangApiController::class, 'index']);
@@ -156,7 +158,7 @@ Route::get('/admin/kho-hang/kiem-kho/{id}', [KiemKhoController::class, 'show'])
 
 Route::middleware([KTVaiTro::class])->group(function () {
     // Admin Routes - Preview
-    Route::get('/admin/dashboard',[DashboardController::class, 'index'])->name('admin.dashboard');
+    Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
 
     // API - phải đặt TRƯỚC san-pham/{id} để tránh bị match nhầm (KHÔNG bị chặn bởi KTVaiTro)
@@ -258,10 +260,19 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::post('/admin/hang-loi/{id}/xac-nhan-tieu-huy', [HangLoiController::class, 'xacNhanTieuHuy'])->name('admin.hang-loi.xac-nhan-tieu-huy');
 
     // Trang kho hang
-    Route::get('/admin/kho-hang', [KhoHangController::class, 'index']);
-    Route::get('/admin/kho-hang/lo-hang', function () { return view('admin_xem_truoc.warehouse.lo-hang');});
-    Route::get('/admin/kho-hang/phieu-nhap', function () { return view('admin_xem_truoc.warehouse.phieu-nhap');});
-    Route::get('/admin/kho-hang/phieu-xuat', function () { return view('admin_xem_truoc.warehouse.phieu-xuat');});
+    Route::get('/admin/kho-hang', function () {
+        $nhaCungCaps = NhaCungCap::orderBy('id', 'asc')->get();
+        return view('admin_xem_truoc.kho-hang.index', compact('nhaCungCaps'));
+    });
+    Route::get('/admin/kho-hang/lo-hang', function () {
+        return view('admin_xem_truoc.warehouse.lo-hang');
+    });
+    Route::get('/admin/kho-hang/phieu-nhap', function () {
+        return view('admin_xem_truoc.warehouse.phieu-nhap');
+    });
+    Route::get('/admin/kho-hang/phieu-xuat', function () {
+        return view('admin_xem_truoc.warehouse.phieu-xuat');
+    });
 
     // Trang tạo phiếu nhập (chuyển từ modal sang trang riêng)
     Route::get('/admin/kho-hang/phieu-nhap/create', [PhieuNhapController::class, 'create'])
@@ -312,28 +323,28 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::put('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'update'])->name('chia-ca-lam-viec.update')->middleware('permission:quan_ly_ca_lam');
     Route::delete('/admin/chia-ca-lam-viec/{chiaCaLamViec}', [ChiaCaController::class, 'destroy'])->name('chia-ca-lam-viec.destroy')->middleware('permission:quan_ly_ca_lam');
 
-     // quản lý ca làm hiện tại 
-        Route::get('/ca-lam',[CaLam::class, 'index'])->name('ca-lam.index')->middleware('permission:quan_ly_ca_lam');
-        Route::get('/chi-tiet-hoa-don/{id_hoadon}',[CaLam::class, 'show'])->name('chi-tiet-hoa-don.show')->middleware('permission:quan_ly_ca_lam');
-        //lịch sử ca làm
-        Route::get('/lich-su-ca-lam-viec',[LichSuCaLam::class, 'index'])->name('lich-su-ca-lam-viec.index')->middleware('permission:quan_ly_ca_lam');
-        Route::get('/cac-hoa-don-cua-ca-hoan-thanh/{ngay}/{id_ca}',[LichSuCaLam::class, 'hoa_don_cua_ca_hoan_thanh'])->name('hoa-don-cua-ca.hoan-thanh')->middleware('permission:quan_ly_ca_lam');
-        Route::get('/cac-hoa-don-cua-ca-huy/{ngay}/{id_ca}',[LichSuCaLam::class, 'hoa_don_cua_ca_huy'])->name('hoa-don-cua-ca.huy')->middleware('permission:quan_ly_ca_lam');
-        // Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}',[LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:quan_ly_ca_lam');
-        Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}/{id_ca?}',[LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:quan_ly_ca_lam');
+    // quản lý ca làm hiện tại 
+    Route::get('/ca-lam', [CaLam::class, 'index'])->name('ca-lam.index')->middleware('permission:quan_ly_ca_lam');
+    Route::get('/chi-tiet-hoa-don/{id_hoadon}', [CaLam::class, 'show'])->name('chi-tiet-hoa-don.show')->middleware('permission:quan_ly_ca_lam');
+    //lịch sử ca làm
+    Route::get('/lich-su-ca-lam-viec', [LichSuCaLam::class, 'index'])->name('lich-su-ca-lam-viec.index')->middleware('permission:quan_ly_ca_lam');
+    Route::get('/cac-hoa-don-cua-ca-hoan-thanh/{ngay}/{id_ca}', [LichSuCaLam::class, 'hoa_don_cua_ca_hoan_thanh'])->name('hoa-don-cua-ca.hoan-thanh')->middleware('permission:quan_ly_ca_lam');
+    Route::get('/cac-hoa-don-cua-ca-huy/{ngay}/{id_ca}', [LichSuCaLam::class, 'hoa_don_cua_ca_huy'])->name('hoa-don-cua-ca.huy')->middleware('permission:quan_ly_ca_lam');
+    // Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}',[LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:quan_ly_ca_lam');
+    Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}/{id_ca?}', [LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:quan_ly_ca_lam');
 
 
 
-        Route::get('/lich-su-ca-lam-chi_tiet_ca_lam/{id_ca}/{ngay}',[LichSuCaLam::class, 'chi_tiet_ca'])->name('lich-su-ngay-lam-viec.chi_tiet_ca_lam')->middleware('permission:quan_ly_ca_lam');
-        Route::get('/lich-su-ca-lam-chi_tiet-hoa-don/{id_hoaDon}/{ngay}',[LichSuCaLam::class, 'chi_tiet_hoa_don'])->name('lich-su-ca-lam-chi-tiet-hoa-don.show')->middleware('permission:ca_lam');
-        //giao ca
-        Route::get('/lich-su-ca-lam-giao-ca/{id_ca}/{ngay}',[LichSuCaLam::class, 'tao_giao_ca'])->name('lich-su-ca-lam-giao-ca.tao-giao-ca')->middleware('permission:quan_ly_ca_lam');
-        Route::post('/lich-su-ca-lam-giao-ca',[LichSuCaLam::class, 'giao_ca_store'])->name('giao-ca.store')->middleware('permission:quan_ly_ca_lam');
-        Route::get('/lich-su-ca-lam-giao-ca-chi-tiet/{id}',[LichSuCaLam::class, 'giao_ca_chi_tiet'])->name('giao-ca.chi-tiet')->middleware('permission:quan_ly_ca_lam');
-        Route::get('/lich-su-ca-lam-giao-ca-sua/{id}',[LichSuCaLam::class, 'sua_giao_ca'])->name('giao-ca.sua')->middleware('permission:ca_lam');
-        Route::put('/lich-su-ca-lam-giao-cap-nhat/{id}',[LichSuCaLam::class, 'cap_nhat_giao_ca'])->name('giao-ca.cap-nhat')->middleware('permission:quan_ly_ca_lam');
-        Route::put('/lich-su-ca-lam-giao-ca/{id}/xac-nhan', [LichSuCaLam::class, 'xac_nhan_giao_ca'])->name('giao-ca.xac-nhan')->middleware('permission:quan_ly_ca_lam');
-        Route::put('/lich-su-ca-lam-giao-ca/{id}/tu-choi', [LichSuCaLam::class, 'tu_choi_giao_ca'])->name('giao-ca.tu-choi')->middleware('permission:quan_ly_ca_lam');
+    Route::get('/lich-su-ca-lam-chi_tiet_ca_lam/{id_ca}/{ngay}', [LichSuCaLam::class, 'chi_tiet_ca'])->name('lich-su-ngay-lam-viec.chi_tiet_ca_lam')->middleware('permission:quan_ly_ca_lam');
+    Route::get('/lich-su-ca-lam-chi_tiet-hoa-don/{id_hoaDon}/{ngay}', [LichSuCaLam::class, 'chi_tiet_hoa_don'])->name('lich-su-ca-lam-chi-tiet-hoa-don.show')->middleware('permission:ca_lam');
+    //giao ca
+    Route::get('/lich-su-ca-lam-giao-ca/{id_ca}/{ngay}', [LichSuCaLam::class, 'tao_giao_ca'])->name('lich-su-ca-lam-giao-ca.tao-giao-ca')->middleware('permission:quan_ly_ca_lam');
+    Route::post('/lich-su-ca-lam-giao-ca', [LichSuCaLam::class, 'giao_ca_store'])->name('giao-ca.store')->middleware('permission:quan_ly_ca_lam');
+    Route::get('/lich-su-ca-lam-giao-ca-chi-tiet/{id}', [LichSuCaLam::class, 'giao_ca_chi_tiet'])->name('giao-ca.chi-tiet')->middleware('permission:quan_ly_ca_lam');
+    Route::get('/lich-su-ca-lam-giao-ca-sua/{id}', [LichSuCaLam::class, 'sua_giao_ca'])->name('giao-ca.sua')->middleware('permission:ca_lam');
+    Route::put('/lich-su-ca-lam-giao-cap-nhat/{id}', [LichSuCaLam::class, 'cap_nhat_giao_ca'])->name('giao-ca.cap-nhat')->middleware('permission:quan_ly_ca_lam');
+    Route::put('/lich-su-ca-lam-giao-ca/{id}/xac-nhan', [LichSuCaLam::class, 'xac_nhan_giao_ca'])->name('giao-ca.xac-nhan')->middleware('permission:quan_ly_ca_lam');
+    Route::put('/lich-su-ca-lam-giao-ca/{id}/tu-choi', [LichSuCaLam::class, 'tu_choi_giao_ca'])->name('giao-ca.tu-choi')->middleware('permission:quan_ly_ca_lam');
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Routes bán hàng
