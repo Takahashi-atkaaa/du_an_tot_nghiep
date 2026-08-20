@@ -196,6 +196,7 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::get('quan-ly-danh-muc-edit/{id}', [DanhMucSanPhamController::class, 'edit'])->name('danh_muc.edit')->middleware('permission:quan_ly_danh_muc');
     Route::put('quan-ly-danh-muc-update/{id}', [DanhMucSanPhamController::class, 'update'])->name('danh_muc.update')->middleware('permission:quan_ly_danh_muc');
     Route::delete('quan-ly-danh-muc-delete/{id}', [DanhMucSanPhamController::class, 'destroy'])->name('danh_muc.destroy')->middleware('permission:quan_ly_danh_muc');
+    Route::get('quan-ly-danh-muc-san-pham/{id}', [DanhMucSanPhamController::class, 'sanPhamTheoDanhMuc'])->name('danh_muc.san_pham')->middleware('permission:quan_ly_danh_muc');
 
 
     //quản lý người dùng

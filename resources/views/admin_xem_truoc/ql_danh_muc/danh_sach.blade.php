@@ -105,9 +105,11 @@
 
                     <h5 class="mb-1">{{ $item->ten_danh_muc }}</h5>
 
-                    <p class="text-muted mb-2">
-                        {{ $item->san_phams_count }} sản phẩm
-                    </p>
+                    <a href="{{route('danh_muc.san_pham', $item->id)}}" class="text-decoration-none">
+                        <p class="text-muted mb-2">
+                            {{ $item->san_phams_count }} sản phẩm
+                        </p>
+                    </a>
 
                     <a href="{{ route('danh_muc.edit', $item->id) }}" class="btn btn-sm btn-outline-primary">
                         <i class="fa fa-edit"></i>
