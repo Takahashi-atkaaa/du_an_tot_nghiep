@@ -23,7 +23,7 @@ class RevenueStatisticsService
             ->join('chi_tiet_doi_tra', 'doi_tra.id', '=', 'chi_tiet_doi_tra.id_doi_tra')
             ->whereNull('doi_tra.deleted_at')
             ->whereNull('chi_tiet_doi_tra.deleted_at')
-            ->where('doi_tra.Loai', 'tra_hang')
+            ->whereRaw($this->chiTietLoaiSql() . " = 'tra_hang'")
             ->groupBy('doi_tra.id_hoa_don')
             ->selectRaw('doi_tra.id_hoa_don, SUM(chi_tiet_doi_tra.thanh_tien) as tong_tien_tra');
     }
@@ -34,9 +34,14 @@ class RevenueStatisticsService
             ->join('chi_tiet_doi_tra', 'doi_tra.id', '=', 'chi_tiet_doi_tra.id_doi_tra')
             ->whereNull('doi_tra.deleted_at')
             ->whereNull('chi_tiet_doi_tra.deleted_at')
-            ->where('doi_tra.Loai', 'tra_hang')
+            ->whereRaw($this->chiTietLoaiSql() . " = 'tra_hang'")
             ->groupBy('doi_tra.id_hoa_don', 'chi_tiet_doi_tra.id_bien_the')
             ->selectRaw('doi_tra.id_hoa_don, chi_tiet_doi_tra.id_bien_the, SUM(chi_tiet_doi_tra.thanh_tien) as tong_tien_tra');
+    }
+
+    private function chiTietLoaiSql(): string
+    {
+        return "COALESCE(chi_tiet_doi_tra.loai, CASE WHEN doi_tra.Loai = 'doi_tra' THEN 'doi_hang' ELSE 'tra_hang' END)";
     }
 
     public function invoiceNetRevenueExpression(

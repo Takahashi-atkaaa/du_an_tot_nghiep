@@ -21,6 +21,11 @@ use Illuminate\Validation\ValidationException;
 
 class DoiTraService
 {
+    private function chiTietLoaiSql(): string
+    {
+        return "COALESCE(chi_tiet_doi_tra.loai, CASE WHEN doi_tra.Loai = 'doi_tra' THEN 'doi_hang' ELSE 'tra_hang' END)";
+    }
+
     private function tenHienThiBienTheSelect(): \Illuminate\Database\Query\Expression
     {
         return DB::raw("
@@ -146,6 +151,8 @@ class DoiTraService
 
     public function getInvoiceItemReturnBreakdown(int $hoaDonId): Collection
     {
+        $chiTietLoaiSql = $this->chiTietLoaiSql();
+
         return ChiTietDoiTra::query()
             ->join('doi_tra', 'chi_tiet_doi_tra.id_doi_tra', '=', 'doi_tra.id')
             ->whereNull('doi_tra.deleted_at')
@@ -154,8 +161,8 @@ class DoiTraService
             ->groupBy('chi_tiet_doi_tra.id_bien_the')
             ->select(
                 'chi_tiet_doi_tra.id_bien_the',
-                DB::raw("SUM(CASE WHEN doi_tra.Loai = 'tra_hang' THEN chi_tiet_doi_tra.so_luong ELSE 0 END) as tong_tra_hang"),
-                DB::raw("SUM(CASE WHEN doi_tra.Loai = 'doi_tra' THEN chi_tiet_doi_tra.so_luong ELSE 0 END) as tong_doi_hang"),
+                DB::raw("SUM(CASE WHEN {$chiTietLoaiSql} = 'tra_hang' THEN chi_tiet_doi_tra.so_luong ELSE 0 END) as tong_tra_hang"),
+                DB::raw("SUM(CASE WHEN {$chiTietLoaiSql} = 'doi_hang' THEN chi_tiet_doi_tra.so_luong ELSE 0 END) as tong_doi_hang"),
                 DB::raw('SUM(chi_tiet_doi_tra.so_luong) as tong_doi_tra')
             )
             ->get()
@@ -164,12 +171,14 @@ class DoiTraService
 
     public function getReturnTotals(int $hoaDonId): array
     {
+        $chiTietLoaiSql = $this->chiTietLoaiSql();
+
         $tongTraHang = (float) ChiTietDoiTra::query()
             ->join('doi_tra', 'chi_tiet_doi_tra.id_doi_tra', '=', 'doi_tra.id')
             ->whereNull('doi_tra.deleted_at')
             ->whereNull('chi_tiet_doi_tra.deleted_at')
             ->where('doi_tra.id_hoa_don', $hoaDonId)
-            ->where('doi_tra.Loai', 'tra_hang')
+            ->whereRaw("{$chiTietLoaiSql} = 'tra_hang'")
             ->sum('chi_tiet_doi_tra.thanh_tien');
 
         return [
@@ -201,7 +210,7 @@ class DoiTraService
             ]);
         }
 
-        return DB::transaction(function () use ($hoaDon, $payload, $nguoiXuLy, $items) {
+        return DB::transaction(function () use ($hoaDon, $payload, $items) {
             $nguoiBan = $this->resolveSelectedSeller((int) ($payload['id_nguoi_dung'] ?? 0));
 
             $hoaDon = HoaDon::query()
@@ -225,9 +234,10 @@ class DoiTraService
             $daDoiTraTheoBienThe = $this->getReturnedQuantitiesByVariant($hoaDon->id);
 
             $normalizedItems = [];
-            $loaiDoiTra = null;
             $tongTienTra = 0;
-            $hangLoi = null;
+            $coTraHang = false;
+            $coDoiHang = false;
+            $coHangLoi = false;
 
             foreach ($items as $item) {
                 $chiTiet = $chiTietHoaDon->get((int) $item['id_chi_tiet_hoa_don']);
@@ -250,23 +260,8 @@ class DoiTraService
                     ]);
                 }
 
-                if ($loaiDoiTra === null) {
-                    $loaiDoiTra = $action === 'exchange' ? 'doi_tra' : 'tra_hang';
-                } elseif ($loaiDoiTra !== ($action === 'exchange' ? 'doi_tra' : 'tra_hang')) {
-                    throw ValidationException::withMessages([
-                        'items' => 'Mỗi lần xử lý chỉ được chọn một loại nghiệp vụ: trả hàng hoặc đổi hàng.',
-                    ]);
-                }
-
-                if ($hangLoi === null) {
-                    $hangLoi = $isHangLoi;
-                } elseif ($hangLoi !== $isHangLoi) {
-                    throw ValidationException::withMessages([
-                        'items' => 'Mỗi lần xử lý chỉ nên áp dụng một trạng thái hàng lỗi duy nhất. Vui lòng tách riêng trả hàng tốt và trả hàng lỗi thành 2 lần xử lý.',
-                    ]);
-                }
-
                 $replacementVariantId = null;
+                $lineLoai = $action === 'exchange' ? 'doi_hang' : 'tra_hang';
 
                 if ($action === 'exchange') {
                     if (!$isHangLoi) {
@@ -296,8 +291,8 @@ class DoiTraService
                         ]);
                     }
 
-                    // Hàng lỗi khách trả về không nhập lại kho bán được.
                     $this->deductVariantStockByLots($replacementVariant->id, $soLuong, true);
+                    $coDoiHang = true;
                 }
 
                 if ($action === 'return') {
@@ -306,11 +301,17 @@ class DoiTraService
                     }
 
                     $tongTienTra += $soLuong * (float) $chiTiet->gia_ban;
+                    $coTraHang = true;
+                }
+
+                if ($isHangLoi) {
+                    $coHangLoi = true;
                 }
 
                 $normalizedItems[] = [
                     'chi_tiet' => $chiTiet,
                     'action' => $action,
+                    'loai' => $lineLoai,
                     'so_luong' => $soLuong,
                     'hang_loi' => $isHangLoi,
                     'id_bien_the_thay_the' => $replacementVariantId ?: null,
@@ -322,11 +323,16 @@ class DoiTraService
             $doiTra = DoiTra::query()->create([
                 'id_nguoi_dung' => $nguoiBan->id,
                 'id_hoa_don' => $hoaDon->id,
-                'Loai' => $loaiDoiTra,
-                'hang_loi' => (bool) $hangLoi,
+                'Loai' => $coDoiHang ? 'doi_tra' : 'tra_hang',
+                'hang_loi' => $coHangLoi,
                 'ngay' => Carbon::now(),
                 'tru_diem_cua_khach' => false,
-                'ly_do' => $this->normalizeReason((string) ($payload['ly_do'] ?? ''), $loaiDoiTra, (bool) $hangLoi),
+                'ly_do' => $this->normalizeReason(
+                    (string) ($payload['ly_do'] ?? ''),
+                    $coTraHang,
+                    $coDoiHang,
+                    $coHangLoi
+                ),
             ]);
 
             foreach ($normalizedItems as $item) {
@@ -334,6 +340,7 @@ class DoiTraService
                     'id_doi_tra' => $doiTra->id,
                     'id_bien_the' => $item['chi_tiet']->id_bien_the_san_pham,
                     'id_bien_the_thay_the' => $item['id_bien_the_thay_the'],
+                    'loai' => $item['loai'],
                     'so_luong' => $item['so_luong'],
                     'gia_ban' => $item['gia_ban'],
                     'thanh_tien' => $item['thanh_tien'],
@@ -357,7 +364,7 @@ class DoiTraService
                 }
             }
 
-            if ($loaiDoiTra === 'tra_hang' && $tongTienTra > 0) {
+            if ($coTraHang && $tongTienTra > 0) {
                 $this->deductCustomerPointsForReturn($hoaDon, $doiTra, $tongTienTra);
             }
 
@@ -525,12 +532,14 @@ class DoiTraService
             ->where('id_hoa_don', $hoaDon->id)
             ->sum('so_luong');
 
+        $chiTietLoaiSql = $this->chiTietLoaiSql();
+
         $tongDaTraHang = (int) ChiTietDoiTra::query()
             ->join('doi_tra', 'chi_tiet_doi_tra.id_doi_tra', '=', 'doi_tra.id')
             ->whereNull('doi_tra.deleted_at')
             ->whereNull('chi_tiet_doi_tra.deleted_at')
             ->where('doi_tra.id_hoa_don', $hoaDon->id)
-            ->where('doi_tra.Loai', 'tra_hang')
+            ->whereRaw("{$chiTietLoaiSql} = 'tra_hang'")
             ->sum('chi_tiet_doi_tra.so_luong');
 
         $hoaDon->update([
@@ -538,26 +547,25 @@ class DoiTraService
         ]);
     }
 
-    private function normalizeReason(string $reason, string $loaiDoiTra, bool $hangLoi): ?string
+    private function normalizeReason(string $reason, bool $coTraHang, bool $coDoiHang, bool $coHangLoi): ?string
     {
         $trimmed = trim($reason);
-
-        if ($loaiDoiTra === 'doi_tra') {
-            if ($trimmed === '') {
-                return 'Hàng lỗi';
-            }
-
-            return mb_stripos($trimmed, 'hàng lỗi', 0, 'UTF-8') === 0
-                ? $trimmed
-                : 'Hàng lỗi - ' . $trimmed;
-        }
 
         if ($trimmed !== '') {
             return $trimmed;
         }
 
-        return $hangLoi ? 'Trả hàng lỗi' : 'Trả hàng';
+        if ($coTraHang && $coDoiHang) {
+            return $coHangLoi ? 'Đổi / trả hàng lỗi' : 'Đổi / trả hàng';
+        }
+
+        if ($coDoiHang) {
+            return 'Hàng lỗi';
+        }
+
+        return $coHangLoi ? 'Trả hàng lỗi' : 'Trả hàng';
     }
+
     private function isEligibleSellerRole(?string $roleName): bool
     {
         $normalized = Str::of((string) $roleName)

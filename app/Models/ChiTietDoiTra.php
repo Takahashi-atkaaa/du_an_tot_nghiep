@@ -16,6 +16,7 @@ class ChiTietDoiTra extends Model
         'id_doi_tra',
         'id_bien_the',
         'id_bien_the_thay_the',
+        'loai',
         'so_luong',
         'gia_ban',
         'thanh_tien',
@@ -26,6 +27,16 @@ class ChiTietDoiTra extends Model
         'gia_ban' => 'decimal:2',
         'thanh_tien' => 'decimal:2',
     ];
+
+    public function isTraHang(): bool
+    {
+        return $this->loai === 'tra_hang';
+    }
+
+    public function isDoiHang(): bool
+    {
+        return $this->loai === 'doi_hang';
+    }
 
     public function doiTra()
     {
