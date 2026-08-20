@@ -260,10 +260,7 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::post('/admin/hang-loi/{id}/xac-nhan-tieu-huy', [HangLoiController::class, 'xacNhanTieuHuy'])->name('admin.hang-loi.xac-nhan-tieu-huy');
 
     // Trang kho hang
-    Route::get('/admin/kho-hang', function () {
-        $nhaCungCaps = NhaCungCap::orderBy('id', 'asc')->get();
-        return view('admin_xem_truoc.kho-hang.index', compact('nhaCungCaps'));
-    });
+    Route::get('/admin/kho-hang', [KhoHangController::class, 'index']);
     Route::get('/admin/kho-hang/lo-hang', function () {
         return view('admin_xem_truoc.warehouse.lo-hang');
     });
@@ -273,6 +270,15 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::get('/admin/kho-hang/phieu-xuat', function () {
         return view('admin_xem_truoc.warehouse.phieu-xuat');
     });
+
+    // Trang tạo phiếu xuất (không popup)
+    Route::get('/admin/kho-hang/phieu-xuat/create', function () {
+        return view('admin_xem_truoc.warehouse.phieu-xuat-create');
+    })->middleware('permission:quan_ly_kho_hang');
+
+    // Trang sửa phiếu xuất (không popup)
+    Route::get('/admin/kho-hang/phieu-xuat/{id}/edit', [App\Http\Controllers\admin\Api\PhieuXuatApiController::class, 'showEdit'])
+        ->middleware('permission:quan_ly_kho_hang');
 
     // Trang tạo phiếu nhập (chuyển từ modal sang trang riêng)
     Route::get('/admin/kho-hang/phieu-nhap/create', [PhieuNhapController::class, 'create'])
