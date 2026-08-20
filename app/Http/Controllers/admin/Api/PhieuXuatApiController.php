@@ -68,6 +68,30 @@ class PhieuXuatApiController extends Controller
         ]);
     }
 
+    public function showView(int $id)
+    {
+        $phieuXuat = PhieuXuat::with([
+            'phieu',
+            'phieu.nhaCungCap',
+            'phieu.nguoiDung',
+            'chiTietPhieu.variant.product',
+            'chiTietPhieu.chiTietLoHang.loHang',
+        ])->find($id);
+
+        if (!$phieuXuat) {
+            abort(404, 'Phiếu xuất không tồn tại.');
+        }
+
+        return view('admin_xem_truoc.warehouse.phieu-xuat-show', [
+            'phieuXuat' => $phieuXuat,
+        ]);
+    }
+
+    public function importView()
+    {
+        return view('admin_xem_truoc.warehouse.phieu-xuat-import');
+    }
+
     public function show(int $id): JsonResponse
     {
         $phieuXuat = PhieuXuat::with([

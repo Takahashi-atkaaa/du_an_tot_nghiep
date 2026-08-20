@@ -276,8 +276,18 @@ Route::middleware([KTVaiTro::class])->group(function () {
         return view('admin_xem_truoc.warehouse.phieu-xuat-create');
     })->middleware('permission:quan_ly_kho_hang');
 
+    // Trang import Excel phiếu xuất (đặt TRƯỚC route có {id} để tránh match nhầm)
+    Route::get('/admin/kho-hang/phieu-xuat/import', [App\Http\Controllers\admin\Api\PhieuXuatApiController::class, 'importView'])
+        ->middleware('permission:quan_ly_kho_hang');
+
+    // Trang xem chi tiết phiếu xuất (không popup)
+    Route::get('/admin/kho-hang/phieu-xuat/{id}', [App\Http\Controllers\admin\Api\PhieuXuatApiController::class, 'showView'])
+        ->whereNumber('id')
+        ->middleware('permission:quan_ly_kho_hang');
+
     // Trang sửa phiếu xuất (không popup)
     Route::get('/admin/kho-hang/phieu-xuat/{id}/edit', [App\Http\Controllers\admin\Api\PhieuXuatApiController::class, 'showEdit'])
+        ->whereNumber('id')
         ->middleware('permission:quan_ly_kho_hang');
 
     // Trang tạo phiếu nhập (chuyển từ modal sang trang riêng)
