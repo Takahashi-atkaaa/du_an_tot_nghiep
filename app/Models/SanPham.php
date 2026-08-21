@@ -39,4 +39,21 @@ class SanPham extends BaseModel
     {
         return $this->hasMany(BienTheSanPham::class, 'product_id');
     }
+
+    /**
+     * Lấy tất cả chi tiết hóa đơn của sản phẩm này (thông qua các biến thể).
+     * - san_pham.id              → bien_the_san_pham.product_id
+     * - bien_the_san_pham.id     → chi_tiet_hoa_don.id_bien_the_san_pham
+     */
+    public function chiTietHoaDons()
+    {
+        return $this->hasManyThrough(
+            ChiTietHoaDon::class,
+            BienTheSanPham::class,
+            'product_id',            // FK trên bien_the_san_pham
+            'id_bien_the_san_pham',  // FK trên chi_tiet_hoa_don
+            'id',                    // Local key trên san_pham
+            'id'                     // Local key trên bien_the_san_pham
+        );
+    }
 }

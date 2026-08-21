@@ -339,7 +339,10 @@ class LoHangApiController extends Controller
             }
         }
 
-        $items = BienTheSanPham::with('product.danhMuc')
+        $items = BienTheSanPham::with([
+                'product.danhMuc',
+                'chiTietLoHangTon.loHang.nhaCungCap:id,ten_nha_cung_cap',
+            ])
             ->get(['id', 'product_id', 'ten_bien_the', 'ma_vach', 'so_luong_ton', 'dinh_muc_toi_thieu'])
             ->map(function ($variant) use ($sumByVariant, $sumByProduct) {
                 $fallbackTon = $variant->so_luong_ton ?? 0;
@@ -348,6 +351,15 @@ class LoHangApiController extends Controller
                 $tongTon = $variantTon + $productTon;
                 if ($tongTon === 0) {
                     $tongTon = $fallbackTon;
+                }
+
+                // Gom danh sách nhà cung cấp duy nhất từ các lô còn tồn
+                $nhaCungCaps = [];
+                foreach (($variant->chiTietLoHangTon ?? []) as $ct) {
+                    $nccName = $ct->loHang?->nhaCungCap?->ten_nha_cung_cap;
+                    if ($nccName && !in_array($nccName, $nhaCungCaps, true)) {
+                        $nhaCungCaps[] = $nccName;
+                    }
                 }
 
                 return [
@@ -362,6 +374,7 @@ class LoHangApiController extends Controller
                     'dinh_muc_toi_thieu' => $variant->dinh_muc_toi_thieu ?? 0,
                     'thuong_hieu' => $variant->product->thuong_hieu ?? '',
                     'danh_muc' => $variant->product->danhMuc->ten_danh_muc ?? '',
+                    'nha_cung_caps' => $nhaCungCaps,
                 ];
             })
             ->sortBy(fn($v) => $v['ten_san_pham'] ?? '')

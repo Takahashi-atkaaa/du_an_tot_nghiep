@@ -3,9 +3,8 @@
 // ============================================================
 
 let sanPhamAll = [];
-let pnIdx = 0, pxIdx = 0, loIdx = 0;
+let pxIdx = 0, loIdx = 0;
 let tkPage = 1, lhPage = 1, pnPage = 1, pxPage = 1, nccPage = 1;
-let selectedPnProducts = new Set();
 let selectedPxProducts = new Set();
 
 // Helpers for HTML escaping (tránh lỗi quote khi tên có dấu nháy)
@@ -27,30 +26,18 @@ function escapeAttr(s) {
 $(function () {
     console.log('[KHO-HANG] Init start');
     try { loadStats(); } catch(e) { console.error('[KHO-HANG] loadStats error:', e); hienBao('danger', 'Lỗi loadStats: ' + e.message); }
-    try { loadTonKho(); } catch(e) { console.error('[KHO-HANG] loadTonKho error:', e); hienBao('danger', 'Lỗi loadTonKho: ' + e.message); }
+    // loadTonKho() không gọi nữa: tab Tồn kho đã được render server-side (Blade)
+    // bằng KhoHangController với paginate($sanPhams) và Alpine.js expand row.
     try { loadLoHang(); } catch(e) { console.error('[KHO-HANG] loadLoHang error:', e); hienBao('danger', 'Lỗi loadLoHang: ' + e.message); }
     try { loadPhieuNhap(); } catch(e) { console.error('[KHO-HANG] loadPhieuNhap error:', e); hienBao('danger', 'Lỗi loadPhieuNhap: ' + e.message); }
     try { loadPhieuXuat(); } catch(e) { console.error('[KHO-HANG] loadPhieuXuat error:', e); hienBao('danger', 'Lỗi loadPhieuXuat: ' + e.message); }
     try { loadNhaCungCap(1); } catch(e) { console.error('[KHO-HANG] loadNhaCungCap error:', e); hienBao('danger', 'Lỗi loadNhaCungCap: ' + e.message); }
     try { loadNccDropdown(); } catch(e) { console.error('[KHO-HANG] loadNccDropdown error:', e); hienBao('danger', 'Lỗi loadNccDropdown: ' + e.message); }
     try { loadSanPhamAll(); } catch(e) { console.error('[KHO-HANG] loadSanPhamAll error:', e); hienBao('danger', 'Lỗi loadSanPhamAll: ' + e.message); }
+    try { initKhoFilterPanel(); } catch(e) { console.error('[KHO-HANG] initKhoFilterPanel error:', e); }
     console.log('[KHO-HANG] Init end');
 
     // Modal events
-    $('#modal-tao-pn').on('shown.bs.modal', function () {
-        loadDanhMucNhap();
-        $('#pn-sp-search').focus();
-    });
-    $('#modal-tao-pn').on('hidden.bs.modal', function () {
-        selectedPnProducts.clear();
-        pnIdx = 0;
-        $('#form-tao-pn')[0].reset();
-        $('#pn-ds-sp').html('<tr id="pn-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td></tr>');
-        $('#pn-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-search fs-4 mb-2 d-block"></i>Nhập tên hoặc mã vạch để tìm sản phẩm</div>');
-        $('#pn-sp-search').val('');
-        $('#pn-sp-danh-muc').val('');
-    });
-
     $('#modal-tao-px').on('shown.bs.modal', function () {
         loadDanhMucXuat();
         $('#px-sp-search').focus();
@@ -72,7 +59,6 @@ $(function () {
     });
 
     // Modal triggers
-    $('#pn-btn-tao').click(() => new bootstrap.Modal(document.getElementById('modal-tao-pn')).show());
     $('#px-btn-tao').click(() => {
         pxIdx = 0;
         selectedPxProducts.clear();
@@ -83,21 +69,11 @@ $(function () {
         $('#form-tao-px')[0].reset();
         new bootstrap.Modal(document.getElementById('modal-tao-px')).show();
     });
-    $('#lh-btn-tao').click(() => {
-        pnIdx = 0;
-        selectedPnProducts.clear();
-        $('#pn-ds-sp').html('<tr id="pn-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td></tr>');
-        $('#form-tao-pn')[0].reset();
-        $('#pn-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-search fs-4 mb-2 d-block"></i>Nhập tên hoặc mã vạch để tìm sản phẩm</div>');
-        $('#pn-sp-search').val('');
-        $('#pn-sp-danh-muc').val('');
-        new bootstrap.Modal(document.getElementById('modal-tao-pn')).show();
-    });
 
     // Tab events
     $('#khoHangTabs button[data-bs-toggle="tab"]').on('shown.bs.tab', function () {
         const id = $(this).attr('id');
-        if (id === 'tab-ton-kho') loadTonKho(tkPage);
+        // Tab Tồn kho đã render server-side, không cần load lại qua AJAX.
         if (id === 'tab-lo-hang') loadLoHang(lhPage);
         if (id === 'tab-nhap-hang') loadPhieuNhap(pnPage);
         if (id === 'tab-xuat-hang') loadPhieuXuat(pxPage);
@@ -105,22 +81,18 @@ $(function () {
         if (id === 'tab-ncc') loadNhaCungCap(nccPage);
     });
 
-    // Filter buttons
-    $('#tk-btn-loc').click(() => loadTonKho(1));
+    // Filter buttons (Tồn kho dùng GET form submit, không qua JS)
     $('#lh-btn-loc').click(() => loadLoHang(1));
     $('#pn-btn-loc').click(() => loadPhieuNhap(1));
     $('#px-btn-loc').click(() => loadPhieuXuat(1));
 
     // Enter key filters
-    $('#tk-filter-ten').on('keypress', e => { if (e.which === 13) loadTonKho(1); });
     $('#lh-filter-ma').on('keypress', e => { if (e.which === 13) loadLoHang(1); });
 
     $('#px-btn-them-sp').click(() => addPxRow());
     $('#lo-btn-them-sp').click(() => addLoRow());
 
     // Submit forms
-    $('#form-tao-pn').submit(e => { e.preventDefault(); submitPhieuNhap(); });
-    $('#pn-btn-save').click(e => { e.preventDefault(); submitPhieuNhap(); });
     $('#form-tao-px').submit(e => { e.preventDefault(); submitPhieuXuat(); });
     $('#form-tao-lo').submit(e => { e.preventDefault(); submitLoHang(); });
 });
@@ -151,12 +123,109 @@ function loadStats() {
     });
 }
 
-function loadDanhMucNhap() {
-    $.get('/admin/api/san-pham', { q: '', danh_muc: '' }, res => {
-        if (!res.danh_muc_list) return;
-        $('#pn-sp-danh-muc').html('<option value="">Tất cả danh mục</option>' +
-            res.danh_muc_list.map(dm => `<option value="${dm.id}">${dm.ten_danh_muc}</option>`).join(''));
+// ============================================================
+// KHỐI LỌC MỚI — đồng bộ trang Sản phẩm
+// ============================================================
+
+// Cache toàn bộ TonKho server trả về để filter client-side
+let tkAllItems = [];
+let tkCurrentPage = 1;
+const TK_PER_PAGE = 10;
+
+/**
+ * Load dropdown Danh mục cho bộ lọc Tồn kho.
+ * Tận dụng API /admin/api/san-pham (đã include danh_muc_list)
+ * value = ten_danh_muc để so sánh với field `danh_muc` trong data ton-kho-tong.
+ */
+function loadDanhMucDropdownForTk() {
+    const $sel = $('#tk-filter-danh-muc');
+    if (!$sel.length) return;
+    const params = new URLSearchParams(window.location.search);
+    const currentVal = params.get('danh_muc_id') || '';
+    $.get('/admin/api/san-pham', { q: '' }, res => {
+        const list = (res && res.danh_muc_list) || [];
+        if (!Array.isArray(list) || list.length === 0) {
+            console.warn('[KHO-HANG] danh_muc_list not found in /admin/api/san-pham response');
+            return;
+        }
+        const opts = list.map(dm =>
+            `<option value="${dm.id}">${escapeHtml(dm.ten_danh_muc || '')}</option>`
+        ).join('');
+        $sel.html('<option value="">Tất cả danh mục</option>' + opts).val(currentVal);
+    }).fail(function() {
+        console.warn('[KHO-HANG] loadDanhMucDropdownForTk failed');
     });
+}
+
+/**
+ * Dropdown Nhà cung cấp cho bộ lọc Tồn kho
+ * - value = ten_nha_cung_cap (so sánh với mảng nha_cung_caps trả về từ API)
+ */
+function loadNccDropdownForTk() {
+    const $sel = $('#tk-filter-ncc');
+    if (!$sel.length) return;
+    const currentVal = new URLSearchParams(window.location.search).get('nha_cung_cap') || '';
+    $.get('/admin/api/nha-cung-cap/dropdown', res => {
+        if (!res.success || !Array.isArray(res.data)) return;
+        const opts = res.data.map(n =>
+            `<option value="${escapeAttr(n.ten_nha_cung_cap || '')}">${escapeHtml(n.ten_nha_cung_cap || '')}</option>`
+        ).join('');
+        $sel.html('<option value="">Tất cả nhà cung cấp</option>' + opts).val(currentVal);
+    }).fail(function() {
+        console.warn('[KHO-HANG] loadNccDropdownForTk failed');
+    });
+}
+
+/**
+ * Đếm số filter đang active để hiển thị badge + auto-open panel khi có filter
+ */
+function updateKhoFilterCount() {
+    const params = new URLSearchParams(window.location.search);
+    let count = 0;
+    if (params.get('keyword')) count++;
+    if (params.get('danh_muc')) count++;
+    if (params.get('trang_thai_ton')) count++;
+    if (params.get('nha_cung_cap')) count++;
+    const $badge = $('.kho-filter-count');
+    if (count > 0) {
+        $badge.text(count).show();
+    } else {
+        $badge.hide();
+    }
+    return count;
+}
+
+function initKhoFilterPanel() {
+    loadDanhMucDropdownForTk();
+    loadNccDropdownForTk();
+    updateKhoFilterCount();
+
+    // Re-count khi thay đổi filter
+    $('#tk-filter-danh-muc, #tk-filter-status, #tk-filter-ncc').on('change', function () {
+        updateKhoFilterCount();
+    });
+
+    // Reset filter → quay về URL gốc
+    $('#tk-btn-reset').on('click', function () {
+        window.location.href = window.location.pathname;
+    });
+
+    // Auto-open panel khi Alpine.js đã init (nếu có filter đang active)
+    const tryAutoOpenFilter = () => {
+        const card = document.querySelector('.search-filter-card[x-data]');
+        if (!card || !window.Alpine) return;
+        try {
+            const data = window.Alpine.$data(card);
+            if (updateKhoFilterCount() > 0) {
+                data.showFilter = true;
+            }
+        } catch (e) { /* ignore */ }
+    };
+    if (window.Alpine) {
+        setTimeout(tryAutoOpenFilter, 0);
+    } else {
+        document.addEventListener('alpine:init', tryAutoOpenFilter, { once: true });
+    }
 }
 
 function loadNhaCungCap(page = 1, q = '') {
@@ -215,253 +284,11 @@ function loadNccDropdown() {
     $.get('/admin/api/nha-cung-cap/dropdown', res => {
         if (!res.success) return;
         const opts = res.data.map(n => `<option value="${n.id}">${n.ten_nha_cung_cap}</option>`).join('');
-        $('#pn-ncc').html('<option value="">-- Chon NCC --</option>' + opts);
         $('#px-ncc').html('<option value="">-- Chon NCC --</option>' + opts);
         $('#lo-ncc').html('<option value="">-- Chon NCC --</option>' + opts);
         $('#lh-filter-ncc').html('<option value="">Tất cả NCC</option>' + opts);
     });
 }
-
-// ─── PRODUCT SEARCH (PN Modal) ─────────────────────────────────────
-
-let pnSearchTimer = 0;
-$('#pn-sp-search').on('input', function () {
-    clearTimeout(pnSearchTimer);
-    pnSearchTimer = setTimeout(() => {
-        searchProductsNhap($('#pn-sp-search').val(), $('#pn-sp-danh-muc').val());
-    }, 300);
-});
-
-$('#pn-sp-danh-muc').on('change', () => {
-    searchProductsNhap($('#pn-sp-search').val(), $('#pn-sp-danh-muc').val());
-});
-
-$('#pn-sp-clear').click(() => {
-    $('#pn-sp-search').val('');
-    $('#pn-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-search fs-4 mb-2 d-block"></i>Nhập tên hoặc mã vạch để tìm sản phẩm</div>');
-});
-
-function searchProductsNhap(q, danhMuc) {
-    if (!q && !danhMuc) {
-        $('#pn-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-search fs-4 mb-2 d-block"></i>Nhập tên hoặc mã vạch để tìm sản phẩm</div>');
-        return;
-    }
-    $('#pn-sp-results').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-muted fs-4"></i></div>');
-    $.get('/admin/api/san-pham', { q: q || '', danh_muc: danhMuc || '' }, res => {
-        if (!res.success || !res.data.length) {
-            $('#pn-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-box-open fs-4 mb-2 d-block text-secondary"></i>Không tìm thấy sản phẩm nào.</div>');
-            return;
-        }
-        // res.data: mang nested theo product, moi product co bien_the[]
-        const rows = res.data.map(sp => {
-            const variants = sp.bien_the || [];
-            const hasVariants = variants.length > 1;
-            // Tổng tồn = tổng tồn của tất cả biến thể
-            const totalTon = variants.reduce((sum, bt) => sum + (bt.chi_tiet_lo_hang_ton || 0), 0);
-            const tonClass = totalTon === 0 ? 'text-danger' : totalTon < 10 ? 'text-warning' : 'text-success';
-            const img = sp.hinh_anh
-                ? `<img src="/${sp.hinh_anh}" width="38" height="38" class="rounded" style="object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                   <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width:38px;height:38px;display:none"><i class="fas fa-box text-secondary"></i></div>`
-                : `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="width:38px;height:38px"><i class="fas fa-box text-secondary"></i></div>`;
-            const danhMucName = sp.danh_muc?.ten_danh_muc || '';
-            // ID cua parent row = product_id (de expand/collapse), nhung btn-chon gui variant_id = first variant
-            const parentVariantId = variants[0]?.id;
-            const isParentSelected = selectedPnProducts.has(parentVariantId);
-            const expandBtn = hasVariants ? `<button class="btn btn-sm btn-light border btn-toggle-variants" data-parent="${sp.id}" title="Mở rộng biến thể"><i class="fas fa-chevron-down"></i></button>` : '';
-            const parentBtnClass = isParentSelected ? 'btn-secondary' : 'btn-primary';
-            const parentBtnIcon = isParentSelected ? 'fa-check' : 'fa-plus';
-            const parentBtnText = isParentSelected ? 'Đã chọn' : 'Chọn';
-            const parentDisabled = isParentSelected ? 'disabled' : '';
-            const variantRows = variants.map(bt => {
-                const btTon = bt.chi_tiet_lo_hang_ton || 0;
-                const btTonClass = btTon === 0 ? 'text-danger' : btTon < 10 ? 'text-warning' : 'text-success';
-                const isBtSelected = selectedPnProducts.has(bt.id);
-                const btBtnClass = isBtSelected ? 'btn-secondary' : 'btn-success';
-                const btBtnIcon = isBtSelected ? 'fa-check' : 'fa-plus';
-                const btBtnText = isBtSelected ? 'Đã chọn' : 'Chọn';
-                const btDisabled = isBtSelected ? 'disabled' : '';
-                const attrs = (bt.thuoc_tinh_labels || []).map(tt =>
-                    `<span class="badge variant-chip" style="background:#e9ecef;color:#495057;border:1px solid #dee2e6">${tt}</span>`
-                ).join(' ');
-                // Gắn units vào data-units (JSON) để click "Chọn" có thể build dropdown đơn vị
-                const unitsJson = JSON.stringify(bt.units || []).replace(/'/g, '&#39;');
-                return `<tr class="variant-sub-row" data-parent="${sp.id}" style="display:none">
-                    <td class="text-center align-middle"><div class="vr" style="width:2px;height:30px;opacity:0.4"></div></td>
-                    <td class="align-middle ps-1">
-                        <div class="small"><span class="text-muted">\\</span> ${attrs || '<span class="text-muted small">Không có thuộc tính</span>'}</div>
-                    </td>
-                    <td class="align-middle"><code class="small">${bt.ma_vach || '--'}</code></td>
-                    <td class="text-end align-middle small">${Number(bt.gia_ban || 0).toLocaleString()} d</td>
-                    <td class="text-center align-middle"><span class="fw-semibold ${btTonClass}">${btTon.toLocaleString()}</span></td>
-                    <td class="text-center align-middle">
-                        <button class="btn btn-sm ${btBtnClass} btn-chon-sp-nhap"
-                            data-id="${bt.id}"
-                            data-ten="${sp.ten_san_pham}${attrs ? ' - ' + bt.ten_bien_the : ''}"
-                            data-gia="${bt.gia_ban || 0}"
-                            data-variant="1"
-                            data-base-name="${escapeAttr(bt.ten_bien_the || bt.ten_don_vi || 'Cơ bản')}"
-                            data-base-unit="${escapeAttr(bt.ten_don_vi || '')}"
-                            data-units='${unitsJson}'
-                            ${btDisabled}>
-                            <i class="fas ${btBtnIcon}"></i> ${btBtnText}
-                        </button>
-                    </td>
-                </tr>`;
-            });
-            return [
-                `<tr class="parent-row" data-id="${sp.id}">
-                    <td class="text-center align-middle">${img}</td>
-                    <td class="align-middle">
-                        <div class="fw-semibold small">${sp.ten_san_pham}</div>
-                        <div class="small text-muted">${danhMucName}</div>
-                        ${hasVariants ? `<div class="mt-1"><span class="badge bg-secondary" style="font-size:0.68rem">${variants.length} bien the</span></div>` : ''}
-                    </td>
-                    <td class="align-middle"><code class="small">${variants[0]?.ma_vach || '--'}</code></td>
-                    <td class="text-end align-middle small">${Number(variants[0]?.gia_ban || 0).toLocaleString()} d</td>
-                    <td class="text-center align-middle"><span class="fw-semibold ${tonClass}">${totalTon.toLocaleString()}</span></td>
-                    <td class="text-center align-middle">
-                        ${expandBtn}
-                        ${!hasVariants ? `
-                        <button class="btn btn-sm ${parentBtnClass} btn-chon-sp-nhap"
-                            data-id="${parentVariantId}"
-                            data-ten="${sp.ten_san_pham}"
-                            data-gia="${variants[0]?.gia_ban || 0}"
-                            data-base-name="${escapeAttr(variants[0]?.ten_bien_the || variants[0]?.ten_don_vi || 'Cơ bản')}"
-                            data-base-unit="${escapeAttr(variants[0]?.ten_don_vi || '')}"
-                            data-units='${JSON.stringify(variants[0]?.units || []).replace(/'/g, '&#39;')}'
-                            ${parentDisabled}>
-                            <i class="fas ${parentBtnIcon}"></i> ${parentBtnText}
-                        </button>` : ''}
-                    </td>
-                </tr>`,
-                ...variantRows
-            ];
-        });
-        const tableHtml = `<table class="table table-sm table-hover mb-0">
-            <thead class="table-light"><tr>
-                <th style="width:50px"></th>
-                <th>Sản phẩm</th>
-                <th style="width:110px">Mã vạch</th>
-                <th style="width:110px" class="text-end">Giá bán</th>
-                <th style="width:80px" class="text-center">Tồn kho</th>
-                <th style="width:120px" class="text-center">Chon</th>
-            </tr></thead>
-            <tbody>${rows.join('')}</tbody>
-        </table>`;
-        $('#pn-sp-results').html(tableHtml);
-    });
-}
-
-$(document).on('click', '.btn-toggle-variants', function () {
-    const parentId = $(this).data('parent');
-    const icon = $(this).find('i');
-    const isExpanded = icon.hasClass('fa-chevron-down');
-    if (isExpanded) {
-        $(`.variant-sub-row[data-parent="${parentId}"]`).hide();
-        icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
-    } else {
-        $(`.variant-sub-row[data-parent="${parentId}"]`).show();
-        icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
-    }
-});
-
-$(document).on('click', '.btn-chon-sp-nhap', function () {
-    const id = $(this).data('id');
-    if (selectedPnProducts.has(id)) return;
-    selectedPnProducts.add(id);
-    const ten = $(this).data('ten');
-    const gia = $(this).data('gia');
-    // Lấy thêm danh sách đơn vị quy đổi (nếu có) từ nút bấm
-    const units = $(this).data('units') || [];
-    const variantBaseName = $(this).data('base-name') || 'Cơ bản';
-    const baseUnitLabel = $(this).data('base-unit') || variantBaseName || 'đơn vị cơ bản';
-    const idx = pnIdx++;
-    $('#pn-empty-row').remove();
-
-    // Build option đơn vị: đơn vị cơ bản (he_so=1) + đơn vị quy đổi
-    const baseOpt = `<option value="__base__" data-he-so="1" data-ten="${escapeAttr(baseUnitLabel)}" data-don-vi-id="" selected>${escapeHtml(variantBaseName)} (đơn vị cơ bản)</option>`;
-    const unitOpts = units.map(u => `<option value="${u.id}" data-he-so="${u.so_luong_san_pham_trong_don_vi || 1}" data-ten="${escapeAttr(u.ten_don_vi)}" data-don-vi-id="${u.id}">${escapeHtml(u.ten_don_vi)} (×${u.so_luong_san_pham_trong_don_vi || 1})</option>`).join('');
-    const donViSelect = `<select class="form-select form-select-sm pn-don-vi-select" name="chi_tiet[${idx}][don_vi_id]" data-idx="${idx}">${baseOpt}${unitOpts}</select>`;
-
-    // Ghi chú nhỏ hiển thị quy đổi khi user chọn đơn vị
-    const quyDoiHint = units.length
-        ? `<small class="text-muted pn-quy-doi-hint d-block mt-1">Mặc định nhập theo đơn vị cơ bản. Đổi sang "Thùng", "Hộp"... nếu mua theo đơn vị quy đổi.</small>`
-        : '';
-
-    $('#pn-ds-sp').append(`<tr data-sp-id="${id}">
-        <td>
-            <div class="fw-semibold small">${ten}</div>
-            <input type="hidden" name="chi_tiet[${idx}][variant_id]" value="${id}">
-            <input type="hidden" name="chi_tiet[${idx}][so_luong_san_pham_trong_don_vi]" value="1" class="pn-he-so-hidden">
-            ${units.length ? `<div class="mt-1 d-flex align-items-center gap-1">${donViSelect}${quyDoiHint}</div>` : ''}
-        </td>
-        <td>
-            <input type="number" class="form-control form-control-sm pn-sl-input" name="chi_tiet[${idx}][so_luong_nhap]" value="1" min="0.0001" step="0.0001" data-idx="${idx}">
-            ${units.length ? `<small class="text-muted pn-sl-display d-block mt-1" data-idx="${idx}">= 1 ${escapeHtml(baseUnitLabel)}</small>` : ''}
-        </td>
-        <td>
-            <input type="number" class="form-control form-control-sm pn-gia-input" name="chi_tiet[${idx}][gia_nhap]" value="${gia}" min="0" step="100">
-            ${units.length ? `<small class="text-muted pn-gia-display d-block mt-1" data-idx="${idx}">đơn giá / ${escapeHtml(baseUnitLabel)}</small>` : `<small class="text-muted d-block mt-1">đơn giá / ${escapeHtml(baseUnitLabel)}</small>`}
-        </td>
-        <td><input type="date" class="form-control form-control-sm" name="chi_tiet[${idx}][han_su_dung]" value=""></td>
-        <td><button type="button" class="btn btn-sm btn-outline-danger btn-remove-pn-row" data-id="${id}"><i class="fas fa-times"></i></button></td>
-    </tr>`);
-    $(this).prop('disabled', true).removeClass('btn-primary btn-success').addClass('btn-secondary').html('<i class="fas fa-check"></i> Đã chọn');
-});
-
-// Tính số lượng quy đổi realtime khi user đổi đơn vị hoặc số lượng / giá
-$(document).on('input change', '.pn-sl-input, .pn-gia-input, .pn-don-vi-select', function () {
-    const $row = $(this).closest('tr');
-    const $slInput = $row.find('.pn-sl-input');
-    const $giaInput = $row.find('.pn-gia-input');
-    const $donViSelect = $row.find('.pn-don-vi-select');
-    const $heSoHidden = $row.find('.pn-he-so-hidden');
-    const $display = $row.find('.pn-sl-display');
-    const $giaDisplay = $row.find('.pn-gia-display');
-
-    const sl = parseFloat($slInput.val()) || 0;
-    const gia = parseFloat($giaInput.val()) || 0;
-    let heSo = 1;
-    let tenDonViNhap = '';
-    let tenDonViCoBan = '';
-    if ($donViSelect.length) {
-        const opt = $donViSelect.find('option:selected');
-        heSo = parseFloat(opt.data('he-so')) || 1;
-        tenDonViNhap = opt.data('ten') || opt.text();
-        const baseOpt = $donViSelect.find('option[value="__base__"]');
-        tenDonViCoBan = baseOpt.data('ten') || '';
-    }
-    $heSoHidden.val(heSo);
-
-    if ($display.length) {
-        if (heSo === 1) {
-            $display.html(`= <strong>${sl.toLocaleString()}</strong> ${escapeHtml(tenDonViCoBan || 'đơn vị cơ bản')}`);
-        } else {
-            const tong = sl * heSo;
-            const donGiaCoBan = gia / heSo;
-            $display.html(`= <strong class="text-primary">${tong.toLocaleString()}</strong> ${escapeHtml(tenDonViCoBan || 'đơn vị cơ bản')} <span class="text-muted">(1 ${escapeHtml(tenDonViNhap)} = ${heSo} ${escapeHtml(tenDonViCoBan || 'đơn vị cơ bản')})</span>`);
-            if ($giaDisplay.length) {
-                $giaDisplay.html(`đơn giá / ${escapeHtml(tenDonViNhap)} → <strong class="text-info">${donGiaCoBan.toLocaleString(undefined, {maximumFractionDigits: 2})}</strong> / ${escapeHtml(tenDonViCoBan || 'đơn vị cơ bản')}`);
-            }
-        }
-    }
-});
-
-$(document).on('click', '.btn-remove-pn-row', function () {
-    const tr = $(this).closest('tr');
-    const spId = parseInt(tr.data('sp-id'));
-    selectedPnProducts.delete(spId);
-    tr.remove();
-    if (!$('#pn-ds-sp tr').length) {
-        $('#pn-ds-sp').html('<tr id="pn-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td></tr>');
-    }
-    // Chỉ re-enable nút nếu nó tồn tại (sản phẩm không có biến thể)
-    const btn = $(`.btn-chon-sp-nhap[data-id="${spId}"]`);
-    if (btn.length) {
-        const isVariant = btn.data('variant') == 1;
-        btn.prop('disabled', false).removeClass('btn-secondary').addClass(isVariant ? 'btn-success' : 'btn-primary').html(`<i class="fas fa-plus"></i> Chọn`);
-    }
-});
 
 // ─── PRODUCT SEARCH (PX Modal) ─────────────────────────────────────
 
@@ -483,17 +310,12 @@ $('#px-sp-clear').click(() => {
 });
 
 function loadDanhMucXuat() {
-    // Tận dụng API đã có (đã được gọi ở loadDanhMucNhap); chỉ cần clone options.
-    const opts = $('#pn-sp-danh-muc option').clone();
-    if (!opts.length) {
-        $.get('/admin/api/san-pham', { q: '', danh_muc: '' }, res => {
-            if (!res.danh_muc_list) return;
-            $('#px-sp-danh-muc').html('<option value="">Tất cả danh mục</option>' +
-                res.danh_muc_list.map(dm => `<option value="${dm.id}">${dm.ten_danh_muc}</option>`).join(''));
-        });
-    } else {
-        $('#px-sp-danh-muc').html('<option value="">Tất cả danh mục</option>' + opts.not('[value=""]').clone().get().map(o => o.outerHTML).join(''));
-    }
+    // Phiếu xuất (PX) cũng tận dụng API /admin/api/san-pham để lấy danh mục.
+    $.get('/admin/api/san-pham', { q: '', danh_muc: '' }, res => {
+        if (!res.danh_muc_list) return;
+        $('#px-sp-danh-muc').html('<option value="">Tất cả danh mục</option>' +
+            res.danh_muc_list.map(dm => `<option value="${dm.id}">${dm.ten_danh_muc}</option>`).join(''));
+    });
 }
 
 function searchProductsXuat(q, danhMuc) {
@@ -649,86 +471,198 @@ $(document).on('input change', '.px-sl-input', function () {
 
 function loadTonKho(page = 1) {
     tkPage = page;
-    const q = $('#tk-filter-ten').val();
-    const status = $('#tk-filter-status').val();
+    const q = $('#tk-filter-ten').val() || '';
+    const status = $('#tk-filter-status').val() || '';
+    const danhMuc = $('#tk-filter-danh-muc').val() || '';
+    const ncc = $('#tk-filter-ncc').val() || '';
+
+    $('#tk-bang').html(
+        '<tr><td colspan="6" class="text-center text-muted py-4">' +
+        '<i class="fas fa-spinner fa-spin me-1"></i> Đang tải...</td></tr>'
+    );
+
     $.get('/admin/api/lo-hang/ton-kho-tong')
     .done(res => {
         if (!res.success) {
-            $('#tk-bang').html('<tr><td colspan="7" class="text-center text-danger py-4">Lỗi tải dữ liệu tồn kho.</td></tr>');
+            $('#tk-bang').html(
+                '<tr><td colspan="6" class="text-center text-danger py-4">' +
+                'Lỗi tải dữ liệu tồn kho.</td></tr>'
+            );
             return;
         }
-        let items = res.data;
-        if (q) items = items.filter(i => {
-            const name = (i.ten_san_pham || i.product?.ten_san_pham || '') + '';
-            const code = (i.ma_vach || '') + '';
-            return name.toLowerCase().includes(q.toLowerCase()) || code.toLowerCase().includes(q.toLowerCase());
-        });
-        if (status === 'het-hang') items = items.filter(i => !(i.tong_ton || i.product?.tong_ton) || (i.tong_ton || i.product?.tong_ton) == 0);
-        if (status === 'duoi-dinh-muc') items = items.filter(i => {
-            const qty = i.tong_ton ?? i.product?.tong_ton ?? 0;
-            const min = i.dinh_muc_toi_thieu ?? i.product?.dinh_muc_toi_thieu ?? 0;
-            return qty > 0 && qty <= min;
-        });
-        if (status === 'binh-thuong') items = items.filter(i => {
-            const qty = i.tong_ton ?? i.product?.tong_ton ?? 0;
-            const min = i.dinh_muc_toi_thieu ?? i.product?.dinh_muc_toi_thieu ?? 0;
-            return qty > min;
-        });
 
-        const perPage = 15, total = items.length;
-        const paged = items.slice((page - 1) * perPage, page * perPage);
+        // Lưu cache toàn bộ để filter client-side (chỉ áp dụng với danh mục + NCC;
+        // status tính ngay từ dữ liệu gốc; search theo tên/mã vạch)
+        tkAllItems = Array.isArray(res.data) ? res.data : [];
+
+        // ---- LỌC ----
+        let items = tkAllItems.slice();
+
+        if (q) {
+            const qLower = q.toLowerCase();
+            items = items.filter(i => {
+                const name = (i.ten_san_pham || i.product?.ten_san_pham || '') + '';
+                const code = (i.ma_vach || '') + '';
+                return name.toLowerCase().includes(qLower) ||
+                       code.toLowerCase().includes(qLower);
+            });
+        }
+
+        if (status === 'het-hang') {
+            items = items.filter(i => {
+                const qty = i.tong_ton ?? i.product?.tong_ton ?? 0;
+                return !qty || qty == 0;
+            });
+        } else if (status === 'duoi-dinh-muc') {
+            items = items.filter(i => {
+                const qty = i.tong_ton ?? i.product?.tong_ton ?? 0;
+                const min = i.dinh_muc_toi_thieu ?? i.product?.dinh_muc_toi_thieu ?? 0;
+                return qty > 0 && qty <= min;
+            });
+        } else if (status === 'binh-thuong') {
+            items = items.filter(i => {
+                const qty = i.tong_ton ?? i.product?.tong_ton ?? 0;
+                const min = i.dinh_muc_toi_thieu ?? i.product?.dinh_muc_toi_thieu ?? 0;
+                return qty > min;
+            });
+        }
+
+        if (danhMuc) {
+            items = items.filter(i =>
+                (i.danh_muc || i.product?.danhMuc?.ten_danh_muc) == danhMuc
+            );
+        }
+
+        if (ncc) {
+            items = items.filter(i => {
+                const list = i.nha_cung_caps || [];
+                return Array.isArray(list) && list.includes(ncc);
+            });
+        }
+
+        // ---- PHÂN TRANG (client-side) ----
+        const total = items.length;
+        const totalPages = Math.max(1, Math.ceil(total / TK_PER_PAGE));
+        if (page < 1) page = 1;
+        if (page > totalPages) page = totalPages;
+        tkCurrentPage = page;
+        const paged = items.slice((page - 1) * TK_PER_PAGE, page * TK_PER_PAGE);
 
         if (!paged.length) {
-            $('#tk-bang').html('<tr><td colspan="7" class="text-center text-muted py-4">Không có sản phẩm nào.</td></tr>');
-            $('#tk-thong-tin').text('Hiển thị 0 sản phẩm');
+            $('#tk-bang').html(
+                '<tr><td colspan="6" class="text-center text-muted py-4">' +
+                '<i class="fas fa-inbox me-1"></i> Không có sản phẩm nào.</td></tr>'
+            );
+            $('#tk-thong-tin').text('Hiển thị 0 / 0 sản phẩm');
             $('#tk-phan-trang').html('');
             return;
         }
 
-        const html = paged.map(sp => {
-            const tongTon = sp.tong_ton || 0;
-            const dinhMuc = sp.dinh_muc_toi_thieu || 0;
-            let badge, statusClass;
-            if (tongTon === 0) { badge = '<span class="badge bg-secondary">Hết hàng</span>'; statusClass = 'table-secondary'; }
-            else if (tongTon <= dinhMuc) { badge = '<span class="badge bg-warning text-dark">Dưới định mức</span>'; statusClass = 'table-warning'; }
-            else { badge = '<span class="badge bg-success">Bình thường</span>'; statusClass = ''; }
-            const productName = sp.ten_san_pham || sp.product?.ten_san_pham || '';
-            const variantName = sp.ten_bien_the || '';
-            const baseName = variantName && variantName !== productName
-                ? `${productName} - ${variantName}`
-                : productName;
-            const attrs = (sp.thuoc_tinh_labels && sp.thuoc_tinh_labels.length)
-                ? ` - ${sp.thuoc_tinh_labels.join(', ')}`
-                : '';
-            const displayName = `${baseName}${attrs}`;
-            return `
-            <tr class="clickable-row ${statusClass}" data-id="${sp.id}" data-variant-id="${sp.id}" style="cursor:pointer">
-                <td class="text-center toggle-expand"><i class="fas fa-chevron-down text-muted small"></i></td>
-                <td><code>${sp.ma_vach || sp.id}</code></td>
-                <td><strong>${displayName}</strong></td>
-                <td class="text-center"><strong>${Number(tongTon).toLocaleString()}</strong></td>
-                <td class="text-center text-muted">${Number(dinhMuc).toLocaleString()}</td>
-                <td class="text-center">${badge}</td>
-                <td class="text-center">
-                    <button class="btn btn-sm btn-outline-primary btn-xem-ton" data-id="${sp.id}" data-variant-id="${sp.id}"><i class="fas fa-eye"></i></button>
-                </td>
-            </tr>
-            <tr class="fefo-detail-row" id="fefo-detail-${sp.id}" style="display:none">
-                <td colspan="7" class="p-0">
-                    <div class="p-3" id="fefo-detail-content-${sp.id}">
-                        <div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Dang tai...</div>
-                    </div>
-                </td>
-            </tr>`;
-        }).join('');
+        const html = paged.map(sp => buildTonKhoRow(sp)).join('');
         $('#tk-bang').html(html);
-        $('#tk-thong-tin').text(`Hien thi ${paged.length} / ${total} san pham`);
-        renderPagination('tk', page, Math.ceil(total / perPage));
+        $('#tk-thong-tin').text(`Hiển thị ${paged.length} / ${total} sản phẩm`);
+        renderTkPagination(page, totalPages);
     })
     .fail(function(xhr, status, error) {
         console.error('loadTonKho error:', status, error, xhr.responseText);
-        $('#tk-bang').html(`<tr><td colspan="7" class="text-center text-danger py-4">Loi: ${error || status}<br><small class="text-muted">${xhr.responseText || ''}</small></td></tr>`);
+        $('#tk-bang').html(
+            `<tr><td colspan="6" class="text-center text-danger py-4">` +
+            `Lỗi: ${escapeHtml(error || status)}<br>` +
+            `<small class="text-muted">${escapeHtml(xhr.responseText || '')}</small></td></tr>`
+        );
     });
+}
+
+function buildTonKhoRow(sp) {
+    const tongTon = sp.tong_ton ?? sp.product?.tong_ton ?? 0;
+    const dinhMuc = sp.dinh_muc_toi_thieu ?? sp.product?.dinh_muc_toi_thieu ?? 0;
+
+    // Cảnh báo tinh tế
+    let warnClass = '';
+    let tonBadgeHtml = '';
+    if (tongTon === 0) {
+        tonBadgeHtml = '<span class="status-pill muted"><i class="fas fa-times-circle"></i> Hết hàng</span>';
+    } else if (tongTon <= dinhMuc) {
+        warnClass = 'is-warn';   // đỏ đậm
+        tonBadgeHtml = '<span class="status-pill warn"><i class="fas fa-exclamation-circle"></i> Dưới định mức</span>';
+    } else {
+        tonBadgeHtml = '<span class="status-pill ok"><i class="fas fa-check-circle"></i> Bình thường</span>';
+    }
+
+    const productName = sp.ten_san_pham || sp.product?.ten_san_pham || 'Sản phẩm';
+    const variantName = sp.ten_bien_the || '';
+    const displayName = (variantName && variantName !== productName)
+        ? `${productName} - ${variantName}`
+        : productName;
+    const maVach = sp.ma_vach || sp.id;
+
+    return `
+    <tr class="clickable-row" data-id="${sp.id}" data-variant-id="${sp.id}" data-ton="${tongTon}" data-dinh-muc="${dinhMuc}">
+        <td class="text-center toggle-expand-cell">
+            <i class="fas fa-chevron-right toggle-icon"></i>
+        </td>
+        <td class="product-cell">
+            <span class="product-name">${escapeHtml(displayName)}</span>
+            <span class="product-meta">
+                <i class="fas fa-barcode"></i>MH: ${escapeHtml(maVach)}
+            </span>
+        </td>
+        <td class="num-cell ${warnClass}">
+            <span class="num-value">${Number(tongTon).toLocaleString('vi-VN')}</span>
+        </td>
+        <td class="num-cell">
+            <span class="num-value">${Number(dinhMuc).toLocaleString('vi-VN')}</span>
+        </td>
+        <td class="text-center">${tonBadgeHtml}</td>
+        <td class="text-center">
+            <button class="btn btn-sm btn-outline-secondary btn-xem-ton"
+                    data-id="${sp.id}" data-variant-id="${sp.id}"
+                    title="Xem chi tiết">
+                <i class="fas fa-eye"></i>
+            </button>
+        </td>
+    </tr>
+    <tr class="kho-expand-row" id="kho-expand-${sp.id}" style="display:none;">
+        <td colspan="6">
+            <div id="kho-expand-content-${sp.id}" class="kho-expand-panel">
+                <div class="text-center text-muted py-3" style="grid-column: 1 / -1;">
+                    <i class="fas fa-spinner fa-spin me-1"></i>Đang tải chi tiết...
+                </div>
+            </div>
+        </td>
+    </tr>`;
+}
+
+function renderTkPagination(current, total) {
+    if (total <= 1) { $('#tk-phan-trang').html(''); return; }
+    let html = '<ul class="pagination mb-0 justify-content-end">';
+    const prevDisabled = current === 1 ? ' disabled' : '';
+    html += `<li class="page-item${prevDisabled}">
+                <a class="page-link" href="javascript:;" onclick="loadTonKho(${current - 1})">&laquo;</a>
+             </li>`;
+    const max = 5;
+    let start = Math.max(1, current - Math.floor(max / 2));
+    let end = Math.min(total, start + max - 1);
+    if (end - start < max - 1) start = Math.max(1, end - max + 1);
+    if (start > 1) {
+        html += `<li class="page-item"><a class="page-link" href="javascript:;" onclick="loadTonKho(1)">1</a></li>`;
+        if (start > 2) html += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+    }
+    for (let i = start; i <= end; i++) {
+        html += `<li class="page-item ${i === current ? 'active' : ''}">
+                    <a class="page-link" href="javascript:;" onclick="loadTonKho(${i})">${i}</a>
+                 </li>`;
+    }
+    if (end < total) {
+        if (end < total - 1) html += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+        html += `<li class="page-item"><a class="page-link" href="javascript:;" onclick="loadTonKho(${total})">${total}</a></li>`;
+    }
+    const nextDisabled = current === total ? ' disabled' : '';
+    html += `<li class="page-item${nextDisabled}">
+                <a class="page-link" href="javascript:;" onclick="loadTonKho(${current + 1})">&raquo;</a>
+             </li>`;
+    html += '</ul>';
+    $('#tk-phan-trang').html(html);
 }
 
 function loadLoHang(page = 1) {
@@ -966,117 +900,144 @@ function renderAlertGroup(type, title, cls, items, badgeCls) {
 }
 
 // ─── CLICK EVENTS ────────────────────────────────────────
-$(document).on('click', '.fefo-detail-row', e => e.stopPropagation());
-// Stop propagation on child elements inside clickable rows
-$(document).on('click', '.clickable-row td > *', e => e.stopPropagation());
-$(document).on('click', '.clickable-row button', e => e.stopPropagation());
 
-$(document).on('click', '.clickable-row', function (e) {
-    // Only respond to direct clicks on the toggle column (td:first-child), not other cells
-    const firstTd = this.querySelector('td:first-child');
-    if (e.target.closest('td') !== firstTd && e.target !== this) {
-        return;
+// ============================================================
+// DÒNG MỞ RỘNG — Tab Tồn kho (Mini-Dashboard)
+// Từng sản phẩm cha được bọc trong <tbody x-data="{ expanded: false }">
+// của Alpine.js. Click row cha do Blade xử lý qua @click="expanded = !expanded".
+// KHÔNG bind .clickable-row ở đây để tránh xung đột với Alpine.
+// ============================================================
+// (handler cũ đã được vô hiệu hoá)
+
+/**
+ * Render bảng Lô hàng (FEFO) — nested table gọn gàng
+ */
+function buildFefoTable(chiTiet) {
+    if (!chiTiet.length) {
+        return `
+            <div class="kho-fefo">
+                <h6 class="kho-fefo-title">Chi tiết theo lô (FEFO)</h6>
+                <div class="kho-fefo-empty">Không có lô hàng tồn kho.</div>
+            </div>`;
     }
-    const $row = $(this);
-    const id = $row.data('variant-id') || $row.data('id');
-    const detail = $(`#fefo-detail-${id}`);
-    const icon = $row.find('.fa-chevron-down, .fa-chevron-right');
-    if (detail.is(':visible')) {
-        detail.hide();
-        icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
-        $row.find('td').removeClass('fw-semibold');
-    } else {
-        $('.fefo-detail-row').hide();
-        $('.fefo-detail-row').prev().find('.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-right');
-        detail.show();
-        icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
-        $row.find('td').addClass('fw-semibold');
-        $.get('/admin/api/lo-hang/ton-kho?variant_id=' + id, res => {
-            if (!res.success) return;
-            const chiTiet = res.data.chi_tiet || [];
-            const variantUnits = res.data.variant_units || [];
 
-            if (!chiTiet.length && !variantUnits.length) {
-                $(`#fefo-detail-content-${id}`).html('<div class="text-muted small">Khong co du lieu ton kho.</div>');
-                return;
-            }
-
-            // Tinh tong ton (don vi co ban)
-            const tongTonBase = chiTiet.reduce((sum, ct) => sum + (parseInt(ct.so_luong_ton) || 0), 0);
-
-            // Hien thi tong ton theo tung don vi quy doi
-            let unitStockHtml = '';
-            if (variantUnits.length > 0) {
-                const unitRows = variantUnits.map(u => {
-                    const qty = parseInt(u.so_luong) || 1;
-                    const ton = Math.floor(tongTonBase / qty);
-                    const tenDonVi = u.ten_don_vi_chuan || u.ten_don_vi;
-                    const isEmpty = ton === 0;
-                    return `
-                    <div class="d-flex justify-content-between align-items-center py-1 px-2 ${isEmpty ? 'text-muted' : ''}">
-                        <span>${escapeHtml(tenDonVi)}</span>
-                        <span class="${isEmpty ? 'text-muted' : 'fw-bold text-primary'}">${ton.toLocaleString()}</span>
-                    </div>`;
-                }).join('');
-                unitStockHtml = `
-                    <div class="small fw-bold text-muted text-uppercase mb-1 mt-2">Ton kho theo don vi</div>
-                    <div class="border rounded bg-light mb-2">${unitRows}</div>
-                `;
-            }
-
-            const rows = chiTiet.map(ct => {
-                const lo = ct.lo_hang || {};
-                const ncc = lo.nha_cung_cap?.ten_nha_cung_cap || '--';
-                const hsdRaw = ct.han_su_dung || '';
-                const hsd = hsdRaw.split('T')[0];
-                const diff = Math.ceil((new Date(hsdRaw) - new Date()) / 86400000);
-                let hsdClass = 'text-success';
-                if (diff < 0) hsdClass = 'text-danger';
-                else if (diff <= 30) hsdClass = 'text-warning';
-                return `
-                <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
-                    <div class="small">
-                        <span class="badge bg-dark me-1">${lo.ma_lo || 'L-' + lo.id}</span>
-                        <span class="me-2">NCC: ${escapeHtml(ncc)}</span>
-                        <span class="me-2">HSD: <span class="${hsdClass} fw-semibold">${hsd}</span> (${diff > 0 ? diff + ' ngay' : 'Het HSD'})</span>
-                    </div>
-                    <div class="text-end">
-                        <span class="fw-bold text-primary">${(parseInt(ct.so_luong_ton) || 0).toLocaleString()}</span>
-                        <span class="text-muted small ms-1">/ ${(parseInt(ct.so_luong_nhap) || 0).toLocaleString()}</span>
-                    </div>
-                </div>`;
-            }).join('');
-
-            // Header: tong ton don vi co ban
-            const baseUnitLabel = chiTiet.length
-                ? `<div class="d-flex justify-content-between align-items-center py-1 px-2 border-bottom">
-                        <span class="text-muted small">Don vi co ban (Lon)</span>
-                        <span class="fw-bold text-primary">${tongTonBase.toLocaleString()}</span>
-                   </div>`
-                : '';
-
-            $(`#fefo-detail-content-${id}`).html(`
-                <div class="small fw-bold text-muted text-uppercase mb-1">Tong ton kho</div>
-                <div class="border rounded bg-light">${baseUnitLabel}${unitStockHtml}</div>
-                <div class="small fw-bold text-muted text-uppercase mt-3 mb-1">Chi tiet theo lo (FEFO)</div>
-                <div class="small">${rows}</div>
-            `);
-        });
-    }
-});
-
-$(document).on('click', '.btn-xem-ton', function (e) {
-    e.stopPropagation();
-    const id = $(this).data('variant-id') || $(this).data('id');
-    $('#tab-ton-kho').click();
-    setTimeout(() => {
-        const $row = $(`.clickable-row[data-variant-id="${id}"], .clickable-row[data-id="${id}"]`).first();
-        if ($row.length) {
-            const firstTd = $row[0].querySelector('td:first-child');
-            const fakeEvent = { target: firstTd, stopPropagation: () => {} };
-            $row.trigger('click', [fakeEvent]);
+    const rowsHtml = chiTiet.map(ct => {
+        const lo = ct.lo_hang || {};
+        const ncc = lo.nha_cung_cap?.ten_nha_cung_cap || '--';
+        const hsdRaw = ct.han_su_dung || '';
+        const hsd = hsdRaw.split('T')[0];
+        let diff = null;
+        if (hsdRaw) {
+            const d = new Date(hsdRaw);
+            diff = Math.ceil((d - new Date()) / 86400000);
         }
-    }, 100);
+
+        let hsdClass = 'hsd-ok';
+        let hsdLabel = hsd || '--';
+        if (diff === null) {
+            hsdClass = 'hsd-ok';
+            hsdLabel = hsd || '--';
+        } else if (diff < 0) {
+            hsdClass = 'hsd-danger';
+            hsdLabel = `${hsd} (Hết HSD)`;
+        } else if (diff <= 30) {
+            hsdClass = 'hsd-warn';
+            hsdLabel = `${hsd} (còn ${diff} ngày)`;
+        }
+
+        const maLo = lo.ma_lo || ('L-' + lo.id);
+        const ton = parseInt(ct.so_luong_ton) || 0;
+        const slNhap = parseInt(ct.so_luong_nhap) || 0;
+
+        return `
+        <tr>
+            <td><span class="lo-badge-mini">${escapeHtml(maLo)}</span></td>
+            <td>${escapeHtml(ncc)}</td>
+            <td class="text-right"><span class="${hsdClass}">${escapeHtml(hsdLabel)}</span></td>
+            <td class="text-right">
+                <span class="fw-semibold text-primary">${ton.toLocaleString('vi-VN')}</span>
+                <span class="text-muted small ms-1">/ ${slNhap.toLocaleString('vi-VN')}</span>
+            </td>
+        </tr>`;
+    }).join('');
+
+    return `
+        <div class="kho-fefo">
+            <h6 class="kho-fefo-title">
+                <i class="fas fa-layer-group me-1"></i>Chi tiết theo lô (FEFO)
+            </h6>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mã lô</th>
+                        <th>Nhà cung cấp</th>
+                        <th class="text-right">HSD</th>
+                        <th class="text-right">Tồn / Nhập</th>
+                    </tr>
+                </thead>
+                <tbody>${rowsHtml}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+// .btn-xem-ton không còn dùng (tab Tồn kho chuyển sang Alpine + Mini-Dashboard).
+// Button này nếu tồn tại sẽ không có tác dụng để tránh xung đột với Alpine.
+// (handler cũ đã được vô hiệu hoá)
+
+// Xem chi tiết Lô hàng (FEFO) của một biến thể — mở modal riêng
+$(document).on('click', '.btn-xem-lo-bt', function (e) {
+    e.stopPropagation();
+    const $btn = $(this);
+    const variantId = $btn.attr('data-variant-id');
+    const spName = $btn.attr('data-sp-name') || '';
+    const btName = $btn.attr('data-bt-name') || '';
+
+    const $modal = $('#modal-fefo-bt');
+    const $body = $('#fefo-bt-body');
+    const $title = $('#fefo-bt-title');
+    $title.text(`${spName} — ${btName}`);
+    $body.html('<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-1"></i>Đang tải chi tiết lô hàng...</div>');
+
+    const modal = bootstrap.Modal.getOrCreateInstance($modal[0]);
+    modal.show();
+
+    $.get('/admin/api/lo-hang/ton-kho?variant_id=' + variantId, res => {
+        if (!res.success || !res.data) {
+            $body.html('<div class="text-danger small">Lỗi tải dữ liệu lô hàng.</div>');
+            return;
+        }
+        const data = res.data || {};
+        const chiTiet = data.chi_tiet || [];
+        const variantUnits = data.variant_units || [];
+        const tongTon = data.tong_ton || 0;
+
+        if (!chiTiet.length && !variantUnits.length) {
+            $body.html('<div class="text-muted text-center py-4">Biến thể này hiện không có lô hàng tồn kho.</div>');
+            return;
+        }
+
+        const summaryHtml = `
+            <div class="kho-summary mb-3">
+                <div class="kho-summary-title"><i class="fas fa-info-circle me-1"></i>Tổng quan</div>
+                <div class="kho-info-row">
+                    <span class="kho-info-label">Tổng tồn (đơn vị cơ bản)</span>
+                    <span class="kho-info-value">${Number(tongTon).toLocaleString('vi-VN')}</span>
+                </div>
+                ${variantUnits.length ? `
+                <div class="kho-info-row">
+                    <span class="kho-info-label">Quy đổi đơn vị</span>
+                    <span class="kho-info-value">${variantUnits.map(u =>
+                        `${u.so_luong} ${escapeHtml(u.ten_don_vi)} = ${u.so_luong_chuan} ${escapeHtml(u.ten_don_vi_chuan || '')}`
+                    ).join(' · ')}</span>
+                </div>` : ''}
+            </div>
+        `;
+
+        $body.html(summaryHtml + buildFefoTable(chiTiet));
+    }).fail(function (xhr) {
+        $body.html(`<div class="text-danger small">Lỗi: ${xhr.status} ${xhr.statusText}</div>`);
+    });
 });
 
 $(document).on('click', '.btn-xem-lo', function () {
@@ -1530,34 +1491,8 @@ function buildChiTiet(tableId, prefix) {
     return rows;
 }
 
-function submitPhieuNhap() {
-    const chiTiet = buildChiTiet('pn-ds-sp', 'pn');
-    if (!chiTiet.length) {
-        $('#pn-alert-container').html('<div class="alert alert-warning">Vui lòng thêm ít nhất một sản phẩm trước khi lưu.</div>');
-        return;
-    }
-    $('#pn-alert-container').html('');
-    const data = {
-        loai_nhap: $('#pn-loai').val(),
-        id_nha_cung_cap: $('#pn-ncc').val() || null,
-        ghi_chu: $('#pn-ghi-chu').val(),
-        tao_lo_moi: '1',
-        id_lo_hang: '',
-        chi_tiet: chiTiet,
-    };
-    $.ajax({ url: '/admin/api/phieu-nhap', method: 'POST', headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }, contentType: 'application/json', data: JSON.stringify(data),
-        success: res => {
-            bootstrap.Modal.getInstance(document.getElementById('modal-tao-pn')).hide();
-            hienBao('success', res.message);
-            loadPhieuNhap(1); loadLoHang(1); loadTonKho(tkPage); loadStats();
-        },
-        error: x => {
-            const msg = x.responseJSON?.message || 'Có lỗi xảy ra khi lưu nhập hàng.';
-            $('#pn-alert-container').html(`<div class="alert alert-danger">${msg}</div>`);
-            hienBao('danger', msg);
-        }
-    });
-}
+// Hàm submitPhieuNhap() đã được chuyển sang file riêng: public/js/admin/phieu-nhap-create.js
+// (tính năng tạo phiếu nhập giờ là trang riêng thay vì modal trong kho-hang).
 
 function submitPhieuXuat() {
     const chiTiet = [];
@@ -1596,7 +1531,9 @@ function submitPhieuXuat() {
         success: res => {
             bootstrap.Modal.getInstance(document.getElementById('modal-tao-px')).hide();
             hienBao('success', res.message);
-            loadPhieuXuat(1); loadTonKho(tkPage); loadStats();
+            loadPhieuXuat(1); loadStats();
+            // Reload trang để cập nhật bảng Tồn kho server-side
+            if ($('#content-ton-kho').hasClass('active')) window.location.reload();
         },
         error: x => {
             console.error('PhieuXuat error:', x);
@@ -1624,7 +1561,9 @@ function submitLoHang() {
         success: res => {
             bootstrap.Modal.getInstance(document.getElementById('modal-tao-lo')).hide();
             hienBao('success', res.message);
-            loadLoHang(1); loadTonKho(tkPage); loadStats();
+            loadLoHang(1); loadStats();
+            // Reload trang nếu đang ở tab Tồn kho (server-side render)
+            if ($('#content-ton-kho').hasClass('active')) window.location.reload();
         },
         error: x => hienBao('danger', x.responseJSON?.message || 'Có lỗi xảy ra.')
     });
@@ -1647,7 +1586,7 @@ function renderPagination(prefix, current, total) {
     $('#' + prefix + '-phan-trang').html(html);
 }
 
-function gotk(p) { loadTonKho(p); }
+function gotk(p) { /* Tab Tồn kho đã chuyển sang server-side, không cần AJAX */ }
 function golh(p) { loadLoHang(p); }
 function gopn(p) { loadPhieuNhap(p); }
 function gopx(p) { loadPhieuXuat(p); }

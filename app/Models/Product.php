@@ -41,7 +41,7 @@ class Product extends BaseModel
     }
 
     /**
-     * Chi tiết hóa đơn thuộc về sản phẩm này (qua biến thể bien_the_san_pham.product_id).
+     * Chi tiết hóa đơn thuộc về sản phẩm này (qua các biến thể).
      * Dùng để tính tổng số lượng đã bán (withSum) hoặc truy vấn thống kê.
      */
     public function chiTietHoaDons()
@@ -63,6 +63,8 @@ class Product extends BaseModel
      * Lưu ý: Dùng subquery (không join) để tránh nhân bản dòng khi paginate.
      * Dùng DB::table với alias thủ công vì Eloquent Model::query()->join() không
      * giữ alias trong FROM clause, gây lỗi "Unknown column 'cth.so_luong'".
+     *
+     * Cấu trúc mới: chi_tiet_hoa_don.id_bien_the_san_pham → bien_the_san_pham.id → san_pham.id
      */
     public function scopeWithTongDaBan($query)
     {
@@ -368,7 +370,10 @@ class Product extends BaseModel
                 'ma_vach' => $u->ma_vach,
                 'la_don_vi_mac_dinh' => $u->la_don_vi_mac_dinh,
                 'don_vi_chuan_id' => $u->don_vi_chuan_id,
-                'hinh_anh' => $u->hinh_anh,
+                // Resolve full URL for existing images (units)
+                'hinh_anh' => $u->hinh_anh
+                    ? \App\Models\BienTheSanPham::resolveImageUrl($u->hinh_anh)
+                    : null,
             ])->all();
             $variantsArr[] = [
                 'id' => $v->id,
@@ -382,6 +387,10 @@ class Product extends BaseModel
                 'so_luong_ton' => $v->so_luong_ton,
                 'dinh_muc_toi_thieu' => $v->dinh_muc_toi_thieu,
                 'thuoc_tinh_ids' => $v->thuoc_tinh_ids ?? [],
+                // Resolve full URL for existing images (variant itself)
+                'hinh_anh' => $v->hinh_anh
+                    ? \App\Models\BienTheSanPham::resolveImageUrl($v->hinh_anh)
+                    : null,
                 'units' => $variantUnits,
             ];
         }

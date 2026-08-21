@@ -393,64 +393,251 @@ function toggleSection(headerEl) {
     function buildStockHtml(productId, data) {
         var currentVariant = data.variant || {};
         var variants = data.allVariants || [];
+        // Ưu tiên dữ liệu đầy đủ cho Quick View (đã include variant_id),
+        // fallback về theKho/loHang cũ cho tương thích ngược.
+        var theKhoAll = data.theKhoAll || [];
+        var loHangAll = data.loHangAll || [];
         var theKho = data.theKho || [];
         var loHang = data.loHang || [];
+
+        // Nếu server đã trả về dữ liệu đầy đủ (theKhoAll/loHangAll) thì
+        // dùng nó để render, vì mỗi dòng có variant_id giúp frontend lọc
+        // ngay khi user đổi biến thể mà không cần gọi lại API.
+        var useFullData = (theKhoAll.length > 0 || loHangAll.length > 0);
+
         var html = '';
 
+        // ID biến thể đang chọn mặc định (variant hiện tại, fallback về
+        // variant đầu tiên nếu không có).
+        var initialVariantId = String((currentVariant && currentVariant.id) || (variants[0] && variants[0].id) || '');
+        // ID rất đặc biệt để tag scope an toàn giữa nhiều QuickView
+        // (mỗi sản phẩm 1 ID riêng, tránh xung đột DOM/JS).
+        var scopeId = 'qv-' + productId + '-' + Date.now();
+
+        // Khối root chỉ để nhóm các phần tử + phục vụ click handler
+        // (window.__qvStockClickVariant dùng closest('.quickview-stock-root')
+        // để tìm scope). KHÔNG dùng Alpine.js để tránh xung đột với DOM
+        // toggle thủ công (Alpine x-show có thể ghi đè style.display).
+        html += '<div class="quickview-stock-root" id="' + scopeId + '" ' +
+            'data-product-id="' + productId + '" ' +
+            'data-initial-variant="' + initialVariantId + '">';
+
+        // BƯỚC 1: NÚT CHỌN BIẾN THỂ
+        // ----------------------------------------
+        // Cơ chế hoạt động:
+        //   - Mỗi nút có data-variant-id + inline onclick gọi
+        //     window.__qvStockClickVariant (handler vanilla JS, không phụ
+        //     thuộc Alpine).
+        //   - Ta vẫn wrap trong x-data="{ selectedVariantId: ... }" để
+        //     có thể dùng Alpine x-show cho row filtering (progressive
+        //     enhancement) — nếu Alpine chưa load, onclick vẫn hoạt động
+        //     bình thường nhờ DOM toggle 'display:none' inline.
         if (variants.length > 1) {
-            html += '<div class="mb-3 d-flex flex-wrap gap-2">';
-            variants.forEach(function(v) {
-                var active = String(v.id) === String(currentVariant.id) ? ' active' : '';
-                html += '<button type="button" class="btn btn-sm btn-outline-secondary' + active + '" onclick="event.stopPropagation(); window.switchProductTab(' + productId + ', \"stock\", ' + v.id + ')">' + (v.ten_bien_the || v.ten_don_vi || 'Biến thể ' + v.id) + '</button>';
+            html += '<div class="mb-3 d-flex flex-wrap gap-2 qv-variant-buttons">';
+            variants.forEach(function (v) {
+                var vid = String(v.id);
+                var label = v.ten_bien_the || v.ten_don_vi || ('Biến thể ' + v.id);
+                // Nút biến thể đầu tiên (initial selection) → btn-dark active.
+                var isFirst = (vid === initialVariantId);
+                var btnClass = isFirst
+                    ? 'qv-variant-btn btn btn-sm btn-dark text-white'
+                    : 'qv-variant-btn btn btn-sm btn-outline-secondary';
+                html += '<button type="button" ' +
+                    'class="' + btnClass + '" ' +
+                    'data-variant-id="' + vid + '" ' +
+                    'onclick="window.__qvStockClickVariant && window.__qvStockClickVariant(this, ' + vid + ', ' + productId + ');">' +
+                    '<i class="fas fa-circle me-1" style="font-size:0.5rem; vertical-align:middle;"></i>' + label +
+                    '</button>';
             });
             html += '</div>';
         }
 
+        // BƯỚC 2: 2 BẢNG (Thẻ kho mini + Lô hàng)
+        // ----------------------------------------
         html += '<div class="row g-3">';
+
+        // ----- Bảng Thẻ kho mini -----
         html += '<div class="col-md-6">';
         html += '<div class="bg-white rounded shadow-sm p-3">';
         html += '<h6 class="fw-semibold mb-2">Thẻ kho mini</h6>';
-        if (!theKho.length) {
-            html += '<div class="text-muted small py-3">Chưa có lịch sử kho.</div>';
+
+        if (useFullData) {
+            // Render tất cả dòng kèm data-variant-id để fallback filter
+            // bằng DOM. Alpine x-show sẽ được thêm vào để bind theo state.
+            if (!theKhoAll.length) {
+                html += '<div class="text-muted small py-3 qv-empty-state" data-empty-for="theKho">Chưa có lịch sử kho.</div>';
+            } else {
+                // Tính số thứ tự theo từng variant (mỗi variant reset về 1)
+                // để khi filter hiển thị, số thứ tự vẫn liền mạch, dễ đọc.
+                var idxByVariant = {};
+                theKhoAll.forEach(function (item) {
+                    var key = String(item.variant_id);
+                    idxByVariant[key] = (idxByVariant[key] || 0) + 1;
+                });
+                var seenPerVariant = {};
+                html += '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>#</th><th>Phiếu</th><th>Thời gian</th><th>Loại</th><th>Số lượng</th><th>Còn lại</th></tr></thead><tbody>';
+                theKhoAll.forEach(function (item, index) {
+                    var isFirst = (String(item.variant_id) === initialVariantId);
+                    var variantKey = String(item.variant_id);
+                    seenPerVariant[variantKey] = (seenPerVariant[variantKey] || 0) + 1;
+                    // Row chỉ hiển thị khi data-variant-id khớp variant
+                    // đang chọn. Áp dụng 2 cơ chế filter:
+                    //   1. Inline style="display:none" cho rows KHÔNG khớp
+                    //      (ban đầu selectedVariantId = initialVariantId).
+                    //   2. window.__qvStockClickVariant sẽ toggle display
+                    //      khi user đổi variant.
+                    html += '<tr data-variant-id="' + item.variant_id + '" data-table-for="theKho" ' +
+                        'style="' + (isFirst ? '' : 'display:none;') + '">' +
+                        '<td>' + seenPerVariant[variantKey] + '</td>' +
+                        '<td>' + (item.maPhieu || '-') + '</td>' +
+                        '<td>' + (item.thoiGian ? new Date(item.thoiGian).toLocaleString('vi-VN') : '-') + '</td>' +
+                        '<td>' + (item.loaiPhieu || '-') + '</td>' +
+                        '<td>' + (item.soLuong ?? 0) + '</td>' +
+                        '<td>' + (item.soLuongConLai ?? 0) + '</td>' +
+                        '</tr>';
+                });
+                html += '</tbody></table>';
+                html += '<div class="text-muted small py-3 qv-empty-state" data-empty-for="theKho" data-empty-variant="' + initialVariantId + '" style="display:none;">Chưa có lịch sử kho cho biến thể này.</div>';
+                html += '</div>';
+            }
         } else {
-            html += '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>#</th><th>Phiếu</th><th>Thời gian</th><th>Loại</th><th>Số lượng</th><th>Còn lại</th></tr></thead><tbody>';
-            theKho.forEach(function(item, index) {
-                html += '<tr>';
-                html += '<td>' + (index + 1) + '</td>';
-                html += '<td>' + (item.maPhieu || '-') + '</td>';
-                html += '<td>' + (item.thoiGian ? new Date(item.thoiGian).toLocaleString('vi-VN') : '-') + '</td>';
-                html += '<td>' + (item.loaiPhieu || '-') + '</td>';
-                html += '<td>' + (item.soLuong ?? 0) + '</td>';
-                html += '<td>' + (item.soLuongConLai ?? 0) + '</td>';
-                html += '</tr>';
-            });
-            html += '</tbody></table></div>';
+            // Fallback: chỉ có dữ liệu 1 variant (cũ)
+            if (!theKho.length) {
+                html += '<div class="text-muted small py-3 qv-empty-state" data-empty-for="theKho">Chưa có lịch sử kho.</div>';
+            } else {
+                html += '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>#</th><th>Phiếu</th><th>Thời gian</th><th>Loại</th><th>Số lượng</th><th>Còn lại</th></tr></thead><tbody>';
+                theKho.forEach(function (item, index) {
+                    html += '<tr data-variant-id="' + initialVariantId + '" data-table-for="theKho">' +
+                        '<td>' + (index + 1) + '</td>' +
+                        '<td>' + (item.maPhieu || '-') + '</td>' +
+                        '<td>' + (item.thoiGian ? new Date(item.thoiGian).toLocaleString('vi-VN') : '-') + '</td>' +
+                        '<td>' + (item.loaiPhieu || '-') + '</td>' +
+                        '<td>' + (item.soLuong ?? 0) + '</td>' +
+                        '<td>' + (item.soLuongConLai ?? 0) + '</td>' +
+                        '</tr>';
+                });
+                html += '</tbody></table></div>';
+            }
         }
+
         html += '</div></div>';
 
+        // ----- Bảng Lô hàng -----
         html += '<div class="col-md-6">';
         html += '<div class="bg-white rounded shadow-sm p-3">';
         html += '<h6 class="fw-semibold mb-2">Lô hàng</h6>';
-        if (!loHang.length) {
-            html += '<div class="text-muted small py-3">Không có lô hàng tồn kho.</div>';
+
+        if (useFullData) {
+            if (!loHangAll.length) {
+                html += '<div class="text-muted small py-3 qv-empty-state" data-empty-for="loHang">Không có lô hàng tồn kho.</div>';
+            } else {
+                // Số thứ tự theo từng variant (xem giải thích ở bảng Thẻ kho)
+                var loIdxByVariant = {};
+                var loSeenPerVariant = {};
+                loHangAll.forEach(function (item) {
+                    var key = String(item.variant_id);
+                    loIdxByVariant[key] = (loIdxByVariant[key] || 0) + 1;
+                });
+                html += '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>#</th><th>Mã lô</th><th>Hạn dùng</th><th>Số lượng</th><th>Giá</th></tr></thead><tbody>';
+                loHangAll.forEach(function (item, index) {
+                    var isFirst = (String(item.variant_id) === initialVariantId);
+                    var variantKey = String(item.variant_id);
+                    loSeenPerVariant[variantKey] = (loSeenPerVariant[variantKey] || 0) + 1;
+                    html += '<tr data-variant-id="' + item.variant_id + '" data-table-for="loHang" ' +
+                        'style="' + (isFirst ? '' : 'display:none;') + '">' +
+                        '<td>' + loSeenPerVariant[variantKey] + '</td>' +
+                        '<td>' + (item.maLo || '-') + '</td>' +
+                        '<td>' + (item.hanSuDung ? new Date(item.hanSuDung).toLocaleDateString('vi-VN') : '-') + '</td>' +
+                        '<td>' + (item.soLuongConLai ?? 0) + '</td>' +
+                        '<td>' + formatMoney(item.giaNhap ?? 0) + ' đ</td>' +
+                        '</tr>';
+                });
+                html += '</tbody></table>';
+                html += '<div class="text-muted small py-3 qv-empty-state" data-empty-for="loHang" data-empty-variant="' + initialVariantId + '" style="display:none;">Không có lô hàng tồn kho cho biến thể này.</div>';
+                html += '</div>';
+            }
         } else {
-            html += '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>#</th><th>Mã lô</th><th>Hạn dùng</th><th>Số lượng</th><th>Giá</th></tr></thead><tbody>';
-            loHang.forEach(function(item, index) {
-                html += '<tr>';
-                html += '<td>' + (index + 1) + '</td>';
-                html += '<td>' + (item.maLo || '-') + '</td>';
-                html += '<td>' + (item.hanSuDung ? new Date(item.hanSuDung).toLocaleDateString('vi-VN') : '-') + '</td>';
-                html += '<td>' + (item.soLuongConLai ?? 0) + '</td>';
-                html += '<td>' + formatMoney(item.giaNhap ?? 0) + ' đ</td>';
-                html += '</tr>';
-            });
-            html += '</tbody></table></div>';
+            if (!loHang.length) {
+                html += '<div class="text-muted small py-3 qv-empty-state" data-empty-for="loHang">Không có lô hàng tồn kho.</div>';
+            } else {
+                html += '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>#</th><th>Mã lô</th><th>Hạn dùng</th><th>Số lượng</th><th>Giá</th></tr></thead><tbody>';
+                loHang.forEach(function (item, index) {
+                    html += '<tr data-variant-id="' + initialVariantId + '" data-table-for="loHang">' +
+                        '<td>' + (index + 1) + '</td>' +
+                        '<td>' + (item.maLo || '-') + '</td>' +
+                        '<td>' + (item.hanSuDung ? new Date(item.hanSuDung).toLocaleDateString('vi-VN') : '-') + '</td>' +
+                        '<td>' + (item.soLuongConLai ?? 0) + '</td>' +
+                        '<td>' + formatMoney(item.giaNhap ?? 0) + ' đ</td>' +
+                        '</tr>';
+                });
+                html += '</tbody></table></div>';
+            }
         }
+
         html += '</div></div>';
 
-        html += '</div>';
+        html += '</div>'; // close row
+        html += '</div>'; // close quickview-stock-root
+
         return html;
     }
+
+    // ============================================================
+    // CLICK HANDLER - Chọn variant trong Tab Kho của Quick View
+    // Được gọi từ inline onclick của mỗi nút chọn variant.
+    // Nhiệm vụ:
+    //   1. Toggle class active/inactive cho nút
+    //   2. Ẩn/hiện từng <tr> theo data-variant-id
+    //   3. Toggle empty-state (nếu không có dòng nào khớp biến thể)
+    // ============================================================
+    window.__qvStockClickVariant = function (btn, vid, productId) {
+        var root = btn.closest('.quickview-stock-root');
+        if (!root) return;
+
+        // 1. Toggle active class cho tất cả nút
+        var btns = root.querySelectorAll('.qv-variant-btn');
+        btns.forEach(function (b) {
+            b.classList.remove('btn-dark', 'text-white');
+            b.classList.add('btn-outline-secondary');
+        });
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-dark', 'text-white');
+
+        // 2. Ẩn/hiện dòng trong cả 2 bảng theo data-variant-id
+        var rows = root.querySelectorAll('tr[data-variant-id]');
+        var matchCounts = { theKho: 0, loHang: 0 };
+        var targetVid = String(vid);
+        rows.forEach(function (tr) {
+            var trVid = String(tr.getAttribute('data-variant-id'));
+            var matches = (trVid === targetVid);
+            tr.style.display = matches ? '' : 'none';
+            if (matches) {
+                var tableFor = tr.getAttribute('data-table-for');
+                if (matchCounts[tableFor] !== undefined) matchCounts[tableFor]++;
+            }
+        });
+
+        // 3. Toggle empty-state riêng cho từng bảng
+        var emptyStates = root.querySelectorAll('.qv-empty-state[data-empty-for]');
+        emptyStates.forEach(function (el) {
+            var kind = el.getAttribute('data-empty-for');
+            if (el.hasAttribute('data-empty-variant')) {
+                // Empty-state "theo variant" → ẩn/hiện theo match count
+                el.style.display = (matchCounts[kind] === 0) ? '' : 'none';
+            } else {
+                // Empty-state tổng (toàn bộ bảng rỗng ngay từ đầu) → ẩn
+                el.style.display = 'none';
+            }
+        });
+
+        // 4. Cập nhật data-initial-variant để lần vào lại tab lưu state
+        root.setAttribute('data-initial-variant', targetVid);
+        // Đẩy sự kiện ra ngoài để các listener khác (nếu có) cũng biết
+        root.dispatchEvent(new CustomEvent('qv:variant-changed', {
+            detail: { variantId: targetVid, productId: productId },
+            bubbles: true
+        }));
+    };
 
     window.loadProductStats = async function(productId, forceReload) {
         var detailRow = document.getElementById('productDetailRow' + productId);
@@ -480,8 +667,19 @@ function toggleSection(headerEl) {
         window.productDetailCache = window.productDetailCache || {};
         var cached = window.productDetailCache[productId];
         var requestedVariant = variantId ? String(variantId) : null;
-        if (cached && (!requestedVariant || String(cached.variantId) === requestedVariant)) {
-            return cached.data;
+
+        // Cache key strategy:
+        //  - Caller yêu cầu variant_id cụ thể → cache theo variantId đó.
+        //  - Caller KHÔNG truyền variant_id (Quick View tab Kho) → cache
+        //    kết quả variant_id=null (chứa theKhoAll, loHangAll) và dùng
+        //    lại cho lần sau nếu chưa có variant_id khác ghi đè.
+        if (cached) {
+            if (!requestedVariant) {
+                // Cached data không có variant_id (bản đầy đủ) → trả luôn
+                if (!cached.variantId) return cached.data;
+            } else if (String(cached.variantId) === requestedVariant) {
+                return cached.data;
+            }
         }
 
         var url = '/admin/api/san-pham/' + productId;
@@ -496,7 +694,6 @@ function toggleSection(headerEl) {
             throw new Error('Lỗi mạng: ' + networkErr.message);
         }
         if (!res.ok) {
-            // Try to read body to see what error
             let bodyText = '';
             try { bodyText = await res.text(); } catch (e) {}
             throw new Error('Không tải được dữ liệu sản phẩm.');
@@ -505,7 +702,7 @@ function toggleSection(headerEl) {
         if (!json.success) throw new Error(json.message || 'Lỗi API');
 
         window.productDetailCache[productId] = {
-            variantId: requestedVariant || String(json.data.variant?.id || ''),
+            variantId: requestedVariant || '', // '' = phiên bản đầy đủ
             data: json.data,
         };
         return json.data;
@@ -539,10 +736,17 @@ function toggleSection(headerEl) {
         var content = panel.querySelector('.product-stock-tab');
         if (!content) return;
 
+        // Quick View tab "Kho" hiển thị dữ liệu của TẤT CẢ biến thể
+        // (xem buildStockHtml). Luôn re-render khi gọi để đảm bảo
+        // state Alpine.js + nút active + filter table được khởi tạo
+        // tươi, tránh bug khi user chuyển tab tới lui.
         panel.dataset.loadedStock = '0';
         content.innerHTML = '<div class="d-flex justify-content-center align-items-center py-4"><div class="spinner-border spinner-border-sm me-2" role="status"></div>Đang tải thông tin kho...</div>';
 
         try {
+            // Truyền variant_id nếu có để server trả dữ liệu tập trung cho
+            // variant đó (theKho/loHang) — nhưng vẫn trả kèm theKhoAll/...
+            // cho frontend dùng khi user đổi biến thể nhanh tại client.
             var data = await window.loadProductDetail(productId, variantId);
             content.innerHTML = buildStockHtml(productId, data);
             panel.dataset.loadedStock = '1';
@@ -573,7 +777,13 @@ function toggleSection(headerEl) {
         } else if (tabKey === 'variants') {
             await window.loadProductVariants(productId);
         } else if (tabKey === 'stock') {
-            await window.loadProductStock(productId, variantId);
+            // Quick View tab "Kho" hiển thị dữ liệu của TẤT CẢ biến
+            // thể với nút chọn variant (active state + filter table).
+            // → KHÔNG truyền variantId: cần fetch với variant_id=null
+            // để server trả theKhoAll/loHangAll.
+            // → Không dùng cache (đã xử lý trong loadProductDetail).
+            panel.dataset.loadedStock = '0';
+            await window.loadProductStock(productId);
         }
     };
 
@@ -717,18 +927,6 @@ window.deleteProduct = async function(productId, productName) {
     var deleteUrl = '/admin/san-pham/' + productId;
     window.deleteProductByUrl(deleteUrl, productId, productName);
 };
-
-// ============================================================
-// EXPORT EXCEL
-// ============================================================
-(function() {
-    var btn = document.getElementById('btnExportExcel');
-    if (!btn) return;
-    btn.addEventListener('click', function() {
-        var params = new URLSearchParams(window.location.search);
-        window.location.href = '/admin/san-pham/export?' + params.toString();
-    });
-})();
 
 // ============================================================
 // IMPORT PREVIEW

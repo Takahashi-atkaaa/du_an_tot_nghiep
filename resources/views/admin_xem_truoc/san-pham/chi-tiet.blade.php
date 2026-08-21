@@ -15,7 +15,7 @@
         </nav>
     </div>
     <div class="d-flex gap-2">
-        <a href="{{ url('admin/san-pham/edit/' . $product->id) }}" class="btn btn-primary">
+        <a href="{{ route('san-pham.edit', $product->id) }}" class="btn btn-primary">
             <i class="fas fa-edit me-2"></i>Chỉnh sửa
         </a>
         <a href="{{ url('admin/san-pham') }}" class="btn btn-outline-secondary">
@@ -46,11 +46,11 @@
             - Pill badge cho danh mục, trạng thái
             ============================================================ --}}
         <div class="detail-card mb-4">
-            <div class="detail-card-header">
+            <div class="detail-card-header px-5 py-4 border-b border-gray-100">
                 <h6><i class="fas fa-info-circle text-blue-600 me-2"></i>Thông tin sản phẩm</h6>
             </div>
-            <div class="card-body">
-                <div class="text-center mb-4">
+            <div class="card-body px-5 pb-5">
+                <div class="text-center mb-4 pt-1">
                     @if($product->variants->count() > 0 && $product->variants->first()->hinh_anh && \App\Models\BienTheSanPham::hasImageFile($product->variants->first()->hinh_anh))
                         <img src="{{ \App\Models\BienTheSanPham::resolveImageUrl($product->variants->first()->hinh_anh) }}"
                              alt="{{ $product->ten_san_pham }}"
@@ -95,10 +95,12 @@
                     </li>
                 </ul>
 
-                {{-- Mô tả — đặt tách khỏi info-list để format đặc biệt --}}
-                <div class="mt-3">
-                    <div class="info-label mb-1" style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.03em;font-weight:600;">Mô tả</div>
-                    <p class="mb-0 text-gray-700" style="font-size:0.85rem;line-height:1.5;">
+                {{-- Mô tả — tách khỏi info-list: xếp dọc (stack) để tránh bị ép ngang --}}
+                <div class="flex flex-col items-start py-3 border-top border-gray-100 mt-1">
+                    <div class="text-sm font-medium text-gray-500 uppercase mb-2" style="letter-spacing:0.04em;">
+                        Mô tả
+                    </div>
+                    <p class="w-full text-sm text-gray-700 leading-relaxed break-words mb-0">
                         {{ $product->mo_ta ?: 'Không có mô tả' }}
                     </p>
                 </div>
@@ -152,7 +154,7 @@
         <div class="detail-card">
             <div class="detail-card-header">
                 <h6><i class="fas fa-chart-line text-purple me-2" style="color:#6d28d9;"></i>Hiệu suất kinh doanh</h6>
-                <span class="pill pill--gray" style="font-weight:500;">30 ngày qua</span>
+                <span class="pill pill--gray" style="font-weight:500;">{{ $dateLabel ?? 'TOÀN THỜI GIAN' }}</span>
             </div>
             <div class="detail-card-body--compact">
                 {{-- Mini-KPI dạng inline --}}
@@ -160,13 +162,13 @@
                     <div>
                         <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.04em;">Doanh thu TB/ngày</div>
                         <div style="font-size:1rem;font-weight:600;color:#111827;">
-                            {{ number_format($ordersSummary['doanh_thu'] / 30, 0, ',', '.') }} đ
+                            {{ number_format(($ordersSummary['doanh_thu'] ?? 0) / max(1, (int) ($daysInRange ?? 30)), 0, ',', '.') }} đ
                         </div>
                     </div>
                     <div class="text-end">
                         <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.04em;">Đơn TB/ngày</div>
                         <div style="font-size:1rem;font-weight:600;color:#111827;">
-                            {{ number_format($ordersSummary['so_don'] / 30, 1, ',', '.') }}
+                            {{ number_format(($ordersSummary['so_don'] ?? 0) / max(1, (int) ($daysInRange ?? 30)), 1, ',', '.') }}
                         </div>
                     </div>
                 </div>
@@ -183,273 +185,225 @@
     </div>
 
     <div class="col-lg-8">
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold"><i class="fas fa-layer-group me-2 text-danger"></i>Danh sách biến thể</h5>
-                <a href="{{ url('admin/san-pham/edit/' . $product->id) }}" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-plus me-1"></i>Thêm biến thể
-                </a>
-            </div>
-            <div class="card-body p-0">
-                @if($product->variants->count() > 0)
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th class="text-uppercase small fw-semibold" style="width:40px;">#</th>
-                                    <th class="text-uppercase small fw-semibold">Biến thể</th>
-                                    <th class="text-uppercase small fw-semibold text-center">Mã vạch</th>
-                                    <th class="text-uppercase small fw-semibold text-end">Giá vốn</th>
-                                    <th class="text-uppercase small fw-semibold text-end">Giá bán</th>
-                                    <th class="text-uppercase small fw-semibold text-center">Tồn kho</th>
-                                    <th class="text-uppercase small fw-semibold">Thuộc tính</th>
-                                    <th class="text-uppercase small fw-semibold text-center">Đơn vị</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($product->variants as $index => $variant)
-                                    <tr>
-                                        <td class="text-center text-muted">{{ $index + 1 }}</td>
-                                        <td>
-                                            <div class="d-flex align-items-center gap-2">
-                                                @if($variant->hinh_anh && \App\Models\BienTheSanPham::hasImageFile($variant->hinh_anh))
-                                                    <img src="{{ \App\Models\BienTheSanPham::resolveImageUrl($variant->hinh_anh) }}"
-                                                         alt="{{ $variant->ten_bien_the }}"
-                                                         class="rounded"
-                                                         style="width:40px;height:40px;object-fit:cover;">
-                                                @else
-                                                    <div class="rounded bg-light d-flex align-items-center justify-content-center"
-                                                         style="width:40px;height:40px;">
-                                                        <i class="fas fa-box text-muted"></i>
-                                                    </div>
-                                                @endif
-                                                <div>
-                                                    <span class="fw-semibold small">{{ $variant->ten_bien_the ?: 'Mặc định' }}</span>
-                                                    @if($variant->ma_hang)
-                                                        <div class="text-muted" style="font-size:0.72rem;">MH: {{ $variant->ma_hang }}</div>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="small text-muted font-monospace">{{ $variant->ma_vach ?: '-' }}</span>
-                                        </td>
-                                        <td class="text-end">
-                                            <span class="fw-semibold text-secondary">{{ number_format((float)$variant->gia_von, 0, ',', '.') }} đ</span>
-                                        </td>
-                                        <td class="text-end">
-                                            <span class="fw-bold text-primary">{{ number_format((float)$variant->gia_ban, 0, ',', '.') }} đ</span>
-                                        </td>
-                                        <td class="text-center">
-                                            @php
-                                                $dinhMuc = $variant->dinh_muc_toi_thieu ?? 0;
-                                                $tonKho = $variant->so_luong_ton ?? 0;
-                                            @endphp
-                                            @if($tonKho <= 0)
-                                                <span class="badge bg-secondary">Hết</span>
-                                            @elseif($tonKho <= $dinhMuc)
-                                                <span class="badge bg-warning text-dark">Sắp hết</span>
-                                            @else
-                                                <span class="badge bg-success">Còn</span>
-                                            @endif
-                                            <span class="d-block small text-muted mt-1">{{ number_format($tonKho) }}</span>
-                                        </td>
-                                        <td>
-                                            @php
-                                                $tonTmp = (int) ($vkFirstSapHet->so_luong_ton ?? 0);
-                                                $dinhMucTmp = (int) ($vkFirstSapHet->dinh_muc_toi_thieu ?? 0);
-                                            @endphp
-                                            Gần nhất: <strong>{{ \Illuminate\Support\Str::limit($vkFirstSapHet->ten_bien_the ?: $vkFirstSapHet->ma_hang ?: ('#' . $vkFirstSapHet->id), 20) }}</strong>
-                                            (còn {{ number_format($tonTmp) }}/định mức {{ number_format($dinhMucTmp) }})
-                                        @else
-                                            Tất cả biến thể đều ở mức an toàn
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+        <div class="detail-card">
+            {{-- ============================================================
+                HỆ THỐNG TABS CHUẨN (Bootstrap 5 nav-tabs + tab-content)
+                4 tab: Biến thể | Lịch sử bán hàng | Lịch sử Kho | Quản lý Lô hàng
+                Bootstrap JS (đã load trong layout admin) tự động ẩn/hiện
+                các tab-pane khi click.
+                ============================================================ --}}
+            <ul class="nav nav-tabs detail-tabs px-3 pt-2 mb-0" id="productDetailTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="tab-bien-the-tab" data-bs-toggle="tab"
+                            data-bs-target="#tab-bien-the" type="button" role="tab"
+                            aria-controls="tab-bien-the" aria-selected="true">
+                        <i class="fas fa-layer-group me-1 text-danger"></i>Danh sách biến thể
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-lich-su-ban-hang-tab" data-bs-toggle="tab"
+                            data-bs-target="#tab-lich-su-ban-hang" type="button" role="tab"
+                            aria-controls="tab-lich-su-ban-hang" aria-selected="false">
+                        <i class="fas fa-receipt me-1 text-green-700"></i>Lịch sử bán hàng
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-lich-su-kho-tab" data-bs-toggle="tab"
+                            data-bs-target="#tab-lich-su-kho" type="button" role="tab"
+                            aria-controls="tab-lich-su-kho" aria-selected="false">
+                        <i class="fas fa-history me-1 text-orange-600"></i>Lịch sử Kho
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-quan-ly-lo-hang-tab" data-bs-toggle="tab"
+                            data-bs-target="#tab-quan-ly-lo-hang" type="button" role="tab"
+                            aria-controls="tab-quan-ly-lo-hang" aria-selected="false">
+                        <i class="fas fa-boxes-stacked me-1 text-blue-600"></i>Quản lý Lô hàng
+                    </button>
+                </li>
+            </ul>
 
-                        @if($product->variants->count() > 0)
-                            <div class="table-responsive">
-                                <table class="detail-table">
-                                    <thead>
+            <div class="tab-content" id="productDetailTabsContent">
+                {{-- ============================================================
+                    TAB 1: DANH SÁCH BIẾN THỂ
+                    ============================================================ --}}
+                <div class="tab-pane fade show active" id="tab-bien-the"
+                     role="tabpanel" aria-labelledby="tab-bien-the-tab">
+                    <div class="d-flex justify-content-end align-items-center px-3 pt-3 pb-2">
+                        <a href="{{ route('san-pham.edit', $product->id) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-plus me-1"></i>Thêm biến thể
+                        </a>
+                    </div>
+
+                    @if($product->variants->count() > 0)
+                        <div class="table-responsive px-3 pb-3">
+                            <table class="detail-table">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center align-middle" style="width:40px;">#</th>
+                                        <th class="align-middle">Biến thể</th>
+                                        <th class="text-center align-middle">Mã vạch</th>
+                                        <th class="text-end align-middle">Giá vốn</th>
+                                        <th class="text-end align-middle">Giá bán</th>
+                                        <th class="text-end align-middle">Tồn kho</th>
+                                        <th class="align-middle">Thuộc tính</th>
+                                        <th class="text-center align-middle">Đơn vị</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($product->variants as $index => $variant)
                                         <tr>
-                                            <th class="text-center" style="width:40px;">#</th>
-                                            <th>Biến thể</th>
-                                            <th class="text-center">Mã vạch</th>
-                                            <th class="text-end">Giá vốn</th>
-                                            <th class="text-end">Giá bán</th>
-                                            <th class="text-center">Tồn kho</th>
-                                            <th>Thuộc tính</th>
-                                            <th class="text-center">Đơn vị</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($product->variants as $index => $variant)
-                                            <tr>
-                                                <td class="text-center text-gray-500">{{ $index + 1 }}</td>
-                                                <td>
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        @if($variant->hinh_anh)
-                                                            <img src="{{ asset($variant->hinh_anh) }}"
-                                                                 alt="{{ $variant->ten_bien_the }}"
-                                                                 class="rounded"
-                                                                 style="width:40px;height:40px;object-fit:cover;">
-                                                        @else
-                                                            <div class="rounded bg-light d-flex align-items-center justify-content-center"
-                                                                 style="width:40px;height:40px;">
-                                                                <i class="fas fa-box text-muted"></i>
-                                                            </div>
+                                            <td class="text-center text-gray-500 align-middle">{{ $index + 1 }}</td>
+                                            <td class="align-middle">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    @if($variant->hinh_anh)
+                                                        <img src="{{ asset($variant->hinh_anh) }}"
+                                                             alt="{{ $variant->ten_bien_the }}"
+                                                             class="rounded"
+                                                             style="width:40px;height:40px;object-fit:cover;">
+                                                    @else
+                                                        <div class="rounded bg-light d-flex align-items-center justify-content-center"
+                                                             style="width:40px;height:40px;">
+                                                            <i class="fas fa-box text-muted"></i>
+                                                        </div>
+                                                    @endif
+                                                    <div>
+                                                        <span class="fw-semibold text-gray-900">{{ $variant->ten_bien_the ?: 'Mặc định' }}</span>
+                                                        @if($variant->ma_hang)
+                                                            <div class="text-gray-500" style="font-size:0.72rem;">MH: {{ $variant->ma_hang }}</div>
                                                         @endif
-                                                        <div>
-                                                            <span class="fw-semibold text-gray-900">{{ $variant->ten_bien_the ?: 'Mặc định' }}</span>
-                                                            @if($variant->ma_hang)
-                                                                <div class="text-gray-500" style="font-size:0.72rem;">MH: {{ $variant->ma_hang }}</div>
-                                                            @endif
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center align-middle">
+                                                <span class="text-gray-500 font-monospace">{{ $variant->ma_vach ?: '-' }}</span>
+                                            </td>
+                                            <td class="text-end align-middle">
+                                                <span class="text-gray-700">{{ number_format((float)$variant->gia_von, 0, ',', '.') }} đ</span>
+                                            </td>
+                                            <td class="text-end align-middle">
+                                                <span class="fw-bold text-blue-600">{{ number_format((float)$variant->gia_ban, 0, ',', '.') }} đ</span>
+                                            </td>
+                                            <td class="text-end align-middle">
+                                                @php
+                                                    $dinhMuc = $variant->dinh_muc_toi_thieu ?? 0;
+                                                    $tonKho = (int) ($variant->so_luong_ton ?? 0);
+                                                @endphp
+                                                @if($tonKho <= 0)
+                                                    <span class="stock-badge stock-badge--danger">Hết hàng</span>
+                                                @else
+                                                    <span class="stock-number">{{ number_format($tonKho) }}</span>
+                                                    @if($tonKho <= $dinhMuc)
+                                                        <div class="text-xs text-orange-600 mt-1">Sắp hết (định mức {{ number_format($dinhMuc) }})</div>
+                                                    @endif
+                                                @endif
+                                            </td>
+                                            <td class="align-middle">
+                                                @php
+                                                    $thuocTinhIds = $variant->thuoc_tinh_ids ?? [];
+                                                    $thuocTinhs = \App\Models\ThuocTinhSanPham::whereIn('id', $thuocTinhIds)->get();
+                                                @endphp
+                                                @if($thuocTinhs->count() > 0)
+                                                    <div class="d-flex flex-wrap gap-1">
+                                                        @foreach($thuocTinhs as $tt)
+                                                            <span class="pill pill--gray" style="font-weight:500;">{{ $tt->ten_thuoc_tinh }}</span>
+                                                        @endforeach
+                                                    </div>
+                                                @else
+                                                    <span class="text-gray-400">—</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-center align-middle">
+                                                @if($variant->units->count() > 0)
+                                                    <button class="btn btn-sm btn-outline-secondary"
+                                                            type="button"
+                                                            data-bs-toggle="collapse"
+                                                            data-bs-target="#units-{{ $variant->id }}"
+                                                            aria-expanded="false">
+                                                        <i class="fas fa-list-ul me-1"></i>{{ $variant->units->count() }}
+                                                    </button>
+                                                @else
+                                                    <span class="text-gray-400">—</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                        @if($variant->units->count() > 0)
+                                            <tr>
+                                                <td colspan="8" class="p-0 border-0">
+                                                    <div class="collapse" id="units-{{ $variant->id }}">
+                                                        <div class="p-3 bg-gray-50" style="font-size:0.82rem;">
+                                                            <div class="text-gray-500 fw-semibold text-uppercase mb-2" style="font-size:0.7rem;letter-spacing:0.05em;">
+                                                                <i class="fas fa-exchange-alt me-1"></i>Đơn vị quy đổi của "{{ $variant->ten_bien_the }}"
+                                                            </div>
+                                                            <div class="table-responsive">
+                                                                <table class="detail-table">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th class="align-middle">Đơn vị</th>
+                                                                            <th class="text-center align-middle">Tỷ lệ QĐ</th>
+                                                                            <th class="text-end align-middle">Giá vốn QĐ</th>
+                                                                            <th class="text-end align-middle">Giá bán QĐ</th>
+                                                                            <th class="align-middle">Mã vạch</th>
+                                                                            <th class="text-center align-middle">Mặc định</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        @foreach($variant->units as $unit)
+                                                                            <tr>
+                                                                                <td class="align-middle">
+                                                                                    <span class="fw-semibold">{{ $unit->ten_don_vi }}</span>
+                                                                                    @if($unit->ma_hang)
+                                                                                        <span class="text-gray-500 ms-1" style="font-size:0.72rem;">({{ $unit->ma_hang }})</span>
+                                                                                    @endif
+                                                                                </td>
+                                                                                <td class="text-center align-middle">
+                                                                                    <span class="pill pill--blue">1 : {{ $unit->so_luong_san_pham_trong_don_vi ?? '—' }}</span>
+                                                                                </td>
+                                                                                <td class="text-end align-middle text-gray-500">
+                                                                                    {{ number_format((float)$unit->gia_von_quy_doi, 0, ',', '.') }} đ
+                                                                                </td>
+                                                                                <td class="text-end align-middle fw-semibold text-blue-600">
+                                                                                    {{ number_format((float)$unit->gia_ban_quy_doi, 0, ',', '.') }} đ
+                                                                                </td>
+                                                                                <td class="align-middle">
+                                                                                    <span class="text-gray-500 font-monospace">{{ $unit->ma_vach ?: '—' }}</span>
+                                                                                </td>
+                                                                                <td class="text-center align-middle">
+                                                                                    @if($unit->la_don_vi_mac_dinh)
+                                                                                        <i class="fas fa-check-circle text-green-700"></i>
+                                                                                    @else
+                                                                                        <i class="far fa-circle text-gray-400"></i>
+                                                                                    @endif
+                                                                                </td>
+                                                                            </tr>
+                                                                        @endforeach
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </td>
-                                                <td class="text-center">
-                                                    <span class="text-gray-500 font-monospace">{{ $variant->ma_vach ?: '-' }}</span>
-                                                </td>
-                                                <td class="text-end">
-                                                    <span class="fw-semibold text-gray-700">{{ number_format((float)$variant->gia_von, 0, ',', '.') }} đ</span>
-                                                </td>
-                                                <td class="text-end">
-                                                    <span class="fw-bold text-blue-600">{{ number_format((float)$variant->gia_ban, 0, ',', '.') }} đ</span>
-                                                </td>
-                                                <td class="text-center">
-                                                    @php
-                                                        $dinhMuc = $variant->dinh_muc_toi_thieu ?? 0;
-                                                        $tonKho = $variant->so_luong_ton ?? 0;
-                                                    @endphp
-                                                    @if($tonKho <= 0)
-                                                        <span class="pill pill--gray">Hết</span>
-                                                    @elseif($tonKho <= $dinhMuc)
-                                                        <span class="pill pill--amber">Sắp hết</span>
-                                                    @else
-                                                        <span class="pill pill--green">Còn</span>
-                                                    @endif
-                                                    <div class="text-gray-500 mt-1" style="font-size:0.72rem;">{{ number_format($tonKho) }}</div>
-                                                </td>
-                                                <td>
-                                                    @php
-                                                        $thuocTinhIds = $variant->thuoc_tinh_ids ?? [];
-                                                        $thuocTinhs = \App\Models\ThuocTinhSanPham::whereIn('id', $thuocTinhIds)->get();
-                                                    @endphp
-                                                    @if($thuocTinhs->count() > 0)
-                                                        <div class="d-flex flex-wrap gap-1">
-                                                            @foreach($thuocTinhs as $tt)
-                                                                <span class="pill pill--gray" style="font-weight:500;">{{ $tt->ten_thuoc_tinh }}</span>
-                                                            @endforeach
-                                                        </div>
-                                                    @else
-                                                        <span class="text-gray-400">—</span>
-                                                    @endif
-                                                </td>
-                                                <td class="text-center">
-                                                    @if($variant->units->count() > 0)
-                                                        <button class="btn btn-sm btn-outline-secondary"
-                                                                type="button"
-                                                                data-bs-toggle="collapse"
-                                                                data-bs-target="#units-{{ $variant->id }}"
-                                                                aria-expanded="false">
-                                                            <i class="fas fa-list-ul me-1"></i>{{ $variant->units->count() }}
-                                                        </button>
-                                                    @else
-                                                        <span class="text-gray-400">—</span>
-                                                    @endif
                                                 </td>
                                             </tr>
-                                            @if($variant->units->count() > 0)
-                                                <tr>
-                                                    <td colspan="8" class="p-0 border-0">
-                                                        <div class="collapse" id="units-{{ $variant->id }}">
-                                                            <div class="p-3 bg-gray-50" style="font-size:0.82rem;">
-                                                                <div class="text-gray-500 fw-semibold text-uppercase mb-2" style="font-size:0.7rem;letter-spacing:0.05em;">
-                                                                    <i class="fas fa-exchange-alt me-1"></i>Đơn vị quy đổi của "{{ $variant->ten_bien_the }}"
-                                                                </div>
-                                                                <div class="table-responsive">
-                                                                    <table class="detail-table">
-                                                                        <thead>
-                                                                            <tr>
-                                                                                <th>Đơn vị</th>
-                                                                                <th class="text-center">Tỷ lệ QĐ</th>
-                                                                                <th class="text-end">Giá vốn QĐ</th>
-                                                                                <th class="text-end">Giá bán QĐ</th>
-                                                                                <th>Mã vạch</th>
-                                                                                <th class="text-center">Mặc định</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody>
-                                                                            @foreach($variant->units as $unit)
-                                                                                <tr>
-                                                                                    <td>
-                                                                                        <span class="fw-semibold">{{ $unit->ten_don_vi }}</span>
-                                                                                        @if($unit->ma_hang)
-                                                                                            <span class="text-gray-500 ms-1" style="font-size:0.72rem;">({{ $unit->ma_hang }})</span>
-                                                                                        @endif
-                                                                                    </td>
-                                                                                    <td class="text-center">
-                                                                                        <span class="pill pill--blue">1 : {{ $unit->so_luong_san_pham_trong_don_vi ?? '—' }}</span>
-                                                                                    </td>
-                                                                                    <td class="text-end text-gray-500">
-                                                                                        {{ number_format((float)$unit->gia_von_quy_doi, 0, ',', '.') }} đ
-                                                                                    </td>
-                                                                                    <td class="text-end fw-semibold text-blue-600">
-                                                                                        {{ number_format((float)$unit->gia_ban_quy_doi, 0, ',', '.') }} đ
-                                                                                    </td>
-                                                                                    <td>
-                                                                                        <span class="text-gray-500 font-monospace">{{ $unit->ma_vach ?: '—' }}</span>
-                                                                                    </td>
-                                                                                    <td class="text-center">
-                                                                                        @if($unit->la_don_vi_mac_dinh)
-                                                                                            <i class="fas fa-check-circle text-green-700"></i>
-                                                                                        @else
-                                                                                            <i class="far fa-circle text-gray-400"></i>
-                                                                                        @endif
-                                                                                    </td>
-                                                                                </tr>
-                                                                            @endforeach
-                                                                        </tbody>
-                                                                    </table>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            @endif
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        @else
-                            <div class="text-center text-gray-400 py-5">
-                                <i class="fas fa-layer-group fa-3x mb-3"></i>
-                                <p class="mb-0">Chưa có biến thể nào.</p>
-                            </div>
-                        @endif
-                    </div>
+                                        @endif
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <div class="text-center text-gray-400 py-5">
+                            <i class="fas fa-layer-group fa-3x mb-3"></i>
+                            <p class="mb-0">Chưa có biến thể nào.</p>
+                        </div>
+                    @endif
+                </div>
 
                     {{-- ============================================================
                         TAB 2: LỊCH SỬ BÁN HÀNG (kèm Filter Toolbar)
                         ============================================================ --}}
-                    <div class="tab-pane fade" id="tab-lich-su-ban-hang"
-                         role="tabpanel" aria-labelledby="tab-lich-su-ban-hang-tab">
-                        <div class="px-3 pt-3">
-                            <div class="detail-card-header" style="padding-left:0;padding-right:0;border:0;">
-                                <div>
-                                    <h6 class="mb-1"><i class="fas fa-receipt text-green-700 me-2"></i>Đơn hàng gần đây</h6>
-                                    <div class="text-gray-500" style="font-size:0.78rem;">Tối đa 50 đơn mới nhất trong 30 ngày — dùng bộ lọc bên dưới để thu hẹp.</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="px-3">
-                            {{-- ========================================================
-                                 KPI WIDGETS: Doanh thu / Lợi nhuận gộp / Sản phẩm đã bán
-                                 (Tính server-side ở SanPhamController::show())
-                                 ======================================================== --}}
+<div class="tab-pane fade" id="tab-lich-su-ban-hang"
+                     role="tabpanel" aria-labelledby="tab-lich-su-ban-hang-tab">
+                        <div class="px-3 mt-4">
                             @php
                                 $doanhThu     = $ordersSummary['doanh_thu']     ?? 0;
                                 $loiNhuanGop  = $ordersSummary['loi_nhuan_gop'] ?? 0;
@@ -461,15 +415,15 @@
                             <div class="kpi-grid kpi-grid--3">
                                 <div class="kpi-card">
                                     <div class="kpi-head">
-                                        <span class="kpi-label">Doanh thu (30 ngày)</span>
+                                        <span class="kpi-label" data-kpi-label="doanh_thu">Doanh thu ({{ $dateLabel ?? 'TOÀN THỜI GIAN' }})</span>
                                         <span class="kpi-icon kpi-icon--green"><i class="fas fa-coins"></i></span>
                                     </div>
                                     <div class="kpi-value" data-kpi="doanh_thu">{{ number_format($doanhThu, 0, ',', '.') }} <span class="text-gray-500" style="font-size:0.85rem;font-weight:500;">đ</span></div>
-                                    <div class="kpi-sub"><strong>{{ number_format($soDon) }}</strong> đơn hàng hoàn thành</div>
+                                    <div class="kpi-sub" data-kpi-sub="doanh_thu"><strong>{{ number_format($soDon) }}</strong> đơn hàng hoàn thành</div>
                                 </div>
                                 <div class="kpi-card">
                                     <div class="kpi-head">
-                                        <span class="kpi-label">Lợi nhuận gộp</span>
+                                        <span class="kpi-label" data-kpi-label="loi_nhuan">Lợi nhuận gộp ({{ $dateLabel ?? 'TOÀN THỜI GIAN' }})</span>
                                         <span class="kpi-icon kpi-icon--{{ $trendUp ? 'blue' : 'red' }}"><i class="fas fa-chart-line"></i></span>
                                     </div>
                                     <div class="kpi-value" data-kpi="loi_nhuan">
@@ -485,11 +439,11 @@
                                 </div>
                                 <div class="kpi-card">
                                     <div class="kpi-head">
-                                        <span class="kpi-label">Sản phẩm đã bán</span>
+                                        <span class="kpi-label" data-kpi-label="so_luong_ban">Sản phẩm đã bán ({{ $dateLabel ?? 'TOÀN THỜI GIAN' }})</span>
                                         <span class="kpi-icon kpi-icon--orange"><i class="fas fa-boxes-stacked"></i></span>
                                     </div>
                                     <div class="kpi-value" data-kpi="so_luong_ban">{{ number_format($soLuongBan) }} <span class="text-gray-500" style="font-size:0.85rem;font-weight:500;">sản phẩm</span></div>
-                                    <div class="kpi-sub">Trung bình <strong>{{ $soLuongBan > 0 ? number_format($doanhThu / $soLuongBan, 0, ',', '.') : 0 }} đ</strong> / sản phẩm</div>
+                                    <div class="kpi-sub" data-kpi-sub="so_luong_ban">Trung bình <strong>{{ $soLuongBan > 0 ? number_format($doanhThu / $soLuongBan, 0, ',', '.') : 0 }} đ</strong> / sản phẩm</div>
                                 </div>
                             </div>
                         </div>
@@ -537,22 +491,22 @@
                             </div>
                         </div>
 
-                        <div id="detailPageOrdersList" class="table-responsive position-relative">
+                        <div id="detailPageOrdersList" class="table-responsive position-relative px-3 pb-3">
                             <table class="detail-table">
                                 <thead>
                                     <tr>
-                                        <th>Mã đơn</th>
-                                        <th>Khách hàng</th>
-                                        <th>Biến thể</th>
-                                        <th>Thời gian</th>
-                                        <th class="text-center">Số lượng</th>
-                                        <th class="text-end">Thành tiền</th>
-                                        <th class="text-center">Trạng thái</th>
-                                        <th class="text-end"></th>
+                                        <th class="align-middle">Mã đơn</th>
+                                        <th class="align-middle">Khách hàng</th>
+                                        <th class="align-middle">Biến thể</th>
+                                        <th class="align-middle">Thời gian</th>
+                                        <th class="text-center align-middle">Số lượng</th>
+                                        <th class="text-end align-middle">Thành tiền</th>
+                                        <th class="text-center align-middle">Trạng thái</th>
+                                        <th class="text-end align-middle"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="ordersTableBody">
-                                    <tr><td colspan="8" class="text-center text-gray-400 py-5">
+                                    <tr><td colspan="8" class="text-center text-gray-400 py-5 align-middle">
                                         <div class="spinner-border spinner-border-sm me-2" role="status"></div>
                                         Đang tải danh sách đơn hàng...
                                     </td></tr>
@@ -568,18 +522,9 @@
                     {{-- ============================================================
                         TAB 3: LỊCH SỬ KHO (kèm Filter Toolbar)
                         ============================================================ --}}
-                    <div class="tab-pane fade" id="tab-lich-su-kho"
-                         role="tabpanel" aria-labelledby="tab-lich-su-kho-tab">
-                        <div class="px-3 pt-3">
-                            <div class="detail-card-header" style="padding-left:0;padding-right:0;border:0;">
-                                <div>
-                                    <h6 class="mb-1"><i class="fas fa-history text-orange-600 me-2"></i>Lịch sử tồn kho</h6>
-                                    <div class="text-gray-500" style="font-size:0.78rem;">Theo dõi các phiếu nhập/xuất/trả/kiểm kho ảnh hưởng tới tồn kho sản phẩm.</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="px-3">
+<div class="tab-pane fade" id="tab-lich-su-kho"
+                     role="tabpanel" aria-labelledby="tab-lich-su-kho-tab">
+                        <div class="px-3 mt-4">
                             <div class="detail-tab-toolbar filter-toolbar"
                                  data-target-table="khoTableBody"
                                  data-target-empty="khoEmptyState">
@@ -615,52 +560,59 @@
                             </div>
                         </div>
 
-                        <div class="table-responsive">
+                        <div class="table-responsive px-3 pb-3">
                             <table class="detail-table">
                                 <thead>
                                     <tr>
-                                        <th>Mã phiếu</th>
-                                        <th>Loại</th>
-                                        <th>Nhà cung cấp</th>
-                                        <th class="text-end">Số lượng</th>
-                                        <th class="text-end">Giá nhập</th>
-                                        <th>Thời gian</th>
+                                        <th class="align-middle">Mã phiếu</th>
+                                        <th class="align-middle">Loại</th>
+                                        <th class="align-middle">Nhà cung cấp</th>
+                                        <th class="text-end align-middle">Số lượng</th>
+                                        <th class="text-end align-middle">Giá nhập</th>
+                                        <th class="align-middle">Thời gian</th>
                                     </tr>
                                 </thead>
                                 <tbody id="khoTableBody">
                                     @forelse($theKho as $item)
-                                        @php $loaiKey = $categorizeLoaiPhieu($item->loai_phieu ?? ''); @endphp
+                                        @php
+                                            $loaiPhieuRaw = strtolower($item->loai_phieu ?? '');
+                                            $loaiKey = match(true) {
+                                                str_contains($loaiPhieuRaw, 'nhap') => 'nhap',
+                                                str_contains($loaiPhieuRaw, 'xuat') => 'xuat',
+                                                str_contains($loaiPhieuRaw, 'tra')  => 'tra',
+                                                default => 'khac',
+                                            };
+                                        @endphp
                                         <tr data-loai-phieu="{{ $loaiKey }}"
                                             data-ngay="{{ \Carbon\Carbon::parse($item->thoi_gian)->toDateString() }}">
-                                            <td><span class="font-monospace text-gray-700">{{ $item->ma_phieu }}</span></td>
-                                            <td>
+                                            <td class="align-middle"><span class="font-monospace text-gray-700">{{ $item->ma_phieu }}</span></td>
+                                            <td class="align-middle">
                                                 @php
-                                                    $loaiPhieu = $item->loai_phieu ?? '';
                                                     $loaiLabel = match(true) {
-                                                        str_contains(strtolower($loaiPhieu), 'nhap') => '<span class="pill pill--green">Nhập</span>',
-                                                        str_contains(strtolower($loaiPhieu), 'xuat') => '<span class="pill pill--red">Xuất</span>',
-                                                        str_contains(strtolower($loaiPhieu), 'tra') => '<span class="pill pill--amber">Trả</span>',
-                                                        default => '<span class="pill pill--gray">'.$loaiPhieu.'</span>'
+                                                        str_contains($loaiPhieuRaw, 'nhap') => '<span class="pill pill--green">Nhập</span>',
+                                                        str_contains($loaiPhieuRaw, 'xuat') => '<span class="pill pill--red">Xuất</span>',
+                                                        str_contains($loaiPhieuRaw, 'tra') => '<span class="pill pill--amber">Trả</span>',
+                                                        default => '<span class="pill pill--gray">'.($item->loai_phieu ?? '').'</span>'
                                                     };
                                                 @endphp
                                                 {!! $loaiLabel !!}
-                                                <div class="text-gray-400" style="font-size:0.7rem;">{{ $item->loai_phieu }}</div>
+                                                <div class="text-gray-400 text-xs mt-1">{{ $item->loai_phieu }}</div>
                                             </td>
-                                            <td><span class="text-gray-600">{{ $item->nha_cung_cap ?: '—' }}</span></td>
-                                            <td class="text-end fw-semibold {{ ($item->so_luong ?? 0) < 0 ? 'text-red-700' : 'text-green-700' }}">
+                                            <td class="align-middle"><span class="text-gray-600">{{ $item->nha_cung_cap ?: '—' }}</span></td>
+                                            <td class="text-end align-middle fw-semibold {{ ($item->so_luong ?? 0) < 0 ? 'text-red-700' : 'text-green-700' }}">
                                                 {{ $item->so_luong > 0 ? '+' : '' }}{{ number_format($item->so_luong) }}
                                             </td>
-                                            <td class="text-end text-gray-500">
+                                            <td class="text-end align-middle text-gray-500">
                                                 {{ number_format((float)($item->gia ?? 0), 0, ',', '.') }} đ
                                             </td>
-                                            <td>
+                                            <td class="align-middle">
                                                 <span class="text-gray-500">
                                                     {{ \Carbon\Carbon::parse($item->thoi_gian)->format('d/m/Y H:i') }}
                                                 </span>
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="6" class="text-center text-gray-400 py-5">
+                                        <tr><td colspan="6" class="text-center text-gray-400 py-5 align-middle">
                                             <i class="fas fa-inbox fa-3x mb-3"></i>
                                             <p class="mb-0">Chưa có lịch sử tồn kho.</p>
                                         </td></tr>
@@ -679,16 +631,7 @@
                         ============================================================ --}}
                     <div class="tab-pane fade" id="tab-quan-ly-lo-hang"
                          role="tabpanel" aria-labelledby="tab-quan-ly-lo-hang-tab">
-                        <div class="px-3 pt-3">
-                            <div class="detail-card-header" style="padding-left:0;padding-right:0;border:0;">
-                                <div>
-                                    <h6 class="mb-1"><i class="fas fa-boxes-stacked text-blue-600 me-2"></i>Thông tin lô hàng</h6>
-                                    <div class="text-gray-500" style="font-size:0.78rem;">Tìm kiếm theo mã lô, lọc theo tình trạng hạn sử dụng (HSD).</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="px-3">
+                        <div class="px-3 mt-4">
                             <div class="detail-tab-toolbar filter-toolbar"
                                  data-target-table="loHangTableBody"
                                  data-target-empty="loHangEmptyState">
@@ -720,14 +663,14 @@
                             </div>
                         </div>
 
-                        <div class="table-responsive">
+                        <div class="table-responsive px-3 pb-3">
                             <table class="detail-table">
                                 <thead>
                                     <tr>
-                                        <th>Mã lô</th>
-                                        <th class="text-end">Số lượng còn</th>
-                                        <th>Hạn sử dụng</th>
-                                        <th>Trạng thái HSD</th>
+                                        <th class="align-middle">Mã lô</th>
+                                        <th class="text-end align-middle">Số lượng còn</th>
+                                        <th class="align-middle">Hạn sử dụng</th>
+                                        <th class="align-middle">Trạng thái HSD</th>
                                     </tr>
                                 </thead>
                                 <tbody id="loHangTableBody">
@@ -745,20 +688,20 @@
                                         @endphp
                                         <tr data-ma-lo="{{ $lo->ma_lo ?: '' }}"
                                             data-trang-thai-hsd="{{ $hsdKey }}">
-                                            <td><span class="font-monospace fw-semibold text-gray-900">{{ $lo->ma_lo ?: '—' }}</span></td>
-                                            <td class="text-end">
+                                            <td class="align-middle"><span class="font-monospace fw-semibold text-gray-900">{{ $lo->ma_lo ?: '—' }}</span></td>
+                                            <td class="text-end align-middle">
                                                 <span class="fw-bold {{ ($lo->so_luong ?? 0) <= 0 ? 'text-gray-400' : 'text-green-700' }}">
                                                     {{ number_format((float)($lo->so_luong ?? 0)) }}
                                                 </span>
                                             </td>
-                                            <td>
+                                            <td class="align-middle">
                                                 @if($hanSuDung)
                                                     <span class="text-gray-700">{{ $hanSuDung->format('d/m/Y') }}</span>
                                                 @else
                                                     <span class="text-gray-400">—</span>
                                                 @endif
                                             </td>
-                                            <td>
+                                            <td class="align-middle">
                                                 @if(!$hanSuDung)
                                                     <span class="pill pill--gray">Không có HSD</span>
                                                 @elseif($daysLeft < 0)
@@ -771,7 +714,7 @@
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="4" class="text-center text-gray-400 py-5">
+                                        <tr><td colspan="4" class="text-center text-gray-400 py-5 align-middle">
                                             <i class="fas fa-boxes-stacked fa-3x mb-3"></i>
                                             <p class="mb-0">Chưa có thông tin lô hàng.</p>
                                         </td></tr>
@@ -799,19 +742,29 @@
     ============================================================ --}}
 @php
     $detailProductId = $product->id;
+    // Truyền giá trị filter hiện tại (nếu có) sang JS để:
+    // 1) Pre-fill input[type=date] đúng trạng thái.
+    // 2) Khi loadOrders() gọi API, kèm luôn tu_ngay/den_ngay để re-render KPI.
+    $initialFilter = [
+        'tu_ngay'       => $tuNgay ?? '',
+        'den_ngay'      => $denNgay ?? '',
+        'hasDateFilter' => $hasDateFilter ?? false,
+        'dateLabel'     => $dateLabel ?? 'TOÀN THỜI GIAN',
+        'isAllTime'     => $isAllTime ?? true,
+    ];
 @endphp
 <script>
 /* =================================================================
    CHI-TIET (show) PAGE — LOGIC PHÍA CLIENT
    ----------------------------------------------------------------
-   Phụ trách 3 việc sau khi DOM ready:
-     1. Load orders từ API thongKe, render vào #ordersTableBody.
-        Mỗi <tr> có data-* phục vụ Toolbar filter.
+   Phụ trách các việc sau khi DOM ready:
+     1. Load orders từ API thongKe, render vào #ordersTableBody
+        ĐỒNG THỜI cập nhật 3 thẻ KPI (Doanh thu / Lợi nhuận / SP đã bán).
+        Mỗi <tr> có data-* phục vụ Toolbar filter (client-side).
      2. Tự điền <select.filter-variant> với danh sách biến thể của
         sản phẩm (data-variants được inject bằng Blade).
-     3. Khởi tạo Toolbar Filter cho cả 4 tab (orders / kho / loHang
-        / bienThe — bienThe dùng search tự do). Tất cả filter đều
-        chạy client-side, không cần round-trip server.
+     3. Khởi tạo Toolbar Filter cho cả 4 tab. Filter ngày của tab
+        "Lịch sử bán hàng" sẽ trigger lại API call để đồng bộ KPI.
    ================================================================= */
 window.addEventListener('DOMContentLoaded', function () {
     var productId = {{ (int) $detailProductId }};
@@ -827,6 +780,9 @@ window.addEventListener('DOMContentLoaded', function () {
             JSON_UNESCAPED_UNICODE
         );
     ?>;
+
+    // Filter hiện tại (server-injected nếu có; client-overridable khi user đổi input)
+    var initialFilter = <?php echo json_encode($initialFilter, JSON_UNESCAPED_UNICODE); ?>;
 
     /* ---------- Helpers ---------- */
     function formatMoney(num) {
@@ -875,11 +831,97 @@ window.addEventListener('DOMContentLoaded', function () {
             .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
-    /* ---------- 1. Load orders ---------- */
+    /**
+     * Build URL query từ filter hiện tại của Orders toolbar.
+     * - Có cả tu_ngay + den_ngay → truyền tu_ngay/den_ngay (ưu tiên).
+     * - Không có                → truyền days=0 (server hiểu là toàn thời gian).
+     */
+    function buildOrdersUrl(basePath, toolbar) {
+        var fromInp = toolbar ? toolbar.querySelector('.filter-from-date') : null;
+        var toInp   = toolbar ? toolbar.querySelector('.filter-to-date')   : null;
+        var tu  = (fromInp && fromInp.value) || '';
+        var den = (toInp   && toInp.value)   || '';
+        var params = [];
+        if (tu && den) {
+            params.push('tu_ngay='  + encodeURIComponent(tu));
+            params.push('den_ngay=' + encodeURIComponent(den));
+        } else {
+            params.push('days=0'); // 0 = toàn thời gian (server mặc định)
+        }
+        return basePath + (params.length ? '?' + params.join('&') : '');
+    }
+
+    /**
+     * Sinh label động cho 3 KPI dựa trên tu_ngay/den_ngay hiện tại:
+     * - Có filter   → "TỪ dd/mm/yyyy ĐẾN dd/mm/yyyy"
+     * - Không có    → "TOÀN THỜI GIAN"
+     */
+    function buildKpiDateLabel(tu, den) {
+        if (!tu || !den) return 'TOÀN THỜI GIAN';
+        function fmt(s) {
+            var parts = s.split('-'); // yyyy-mm-dd
+            if (parts.length !== 3) return s;
+            return parts[2] + '/' + parts[1] + '/' + parts[0];
+        }
+        return 'TỪ ' + fmt(tu) + ' ĐẾN ' + fmt(den);
+    }
+
+    /**
+     * Cập nhật DOM cho 3 thẻ KPI (label + giá trị) dựa trên
+     * data.summary từ API. Đây là phần "đồng bộ" quan trọng nhất:
+     * mỗi lần loadOrders() fetch về đều gọi hàm này → 3 thẻ luôn
+     * khớp với filter ngày hiện tại.
+     */
+    function renderOrdersKpis(summary, dateLabel) {
+        var doanhThu   = Number(summary.total_revenue  || 0);
+        var soLuongBan = Number(summary.total_quantity || 0);
+        var soDon      = Number(summary.total_orders   || 0);
+        var avgPrice   = Number(summary.average_price  || 0);
+
+        // === 1. Label (tiêu đề động) ===
+        document.querySelectorAll('[data-kpi-label]').forEach(function (el) {
+            var kind = el.getAttribute('data-kpi-label');
+            var baseLabel = ({
+                'doanh_thu'    : 'Doanh thu',
+                'loi_nhuan'   : 'Lợi nhuận gộp',
+                'so_luong_ban': 'Sản phẩm đã bán'
+            })[kind] || '';
+            if (baseLabel) {
+                el.textContent = baseLabel + ' (' + dateLabel + ')';
+            }
+        });
+
+        // === 2. Giá trị ===
+        var kDoanhThu = document.querySelector('[data-kpi="doanh_thu"]');
+        if (kDoanhThu) {
+            kDoanhThu.innerHTML = formatMoney(doanhThu) +
+                ' <span class="text-gray-500" style="font-size:0.85rem;font-weight:500;">đ</span>';
+        }
+        var kSLBan = document.querySelector('[data-kpi="so_luong_ban"]');
+        if (kSLBan) {
+            kSLBan.innerHTML = formatMoney(soLuongBan) +
+                ' <span class="text-gray-500" style="font-size:0.85rem;font-weight:500;">sản phẩm</span>';
+        }
+
+        // === 3. Sub-text (số đơn hoàn thành + giá vốn ước + trung bình/sp) ===
+        var doanhThuCards = document.querySelectorAll('[data-kpi-sub="doanh_thu"]');
+        doanhThuCards.forEach(function (el) {
+            el.innerHTML = '<strong>' + formatMoney(soDon) + '</strong> đơn hàng hoàn thành';
+        });
+        var soLuongBanCards = document.querySelectorAll('[data-kpi-sub="so_luong_ban"]');
+        soLuongBanCards.forEach(function (el) {
+            var avg = soLuongBan > 0 ? formatMoney(doanhThu / soLuongBan) : '0';
+            el.innerHTML = 'Trung bình <strong>' + avg + ' đ</strong> / sản phẩm';
+        });
+    }
+
+    /* ---------- 1. Load orders (đồng bộ với 3 KPI) ---------- */
     function loadOrders() {
         var tbody = document.getElementById('ordersTableBody');
         var emptyState = document.getElementById('ordersEmptyState');
         if (!tbody) return;
+
+        var toolbar = document.querySelector('#tab-lich-su-ban-hang .detail-tab-toolbar');
 
         // Loading state
         tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-5">' +
@@ -887,20 +929,37 @@ window.addEventListener('DOMContentLoaded', function () {
             'Đang tải danh sách đơn hàng...</td></tr>';
         if (emptyState) emptyState.classList.add('d-none');
 
-        fetch('/admin/api/san-pham/' + productId + '/thong-ke?days=30')
+        var url = buildOrdersUrl('/admin/api/san-pham/' + productId + '/thong-ke', toolbar);
+
+        fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            credentials: 'same-origin'
+        })
             .then(function (res) {
+                if (res.redirected) throw new Error('Phiên đăng nhập hết hạn');
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 return res.json();
             })
             .then(function (json) {
                 if (!json.success) throw new Error(json.message || 'Lỗi API');
-                var orders = (json.data && json.data.recent_orders) || [];
+                var data    = json.data || {};
+                var orders  = data.recent_orders || [];
+                var summary = data.summary || {};
+                var fromInp = toolbar ? toolbar.querySelector('.filter-from-date') : null;
+                var toInp   = toolbar ? toolbar.querySelector('.filter-to-date')   : null;
+                var tu  = fromInp && fromInp.value ? fromInp.value : '';
+                var den = toInp   && toInp.value   ? toInp.value   : '';
+                var dateLabel = buildKpiDateLabel(tu, den);
 
+                // ===== ĐỒNG BỘ: cập nhật 3 thẻ KPI + label =====
+                renderOrdersKpis(summary, dateLabel);
+
+                // ===== Render bảng orders =====
                 if (!orders.length) {
                     tbody.innerHTML =
                         '<tr><td colspan="8" class="text-center text-muted py-5">' +
                         '<i class="fas fa-inbox fa-3x mb-3 d-block"></i>' +
-                        'Sản phẩm chưa có giao dịch nào trong 30 ngày qua.' +
+                        'Sản phẩm chưa có giao dịch nào trong khoảng đã chọn.' +
                         '</td></tr>';
                     return;
                 }
@@ -984,6 +1043,8 @@ window.addEventListener('DOMContentLoaded', function () {
         var info      = toolbar.querySelector('.filter-result-info');
         var applyBtn  = toolbar.querySelector('.btn-apply-filter');
         var resetBtn  = toolbar.querySelector('.btn-reset-filter');
+        // Orders toolbar có thể đổi khoảng ngày → phải re-fetch API để đồng bộ KPI
+        var isOrdersToolbar = (tableBodyId === 'ordersTableBody');
 
         function parse(s) {
             // input[type=date] đã trả về yyyy-mm-dd; nếu trống → null
@@ -1070,9 +1131,18 @@ window.addEventListener('DOMContentLoaded', function () {
             }
         }
         // Expose apply lên window để orders fetch có thể gọi lại
-        if (tableBodyId === 'ordersTableBody') window.applyOrdersFilter = apply;
+        if (isOrdersToolbar) window.applyOrdersFilter = apply;
 
-        if (applyBtn) applyBtn.addEventListener('click', apply);
+        if (applyBtn) {
+            applyBtn.addEventListener('click', function () {
+                if (isOrdersToolbar) {
+                    // Filter orders có thể đổi khoảng ngày → gọi lại API để đồng bộ KPI
+                    loadOrders();
+                } else {
+                    apply();
+                }
+            });
+        }
         if (resetBtn) resetBtn.addEventListener('click', function () {
             if (fromInp)   fromInp.value = '';
             if (toInp)     toInp.value   = '';
@@ -1081,7 +1151,12 @@ window.addEventListener('DOMContentLoaded', function () {
             if (loaiSel)   loaiSel.value = '';
             if (maLoInp)   maLoInp.value = '';
             if (hsdSel)    hsdSel.value  = '';
-            apply();
+            if (isOrdersToolbar) {
+                // Reset orders → gọi lại API (all-time) để KPI cũng quay về TOÀN THỜI GIAN
+                loadOrders();
+            } else {
+                apply();
+            }
         });
 
         // Áp dụng ngay khi mount (trường hợp không cần fetch, như kho / loHang render sẵn từ server)
@@ -1091,7 +1166,20 @@ window.addEventListener('DOMContentLoaded', function () {
     // Bind tất cả .detail-tab-toolbar có data-target-table
     document.querySelectorAll('.detail-tab-toolbar').forEach(bindFilterToolbar);
 
-    // Khởi động load orders
+    // Pre-fill input ngày từ server-injected filter (khi user mở trang
+    // qua URL có query string tu_ngay/den_ngay, các input sẽ được điền sẵn
+    // để lần loadOrders() đầu tiên gọi đúng API)
+    (function prefillDateInputs() {
+        var tu  = initialFilter.tu_ngay  || '';
+        var den = initialFilter.den_ngay || '';
+        document.querySelectorAll('#tab-lich-su-ban-hang .filter-from-date, #tab-lich-su-ban-hang .filter-to-date')
+            .forEach(function (inp) {
+                if (inp.classList.contains('filter-from-date') && tu)  inp.value = tu;
+                if (inp.classList.contains('filter-to-date')   && den) inp.value = den;
+            });
+    })();
+
+    // Khởi động load orders (đồng bộ KPI)
     loadOrders();
 
     /**

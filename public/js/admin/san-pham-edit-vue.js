@@ -51,8 +51,8 @@
             const allUnitOptions = computed(() => {
                 const base = availableUnits.value;
                 const current = unitConfig.baseUnit.trim();
-                if (current && !base.find(u => u.name === current)) {
-                    return [...base, { id: '__custom__', name: current }];
+                if (current && !base.find(u => u.ten_don_vi === current)) {
+                    return [...base, { id: '__custom__', ten_don_vi: current }];
                 }
                 return base;
             });
@@ -264,6 +264,8 @@
                         .map(u => ({
                         id: u.id || uid(),
                         name: u.ten_don_vi || u.name || '',
+                        ten_don_vi: u.ten_don_vi || u.name || '',
+                        name_input: '',
                         rate: u.ty_le_quy_doi ?? u.so_luong_san_pham_trong_don_vi ?? u.rate ?? 1,
                         price: u.gia_ban_quy_doi ?? u.price ?? 0,
                         // Giữ lại các trường DB để dùng trong payload
@@ -275,7 +277,7 @@
                         // Gán don_vi_chuan_id dựa trên matching với availableUnits
                         don_vi_chuan_id: (() => {
                             const found = availableUnits.value.find(a =>
-                                a.name === (u.ten_don_vi || u.name || '') &&
+                                a.ten_don_vi === (u.ten_don_vi || u.name || '') &&
                                 a.qty === (u.so_luong_san_pham_trong_don_vi || u.ty_le_quy_doi || u.rate || 1)
                             );
                             return found ? found.id : null;
@@ -733,6 +735,7 @@
                     unitConfig.conversionUnits.push({
                         id: uid(),
                         name: oldName,
+                        ten_don_vi: oldName,
                         rate: newRate,
                         price: 0,
                         _dbId: null,
@@ -808,7 +811,7 @@
 
             // ------- ADD/REMOVE CONVERSION UNIT -------
             function addConversion() {
-                unitConfig.conversionUnits.push({ id: uid(), name: '', rate: 1, price: 0,
+                unitConfig.conversionUnits.push({ id: uid(), name: '', ten_don_vi: '', name_input: '', rate: 1, price: 0,
                     _dbId: null, _giaVonQuyDoi: 0, _giaBanQuyDoi: 0, _maHang: '', _maVach: '',
                     don_vi_chuan_id: null });
             }
@@ -824,7 +827,7 @@
                     if (u.don_vi_chuan_id) {
                         const found = availableUnits.value.find(a => a.id === u.don_vi_chuan_id);
                         if (found) {
-                            u.name = found.name;
+                            u.ten_don_vi = found.ten_don_vi;
                             u.rate = found.qty;
                         }
                     }
@@ -974,7 +977,7 @@
                             return {
                                 id: u._dbId || null, // DB ID (null cho đơn vị mới)
                                 don_vi_chuan_id: u.don_vi_chuan_id || null,
-                                ten_don_vi: u.name || u.ten_don_vi || '',
+                                ten_don_vi: u.ten_don_vi || u.name || '',
                                 so_luong_san_pham_trong_don_vi: parseFloat(u.rate) || 1,
                                 gia_von_quy_doi: parseFloat(u.gia_von_quy_doi) || 0,
                                 gia_ban_quy_doi: parseFloat(u.gia_ban_quy_doi) || 0,
@@ -1269,17 +1272,17 @@
                 // để dropdown hiển thị đúng thay vì tự nhảy sang option khác.
                 const ensureUnitInList = (u) => {
                     if (!u) return;
-                    const n = String(u.name || u.ten_don_vi || '').trim();
+                    const n = String(u.ten_don_vi || u.name || '').trim();
                     if (!n) return;
-                    if (!availableUnits.value.find(x => x.name === n)) {
+                    if (!availableUnits.value.find(x => x.ten_don_vi === n)) {
                         availableUnits.value.push({
                             id: 'temp_custom_' + n,
-                            name: n,
+                            ten_don_vi: n,
                             qty: parseInt(u.so_luong_san_pham_trong_don_vi || u.qty || 1) || 1
                         });
                     }
                 };
-                ensureUnitInList({ name: unitConfig.baseUnit });
+                ensureUnitInList({ ten_don_vi: unitConfig.baseUnit });
                 unitConfig.conversionUnits.forEach(ensureUnitInList);
 
                 const btn = document.getElementById('btnLuuSanPham');
@@ -1432,13 +1435,13 @@
                                     <select v-model="unitConfig.baseUnit"
                                         class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white appearance-none cursor-pointer">
                                         <option value="">— Chọn đơn vị —</option>
-                                        <option v-for="u in allUnitOptions" :key="u.id" :value="u.name">{{ u.name }}</option>
+                                        <option v-for="u in allUnitOptions" :key="u.id" :value="u.ten_don_vi">{{ u.ten_don_vi }}</option>
                                     </select>
                                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                                         <svg class="w-4 h-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
                                     </div>
                                 </div>
-                                <p v-if="unitConfig.baseUnit && !availableUnits.find(u => u.name === unitConfig.baseUnit)"
+                                <p v-if="unitConfig.baseUnit && !availableUnits.find(u => u.ten_don_vi === unitConfig.baseUnit)"
                                     class="mt-1 text-[11px] text-indigo-600 italic">
                                     Đơn vị "<b class="font-medium not-italic">{{ unitConfig.baseUnit }}</b>" sẽ được tạo mới khi lưu.
                                 </p>
@@ -1463,11 +1466,18 @@
                                 <tbody>
                                     <tr v-for="(u, i) in unitConfig.conversionUnits" :key="u.id" class="border-t border-slate-100">
                                         <td class="p-2">
-                                            <select v-model="u.don_vi_chuan_id"
-                                                class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                                                <option value="">— Chọn đơn vị —</option>
-                                                <option v-for="opt in availableUnits" :key="opt.id" :value="opt.id">{{ opt.name }}</option>
-                                            </select>
+                                            <div class="flex gap-1">
+                                                <select v-model="u.don_vi_chuan_id"
+                                                    class="flex-1 rounded border border-slate-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                                    <option value="">— Chọn đơn vị —</option>
+                                                    <option v-for="opt in availableUnits" :key="opt.id" :value="opt.id">{{ opt.ten_don_vi }} ({{ opt.qty }})</option>
+                                                </select>
+                                                <input v-model="u.name_input" type="text"
+                                                    placeholder="Gõ đơn vị mới..."
+                                                    class="flex-1 rounded border border-slate-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                                    style="min-width: 100px;"
+                                                    @input="u.name_input = $event.target.value; u.ten_don_vi = $event.target.value">
+                                            </div>
                                         </td>
                                         <td class="p-2">
                                             <div class="flex items-center gap-1">
