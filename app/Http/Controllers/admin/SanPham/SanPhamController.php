@@ -374,20 +374,12 @@ class SanPhamController extends Controller
             ->orderBy('so_luong_san_pham_trong_don_vi')
             ->get();
 
-        // Payload cho Vue (đơn vị chuẩn - dùng trong form)
-        $unitsPayload = $danhMucDonVis->map(fn($u) => [
-            'id'   => $u->id,
-            'name' => $u->ten_hien_thi,
-            'qty'  => $u->so_luong_san_pham_trong_don_vi,
-        ])->values()->all();
-
-        return view('admin_xem_truoc.san-pham.sua', [
+        return view('admin_xem_truoc.san-pham.edit', [
             'product' => $product,
             'danhMucs' => $danhMucs,
             'thuocTinhChas' => $thuocTinhChas,
             'danhMucDonVis' => $danhMucDonVis,
             'productUnits' => $productUnits,
-            'unitsPayload' => $unitsPayload,
         ]);
     }
 
