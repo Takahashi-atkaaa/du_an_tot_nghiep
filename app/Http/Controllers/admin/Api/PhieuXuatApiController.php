@@ -10,6 +10,7 @@ use App\Models\ChiTietLoHang;
 use App\Models\ChiTietPhieu;
 use App\Models\BienTheSanPham;
 use App\Models\DonViQuyDoi;
+use App\Models\LoHang;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -178,6 +179,27 @@ class PhieuXuatApiController extends Controller
             'message' => 'Tạo phiếu xuất thành công.',
             'data' => $result,
         ], 201);
+    }
+
+    public function danhSachLoHang(Request $request): JsonResponse
+    {
+        $variantId = (int) $request->query('variant_id');
+
+        $query = LoHang::with(['nhaCungCap', 'chiTietLoHang' => function ($q) use ($variantId) {
+            $q->where('so_luong_ton', '>', 0)->orderBy('han_su_dung', 'asc');
+        }])
+            ->whereHas('chiTietLoHang', fn($q) => $q->where('so_luong_ton', '>', 0));
+
+        if ($variantId) {
+            $query->whereHas('chiTietLoHang', fn($q) => $q->where('variant_id', $variantId));
+        }
+
+        $items = $query->orderByDesc('id')->limit(50)->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $items,
+        ]);
     }
 
     public function update(Request $request, int $id): JsonResponse
