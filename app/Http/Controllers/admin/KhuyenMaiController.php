@@ -1070,7 +1070,7 @@ $hoaDonGanDay = $hoaDonQuery
 
     return redirect()
         ->route(
-            'khuyen-mai.edit',
+            'khuyen-mai.index',
             $promo->id
         )
         ->with(

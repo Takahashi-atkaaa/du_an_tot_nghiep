@@ -47,4 +47,32 @@ class DoiTra extends Model
     {
         return $this->hasMany(HangLoi::class, 'id_doi_tra');
     }
+
+    public function hasTraHang(): bool
+    {
+        return $this->chiTietDoiTras->contains(function (ChiTietDoiTra $chiTiet) {
+            return ($chiTiet->loai ?? null) === 'tra_hang'
+                || (($chiTiet->loai ?? null) === null && $this->Loai === 'tra_hang');
+        });
+    }
+
+    public function hasDoiHang(): bool
+    {
+        return $this->chiTietDoiTras->contains(function (ChiTietDoiTra $chiTiet) {
+            return ($chiTiet->loai ?? null) === 'doi_hang'
+                || (($chiTiet->loai ?? null) === null && $this->Loai === 'doi_tra');
+        });
+    }
+
+    public function getLoaiHienThiAttribute(): string
+    {
+        $hasTraHang = $this->relationLoaded('chiTietDoiTras') ? $this->hasTraHang() : $this->Loai === 'tra_hang';
+        $hasDoiHang = $this->relationLoaded('chiTietDoiTras') ? $this->hasDoiHang() : $this->Loai === 'doi_tra';
+
+        if ($hasTraHang && $hasDoiHang) {
+            return 'Đổi / Trả hàng';
+        }
+
+        return $hasTraHang ? 'Trả hàng' : 'Đổi hàng';
+    }
 }
