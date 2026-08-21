@@ -204,10 +204,6 @@ class DoiTraService
             ->filter(fn (array $item) => ($item['action'] ?? 'none') !== 'none')
             ->values();
 
-        // #region agent log
-        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'DoiTraService.php:205', 'message' => 'process entry', 'data' => ['hoa_don_id' => $hoaDon->id, 'payload_id_nguoi_dung' => $payload['id_nguoi_dung'] ?? null, 'payload_items_count' => count($payload['items'] ?? []), 'filtered_items_count' => $items->count(), 'items_payload' => $payload['items'] ?? [], 'filtered_items' => $items->all()], 'runId' => 'initial', 'hypothesisId' => 'H1-H5']) . "\n", FILE_APPEND);
-        // #endregion
-
         if ($items->isEmpty()) {
             throw ValidationException::withMessages([
                 'items' => 'Vui lòng chọn ít nhất 1 sản phẩm để đổi hoặc trả.',
@@ -215,14 +211,7 @@ class DoiTraService
         }
 
         return DB::transaction(function () use ($hoaDon, $payload, $items) {
-            try {
-                $nguoiBan = $this->resolveSelectedSeller((int) ($payload['id_nguoi_dung'] ?? 0));
-            } catch (\Throwable $sellerEx) {
-                // #region agent log
-                file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'DoiTraService.php:resolveSeller', 'message' => 'resolveSelectedSeller FAILED', 'data' => ['msg' => $sellerEx->getMessage(), 'errors' => $sellerEx instanceof ValidationException ? $sellerEx->errors() : null], 'runId' => 'initial', 'hypothesisId' => 'H2']) . "\n", FILE_APPEND);
-                // #endregion
-                throw $sellerEx;
-            }
+            $nguoiBan = $this->resolveSelectedSeller((int) ($payload['id_nguoi_dung'] ?? 0));
 
             $hoaDon = HoaDon::query()
                 ->where('id', $hoaDon->id)
@@ -230,9 +219,6 @@ class DoiTraService
                 ->firstOrFail();
 
             if (in_array($hoaDon->trang_thai, ['Đã hủy', 'Đã trả toàn bộ'], true)) {
-                // #region agent log
-                file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'DoiTraService.php:hoaDonCheck', 'message' => 'hoa_don status blocked', 'data' => ['trang_thai' => $hoaDon->trang_thai], 'runId' => 'initial', 'hypothesisId' => 'H4']) . "\n", FILE_APPEND);
-                // #endregion
                 throw ValidationException::withMessages([
                     'hoa_don' => 'Hóa đơn này không thể đổi/trả hàng.',
                 ]);
@@ -247,10 +233,6 @@ class DoiTraService
 
             $daDoiTraTheoBienThe = $this->getReturnedQuantitiesByVariant($hoaDon->id);
 
-            // #region agent log
-            file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'DoiTraService.php:beforeLoop', 'message' => 'about to loop items', 'data' => ['nguoi_ban_id' => $nguoiBan->id, 'hoa_don_trang_thai' => $hoaDon->trang_thai, 'chi_tiet_count' => $chiTietHoaDon->count(), 'da_doi_tra_map' => $daDoiTraTheoBienThe->all()], 'runId' => 'initial', 'hypothesisId' => 'H2-H4']) . "\n", FILE_APPEND);
-            // #endregion
-
             $normalizedItems = [];
             $tongTienTra = 0;
             $coTraHang = false;
@@ -259,10 +241,6 @@ class DoiTraService
 
             foreach ($items as $item) {
                 $chiTiet = $chiTietHoaDon->get((int) $item['id_chi_tiet_hoa_don']);
-
-                // #region agent log
-                file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'DoiTraService.php:itemLoop', 'message' => 'processing item', 'data' => ['item' => $item, 'chi_tiet_found' => (bool) $chiTiet, 'chi_tiet_id' => $chiTiet ? $chiTiet->id : null, 'chi_tiet_id_bien_the' => $chiTiet ? $chiTiet->id_bien_the_san_pham : null, 'so_luong_original' => $chiTiet ? (int) $chiTiet->so_luong : null, 'da_doi_tra_for_variant' => $chiTiet ? (int) ($daDoiTraTheoBienThe[$chiTiet->id_bien_the_san_pham] ?? 0) : null], 'runId' => 'initial', 'hypothesisId' => 'H1-H4']) . "\n", FILE_APPEND);
-                // #endregion
 
                 if (!$chiTiet) {
                     throw ValidationException::withMessages([
@@ -276,14 +254,7 @@ class DoiTraService
                 $daDoiTra = (int) ($daDoiTraTheoBienThe[$chiTiet->id_bien_the_san_pham] ?? 0);
                 $conLai = max(0, (int) $chiTiet->so_luong - $daDoiTra);
 
-                // #region agent log
-                file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'DoiTraService.php:itemValues', 'message' => 'item normalized values', 'data' => ['action' => $action, 'so_luong' => $soLuong, 'hang_loi' => $isHangLoi, 'da_doi_tra' => $daDoiTra, 'con_lai' => $conLai, 'raw_item' => $item], 'runId' => 'initial', 'hypothesisId' => 'H1,H3-H4']) . "\n", FILE_APPEND);
-                // #endregion
-
                 if ($soLuong < 1 || $soLuong > $conLai) {
-                    // #region agent log
-                    file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'DoiTraService.php:soLuongCheck', 'message' => 'INVALID so_luong', 'data' => ['so_luong' => $soLuong, 'con_lai' => $conLai], 'runId' => 'initial', 'hypothesisId' => 'H4']) . "\n", FILE_APPEND);
-                    // #endregion
                     throw ValidationException::withMessages([
                         'items' => 'Số lượng trả/đổi vượt quá số lượng còn lại của hóa đơn.',
                     ]);
@@ -294,19 +265,12 @@ class DoiTraService
 
                 if ($action === 'exchange') {
                     if (!$isHangLoi) {
-                        // #region agent log
-                        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'DoiTraService.php:exchangeRequireHangLoi', 'message' => 'exchange requires hang_loi', 'data' => [], 'runId' => 'initial', 'hypothesisId' => 'H3']) . "\n", FILE_APPEND);
-                        // #endregion
                         throw ValidationException::withMessages([
                             'items' => 'Đổi hàng chỉ áp dụng cho hàng lỗi.',
                         ]);
                     }
 
                     $replacementVariantId = (int) ($item['id_bien_the_thay_the'] ?? 0);
-
-                    // #region agent log
-                    file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'DoiTraService.php:exchangeVariantCheck', 'message' => 'exchange variant comparison', 'data' => ['replacement_variant_id' => $replacementVariantId, 'original_variant_id' => (int) $chiTiet->id_bien_the_san_pham, 'equal' => $replacementVariantId === (int) $chiTiet->id_bien_the_san_pham], 'runId' => 'initial', 'hypothesisId' => 'H3']) . "\n", FILE_APPEND);
-                    // #endregion
 
                     if ($replacementVariantId !== (int) $chiTiet->id_bien_the_san_pham) {
                         throw ValidationException::withMessages([
@@ -327,14 +291,7 @@ class DoiTraService
                         ]);
                     }
 
-                    try {
-                        $this->deductVariantStockByLots($replacementVariant->id, $soLuong, true);
-                    } catch (\Throwable $deductEx) {
-                        // #region agent log
-                        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'DoiTraService.php:deductStockFail', 'message' => 'deductVariantStockByLots failed', 'data' => ['msg' => $deductEx->getMessage(), 'errors' => $deductEx instanceof ValidationException ? $deductEx->errors() : null], 'runId' => 'initial', 'hypothesisId' => 'H4']) . "\n", FILE_APPEND);
-                        // #endregion
-                        throw $deductEx;
-                    }
+                    $this->deductVariantStockByLots($replacementVariant->id, $soLuong, true);
                     $coDoiHang = true;
                 }
 
@@ -396,21 +353,14 @@ class DoiTraService
                         ]);
                     }
 
-                    try {
-                        HangLoi::query()->create([
-                            'id_doi_tra' => $doiTra->id,
-                            'id_chi_tiet_doi_tra' => $chiTietDoiTra->id,
-                            'id_bien_the' => $item['chi_tiet']->id_bien_the_san_pham,
-                            'so_luong' => $item['so_luong'],
-                            'trang_thai' => 'cho_tieu_huy',
-                            'ly_do' => $doiTra->ly_do,
-                        ]);
-                    } catch (\Throwable $hlEx) {
-                        // #region agent log
-                        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'DoiTraService.php:HangLoiCreateFail', 'message' => 'HangLoi create failed', 'data' => ['msg' => $hlEx->getMessage(), 'class' => get_class($hlEx), 'file' => $hlEx->getFile() . ':' . $hlEx->getLine()], 'runId' => 'initial', 'hypothesisId' => 'H5']) . "\n", FILE_APPEND);
-                        // #endregion
-                        throw $hlEx;
-                    }
+                    HangLoi::query()->create([
+                        'id_doi_tra' => $doiTra->id,
+                        'id_chi_tiet_doi_tra' => $chiTietDoiTra->id,
+                        'id_bien_the' => $item['chi_tiet']->id_bien_the_san_pham,
+                        'so_luong' => $item['so_luong'],
+                        'trang_thai' => 'cho_tieu_huy',
+                        'ly_do' => $doiTra->ly_do,
+                    ]);
                 }
             }
 
