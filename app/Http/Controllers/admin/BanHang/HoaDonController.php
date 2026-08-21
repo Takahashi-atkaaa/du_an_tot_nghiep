@@ -381,36 +381,15 @@ class HoaDonController extends Controller
 
     public function xuLyDoiTra(XuLyDoiTraRequest $request, $id, DoiTraService $doiTraService)
     {
-        // #region agent log
-        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'HoaDonController.php:382', 'message' => 'xuLyDoiTra entry', 'data' => ['hoa_don_id' => $id, 'request_token' => $request->input('request_token'), 'id_nguoi_dung' => $request->input('id_nguoi_dung'), 'items_count' => is_array($request->input('items')) ? count($request->input('items')) : 0, 'items' => $request->input('items')], 'runId' => 'initial', 'hypothesisId' => 'H1-H5']) . "\n", FILE_APPEND);
-        // #endregion
         $processedTokens = session()->get('processed_doi_tra_tokens', []);
         $requestToken = $request->string('request_token')->toString();
 
         if (in_array($requestToken, $processedTokens, true)) {
-            // #region agent log
-            file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'HoaDonController.php:387', 'message' => 'duplicate token blocked', 'data' => ['token' => $requestToken], 'runId' => 'initial', 'hypothesisId' => 'H5']) . "\n", FILE_APPEND);
-            // #endregion
             return back()->with('error', 'Yêu cầu đổi/trả này đã được xử lý trước đó.');
         }
 
-        try {
-            $hoaDon = HoaDon::query()->findOrFail($id);
-            // #region agent log
-            file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'HoaDonController.php:392', 'message' => 'hoa_don loaded', 'data' => ['hoa_don_id' => $hoaDon->id, 'trang_thai' => $hoaDon->trang_thai, 'id_nguoi_dung' => $hoaDon->id_nguoi_dung], 'runId' => 'initial', 'hypothesisId' => 'H2']) . "\n", FILE_APPEND);
-            // #endregion
-            $doiTra = $doiTraService->process($hoaDon, $request->validated(), Auth::user());
-        } catch (\Illuminate\Validation\ValidationException $ve) {
-            // #region agent log
-            file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'HoaDonController.php:catch_VE', 'message' => 'ValidationException caught', 'data' => ['errors' => $ve->errors()], 'runId' => 'initial', 'hypothesisId' => 'H1-H4']) . "\n", FILE_APPEND);
-            // #endregion
-            throw $ve;
-        } catch (\Throwable $e) {
-            // #region agent log
-            file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'HoaDonController.php:catch_Throwable', 'message' => 'Throwable caught: ' . get_class($e), 'data' => ['msg' => $e->getMessage(), 'file' => $e->getFile() . ':' . $e->getLine()], 'runId' => 'initial', 'hypothesisId' => 'H5']) . "\n", FILE_APPEND);
-            // #endregion
-            throw $e;
-        }
+        $hoaDon = HoaDon::query()->findOrFail($id);
+        $doiTra = $doiTraService->process($hoaDon, $request->validated(), Auth::user());
 
         $processedTokens[] = $requestToken;
         session()->put('processed_doi_tra_tokens', array_slice(array_unique($processedTokens), -20));
@@ -418,10 +397,6 @@ class HoaDonController extends Controller
         $thongBao = $doiTra->Loai === 'tra_hang'
             ? 'Đã xử lý trả hàng thành công.'
             : 'Đã xử lý đổi hàng lỗi thành công.';
-
-        // #region agent log
-        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-1bd5a0.log', json_encode(['sessionId' => '1bd5a0', 'id' => 'log_' . uniqid(), 'timestamp' => round(microtime(true) * 1000), 'location' => 'HoaDonController.php:401', 'message' => 'success', 'data' => ['doi_tra_id' => $doiTra->id, 'loai' => $doiTra->Loai], 'runId' => 'initial', 'hypothesisId' => 'H1-H5']) . "\n", FILE_APPEND);
-        // #endregion
 
         return redirect()->route('admin.hoa-don.show', $id)
             ->with('success', $thongBao)
