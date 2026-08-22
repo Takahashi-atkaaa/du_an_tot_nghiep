@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\KiemKho\KiemKhoController;
 use App\Http\Controllers\admin\KhoHang\NhaCungCapController;
 use App\Http\Controllers\admin\KhoHang\HangLoiController;
 use App\Http\Controllers\admin\KhoHang\PhieuNhapController;
+use App\Http\Controllers\admin\KhoHang\PhieuXuatController;
 use App\Http\Controllers\admin\KhoHang\KhoHangController;
 use App\Http\Controllers\admin\Api\ThuocTinhApiController;
 use App\Http\Controllers\admin\Api\SanPhamApiController;
@@ -106,6 +107,7 @@ Route::delete('/admin/api/phieu-nhap/{id}', [PhieuNhapApiController::class, 'des
 Route::get('/admin/api/phieu-xuat/download-template', [PhieuXuatApiController::class, 'downloadTemplate']);
 Route::post('/admin/api/phieu-xuat/import', [PhieuXuatApiController::class, 'importExcel']);
 Route::get('/admin/api/phieu-xuat/export', [PhieuXuatApiController::class, 'exportDanhSach']);
+Route::get('/admin/api/phieu-xuat/lo-hang', [PhieuXuatApiController::class, 'danhSachLoHang']);
 Route::get('/admin/api/phieu-xuat/{id}/export', [PhieuXuatApiController::class, 'exportChiTiet']);
 
 // Phiếu xuất - CRUD
@@ -284,6 +286,10 @@ Route::middleware([KTVaiTro::class])->group(function () {
     // Trang tạo phiếu nhập (chuyển từ modal sang trang riêng)
     Route::get('/admin/kho-hang/phieu-nhap/create', [PhieuNhapController::class, 'create'])
         ->name('phieu-nhap.create');
+
+    // Trang tạo phiếu xuất (trang riêng, không dùng modal)
+    Route::get('/admin/kho-hang/phieu-xuat/create', [PhieuXuatController::class, 'create'])
+        ->name('phieu-xuat.create');
 
     // Quan ly khach hang
     Route::get('/admin/khach-hang', [KhachHangController::class, 'index'])->name('khach-hang.index')->middleware('permission:quan_ly_khach_hang');

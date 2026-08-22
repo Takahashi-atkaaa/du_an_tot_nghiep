@@ -257,8 +257,8 @@
                                             <td class="text-center text-gray-500 align-middle">{{ $index + 1 }}</td>
                                             <td class="align-middle">
                                                 <div class="d-flex align-items-center gap-2">
-                                                    @if($variant->hinh_anh)
-                                                        <img src="{{ asset($variant->hinh_anh) }}"
+                                                    @if($variant->hinh_anh && \App\Models\BienTheSanPham::hasImageFile($variant->hinh_anh))
+                                                        <img src="{{ \App\Models\BienTheSanPham::resolveImageUrl($variant->hinh_anh) }}"
                                                              alt="{{ $variant->ten_bien_the }}"
                                                              class="rounded"
                                                              style="width:40px;height:40px;object-fit:cover;">

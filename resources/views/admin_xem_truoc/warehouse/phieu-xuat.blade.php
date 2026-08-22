@@ -21,7 +21,7 @@
         <button class="btn btn-outline-danger btn-sm" id="btn-xuat-excel-xuat" title="Xuất Excel">
             <i class="fas fa-file-excel me-1"></i>Xuất Excel
         </button>
-        <a href="{{ url('admin/kho-hang/phieu-xuat/create') }}" class="btn btn-danger btn-sm">
+        <a href="{{ route('phieu-xuat.create') }}" class="btn btn-danger btn-sm" id="btn-tao-phieu-xuat">
             <i class="fas fa-plus me-1"></i>Tạo phiếu xuất
         </a>
         <button class="btn btn-danger btn-sm" id="btn-open-import-xuat" title="Import từ Excel">
@@ -92,6 +92,114 @@
 
 {{-- MODALS --}}
 @section('modals')
+{{-- Modal Tạo --}}
+<div class="modal fade" id="modal-tao-phieu-xuat" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <form id="form-tao-phieu-xuat">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-arrow-up me-2"></i>Tạo phiếu xuất</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning mb-3 py-2 small">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Hệ thống tự động xuất hàng theo nguyên tắc <strong>FEFO</strong> — ưu tiên lô có HSD gần nhất.
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Loại xuất <span class="text-danger">*</span></label>
+                            <select name="loai_xuat" class="form-select" id="px-loai-xuat" required>
+                                <option value="tra_hang_nha_cung_cap">Trả hàng NCC</option>
+                                <option value="tieu_huy">Tiêu hủy</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Nhà cung cấp</label>
+                            <select name="id_nha_cung_cap" id="px-id-ncc" class="form-select">
+                                <option value="">-- Chọn NCC --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Lý do</label>
+                            <input type="text" name="ly_do" class="form-control" id="px-ly-do" placeholder="Lý do xuất hàng...">
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0 small">Chi tiết sản phẩm xuất</h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btn-them-sp-xuat"><i class="fas fa-plus me-1"></i>Thêm</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-2">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:35%">Sản phẩm</th>
+                                    <th class="text-center" style="width:100px">Tồn kho</th>
+                                    <th class="text-center" style="width:90px">SL xuất</th>
+                                    <th style="width:40px"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="danh-sach-sp-xuat"></tbody>
+                        </table>
+                    </div>
+                    <div id="px-fefo-preview"></div>
+                    <div class="mt-2 text-end">
+                        <h5>Tổng SL: <span id="tong-sl-xuat" class="text-danger">0</span></h5>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger"><i class="fas fa-save me-1"></i>Lưu phiếu xuất</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- Modal Sửa --}}
+<div class="modal fade" id="modal-sua-phieu-xuat" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="form-sua-phieu-xuat">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Sửa phiếu xuất</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="sua-px-id">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Loại xuất <span class="text-danger">*</span></label>
+                            <select name="loai_xuat" class="form-select" id="sua-px-loai" required>
+                                <option value="tra_hang_nha_cung_cap">Trả hàng NCC</option>
+                                <option value="tieu_huy">Tiêu hủy</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Nhà cung cấp</label>
+                            <select name="id_nha_cung_cap" id="sua-px-ncc" class="form-select">
+                                <option value="">-- Chọn NCC --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Lý do</label>
+                            <input type="text" name="ly_do" class="form-control" id="sua-px-ly-do">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Ghi chú</label>
+                            <textarea name="ghi_chu" class="form-control" rows="2" id="sua-px-ghi-chu"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-warning text-dark"><i class="fas fa-save me-1"></i>Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 {{-- Modal Xem chi tiết --}}
 <div class="modal fade" id="modal-xem-phieu-xuat" tabindex="-1">
@@ -184,6 +292,7 @@
 @section('scripts')
 <script>
 let sanPhamListXuat = [];
+let chiTietXuatIndex = 0;
 let currentPageXuat = 1;
 
 $(function () {
@@ -191,9 +300,89 @@ $(function () {
     taiPhieuXuat();
     taiNhaCungCapXuat();
 
+    $('#btn-tao-phieu-xuat').click(function () {
+        chiTietXuatIndex = 0;
+        $('#form-tao-phieu-xuat')[0].reset();
+        $('#danh-sach-sp-xuat').html('');
+        $('#px-fefo-preview').html('');
+        addPxRow();
+        new bootstrap.Modal(document.getElementById('modal-tao-phieu-xuat')).show();
+    });
+
     $(document).on('click', '#btn-open-import-xuat', function () {
         taiNhaCungCapXuat();
         $('#modal-import-phieu-xuat').modal('show');
+    });
+
+    $('#btn-them-sp-xuat').click(() => addPxRow());
+
+    $(document).on('click', '.btn-remove-sp-xuat', function () {
+        if ($('#danh-sach-sp-xuat tr').length > 1) {
+            $(this).closest('tr').remove();
+            tinhTongXuat();
+        }
+    });
+
+    $(document).on('change', '.px-sp-select', function () {
+        const row = $(this).closest('tr');
+        const val = $(this).val();
+        const tonCell = row.find('.ton-kho-cell');
+        if (val) {
+            const opt = $(this).find('option:selected');
+            tonCell.text('Tồn: ' + (opt.data('ton') || 0).toLocaleString());
+        } else {
+            tonCell.text('--');
+        }
+        updateFefoPreview();
+    });
+
+    $(document).on('input', '.px-sl-input', function () {
+        tinhTongXuat();
+        updateFefoPreview();
+    });
+
+    $('#form-tao-phieu-xuat').submit(function (e) {
+        e.preventDefault();
+        const chi_tiet = [];
+        $('#danh-sach-sp-xuat tr').each(function () {
+            const sp = $(this).find('.px-sp-select').val();
+            const sl = $(this).find('.px-sl-input').val();
+            if (sp && sl) chi_tiet.push({ id_san_pham: sp, so_luong: parseInt(sl) });
+        });
+        if (!chi_tiet.length) { hienThongBaoXuat('warning', 'Thêm ít nhất một sản phẩm.'); return; }
+        const data = {
+            loai_xuat: $('#px-loai-xuat').val(),
+            id_nha_cung_cap: $('#px-id-ncc').val() || null,
+            ly_do: $('#px-ly-do').val(),
+            chi_tiet,
+        };
+        $.ajax({ url: '/admin/api/phieu-xuat', method: 'POST', contentType: 'application/json', data: JSON.stringify(data),
+            success: res => {
+                bootstrap.Modal.getInstance(document.getElementById('modal-tao-phieu-xuat')).hide();
+                hienThongBaoXuat('success', res.message);
+                taiPhieuXuat(currentPageXuat);
+            },
+            error: x => hienThongBaoXuat('danger', x.responseJSON?.message || 'Lỗi.')
+        });
+    });
+
+    $('#form-sua-phieu-xuat').submit(function (e) {
+        e.preventDefault();
+        const id = $('#sua-px-id').val();
+        const data = {
+            loai_xuat: $('#sua-px-loai').val(),
+            id_nha_cung_cap: $('#sua-px-ncc').val() || null,
+            ly_do: $('#sua-px-ly-do').val(),
+            ghi_chu: $('#sua-px-ghi-chu').val(),
+        };
+        $.ajax({ url: '/admin/api/phieu-xuat/' + id, method: 'PUT', contentType: 'application/json', data: JSON.stringify(data),
+            success: res => {
+                bootstrap.Modal.getInstance(document.getElementById('modal-sua-phieu-xuat')).hide();
+                hienThongBaoXuat('success', res.message);
+                taiPhieuXuat(currentPageXuat);
+            },
+            error: x => hienThongBaoXuat('danger', x.responseJSON?.message || 'Lỗi.')
+        });
     });
 
     $('#btn-loc-phieu-xuat').click(() => taiPhieuXuat(1));
@@ -323,8 +512,59 @@ function taiSanPhamXuat() {
 function taiNhaCungCapXuat() {
     $.get('/admin/api/lo-hang/nha-cung-cap', res => {
         const opts = res.map(n => `<option value="${n.id}">${n.ten_nha_cung_cap}</option>`).join('');
+        $('#px-id-ncc').html('<option value="">-- Chọn NCC --</option>' + opts);
+        $('#sua-px-ncc').html('<option value="">-- Chọn NCC --</option>' + opts);
         $('#import-xuat-id-ncc').html('<option value="">-- Chọn NCC --</option>' + opts);
     });
+}
+
+function addPxRow(id, sl) {
+    const idx = chiTietXuatIndex++;
+    const opts = sanPhamListXuat.map(sp =>
+        `<option value="${sp.id}" data-ton="${sp.tong_ton || 0}" ${sp.id == id ? 'selected' : ''}>${sp.ten_san_pham} (${sp.ma_vach || sp.id})</option>`
+    ).join('');
+    $('#danh-sach-sp-xuat').append(`<tr>
+        <td><select class="form-select form-select-sm px-sp-select">${opts || '<option value="">-- Chọn --</option>'}</select></td>
+        <td class="text-center ton-kho-cell text-muted small">--</td>
+        <td><input type="number" class="form-control form-control-sm px-sl-input" value="${sl || 1}" min="1"></td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger btn-remove-sp-xuat"><i class="fas fa-times"></i></button></td>
+    </tr>`);
+}
+
+function tinhTongXuat() {
+    let tong = 0;
+    $('.px-sl-input').each(function () { tong += parseInt($(this).val()) || 0; });
+    $('#tong-sl-xuat').text(tong.toLocaleString());
+}
+
+function updateFefoPreview() {
+    let html = '<div class="fefo-preview small"><h6 class="mb-2"><i class="fas fa-list-check me-1"></i>Preview FEFO — lô xuất:</h6>';
+    let hasItem = false;
+    $('#danh-sach-sp-xuat tr').each(function () {
+        const spSelect = $(this).find('.px-sp-select');
+        const slInput = $(this).find('.px-sl-input');
+        const spName = spSelect.find('option:selected').text() || '--';
+        const sl = parseInt(slInput.val()) || 0;
+        if (spSelect.val() && sl > 0) {
+            hasItem = true;
+            html += `<div class="mb-2"><strong>${spName}</strong> × ${sl.toLocaleString()}</div>`;
+            $.ajax({ url: '/admin/api/lo-hang/ton-kho?id_san_pham=' + spSelect.val(), async: false, success: res => {
+                if (!res.success) return;
+                let con = sl;
+                (res.data.chi_tiet || []).forEach(ct => {
+                    const lo = ct.lo_hang || {};
+                    const lay = Math.min(con, ct.so_luong_ton || 0);
+                    con -= lay;
+                    if (lay > 0) {
+                        html += `<div class="ms-3 text-muted">→ Lô ${lo.ma_lo || 'L-' + lo.id} (HSD ${ct.han_su_dung?.slice(0,10)}): xuất <span class="text-danger">${lay}</span></div>`;
+                    }
+                });
+                if (con > 0) html += `<div class="ms-3 text-danger">⚠ Thiếu ${con} cái trong kho</div>`;
+            }});
+        }
+    });
+    html += '</div>';
+    $('#px-fefo-preview').html(hasItem ? html : '');
 }
 
 function taiPhieuXuat(page = 1) {
@@ -362,7 +602,7 @@ function taiPhieuXuat(page = 1) {
                 <td class="text-center fw-bold text-danger">${tongSl.toLocaleString()}</td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-primary btn-xem-px" data-id="${item.id}"><i class="fas fa-eye"></i></button>
-                    <a href="/admin/kho-hang/phieu-xuat/${item.id}/edit" class="btn btn-sm btn-outline-warning"><i class="fas fa-edit"></i></a>
+                    <button class="btn btn-sm btn-outline-warning btn-sua-px" data-id="${item.id}"><i class="fas fa-edit"></i></button>
                     <button class="btn btn-sm btn-outline-danger btn-xoa-px" data-id="${item.id}"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`;
@@ -405,6 +645,20 @@ $(document).on('click', '.btn-xem-px', function () {
                 <tfoot><tr><td colspan="3" class="text-end fw-bold">Tổng SL xuất:</td><td class="text-center fw-bold text-danger">${tongSl.toLocaleString()}</td></tr></tfoot>
             </table>`);
         new bootstrap.Modal(document.getElementById('modal-xem-phieu-xuat')).show();
+    });
+});
+
+$(document).on('click', '.btn-sua-px', function () {
+    const id = $(this).data('id');
+    $.get('/admin/api/phieu-xuat/' + id, res => {
+        if (!res.success) return;
+        const px = res.data;
+        $('#sua-px-id').val(px.id);
+        $('#sua-px-loai').val(px.loai_xuat);
+        $('#sua-px-ncc').val(px.phieu?.id_nha_cung_cap || '');
+        $('#sua-px-ly-do').val(px.ly_do || '');
+        $('#sua-px-ghi-chu').val(px.ghi_chu || '');
+        new bootstrap.Modal(document.getElementById('modal-sua-phieu-xuat')).show();
     });
 });
 

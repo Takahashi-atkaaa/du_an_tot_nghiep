@@ -225,7 +225,7 @@ class DoiTraService
             }
 
             $chiTietHoaDon = ChiTietHoaDon::query()
-                ->with('bienTheSanPham')
+                ->with('bienThe')
                 ->where('id_hoa_don', $hoaDon->id)
                 ->lockForUpdate()
                 ->get()
