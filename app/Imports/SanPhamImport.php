@@ -41,7 +41,7 @@ class SanPhamImport
                 $tenBienThe = trim((string)($row[2] ?? ''));
                 $maHang = trim((string)($row[3] ?? ''));
                 $maVach = trim((string)($row[4] ?? ''));
-                $giaVon = (float)($row[5] ?? 0);
+                $giaVon = 0; // Luôn = 0; giá vốn chỉ được sinh tự động từ lần nhập hàng đầu tiên
                 $giaBan = (float)($row[6] ?? 0);
                 $soLuongTon = (int)($row[7] ?? 0);
                 $dinhMucToiThieu = (int)($row[8] ?? 0);

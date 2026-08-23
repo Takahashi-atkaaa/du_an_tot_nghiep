@@ -272,7 +272,7 @@ class SanPhamController extends Controller
                         'ma_vach' => !empty($baseVariantData['ma_vach'])
                             ? $baseVariantData['ma_vach']
                             : $this->generateUniqueMaVach(),
-                        'gia_von' => $baseVariantData['gia_von'] ?? 0,
+                        'gia_von' => 0, // Luôn = 0; giá vốn chỉ được sinh tự động từ lần nhập hàng đầu tiên
                         'gia_ban' => $baseVariantData['gia_ban'] ?? 0,
                         'so_luong_ton' => $baseVariantData['so_luong_ton'] ?? 0,
                         'dinh_muc_toi_thieu' => $baseVariantData['dinh_muc_toi_thieu'] ?? 0,
@@ -306,7 +306,7 @@ class SanPhamController extends Controller
                                 ? $unitItem['ma_hang']
                                 : $this->generateUniqueMaHang(),
                             'ma_vach' => $unitItem['ma_vach'] ?? null,
-                            'gia_von_quy_doi' => $unitItem['gia_von'] ?? ($unitItem['gia_von_quy_doi'] ?? 0),
+                            'gia_von_quy_doi' => 0, // Luôn = 0; giá vốn chỉ được sinh tự động từ lần nhập hàng đầu tiên
                             'gia_ban_quy_doi' => $unitItem['gia_ban'] ?? ($unitItem['gia_ban_quy_doi'] ?? 0),
                             'gia_ban_si' => $unitItem['gia_ban_si'] ?? null,
                             // FIX: KHÔNG fallback ảnh chính SP. Dùng ảnh riêng của unit (nếu có).
@@ -333,7 +333,7 @@ class SanPhamController extends Controller
                                 'so_luong_san_pham_trong_don_vi' => (float) ($unit['so_luong_san_pham_trong_don_vi'] ?? 1),
                                 'ma_hang' => $unit['ma_hang'] ?? $this->generateUniqueMaHang(),
                                 'ma_vach' => $unit['ma_vach'] ?? null,
-                                'gia_von_quy_doi' => $unit['gia_von_quy_doi'] ?? 0,
+                                'gia_von_quy_doi' => 0, // Luôn = 0; giá vốn chỉ được sinh tự động từ lần nhập hàng đầu tiên
                                 'gia_ban_quy_doi' => $unit['gia_ban_quy_doi'] ?? 0,
                                 'gia_ban_si' => $unit['gia_ban_si'] ?? null,
                                 'hinh_anh' => $unit['uploaded_image_path'] ?? null,
@@ -582,9 +582,7 @@ class SanPhamController extends Controller
                         'ma_vach' => !empty($baseVariantData['ma_vach'])
                             ? $baseVariantData['ma_vach']
                             : $existingVariant->ma_vach,
-                        'gia_von' => isset($baseVariantData['gia_von'])
-                            ? $baseVariantData['gia_von']
-                            : $existingVariant->gia_von,
+                        // KHÔNG cập nhật gia_von: giá vốn chỉ được sinh tự động từ lần nhập hàng đầu tiên.
                         'gia_ban' => isset($baseVariantData['gia_ban'])
                             ? $baseVariantData['gia_ban']
                             : $existingVariant->gia_ban,
@@ -640,7 +638,7 @@ class SanPhamController extends Controller
                         'ma_vach' => !empty($baseVariantData['ma_vach'])
                             ? $baseVariantData['ma_vach']
                             : $this->generateUniqueMaVach(),
-                        'gia_von' => $baseVariantData['gia_von'] ?? 0,
+                        'gia_von' => 0, // Luôn = 0; giá vốn chỉ được sinh tự động từ lần nhập hàng đầu tiên
                         'gia_ban' => $baseVariantData['gia_ban'] ?? 0,
                         'so_luong_ton' => $baseVariantData['so_luong_ton'] ?? 0,
                         'dinh_muc_toi_thieu' => $baseVariantData['dinh_muc_toi_thieu'] ?? 0,
@@ -687,9 +685,6 @@ class SanPhamController extends Controller
                                 'ma_vach' => !empty($unitItem['ma_vach'])
                                     ? $unitItem['ma_vach']
                                     : $existingUnit->ma_vach,
-                                'gia_von_quy_doi' => isset($unitItem['gia_von'])
-                                    ? $unitItem['gia_von']
-                                    : $existingUnit->gia_von_quy_doi,
                                 'gia_ban_quy_doi' => isset($unitItem['gia_ban'])
                                     ? $unitItem['gia_ban']
                                     : $existingUnit->gia_ban_quy_doi,
@@ -710,8 +705,7 @@ class SanPhamController extends Controller
                                 ? $unitItem['ma_hang']
                                 : $this->generateUniqueMaHang(),
                             'ma_vach' => $unitItem['ma_vach'] ?? null,
-                            'gia_von_quy_doi' => $unitItem['gia_von']
-                                ?? ($unitItem['gia_von_quy_doi'] ?? 0),
+                            'gia_von_quy_doi' => 0, // Luôn = 0; giá vốn chỉ được sinh tự động từ lần nhập hàng đầu tiên
                             'gia_ban_quy_doi' => $unitItem['gia_ban']
                                 ?? ($unitItem['gia_ban_quy_doi'] ?? 0),
                             'hinh_anh' => $variantImage,
@@ -753,7 +747,7 @@ class SanPhamController extends Controller
                             'so_luong_san_pham_trong_don_vi' => $tyLeQuyDoi,
                             'ma_hang'      => $uMaHang,
                             'ma_vach'      => $cRow['ma_vach'] ?? null,
-                            'gia_von_quy_doi' => $cRow['gia_von'] ?? ($cRow['gia_von_quy_doi'] ?? 0),
+                            'gia_von_quy_doi' => 0, // Luôn = 0; giá vốn chỉ được sinh tự động từ lần nhập hàng đầu tiên
                             'gia_ban_quy_doi' => $cRow['gia_ban'] ?? ($cRow['gia_ban_quy_doi'] ?? 0),
                             'gia_ban_si'   => $cRow['gia_ban_si'] ?? null,
                             'hinh_anh'     => $cRow['hinh_anh'] ?? null,
@@ -817,14 +811,10 @@ class SanPhamController extends Controller
             if ($product->variants()->exists()) {
                 // San pham co bien the - chi can redirect
                 return redirect()->route('san-pham.index')->with('success', 'Đã cập nhật sản phẩm.');
-            } else {
-                // San pham khong co bien the - cap nhat them cac truong gia_von, gia_ban, so_luong_ton_kho
-                $product->update([
-                    'gia_von' => $data['gia_von'] ?? 0,
-                    'gia_ban' => $data['gia_ban'] ?? 0,
-                    'so_luong_ton_kho' => $data['so_luong_ton_kho'] ?? 0,
-                ]);
             }
+            // San pham khong co bien the: khong co gi de cap nhat them
+            // Cac cot gia_von, gia_ban, so_luong_ton_kho da bi xoa khoi bang san_pham (migration 03/07/2026)
+            return redirect()->route('san-pham.index')->with('success', 'Đã cập nhật sản phẩm.');
         }); // dong DB::transaction
 
         // ============================================================
