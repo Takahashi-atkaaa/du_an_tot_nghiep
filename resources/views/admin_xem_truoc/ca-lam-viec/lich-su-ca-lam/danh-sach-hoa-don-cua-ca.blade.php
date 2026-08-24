@@ -8,7 +8,7 @@
     {{-- Tiêu đề --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="mb-1" style="color:blue;">Hóa đơn của ca hoàn thành</h4>
+            <h4 class="mb-1" style="color:blue;">Hóa đơn của ca </h4>
             <div class="text-muted">
                 Ngày: {{ date('d/m/Y', strtotime($ngay)) }}
             </div>
@@ -25,7 +25,7 @@
         <div class="card-body">
 
             <form method="GET"
-                  action="{{ route('hoa-don-cua-ca.hoan-thanh', [
+                  action="{{ route('hoa-don-cua-ca', [
                       'ngay' => $ngay,
                       'id_ca' => $id_ca
                   ]) }}">
@@ -139,9 +139,23 @@
                                     </td>
 
                                     <td class="text-center">
+                                        @if($hoaDon->trang_thai == 'Hoàn thành')
+                                            <span class="badge bg-success">
+                                                {{ $hoaDon->trang_thai }}
+                                            </span>
+                                        @elseif($hoaDon->trang_thai == 'Đã hủy')
+                                            <span class="badge bg-danger">
+                                                {{ $hoaDon->trang_thai }}
+                                            </span>
+                                        @elseif($hoaDon->trang_thai == 'Đã đổi/trả hàng')
                                         <span class="badge bg-success">
                                             {{ $hoaDon->trang_thai }}
                                         </span>
+                                        @else
+                                            <span class="badge bg-warning">
+                                                Đang xử lý
+                                            </span>
+                                        @endif
                                     </td>
 
                                     <td class="text-center">

@@ -138,11 +138,23 @@
                                 <span class="badge bg-light text-dark border">{{ $tenPttt }}</span>
                             </td>
                             <td>
-                                @if($hoaDon->trang_thai === 'Đã hủy')
-                                    <span class="badge bg-danger">Đã hủy</span>
-                                @else
-                                    <span class="badge bg-success">{{ $hoaDon->trang_thai ?? 'Hoàn thành' }}</span>
-                                @endif
+                                 @if($hoaDon->trang_thai == 'Hoàn thành')
+                                        <span class="badge bg-success">
+                                            {{ $hoaDon->trang_thai }}
+                                        </span>
+                                    @elseif($hoaDon->trang_thai == 'Đã hủy')
+                                        <span class="badge bg-danger">
+                                            {{ $hoaDon->trang_thai }}
+                                        </span>
+                                    @elseif($hoaDon->trang_thai == 'Đã đổi/trả hàng')
+                                    <span class="badge bg-success">
+                                        {{ $hoaDon->trang_thai }}
+                                    </span>
+                                    @else
+                                        <span class="badge bg-warning">
+                                            Đang xử lý
+                                        </span>
+                                    @endif
                             </td>
                             <td>
                                 @if(!empty($hoaDon->ten_ca))
@@ -172,7 +184,7 @@
                                     </a>
                                 @endif
 
-                                @if($hoaDon->trang_thai !== 'Đã hủy')
+                                {{-- @if($hoaDon->trang_thai !== 'Đã hủy')
                                     <form action="{{ route('admin.hoa-don.huy', $hoaDon->id) }}"
                                           method="POST"
                                           class="d-inline"
@@ -182,7 +194,7 @@
                                             <i class="fas fa-times"></i>
                                         </button>
                                     </form>
-                                @endif
+                                @endif --}}
                             </td>
                         </tr>
                     @empty

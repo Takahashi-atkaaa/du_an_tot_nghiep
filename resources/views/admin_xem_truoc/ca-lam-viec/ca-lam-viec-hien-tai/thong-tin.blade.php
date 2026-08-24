@@ -114,14 +114,19 @@
                         <i class="bi bi-receipt"></i>
                     </div>
 
-                    <div>
-                        <div class="text-muted">
-                            Số hóa đơn
-                        </div>
 
-                        <h3 class="mb-0">
-                            {{ $danh_sach_hoa_don_cua_ca->count() }}
-                        </h3>
+                    <div>
+                        <a href="{{ route('hoa-don-cua-ca', ['ngay' => $ngay_hien_tai, 'id_ca' => $ca_hien_tai->id]) }}" class="btn btn-sm btn-light ms-2">
+                            <div class="text-muted">
+                                    <i class="bi bi-eye"></i> Xem tất cả
+                                
+                                Số hóa đơn
+                            </div>
+
+                            <h3 class="mb-0">
+                                {{ $tong_so_hoa_don_cua_ca }}
+                            </h3>
+                        </a>
                     </div>
 
                 </div>
@@ -141,11 +146,11 @@
 
                     <div>
                         <div class="text-muted">
-                            Số hóa đơn bị hủy trong ca
+                            Số hóa đơn đổi trả trong ca
                         </div>
 
                         <h5 class="mb-0 text-danger">
-                            {{ number_format($cac_hoa_don_bi_huy_trong_ca) }}
+                            {{ number_format($cac_hoa_don_doi_tra_trong_ca) }}
                         </h5>
                     </div>
                 </div>
@@ -286,9 +291,28 @@
                                 </td>
 
                                 <td>
-                                    <span class="badge bg-success">
-                                        {{ $hoaDon->trang_thai }}
-                                    </span>
+                                    @if($hoaDon->trang_thai == 'Hoàn thành')
+                                            <span class="badge bg-success">
+                                                {{ $hoaDon->trang_thai }}
+                                            </span>
+                                        @elseif($hoaDon->trang_thai == 'Đã hủy')
+                                            <span class="badge bg-danger">
+                                                {{ $hoaDon->trang_thai }}
+                                            </span>
+                                        @elseif($hoaDon->trang_thai == 'Đã đổi/trả hàng')
+                                        <span class="badge bg-success">
+                                            {{ $hoaDon->trang_thai }}
+                                        </span>
+                                        @elseif($hoaDon->trang_thai == 'Đã trả toàn bộ')
+                                        <span class="badge bg-danger">
+                                            {{ $hoaDon->trang_thai }}
+                                        </span>
+
+                                        @else
+                                            <span class="badge bg-warning">
+                                                Đang xử lý
+                                            </span>
+                                    @endif
                                 </td>
 
                                 <td class="text-danger fw-bold">
@@ -300,7 +324,7 @@
                                 </td>
 
                                 <td>
-                                    <a href="{{ route('chi-tiet-hoa-don.show', $hoaDon->id) }}"
+                                    <a href="{{ route('admin.hoa-don.show', $hoaDon->id) }}"
                                         class="btn btn-warning">
                                             Chi tiết
                                         </a>
@@ -317,6 +341,7 @@
                 </div>
 
             </div>
+            
         </div>
 
         {{-- Nhân viên --}}
