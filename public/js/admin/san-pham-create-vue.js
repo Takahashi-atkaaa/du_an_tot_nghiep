@@ -714,7 +714,7 @@
                 }
                 setUnitTouched(row, field);
 
-                if (field === 'giaBan' || field === 'giaVon') {
+                if (field === 'giaBan') {
                     cascadeByUnit(row, field, row[field]);
                 }
             }
@@ -775,10 +775,9 @@
 
             function fillDefaultsToGrid() {
                 gridData.value.forEach(row => {
-                    row.giaVon = parseFloat(basicInfo.defaultCost) || 0;
                     row.giaBan = parseFloat(basicInfo.defaultPrice) || 0;
                     row.dinhMucToiThieu = parseInt(basicInfo.defaultMinStock) || 0;
-                    row.touched = { giaVon: true, giaBan: true };
+                    row.touched = { giaBan: true };
                 });
             }
 
@@ -855,7 +854,7 @@
                                 don_vi_chuan_id: u.don_vi_chuan_id || null,
                                 ten_don_vi: (u.ten_don_vi || u.name || '').trim(),
                                 so_luong_san_pham_trong_don_vi: parseInt(u.rate) || parseInt(u.so_luong_san_pham_trong_don_vi) || 1,
-                                gia_von_quy_doi: parseFloat(u.gia_von_quy_doi) || 0,
+                                gia_von_quy_doi: 0, // Luôn = 0; giá vốn chỉ được sinh tự động từ lần nhập hàng đầu tiên
                                 gia_ban_quy_doi: parseFloat(u.gia_ban_quy_doi) || 0,
                                 ma_hang: u.ma_hang || '',
                                 ma_vach: u.ma_vach || ''
@@ -870,7 +869,7 @@
                         ty_le: row.tyLe || row.ty_le || 1,
                         ma_hang: row.maHang || row.ma_hang || '',
                         ma_vach: row.maVach || row.ma_vach || '',
-                        gia_von: parseFloat(row.giaVon || row.gia_von) || 0,
+                        gia_von: 0, // Luôn = 0; giá vốn chỉ được sinh tự động từ lần nhập hàng đầu tiên
                         gia_ban: parseFloat(row.giaBan || row.gia_ban) || 0,
                         so_luong_ton: parseInt(row.soLuong || row.so_luong_ton) || 0,
                         dinh_muc_toi_thieu: parseInt(row.dinhMucToiThieu || row.dinh_muc_toi_thieu) || 0,
@@ -1298,12 +1297,7 @@
                             <button v-if="gridData.length" type="button" @click="fillDefaultsToGrid"
                                 class="text-[11px] text-blue-600 hover:underline">Áp dụng lại cho tất cả dòng</button>
                         </div>
-                        <div class="grid grid-cols-3 gap-3">
-                            <div>
-                                <label class="block text-xs font-medium text-slate-600 mb-1">Giá vốn <span class="text-slate-400">(đv cơ bản)</span></label>
-                                <input v-model.number="basicInfo.defaultCost" type="number" min="0" step="any"
-                                    class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                            </div>
+                        <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-medium text-slate-600 mb-1">Giá bán <span class="text-slate-400">(đv cơ bản)</span></label>
                                 <input v-model.number="basicInfo.defaultPrice" type="number" min="0" step="any"
@@ -1572,7 +1566,6 @@
                                     <th class="px-2 py-2 text-left font-medium">Tỷ lệ</th>
                                     <th class="px-2 py-2 text-left font-medium">Mã hàng</th>
                                     <th class="px-2 py-2 text-left font-medium">Mã vạch</th>
-                                    <th class="px-2 py-2 text-right font-medium">Giá vốn</th>
                                     <th class="px-2 py-2 text-right font-medium">Giá bán</th>
                                 </tr>
                             </thead>
@@ -1619,8 +1612,10 @@
                                             class="w-full rounded border border-slate-300 px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
                                     </td>
                                     <td class="px-2 py-1.5">
-                                        <input :value="row.giaVon" @input="onGridInput(row, 'giaVon', $event)" type="number" min="0" step="any"
-                                            class="w-full rounded border border-slate-300 px-2 py-1 text-xs text-right focus:ring-2 focus:ring-emerald-500 outline-none">
+                                        <span v-if="row.giaVon > 0" class="text-xs text-slate-500" title="Giá vốn tự động từ lô hàng">
+                                            {{ Number(row.giaVon).toLocaleString() }}
+                                        </span>
+                                        <span v-else class="text-xs text-slate-400">—</span>
                                     </td>
                                     <td class="px-2 py-1.5">
                                         <input :value="row.giaBan" @input="onGridInput(row, 'giaBan', $event)" type="number" min="0" step="any"

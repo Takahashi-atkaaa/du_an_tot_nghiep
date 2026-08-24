@@ -220,7 +220,11 @@ class PhieuNhapImport implements ToCollection, WithHeadingRow, WithValidation
             $maLo = $loHang->ma_lo;
 
             foreach ($validatedData as $ct) {
+                // Bảo vệ chia cho 0: nếu hệ số <= 0 coi như đơn vị cơ bản
                 $heSoQuyDoi = (float)($ct['so_luong_san_pham_trong_don_vi'] ?? 1);
+                if ($heSoQuyDoi <= 0) {
+                    $heSoQuyDoi = 1;
+                }
                 $soLuongCoBan = $ct['so_luong'] * $heSoQuyDoi;
                 // Nếu user nhập giá theo đơn vị quy đổi, đưa về giá / đơn vị cơ bản
                 $giaNhapCoBan = $heSoQuyDoi > 1

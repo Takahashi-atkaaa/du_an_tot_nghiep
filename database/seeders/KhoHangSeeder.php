@@ -58,6 +58,15 @@ class KhoHangSeeder extends Seeder
             $nccId = $nccIds[$nccIdx % count($nccIds)];
             $nccIdx++;
 
+            // Đặt giá vốn mẫu cho variant trước khi tạo lô hàng:
+            // Chỉ đặt nếu hiện tại = 0 và có giá bán > 0 (để seeder tạo lô với giá nhập hợp lý)
+            if ((float)$variant->gia_von == 0 && (float)$variant->gia_ban > 0) {
+                DB::table('bien_the_san_pham')
+                    ->where('id', $variant->id)
+                    ->update(['gia_von' => round((float)$variant->gia_ban * 0.7, 2)]);
+                $variant->gia_von = round((float)$variant->gia_ban * 0.7, 2);
+            }
+
             // Moi variant co 2 lo: Lo gan (HSD 20-30 ngay) va Lo xa (HSD 3-6 thang)
             $ngayNhapLo1 = $now->copy()->subDays(rand(30, 60))->toDateString();
             $ngayNhapLo2 = $now->copy()->subDays(rand(5, 20))->toDateString();

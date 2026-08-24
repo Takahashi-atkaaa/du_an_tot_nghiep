@@ -1103,8 +1103,9 @@ window.deleteVariant = async function(variantId, productId) {
                             '<input type="text" name="bien_the[' + window.variantCounterEdit + '][ten_bien_the]" class="form-control form-control-sm" placeholder="VD: Bia lon 330ml" value="">' +
                         '</div>' +
                         '<div class="col-2">' +
+                            '<input type="hidden" name="bien_the[' + window.variantCounterEdit + '][gia_von]" value="0">' +
                             '<label class="form-label small fw-medium">Giá vốn</label>' +
-                            '<input type="number" name="bien_the[' + window.variantCounterEdit + '][gia_von]" class="form-control form-control-sm" placeholder="0" min="0" step="0.01" value="0">' +
+                            '<div class="form-control form-control-sm text-muted small">Tự động từ lô</div>' +
                         '</div>' +
                         '<div class="col-2">' +
                             '<label class="form-label small fw-medium">Giá bán</label>' +
