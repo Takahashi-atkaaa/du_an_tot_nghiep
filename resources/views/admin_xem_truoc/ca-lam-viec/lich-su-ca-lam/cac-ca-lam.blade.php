@@ -327,6 +327,7 @@ h3,h4,h5{
     </div>
 
     <div class="the-thong-ke ca">
+        <div class="icon">⏰</div>
         <select class="form-select ca-select"
                 onchange="if (this.value) window.location.href = this.value;">
 
@@ -373,7 +374,7 @@ h3,h4,h5{
             </div>
 
             <div class="col-md-3">
-                <a style="text-decoration: none;" href="{{ route('hoa-don-cua-ca.hoan-thanh', ['ngay' => $ngay, 'id_ca' => $caDangChon->id]) }}" class="the-thong-ke hoa-don">
+                <a style="text-decoration: none;" href="{{ route('hoa-don-cua-ca', ['ngay' => $ngay, 'id_ca' => $caDangChon->id]) }}" class="the-thong-ke hoa-don">
                     <div class="icon">🧾</div>
 
                     <div>
@@ -387,7 +388,7 @@ h3,h4,h5{
 
 
             <div class="col-md-3">
-                <a href="{{ route('hoa-don-cua-ca.huy', ['ngay' => $ngay,'id_ca' => $caDangChon->id]) }}"
+                <a href="{{ route('hoa-don-cua-ca.doi-tra', ['ngay' => $ngay,'id_ca' => $caDangChon->id]) }}"
                 class="the-thong-ke hoa-don"
                 style="text-decoration: none; border-left: 4px solid #dc3545;">
 
@@ -396,10 +397,10 @@ h3,h4,h5{
                     </div>
 
                     <div>
-                        <div class="tieu-de">Số hóa đơn hủy</div>
+                        <div class="tieu-de">Số hóa đơn đổi trả</div>
 
                         <div class="gia-tri" style="color: #dc3545;">
-                            {{ $cacHoaDonBiHuyTrongCa }}
+                            {{ $cacHoaDonDoiTraTrongCa }}
                         </div>
                     </div>
 
@@ -667,10 +668,18 @@ h3,h4,h5{
                                             <span class="badge bg-success">
                                                 {{ $hoaDon->trang_thai }}
                                             </span>
-                                        @elseif($hoaDon->trang_thai == 'Hủy')
+                                        @elseif($hoaDon->trang_thai == 'Đã hủy')
                                             <span class="badge bg-danger">
                                                 {{ $hoaDon->trang_thai }}
                                             </span>
+                                        @elseif($hoaDon->trang_thai == 'Đã đổi/trả hàng')
+                                        <span class="badge bg-success">
+                                            {{ $hoaDon->trang_thai }}
+                                        </span>
+                                        @elseif($hoaDon->trang_thai == 'Đã trả toàn bộ')
+                                        <span class="badge bg-danger">
+                                            {{ $hoaDon->trang_thai }}
+                                        </span>
                                         @else
                                             <span class="badge bg-warning">
                                                 Đang xử lý
@@ -689,7 +698,7 @@ h3,h4,h5{
                                     </td>
 
                                     <td>
-                                        <a href="{{ route('lich-su-ca-lam-chi-tiet-hoa-don.show', ['id_hoaDon' => $hoaDon->id, 'ngay' => $ngay]) }}"
+                                        <a href="{{ route('admin.hoa-don.show', $hoaDon->id) }}"
                                             class="btn btn-warning">
                                             Chi tiết
                                         </a>

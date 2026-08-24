@@ -52,6 +52,23 @@ class PhieuXuatApiController extends Controller
         ]);
     }
 
+    public function showEdit(int $id)
+    {
+        $phieuXuat = PhieuXuat::with([
+            'phieu',
+            'chiTietPhieu.variant.product',
+            'chiTietPhieu.chiTietLoHang',
+        ])->find($id);
+
+        if (!$phieuXuat) {
+            abort(404, 'Phiếu xuất không tồn tại.');
+        }
+
+        return view('admin_xem_truoc.warehouse.phieu-xuat-edit', [
+            'phieuXuat' => $phieuXuat,
+        ]);
+    }
+
     public function show(int $id): JsonResponse
     {
         $phieuXuat = PhieuXuat::with([
