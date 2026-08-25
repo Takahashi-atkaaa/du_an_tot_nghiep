@@ -225,7 +225,7 @@
             <div class="card-body d-flex align-items-center">
                 <div class="icon me-3"><i class="fas fa-times-circle"></i></div>
                 <div>
-                    <h6 class="text-muted mb-1">Đã hủy</h6>
+                    <h6 class="text-muted mb-1">Đã đổi trả </h6>
                     <h3 class="mb-0">{{ number_format($dailyStats['cancelled_orders'] ?? 0) }}</h3>
                 </div>
             </div>
