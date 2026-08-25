@@ -338,7 +338,12 @@
                                 <strong>{{ $method }}</strong>
                                 <div class="text-muted small">Doanh thu</div>
                             </div>
-                            <span class="badge bg-success fs-6">{{ number_format($amount, 0, ',', '.') }} đ</span>
+                            @if($method == 'Tiền mặt')
+                                <input type="hidden" value = "{{$displayAmount = $amount - $returnCustomerMoney}}">
+                                <span class="badge bg-success fs-6">{{ number_format($displayAmount, 0, ',', '.') }} đ</span>
+                            @else
+                               <span class="badge bg-success fs-6">{{ number_format($amount, 0, ',', '.') }} đ</span>
+                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -463,7 +468,9 @@
                                 <tr>
                                     <td>{{ $staff->staff_name }}</td>
                                     <td>{{ number_format($staff->order_count) }}</td>
-                                    <td>{{ number_format($staff->total_revenue, 0, ',', '.') }} đ</td>
+                                    <td>
+                                        <input type="hidden" value = "{{$doanh_thu_cua_nv =$staff->total_revenue - $staff->tra_lai_khach}}">
+                                        {{ number_format($doanh_thu_cua_nv, 0, ',', '.') }} đ</td>
                                 </tr>
                             @empty
                                 <tr>
