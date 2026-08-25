@@ -27,7 +27,7 @@
     <div class="card-body">
         <form method="GET" action="{{ route('admin.hoa-don.index') }}">
             <div class="row g-3 align-items-end">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">Tìm kiếm</label>
                     <input type="text"
                            name="q"
@@ -47,6 +47,29 @@
                 </div>
 
                 <div class="col-md-2">
+                    <label class="form-label">Phương thức thanh toán</label>
+                    @php
+                        $ptttLabel = [
+                            'cash' => 'Tiền mặt',
+                            'tien_mat' => 'Tiền mặt',
+                            'Tiền mặt' => 'Tiền mặt',
+                            'transfer' => 'Chuyển khoản',
+                            'chuyen_khoan' => 'Chuyển khoản',
+                            'Chuyển khoản' => 'Chuyển khoản',
+                            'payos' => 'PayOS',
+                        ];
+                    @endphp
+                    <select name="phuong_thuc" class="form-select">
+                        <option value="">Tất cả PTTT</option>
+                        @foreach($phuongThucThanhToans ?? [] as $pttt)
+                            <option value="{{ $pttt }}" {{ request('phuong_thuc') === $pttt ? 'selected' : '' }}>
+                                {{ $ptttLabel[$pttt] ?? $pttt }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-md-2">
                     <label class="form-label">Trạng thái</label>
                     <select name="trang_thai" class="form-select">
                         <option value="">Tất cả</option>
@@ -55,7 +78,15 @@
                     </select>
                 </div>
 
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i>Lọc
+                    </button>
+                </div>
+            </div>
+
+            <div class="row g-3 align-items-end mt-1">
+                <div class="col-md-10">
                     <label class="form-label">Ca làm việc</label>
                     <select name="id_ca_lam_viec" class="form-select">
                         <option value="">Tất cả ca làm việc</option>
@@ -69,11 +100,10 @@
                         @endforeach
                     </select>
                 </div>
-
                 <div class="col-md-2">
-                    <button class="btn btn-primary w-100">
-                        <i class="fas fa-filter me-2"></i>Lọc
-                    </button>
+                    <a href="{{ route('admin.hoa-don.index') }}" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-rotate-left me-2"></i>Reset
+                    </a>
                 </div>
             </div>
         </form>
@@ -188,7 +218,7 @@
                                     </a>
                                 @endif
 
-                                {{-- @if($hoaDon->trang_thai !== 'Đã hủy')
+                                @if($hoaDon->trang_thai !== 'Đã hủy')
                                     <form action="{{ route('admin.hoa-don.huy', $hoaDon->id) }}"
                                           method="POST"
                                           class="d-inline"
@@ -198,7 +228,7 @@
                                             <i class="fas fa-times"></i>
                                         </button>
                                     </form>
-                                @endif --}}
+                                @endif
                             </td>
                         </tr>
                     @empty

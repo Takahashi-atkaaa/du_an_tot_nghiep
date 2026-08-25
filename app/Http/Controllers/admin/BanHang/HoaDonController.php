@@ -100,6 +100,10 @@ class HoaDonController extends Controller
         }
 
         if ($request->filled('trang_thai')) {
+            $query->where('hoa_don.trang_thai', $request->trang_thai);
+        }
+
+        if ($request->filled('phuong_thuc')) {
             $query->where('hoa_don.phuong_thuc_thanh_toan', $request->phuong_thuc);
         }
 
@@ -113,7 +117,13 @@ class HoaDonController extends Controller
             ->orderBy('id')
             ->get();
 
-        return view('admin_xem_truoc.hoa-don', compact('hoaDons', 'caLamViecs'));
+        $phuongThucThanhToans = DB::table('hoa_don')
+            ->whereNotNull('phuong_thuc_thanh_toan')
+            ->distinct()
+            ->orderBy('phuong_thuc_thanh_toan')
+            ->pluck('phuong_thuc_thanh_toan');
+
+        return view('admin_xem_truoc.hoa-don', compact('hoaDons', 'caLamViecs', 'phuongThucThanhToans'));
     }
 
     public function show($id, DoiTraService $doiTraService)

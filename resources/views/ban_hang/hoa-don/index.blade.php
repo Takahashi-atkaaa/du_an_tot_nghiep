@@ -18,23 +18,49 @@
 <div class="card">
     <div class="card-header bg-white">
         <form method="GET" action="{{ route('nhan-vien.hoa-don') }}">
-            <div class="row g-2">
-                <div class="col-md-4">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small">Tìm kiếm</label>
                     <input type="text" name="q" class="form-control"
-                           placeholder="Tìm theo mã hóa đơn..."
+                           placeholder="Mã hóa đơn..."
                            value="{{ request('q') }}">
                 </div>
 
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label small">Ngày</label>
                     <input type="date" name="ngay" class="form-control"
                            value="{{ request('ngay') }}">
                 </div>
 
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label small">Trạng thái</label>
                     <select name="trang_thai" class="form-select">
                         <option value="">Tất cả trạng thái</option>
                         <option value="Hoàn thành" {{ request('trang_thai') == 'Hoàn thành' ? 'selected' : '' }}>Hoàn thành</option>
                         <option value="Đã hủy" {{ request('trang_thai') == 'Đã hủy' ? 'selected' : '' }}>Đã hủy</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label small">Phương thức thanh toán</label>
+                    @php
+                        $ptttLabel = [
+                            'cash' => 'Tiền mặt',
+                            'tien_mat' => 'Tiền mặt',
+                            'Tiền mặt' => 'Tiền mặt',
+                            'transfer' => 'Chuyển khoản',
+                            'chuyen_khoan' => 'Chuyển khoản',
+                            'Chuyển khoản' => 'Chuyển khoản',
+                            'payos' => 'PayOS',
+                        ];
+                    @endphp
+                    <select name="phuong_thuc" class="form-select">
+                        <option value="">Tất cả PTTT</option>
+                        @foreach($phuongThucThanhToans ?? [] as $pttt)
+                            <option value="{{ $pttt }}" {{ request('phuong_thuc') === $pttt ? 'selected' : '' }}>
+                                {{ $ptttLabel[$pttt] ?? $pttt }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
 
