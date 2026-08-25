@@ -106,7 +106,7 @@
 
                                     <td>
                                         <strong>
-                                            {{ $hoaDon->ma_hoa_don }}
+                                            #HH00{{ $hoaDon->id }}
                                         </strong>
                                     </td>
 
@@ -120,7 +120,7 @@
 
                                     <td class="text-end">
                                         <strong>
-                                            {{ number_format($hoaDon->tong_tien) }} đ
+                                            {{ number_format($hoaDon->khach_can_tra) }} đ
                                         </strong>
                                     </td>
 
@@ -133,7 +133,7 @@
                                     <td class="text-center">
 
                                         {{-- Thay route này bằng route xem chi tiết hóa đơn của bạn --}}
-                                        <a href="#"
+                                        <a href="{{route('admin.hoa-don.show', $hoaDon->id)}}"
                                            class="btn btn-sm btn-outline-primary">
                                             Xem
                                         </a>

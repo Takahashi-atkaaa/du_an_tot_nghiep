@@ -75,16 +75,24 @@ if ($quickFilter === '3_ngay') {
         $ordersQuery = $revenueStatisticsService->invoiceNetRevenueQuery()
             ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd]);
 
+        $tongTienDoiTra = DB::table('chi_tiet_doi_tra')
+            ->join('doi_tra', 'chi_tiet_doi_tra.id_doi_tra', '=', 'doi_tra.id')
+            ->join('hoa_don', 'doi_tra.id_hoa_don', '=', 'hoa_don.id')
+            ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
+            ->sum('chi_tiet_doi_tra.thanh_tien');
+
         $revenueOrdersQuery = (clone $ordersQuery)
             ->whereIn('hoa_don.trang_thai', $revenueStatuses);
 
-        $dailyRevenue = (clone $revenueOrdersQuery)
+        $dailyRevenue1 = (clone $revenueOrdersQuery)
             ->sum('khach_can_tra');
+        
+        $dailyRevenue = $dailyRevenue1 - $tongTienDoiTra;
 
         $totalOrders = (clone $ordersQuery)->count();
         $completedOrders = (clone $revenueOrdersQuery)->count();
         $cancelledOrders = (clone $ordersQuery)
-            ->where('hoa_don.trang_thai', 'Đã hủy')
+            ->whereIn('hoa_don.trang_thai', ['Đã đổi/trả hàng', 'Đã trả toàn bộ'])
             ->count();
 
         $productsSold = DB::table('chi_tiet_hoa_don')

@@ -139,23 +139,27 @@
                             </td>
                             <td>
                                  @if($hoaDon->trang_thai == 'Hoàn thành')
-                                        <span class="badge bg-success">
-                                            {{ $hoaDon->trang_thai }}
-                                        </span>
-                                    @elseif($hoaDon->trang_thai == 'Đã hủy')
-                                        <span class="badge bg-danger">
-                                            {{ $hoaDon->trang_thai }}
-                                        </span>
-                                    @elseif($hoaDon->trang_thai == 'Đã đổi/trả hàng')
                                     <span class="badge bg-success">
                                         {{ $hoaDon->trang_thai }}
                                     </span>
-                                    @else
-                                        <span class="badge bg-warning">
-                                            Đang xử lý
-                                        </span>
-                                    @endif
-                            </td>
+                                @elseif($hoaDon->trang_thai == 'Đã hủy')
+                                    <span class="badge bg-danger">
+                                        {{ $hoaDon->trang_thai }}
+                                    </span>
+                                @elseif($hoaDon->trang_thai == 'Đã đổi/trả hàng')
+                                <span class="badge bg-info text-dark">
+                                    {{ $hoaDon->trang_thai }}
+                                </span>
+                                @elseif($hoaDon->trang_thai == 'Đã trả toàn bộ')
+                                <span class="badge bg-danger">
+                                    {{ $hoaDon->trang_thai }}
+                                </span>
+                                @else
+                                    <span class="badge bg-warning">
+                                        Đang xử lý
+                                    </span>
+                                @endif
+                    </td>
                             <td>
                                 @if(!empty($hoaDon->ten_ca))
                                     <span class="badge bg-info text-dark">{{ $hoaDon->ten_ca }}</span>

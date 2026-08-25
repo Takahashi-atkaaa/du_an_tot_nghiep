@@ -673,7 +673,7 @@ h3,h4,h5{
                                                 {{ $hoaDon->trang_thai }}
                                             </span>
                                         @elseif($hoaDon->trang_thai == 'Đã đổi/trả hàng')
-                                        <span class="badge bg-success">
+                                        <span class="badge bg-info text-dark">
                                             {{ $hoaDon->trang_thai }}
                                         </span>
                                         @elseif($hoaDon->trang_thai == 'Đã trả toàn bộ')
