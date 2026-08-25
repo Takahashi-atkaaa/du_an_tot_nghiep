@@ -21,9 +21,9 @@
         <button class="btn btn-outline-danger btn-sm" id="btn-xuat-excel-xuat" title="Xuất Excel">
             <i class="fas fa-file-excel me-1"></i>Xuất Excel
         </button>
-        <button class="btn btn-danger btn-sm" id="btn-tao-phieu-xuat">
+        <a href="{{ route('phieu-xuat.create') }}" class="btn btn-danger btn-sm" id="btn-tao-phieu-xuat">
             <i class="fas fa-plus me-1"></i>Tạo phiếu xuất
-        </button>
+        </a>
         <button class="btn btn-danger btn-sm" id="btn-open-import-xuat" title="Import từ Excel">
             <i class="fas fa-file-import me-1"></i>Import Excel
         </button>

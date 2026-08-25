@@ -1,6 +1,6 @@
 @extends('admin_xem_truoc.layouts.admin')
 
-@section('title', 'Hóa đơn của ca đã hủy - SmartMart')
+@section('title', 'Hóa đơn của ca đã đổi trả - SmartMart')
 
 @section('content')
 <div class="container-fluid">
@@ -8,7 +8,7 @@
     {{-- Tiêu đề --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="mb-1" style="color:red;">Hóa đơn hủy của ca</h4>
+            <h4 class="mb-1" style="color:red;">Hóa đơn đổi trả của ca</h4>
             <div class="text-muted">
                 Ngày: {{ date('d/m/Y', strtotime($ngay)) }}
             </div>
@@ -25,7 +25,7 @@
         <div class="card-body">
 
             <form method="GET"
-                  action="{{ route('hoa-don-cua-ca.huy', [
+                  action="{{ route('hoa-don-cua-ca.doi-tra', [
                       'ngay' => $ngay,
                       'id_ca' => $id_ca
                   ]) }}">

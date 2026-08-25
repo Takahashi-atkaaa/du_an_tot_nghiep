@@ -557,7 +557,7 @@
         <div class="d-flex justify-content-end mb-3 gap-2">
             <button class="btn btn-outline-danger btn-sm" id="px-btn-export"><i class="fas fa-file-excel me-1"></i>Xuất Excel</button>
             <button class="btn btn-outline-danger btn-sm" id="px-btn-import"><i class="fas fa-file-import me-1"></i>Import Excel</button>
-            <button class="btn btn-danger btn-sm" id="px-btn-tao"><i class="fas fa-plus me-1"></i>Tạo phiếu xuất</button>
+            <a href="{{ route('phieu-xuat.create') }}" class="btn btn-danger btn-sm" id="px-btn-tao"><i class="fas fa-plus me-1"></i>Tạo phiếu xuất</a>
         </div>
         <div class="card table-admin mb-4">
             <div class="card-body">

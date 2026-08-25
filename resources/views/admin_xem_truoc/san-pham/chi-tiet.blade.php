@@ -114,7 +114,9 @@
             ============================================================ --}}
         @php
             $tongTon      = $product->variants->sum('so_luong_ton');
-            $tongVon      = $product->variants->sum(fn($v) => $v->gia_von * $v->so_luong_ton);
+            $tongTon      = $product->variants->sum('so_luong_ton');
+            $tongVon      = $product->variants->sum(fn($v) => $v->gia_von * $v->so_luong_ton); // Tự động từ lô hàng
+            $tongGiaTri   = $product->variants->sum(fn($v) => $v->gia_ban * $v->so_luong_ton);
             $tongGiaTri   = $product->variants->sum(fn($v) => $v->gia_ban * $v->so_luong_ton);
             $tongBienThe  = $product->variants->count();
         @endphp
@@ -244,7 +246,7 @@
                                         <th class="text-center align-middle" style="width:40px;">#</th>
                                         <th class="align-middle">Biến thể</th>
                                         <th class="text-center align-middle">Mã vạch</th>
-                                        <th class="text-end align-middle">Giá vốn</th>
+                                        <th class="text-end align-middle">Giá vốn <span class="text-muted small" title="Tự động từ lô hàng">*</span></th>
                                         <th class="text-end align-middle">Giá bán</th>
                                         <th class="text-end align-middle">Tồn kho</th>
                                         <th class="align-middle">Thuộc tính</th>
@@ -257,8 +259,8 @@
                                             <td class="text-center text-gray-500 align-middle">{{ $index + 1 }}</td>
                                             <td class="align-middle">
                                                 <div class="d-flex align-items-center gap-2">
-                                                    @if($variant->hinh_anh)
-                                                        <img src="{{ asset($variant->hinh_anh) }}"
+                                                    @if($variant->hinh_anh && \App\Models\BienTheSanPham::hasImageFile($variant->hinh_anh))
+                                                        <img src="{{ \App\Models\BienTheSanPham::resolveImageUrl($variant->hinh_anh) }}"
                                                              alt="{{ $variant->ten_bien_the }}"
                                                              class="rounded"
                                                              style="width:40px;height:40px;object-fit:cover;">
@@ -342,7 +344,7 @@
                                                                         <tr>
                                                                             <th class="align-middle">Đơn vị</th>
                                                                             <th class="text-center align-middle">Tỷ lệ QĐ</th>
-                                                                            <th class="text-end align-middle">Giá vốn QĐ</th>
+                                                                            <th class="text-end align-middle">Giá vốn QĐ <span class="text-muted small" title="Tự động từ lô hàng">*</span></th>
                                                                             <th class="text-end align-middle">Giá bán QĐ</th>
                                                                             <th class="align-middle">Mã vạch</th>
                                                                             <th class="text-center align-middle">Mặc định</th>
@@ -435,7 +437,7 @@
                                             </span>
                                         @endif
                                     </div>
-                                    <div class="kpi-sub">Giá vốn ước tính: <strong>{{ number_format($ordersSummary['gia_von_uoc'] ?? 0, 0, ',', '.') }} đ</strong></div>
+                                    <div class="kpi-sub">Giá vốn ước tính (từ lô): <strong>{{ number_format($ordersSummary['gia_von_uoc'] ?? 0, 0, ',', '.') }} đ</strong></div>
                                 </div>
                                 <div class="kpi-card">
                                     <div class="kpi-head">

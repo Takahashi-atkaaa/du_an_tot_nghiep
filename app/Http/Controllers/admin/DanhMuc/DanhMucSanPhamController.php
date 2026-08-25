@@ -74,4 +74,12 @@ class DanhMucSanPhamController extends Controller
             ->route('danh_muc.index')
             ->with('success', 'Cập nhật danh mục thành công!');
     }
+
+    // Hiển thị danh sách sản phẩm theo danh mục
+    public function sanPhamTheoDanhMuc($id){
+        $danhmuc = DanhMucSanPham::findOrFail($id);
+        $sanpham = $danhmuc->sanPhams()->get();
+
+        return view('admin_xem_truoc.ql_danh_muc.san_pham_thuoc_danh_muc', compact('danhmuc', 'sanpham'));
+    }
 }   

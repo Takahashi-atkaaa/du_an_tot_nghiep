@@ -42,7 +42,11 @@ class KhoHangFefoSeeder extends Seeder
         }
 
         $variantId = $variant->id;
-        $giaVon = $variant->gia_von;
+        // Lấy giá vốn đã được set bởi KhoHangSeeder; nếu = 0 thì tính từ giá bán
+        $giaVon = (float)$variant->gia_von;
+        if ($giaVon == 0 && (float)$variant->gia_ban > 0) {
+            $giaVon = round((float)$variant->gia_ban * 0.7, 2);
+        }
 
         // Lay 2 chi tiet lo hien co (1 HSD gan, 1 HSD xa) cua san pham nay
         $chiTietLoGan = DB::table('chi_tiet_lo_hang')

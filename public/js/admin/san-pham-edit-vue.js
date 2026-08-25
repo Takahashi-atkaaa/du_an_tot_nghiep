@@ -979,7 +979,7 @@
                                 don_vi_chuan_id: u.don_vi_chuan_id || null,
                                 ten_don_vi: u.ten_don_vi || u.name || '',
                                 so_luong_san_pham_trong_don_vi: parseFloat(u.rate) || 1,
-                                gia_von_quy_doi: parseFloat(u.gia_von_quy_doi) || 0,
+                                gia_von_quy_doi: 0, // Luôn = 0; giá vốn chỉ được sinh tự động từ lần nhập hàng đầu tiên
                                 gia_ban_quy_doi: parseFloat(u.gia_ban_quy_doi) || 0,
                                 ma_hang: u.ma_hang || '',
                                 ma_vach: u.ma_vach || ''
@@ -1003,7 +1003,7 @@
                         ty_le: row.tyLe || 1,
                         ma_hang: row.maHang,
                         ma_vach: row.maVach,
-                        gia_von: parseFloat(row.giaVon) || 0,
+                        gia_von: 0, // Luôn = 0; giá vốn chỉ được sinh tự động từ lần nhập hàng đầu tiên
                         gia_ban: parseFloat(row.giaBan) || 0,
                         so_luong_ton: parseInt(row.soLuong) || 0,
                         dinh_muc_toi_thieu: parseInt(row.dinhMucToiThieu) || 0,
@@ -1659,7 +1659,6 @@
                                     <th class="px-2 py-2 text-left font-medium">Tỷ lệ</th>
                                     <th class="px-2 py-2 text-left font-medium">Mã hàng</th>
                                     <th class="px-2 py-2 text-left font-medium">Mã vạch</th>
-                                    <th class="px-2 py-2 text-right font-medium">Giá vốn</th>
                                     <th class="px-2 py-2 text-right font-medium">Giá bán</th>
                                 </tr>
                             </thead>
@@ -1706,8 +1705,10 @@
                                             class="w-full rounded border border-slate-300 px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
                                     </td>
                                     <td class="px-2 py-1.5">
-                                        <input :value="row.giaVon" @input="onGridInput(row, 'giaVon', $event)" type="number" min="0" step="any"
-                                            class="w-full rounded border border-slate-300 px-2 py-1 text-xs text-right focus:ring-2 focus:ring-emerald-500 outline-none">
+                                        <span v-if="row.giaVon > 0" class="text-xs text-slate-500" title="Giá vốn tự động từ lô hàng">
+                                            {{ Number(row.giaVon).toLocaleString() }}
+                                        </span>
+                                        <span v-else class="text-xs text-slate-400">—</span>
                                     </td>
                                     <td class="px-2 py-1.5">
                                         <input :value="row.giaBan" @input="onGridInput(row, 'giaBan', $event)" type="number" min="0" step="any"
