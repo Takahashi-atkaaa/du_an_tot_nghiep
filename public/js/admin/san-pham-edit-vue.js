@@ -1705,12 +1705,6 @@
                                             class="w-full rounded border border-slate-300 px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
                                     </td>
                                     <td class="px-2 py-1.5">
-                                        <span v-if="row.giaVon > 0" class="text-xs text-slate-500" title="Giá vốn tự động từ lô hàng">
-                                            {{ Number(row.giaVon).toLocaleString() }}
-                                        </span>
-                                        <span v-else class="text-xs text-slate-400">—</span>
-                                    </td>
-                                    <td class="px-2 py-1.5">
                                         <input :value="row.giaBan" @input="onGridInput(row, 'giaBan', $event)" type="number" min="0" step="any"
                                             class="w-full rounded border border-slate-300 px-2 py-1 text-xs text-right focus:ring-2 focus:ring-emerald-500 outline-none">
                                     </td>

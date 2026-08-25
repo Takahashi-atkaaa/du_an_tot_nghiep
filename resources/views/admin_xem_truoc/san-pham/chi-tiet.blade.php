@@ -200,6 +200,7 @@
                             data-bs-target="#tab-bien-the" type="button" role="tab"
                             aria-controls="tab-bien-the" aria-selected="true">
                         <i class="fas fa-layer-group me-1 text-danger"></i>Danh sách biến thể
+                        <span class="badge bg-secondary ms-1" data-variant-count>{{ $product->variants->count() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -251,11 +252,12 @@
                                         <th class="text-end align-middle">Tồn kho</th>
                                         <th class="align-middle">Thuộc tính</th>
                                         <th class="text-center align-middle">Đơn vị</th>
+                                        <th class="text-center align-middle" style="width:80px;">Hành động</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($product->variants as $index => $variant)
-                                        <tr>
+                                        <tr data-variant-row-id="{{ $variant->id }}">
                                             <td class="text-center text-gray-500 align-middle">{{ $index + 1 }}</td>
                                             <td class="align-middle">
                                                 <div class="d-flex align-items-center gap-2">
@@ -328,6 +330,14 @@
                                                 @else
                                                     <span class="text-gray-400">—</span>
                                                 @endif
+                                            </td>
+                                            <td class="text-center align-middle">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-danger"
+                                                        title="Xóa biến thể"
+                                                        onclick="deleteVariant({{ $variant->id }}, {{ $product->id }}, '{{ addslashes($variant->ten_bien_the ?: 'Biến thể #' . $variant->id) }}')">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                         @if($variant->units->count() > 0)
@@ -1183,6 +1193,81 @@ window.addEventListener('DOMContentLoaded', function () {
 
     // Khởi động load orders (đồng bộ KPI)
     loadOrders();
+
+    // ================================================================
+    // Hàm xóa biến thể
+    // ================================================================
+    window.deleteVariant = async function(variantId, productId, variantName) {
+        if (!confirm('Bạn có chắc muốn xóa biến thể "' + variantName + '"?\n\nHành động này không thể hoàn tác.')) {
+            return;
+        }
+
+        var deleteBtn = event?.target?.closest?.('button') || document.activeElement;
+        var originalContent = '';
+        if (deleteBtn) {
+            originalContent = deleteBtn.innerHTML;
+            deleteBtn.disabled = true;
+            deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        }
+
+        try {
+            var csrfToken = document.querySelector('meta[name=csrf-token]')?.content
+                || document.querySelector('input[name=_token]')?.value
+                || '';
+
+            var res = await fetch('/admin/api/san-pham/variant/' + variantId, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            var data;
+            try {
+                data = await res.json();
+            } catch {
+                data = { success: res.ok, message: res.ok ? 'Đã xóa biến thể.' : 'Không thể xóa biến thể.' };
+            }
+
+            if (res.ok && data.success) {
+                // Tìm và xóa dòng biến thể và dòng units (nếu có) khỏi DOM
+                var variantRow = document.querySelector('tr[data-variant-row-id="' + variantId + '"]');
+                if (variantRow) {
+                    // Tìm row tiếp theo (units row)
+                    var nextRow = variantRow.nextElementSibling;
+                    if (nextRow && nextRow.querySelector && nextRow.querySelector('[id^="units-"]')) {
+                        nextRow.remove();
+                    }
+                    variantRow.remove();
+                } else {
+                    // Fallback: reload trang nếu không tìm thấy row
+                    location.reload();
+                    return;
+                }
+
+                // Cập nhật số biến thể
+                var variantCountEl = document.querySelector('[data-variant-count]');
+                if (variantCountEl) {
+                    var currentCount = parseInt(variantCountEl.textContent) || 0;
+                    variantCountEl.textContent = Math.max(0, currentCount - 1);
+                }
+
+                alert(data.message || 'Đã xóa biến thể thành công.');
+            } else {
+                alert('Lỗi: ' + (data.message || 'Không thể xóa biến thể.') + ' (HTTP ' + res.status + ')');
+            }
+        } catch (e) {
+            console.error('Delete variant error:', e);
+            alert('Lỗi kết nối: ' + e.message);
+        } finally {
+            if (deleteBtn && originalContent) {
+                deleteBtn.disabled = false;
+                deleteBtn.innerHTML = originalContent;
+            }
+        }
+    };
 
     /**
      * Apply filter dành riêng cho OrdersTable (được tái sử dụng sau khi fetch xong)
