@@ -254,7 +254,7 @@ $(document).on('click', '.btn-chon-sp-nhap', function () {
             (units.length ? '<small class="text-muted pn-sl-display d-block mt-1" data-idx="' + idx + '">= 1 ' + escapeHtml(baseUnitLabel) + '</small>' : '') +
         '</td>' +
         '<td>' +
-            '<input type="number" class="form-control form-control-sm pn-gia-input" name="chi_tiet[' + idx + '][gia_nhap]" value="' + gia + '" min="0" step="100">' +
+            '<input type="text" class="form-control form-control-sm pn-gia-input money-input" name="chi_tiet[' + idx + '][gia_nhap]" value="' + (gia ? Number(gia).toLocaleString('vi-VN') : '') + '" inputmode="numeric">' +
             (units.length
                 ? '<small class="text-muted pn-gia-display d-block mt-1" data-idx="' + idx + '">đơn giá / ' + escapeHtml(baseUnitLabel) + '</small>'
                 : '<small class="text-muted d-block mt-1">đơn giá / ' + escapeHtml(baseUnitLabel) + '</small>') +
@@ -279,7 +279,8 @@ $(document).on('input change', '.pn-sl-input, .pn-gia-input, .pn-don-vi-select',
     const $giaDisplay = $row.find('.pn-gia-display');
 
     const sl = parseFloat($slInput.val()) || 0;
-    const gia = parseFloat($giaInput.val()) || 0;
+    // $giaInput có thể chứa dấu chấm do money-input format -> phải bỏ trước khi parseFloat
+    const gia = parseFloat(String($giaInput.val()).replace(/\./g, '')) || 0;
     let heSo = 1;
     let tenDonViNhap = '';
     let tenDonViCoBan = '';

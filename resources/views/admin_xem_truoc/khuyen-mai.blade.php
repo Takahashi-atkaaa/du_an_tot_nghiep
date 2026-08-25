@@ -343,7 +343,7 @@
                         <div class="col-md-6">
                             <label class="form-label">Giá trị giảm <span class="text-danger">*</span></label>
                             <div class="input-group">
-                                <input type="number" step="0.01" name="gia_tri_giam" class="form-control" placeholder="0" required>
+                                <input type="text" name="gia_tri_giam" class="form-control money-input" data-money-decimals="2" placeholder="0" inputmode="decimal" required>
                                 <span class="input-group-text">% / đ</span>
                             </div>
                         </div>
@@ -366,7 +366,7 @@
                         <div class="col-md-6">
                             <label class="form-label">Đơn hàng tối thiểu</label>
                             <div class="input-group">
-                                <input type="number" step="0.01" name="don_hang_toi_thieu" class="form-control" placeholder="0">
+                                <input type="text" name="don_hang_toi_thieu" class="form-control money-input" placeholder="0" inputmode="numeric">
                                 <span class="input-group-text">đ</span>
                             </div>
                         </div>
