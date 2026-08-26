@@ -3,9 +3,8 @@
 // ============================================================
 
 let sanPhamAll = [];
-let pxIdx = 0, loIdx = 0;
+let loIdx = 0;
 let tkPage = 1, lhPage = 1, pnPage = 1, pxPage = 1, nccPage = 1;
-let selectedPxProducts = new Set();
 
 // Helpers for HTML escaping (tránh lỗi quote khi tên có dấu nháy)
 function escapeHtml(s) {
@@ -37,37 +36,10 @@ $(function () {
     try { initKhoFilterPanel(); } catch(e) { console.error('[KHO-HANG] initKhoFilterPanel error:', e); }
     console.log('[KHO-HANG] Init end');
 
-    // Modal events
-    $('#modal-tao-px').on('shown.bs.modal', function () {
-        loadDanhMucXuat();
-        $('#px-sp-search').focus();
-    });
-    $('#modal-tao-px').on('hidden.bs.modal', function () {
-        pxIdx = 0;
-        selectedPxProducts.clear();
-        $('#form-tao-px')[0].reset();
-        $('#px-ds-sp').html('<tr id="px-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td></tr>');
-        $('#px-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-search fs-4 mb-2 d-block"></i>Nhập tên hoặc mã vạch để tìm sản phẩm</div>');
-        $('#px-sp-search').val('');
-        $('#px-sp-danh-muc').val('');
-    });
-
     $('#modal-tao-lo').on('hidden.bs.modal', function () {
         loIdx = 0;
         $('#form-tao-lo')[0].reset();
         $('#lo-ds-sp').html('');
-    });
-
-    // Modal triggers
-    $('#px-btn-tao').click(() => {
-        pxIdx = 0;
-        selectedPxProducts.clear();
-        $('#px-ds-sp').html('<tr id="px-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td></tr>');
-        $('#px-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-search fs-4 mb-2 d-block"></i>Nhập tên hoặc mã vạch để tìm sản phẩm</div>');
-        $('#px-sp-search').val('');
-        $('#px-sp-danh-muc').val('');
-        $('#form-tao-px')[0].reset();
-        new bootstrap.Modal(document.getElementById('modal-tao-px')).show();
     });
 
     // Tab events
@@ -89,11 +61,10 @@ $(function () {
     // Enter key filters
     $('#lh-filter-ma').on('keypress', e => { if (e.which === 13) loadLoHang(1); });
 
-    $('#px-btn-them-sp').click(() => addPxRow());
-    $('#lo-btn-them-sp').click(() => addLoRow());
-
     // Submit forms
-    $('#form-tao-px').submit(e => { e.preventDefault(); submitPhieuXuat(); });
+    // Lưu ý: #form-tao-px đã được chuyển sang trang riêng (file: phieu-xuat-create.js),
+    // không còn submit qua kho-hang.js nữa.
+    $('#lo-btn-them-sp').click(() => addLoRow());
     $('#form-tao-lo').submit(e => { e.preventDefault(); submitLoHang(); });
 });
 
@@ -284,190 +255,15 @@ function loadNccDropdown() {
     $.get('/admin/api/nha-cung-cap/dropdown', res => {
         if (!res.success) return;
         const opts = res.data.map(n => `<option value="${n.id}">${n.ten_nha_cung_cap}</option>`).join('');
-        $('#px-ncc').html('<option value="">-- Chon NCC --</option>' + opts);
+        // #px-ncc đã chuyển sang trang tạo phiếu xuất riêng (file: phieu-xuat-create.js)
         $('#lo-ncc').html('<option value="">-- Chon NCC --</option>' + opts);
         $('#lh-filter-ncc').html('<option value="">Tất cả NCC</option>' + opts);
     });
 }
 
 // ─── PRODUCT SEARCH (PX Modal) ─────────────────────────────────────
-
-let pxSearchTimer = 0;
-$('#px-sp-search').on('input', function () {
-    clearTimeout(pxSearchTimer);
-    pxSearchTimer = setTimeout(() => {
-        searchProductsXuat($('#px-sp-search').val(), $('#px-sp-danh-muc').val());
-    }, 300);
-});
-
-$('#px-sp-danh-muc').on('change', () => {
-    searchProductsXuat($('#px-sp-search').val(), $('#px-sp-danh-muc').val());
-});
-
-$('#px-sp-clear').click(() => {
-    $('#px-sp-search').val('');
-    $('#px-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-search fs-4 mb-2 d-block"></i>Nhập tên hoặc mã vạch để tìm sản phẩm</div>');
-});
-
-function loadDanhMucXuat() {
-    // Phiếu xuất (PX) cũng tận dụng API /admin/api/san-pham để lấy danh mục.
-    $.get('/admin/api/san-pham', { q: '', danh_muc: '' }, res => {
-        if (!res.danh_muc_list) return;
-        $('#px-sp-danh-muc').html('<option value="">Tất cả danh mục</option>' +
-            res.danh_muc_list.map(dm => `<option value="${dm.id}">${dm.ten_danh_muc}</option>`).join(''));
-    });
-}
-
-function searchProductsXuat(q, danhMuc) {
-    if (!q && !danhMuc) {
-        $('#px-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-search fs-4 mb-2 d-block"></i>Nhập tên hoặc mã vạch để tìm sản phẩm</div>');
-        return;
-    }
-    $('#px-sp-results').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-muted fs-4"></i></div>');
-    $.get('/admin/api/san-pham', { q: q || '', danh_muc: danhMuc || '' }, res => {
-        if (!res.success || !res.data.length) {
-            $('#px-sp-results').html('<div class="text-center text-muted py-4"><i class="fas fa-box-open fs-4 mb-2 d-block text-secondary"></i>Không tìm thấy sản phẩm nào.</div>');
-            return;
-        }
-        const rows = res.data.map(sp => {
-            const variants = sp.bien_the || [];
-            const hasVariants = variants.length > 1;
-            const totalTon = variants.reduce((sum, bt) => sum + (bt.chi_tiet_lo_hang_ton || 0), 0);
-            const tonClass = totalTon === 0 ? 'text-danger' : totalTon < 10 ? 'text-warning' : 'text-success';
-            const img = sp.hinh_anh
-                ? `<img src="/${sp.hinh_anh}" width="38" height="38" class="rounded" style="object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                   <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width:38px;height:38px;display:none"><i class="fas fa-box text-secondary"></i></div>`
-                : `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="width:38px;height:38px"><i class="fas fa-box text-secondary"></i></div>`;
-            const danhMucName = sp.danh_muc?.ten_danh_muc || '';
-            const parentVariantId = variants[0]?.id;
-            const isParentSelected = parentVariantId ? selectedPxProducts.has(parentVariantId) : false;
-            const expandBtn = hasVariants ? `<button class="btn btn-sm btn-light border btn-px-toggle-variants" data-parent="${sp.id}" title="Mở rộng biến thể"><i class="fas fa-chevron-down"></i></button>` : '';
-            const parentBtnClass = isParentSelected ? 'btn-secondary' : 'btn-primary';
-            const parentBtnIcon = isParentSelected ? 'fa-check' : 'fa-plus';
-            const parentBtnText = isParentSelected ? 'Đã chọn' : 'Chọn';
-            const parentDisabled = isParentSelected ? 'disabled' : '';
-            const variantRows = variants.map(bt => {
-                const btTon = bt.chi_tiet_lo_hang_ton || 0;
-                const btTonClass = btTon === 0 ? 'text-danger' : btTon < 10 ? 'text-warning' : 'text-success';
-                const isBtSelected = selectedPxProducts.has(bt.id);
-                const btBtnClass = isBtSelected ? 'btn-secondary' : 'btn-success';
-                const btBtnIcon = isBtSelected ? 'fa-check' : 'fa-plus';
-                const btBtnText = isBtSelected ? 'Đã chọn' : 'Chọn';
-                const btDisabled = isBtSelected ? 'disabled' : '';
-                const attrs = (bt.thuoc_tinh_labels || []).map(tt =>
-                    `<span class="badge variant-chip" style="background:#e9ecef;color:#495057;border:1px solid #dee2e6">${tt}</span>`
-                ).join(' ');
-                return `<tr class="variant-sub-row-px" data-parent="${sp.id}" style="display:none">
-                    <td class="text-center align-middle"><div class="vr" style="width:2px;height:30px;opacity:0.4"></div></td>
-                    <td class="align-middle ps-1">
-                        <div class="small"><span class="text-muted">\\</span> ${attrs || '<span class="text-muted small">Không có thuộc tính</span>'}</div>
-                    </td>
-                    <td class="align-middle"><code class="small">${bt.ma_vach || '--'}</code></td>
-                    <td class="text-end align-middle small">${Number(bt.gia_ban || 0).toLocaleString()} d</td>
-                    <td class="text-center align-middle"><span class="fw-semibold ${btTonClass}">${btTon.toLocaleString()}</span></td>
-                    <td class="text-center align-middle">
-                        <button class="btn btn-sm ${btBtnClass} btn-chon-sp-xuat"
-                            data-id="${bt.id}"
-                            data-ten-sp="${escapeAttr(sp.ten_san_pham)}"
-                            data-ten-bt="${escapeAttr(bt.ten_bien_the || '')}"
-                            data-vach="${escapeAttr(bt.ma_vach || '')}"
-                            data-attrs="${escapeAttr((bt.thuoc_tinh_labels || []).join(', '))}"
-                            data-ton="${bt.chi_tiet_lo_hang_ton || 0}"
-                            data-variant="1"
-                            ${btDisabled}>
-                            <i class="fas ${btBtnIcon}"></i> ${btBtnText}
-                        </button>
-                    </td>
-                </tr>`;
-            });
-            return [
-                `<tr class="parent-row-px" data-id="${sp.id}">
-                    <td class="text-center align-middle">${img}</td>
-                    <td class="align-middle">
-                        <div class="fw-semibold small">${sp.ten_san_pham}</div>
-                        <div class="small text-muted">${danhMucName}</div>
-                        ${hasVariants ? `<div class="mt-1"><span class="badge bg-secondary" style="font-size:0.68rem">${variants.length} bien the</span></div>` : ''}
-                    </td>
-                    <td class="align-middle"><code class="small">${variants[0]?.ma_vach || '--'}</code></td>
-                    <td class="text-end align-middle small">${Number(variants[0]?.gia_ban || 0).toLocaleString()} d</td>
-                    <td class="text-center align-middle"><span class="fw-semibold ${tonClass}">${totalTon.toLocaleString()}</span></td>
-                    <td class="text-center align-middle">
-                        ${expandBtn}
-                        ${!hasVariants ? `
-                        <button class="btn btn-sm ${parentBtnClass} btn-chon-sp-xuat"
-                            data-id="${parentVariantId}"
-                            data-ten-sp="${escapeAttr(sp.ten_san_pham)}"
-                            data-ten-bt="${escapeAttr(variants[0]?.ten_bien_the || '')}"
-                            data-vach="${escapeAttr(variants[0]?.ma_vach || '')}"
-                            data-attrs="${escapeAttr((variants[0]?.thuoc_tinh_labels || []).join(', '))}"
-                            data-ton="${variants[0]?.chi_tiet_lo_hang_ton || 0}"
-                            data-variant="0"
-                            ${parentDisabled}>
-                            <i class="fas ${parentBtnIcon}"></i> ${parentBtnText}
-                        </button>` : ''}
-                    </td>
-                </tr>`,
-                ...variantRows
-            ];
-        });
-        const tableHtml = `<table class="table table-sm table-hover mb-0">
-            <thead class="table-light"><tr>
-                <th style="width:50px"></th>
-                <th>Sản phẩm</th>
-                <th style="width:110px">Mã vạch</th>
-                <th style="width:110px" class="text-end">Giá bán</th>
-                <th style="width:80px" class="text-center">Tồn kho</th>
-                <th style="width:120px" class="text-center">Chon</th>
-            </tr></thead>
-            <tbody>${rows.join('')}</tbody>
-        </table>`;
-        $('#px-sp-results').html(tableHtml);
-    });
-}
-
-$(document).on('click', '.btn-px-toggle-variants', function () {
-    const parentId = $(this).data('parent');
-    const icon = $(this).find('i');
-    const isExpanded = icon.hasClass('fa-chevron-down');
-    if (isExpanded) {
-        $(`.variant-sub-row-px[data-parent="${parentId}"]`).hide();
-        icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
-    } else {
-        $(`.variant-sub-row-px[data-parent="${parentId}"]`).show();
-        icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
-    }
-});
-
-$(document).on('click', '.btn-chon-sp-xuat', function () {
-    const $btn = $(this);
-    // Dùng .attr() thay vì .data() để tránh jQuery tự động parse chuỗi số ("333" -> 333).
-    const id = parseInt($btn.attr('data-id'));
-    const readStr = name => $btn.attr(name) || '';
-    const displayInfo = {
-        tenSp: readStr('data-ten-sp'),
-        tenBt: readStr('data-ten-bt'),
-        attrs: readStr('data-attrs'),
-        vach: readStr('data-vach'),
-        ton: parseInt($btn.attr('data-ton')) || 0,
-    };
-    if (!id) return;
-    if (selectedPxProducts.has(id)) return;
-    selectedPxProducts.add(id);
-    $btn.prop('disabled', true).removeClass('btn-primary btn-success').addClass('btn-secondary').html('<i class="fas fa-check"></i> Đã chọn');
-    addPxRow(id, 1, displayInfo);
-});
-
-$(document).on('click', '.btn-remove-px-row', function () {
-    removePxRow(this);
-});
-
-// Cập nhật tổng SL khi đổi số lượng xuất
-$(document).on('input change', '.px-sl-input', function () {
-    updatePxTongSl();
-});
-
-// Cập nhật tổng SL khi thêm row thủ công (gọi từ addPxRow)
-// (Đã được tích hợp vào addPxRow)
+// Lưu ý: Logic search & chọn sản phẩm cho phiếu xuất đã được chuyển sang
+// file riêng: public/js/admin/phieu-xuat-create.js (trang tạo riêng, không modal).
 
 function loadTonKho(page = 1) {
     tkPage = page;
@@ -1258,88 +1054,6 @@ function spOptions(existingId) {
     ).join('');
 }
 
-function addPxRow(id, sl, displayInfo) {
-    const idx = pxIdx++;
-    let opts;
-    let selectTon = 0;
-    if (displayInfo && id) {
-        // Được gọi từ search: dựng option đúng với sản phẩm user vừa chọn (tránh dùng sanPhamAll có LIMIT 50)
-        const label = buildPxLabel(displayInfo.tenSp, displayInfo.tenBt, displayInfo.attrs, displayInfo.vach);
-        selectTon = displayInfo.ton || 0;
-        opts = `<option value="${id}" data-ton="${selectTon}" selected>${label}</option>`;
-    } else {
-        opts = sanPhamAll.map(sp =>
-            `<option value="${sp.id}" data-ton="${sp.chi_tiet_lo_hang_ton_sum_so_luong_ton || 0}" ${sp.id == id ? 'selected' : ''}>${spDisplayText(sp)}</option>`
-        ).join('');
-    }
-    $('#px-empty-row').remove();
-    $('#px-ds-sp').append(`<tr data-sp-id="${id || ''}">
-        <td><select class="form-select form-select-sm px-sp-select" name="chi_tiet[${idx}][variant_id]">${opts || '<option value="">-- Chon --</option>'}</select></td>
-        <td class="text-center text-muted ton-cell small">${selectTon ? 'Tồn: ' + selectTon.toLocaleString() : '--'}</td>
-        <td>
-            <select class="form-select form-select-sm px-lo-select" name="chi_tiet[${idx}][id_chi_tiet_lo_hang]" disabled>
-                <option value="">-- Chon lo --</option>
-            </select>
-            <small class="text-muted px-lo-info d-block mt-1">--</small>
-        </td>
-        <td><input type="number" class="form-control form-control-sm px-sl-input" name="chi_tiet[${idx}][so_luong]" value="${sl || 1}" min="1"></td>
-        <td><button type="button" class="btn btn-sm btn-outline-danger btn-remove-px-row" data-id="${id || ''}"><i class="fas fa-times"></i></button></td>
-    </tr>`);
-    if (id) {
-        if (!displayInfo) updateTonCell($('#px-ds-sp tr:last .px-sp-select'));
-        loadLoOptions($('#px-ds-sp tr:last'), id);
-    } else {
-        updateTonCell($('#px-ds-sp tr:last .px-sp-select'));
-    }
-    updatePxTongSl();
-}
-
-function buildPxLabel(tenSp, tenBt, attrs, vach) {
-    let label = tenSp || '';
-    const variantPart = (tenBt && tenBt !== tenSp) ? tenBt : '';
-    const attrsPart = attrs ? attrs : '';
-    const tail = [variantPart, attrsPart].filter(Boolean).join(' - ');
-    if (tail) label += ' - ' + tail;
-    const code = vach || '';
-    if (code) label += ` (${code})`;
-    return label;
-}
-
-function removePxRow(btn) {
-    const $tr = $(btn).closest('tr');
-    const spId = parseInt($tr.attr('data-sp-id'));
-    if (spId) selectedPxProducts.delete(spId);
-    $tr.remove();
-    if (!$('#px-ds-sp tr').length || $('#px-ds-sp tr').length === 1 && $('#px-ds-sp tr').attr('id') === 'px-empty-row') {
-        $('#px-ds-sp').html('<tr id="px-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td></tr>');
-    } else {
-        // Nếu không còn row thật nào thì thêm empty
-        const hasReal = $('#px-ds-sp tr').toArray().some(r => r.id !== 'px-empty-row');
-        if (!hasReal) {
-            $('#px-ds-sp').html('<tr id="px-empty-row"><td colspan="5" class="text-center text-muted py-3">Chưa chọn sản phẩm nào.</td></tr>');
-        }
-    }
-    // Bật lại nút "Chọn" trong bảng kết quả search (chỉ nếu nút tồn tại)
-    if (spId) {
-        const $btnSel = $(`.btn-chon-sp-xuat[data-id="${spId}"]`);
-        if ($btnSel.length) {
-            const isVariant = $btnSel.data('variant') == 1;
-            $btnSel.prop('disabled', false).removeClass('btn-secondary').addClass(isVariant ? 'btn-success' : 'btn-primary').html('<i class="fas fa-plus"></i> Chọn');
-        }
-    }
-    updatePxTongSl();
-}
-
-function updatePxTongSl() {
-    let total = 0;
-    $('#px-ds-sp tr').each(function () {
-        if (this.id === 'px-empty-row') return;
-        const v = parseInt($(this).find('.px-sl-input').val());
-        if (!isNaN(v)) total += v;
-    });
-    $('#px-tong-sl').text(total.toLocaleString());
-}
-
 function addLoRow(id, sl, gia, hsd) {
     const idx = loIdx++;
     const opts = spOptions(id);
@@ -1354,56 +1068,10 @@ function addLoRow(id, sl, gia, hsd) {
 
 function removeLoRow(btn) { if ($('#lo-ds-sp tr').length > 1) $(btn).closest('tr').remove(); }
 
-$(document).on('change', '.px-sp-select', function () {
-    updateTonCell(this);
-    loadLoOptions($(this).closest('tr'), $(this).val());
-});
-
-$(document).on('change', '.px-lo-select', function () {
-    const opt = $(this).find('option:selected');
-    const info = $(this).closest('tr').find('.px-lo-info');
-    info.text(opt.val() ? `HSD ${opt.data('hsd') || '--'}, tồn lô ${opt.data('ton') || 0}` : '--');
-});
-
-function loadLoOptions(row, idSp) {
-    const loSelect = row.find('.px-lo-select');
-    const info = row.find('.px-lo-info');
-    if (!idSp) {
-        loSelect.html('<option value="">-- Chon lo --</option>').prop('disabled', true);
-        info.text('--');
-        return;
-    }
-    loSelect.html('<option value="">-- Dang tai --</option>').prop('disabled', true);
-    info.text('Đang tải danh sách lô...');
-    $.get('/admin/api/lo-hang/ton-kho?variant_id=' + idSp, res => {
-        if (!res.success || !res.data.chi_tiet || !res.data.chi_tiet.length) {
-            loSelect.html('<option value="">-- Hết hàng --</option>').prop('disabled', true);
-            info.html('<span class="text-danger">Sản phẩm đã hết tồn kho</span>');
-            return;
-        }
-        const opts = res.data.chi_tiet.map(ct => {
-            const lo = ct.lo_hang || {};
-            const hsd = (ct.han_su_dung || '').split('T')[0];
-            const maLo = lo.ma_lo || ('L-' + lo.id);
-            return `<option value="${ct.id}" data-ton="${ct.so_luong_ton}" data-hsd="${hsd}" data-malo="${maLo}">${maLo} | HSD ${hsd} | tồn ${ct.so_luong_ton}</option>`;
-        }).join('');
-        loSelect.html('<option value="">-- Chon lo --</option>' + opts).prop('disabled', false);
-        info.text('');
-    }).fail(() => {
-        loSelect.html('<option value="">-- Lỗi tải lô --</option>').prop('disabled', true);
-        info.html('<span class="text-danger">Không tải được danh sách lô</span>');
-    });
-}
-
-function updateTonCell(el) {
-    const val = $(el).val();
-    const row = $(el).closest('tr');
-    const cell = row.find('.ton-cell');
-    if (val) {
-        const opt = $(el).find('option:selected');
-        cell.text('Ton: ' + (opt.data('ton') || 0).toLocaleString());
-    } else { cell.text('--'); }
-}
+// Lưu ý: Các hàm addPxRow / buildPxLabel / removePxRow / updatePxTongSl /
+// loadLoOptions / updateTonCell và handler .px-sp-select / .px-lo-select
+// đã được chuyển sang file: public/js/admin/phieu-xuat-create.js
+// (trang tạo phiếu xuất riêng, không dùng modal).
 
 // ─── FORM SUBMITS ────────────────────────────────────────
 $(document).on('submit', '#form-them-ncc', function (e) {
@@ -1494,58 +1162,8 @@ function buildChiTiet(tableId, prefix) {
 // Hàm submitPhieuNhap() đã được chuyển sang file riêng: public/js/admin/phieu-nhap-create.js
 // (tính năng tạo phiếu nhập giờ là trang riêng thay vì modal trong kho-hang).
 
-function submitPhieuXuat() {
-    const chiTiet = [];
-    let hasError = false;
-    $('#px-ds-sp tr').each(function () {
-        const sp = $(this).find('.px-sp-select').val();
-        const loSel = $(this).find('.px-lo-select');
-        const lo = loSel.val();
-        const sl = parseInt($(this).find('.px-sl-input').val());
-        const ton = parseInt(loSel.find('option:selected').data('ton') || 0);
-        if (sp && sl) {
-            if (!lo) {
-                hienBao('warning', 'Vui lòng chọn lô hàng cho từng sản phẩm.');
-                hasError = true;
-                return false;
-            }
-            if (sl > ton) {
-                hienBao('warning', `Lo da chon chi ton ${ton}, khong du de xuat ${sl}.`);
-                hasError = true;
-                return false;
-            }
-            chiTiet.push({ variant_id: sp, id_chi_tiet_lo_hang: lo, so_luong: sl });
-        }
-    });
-    if (hasError || !chiTiet.length) {
-        if (!chiTiet.length && !hasError) hienBao('warning', 'Vui lòng thêm ít nhất một sản phẩm.');
-        return;
-    }
-    const data = {
-        loai_xuat: $('#px-loai').val(),
-        id_nha_cung_cap: $('#px-ncc').val() || null,
-        ly_do: $('#px-ly-do').val(),
-        chi_tiet: chiTiet,
-    };
-    $.ajax({ url: '/admin/api/phieu-xuat', method: 'POST', headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }, contentType: 'application/json', data: JSON.stringify(data),
-        success: res => {
-            bootstrap.Modal.getInstance(document.getElementById('modal-tao-px')).hide();
-            hienBao('success', res.message);
-            loadPhieuXuat(1); loadStats();
-            // Reload trang để cập nhật bảng Tồn kho server-side
-            if ($('#content-ton-kho').hasClass('active')) window.location.reload();
-        },
-        error: x => {
-            console.error('PhieuXuat error:', x);
-            let msg = x.responseJSON?.message;
-            if (!msg && x.responseText) {
-                try { const j = JSON.parse(x.responseText); msg = j.message; } catch(e) { msg = x.responseText.substring(0, 200); }
-            }
-            if (!msg) msg = 'Có lỗi xảy ra. Mở console để xem chi tiết.';
-            hienBao('danger', 'Lỗi ' + x.status + ': ' + msg);
-        }
-    });
-}
+// submitPhieuXuat() đã được chuyển sang file riêng: public/js/admin/phieu-xuat-create.js
+// (tính năng tạo phiếu xuất giờ là trang riêng thay vì modal trong kho-hang).
 
 function submitLoHang() {
     const chiTiet = buildChiTiet('lo-ds-sp', 'lo');
