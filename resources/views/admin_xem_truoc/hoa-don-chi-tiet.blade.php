@@ -110,7 +110,7 @@
                                         #DT{{ str_pad($doiTra->id, 4, '0', STR_PAD_LEFT) }}
                                     </div>
                                     <div class="small text-muted">Ngày thực hiện: {{ optional($doiTra->ngay)->format('d/m/Y H:i') }}</div>
-                                    <div class="small text-muted">Nhân viên: {{ $doiTra->nguoiDung->ho_ten ?? 'N/A' }}</div>
+                                    <div class="small text-muted">Người thực hiện đổi/trả: {{ $doiTra->nguoi_thuc_hien_doi_tra_hien_thi ?? ($doiTra->nguoiDung->ho_ten_kem_vai_tro ?? 'N/A') }}</div>
                                 </div>
                                 <div class="text-end">
                                     <span class="badge {{ $doiTra->Loai === 'tra_hang' ? 'bg-danger' : 'bg-warning text-dark' }}">

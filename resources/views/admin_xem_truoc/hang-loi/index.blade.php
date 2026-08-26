@@ -58,8 +58,8 @@
                                     <div class="small text-muted">Đổi/trả #{{ $hangLoi->doiTra?->id }}</div>
                                 </td>
                                 <td>
-                                    <div class="fw-semibold">{{ $hangLoi->bienTheSanPham?->ten_hien_thi ?? 'Sản phẩm' }}</div>
-                                    <div class="small text-muted">Người bán: {{ $hangLoi->doiTra?->nguoiDung?->ho_ten ?? 'N/A' }}</div>
+                                    <div class="fw-semibold">{{ $hangLoi->ten_san_pham_bien_the_hien_thi }}</div>
+                                    <div class="small text-muted">Người xử lý: {{ $hangLoi->nguoi_xu_ly_doi_tra_hien_thi }}</div>
                                 </td>
                                 <td class="text-center">{{ $hangLoi->so_luong }}</td>
                                 <td>{{ $hangLoi->doiTra?->Loai === 'doi_tra' ? 'Đổi hàng lỗi' : 'Trả hàng lỗi' }}</td>

@@ -37,8 +37,8 @@ class XuLyDoiTraRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'id_nguoi_dung.required' => 'Vui lòng chọn người bán.',
-            'id_nguoi_dung.exists' => 'Người bán được chọn không tồn tại hoặc đã ngừng hoạt động.',
+            'id_nguoi_dung.required' => 'Vui lòng chọn người thực hiện đổi/trả.',
+            'id_nguoi_dung.exists' => 'Người thực hiện đổi/trả được chọn không tồn tại hoặc đã ngừng hoạt động.',
         ];
     }
 }
