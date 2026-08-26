@@ -321,23 +321,49 @@ if ($quickFilter === 'nam') {
             ->limit(10)
             ->get();
 
+        // $staffPerformance = DB::table('hoa_don')
+        //     ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
+        //     ->leftJoinSub($returnedByInvoiceSub, 'doi_tra_tra_hang', function ($join) {
+        //         $join->on('hoa_don.id', '=', 'doi_tra_tra_hang.id_hoa_don');
+        //     })
+        //     ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
+        //     ->whereIn('hoa_don.trang_thai', $revenueStatuses)
+        //     ->groupBy('hoa_don.id_nguoi_dung', 'nguoi_dung.ho_ten')
+        //     ->select(
+        //         'hoa_don.id_nguoi_dung as staff_id',
+        //         DB::raw("COALESCE(nguoi_dung.ho_ten, 'Chưa phân công') as staff_name"),
+        //         DB::raw('SUM(hoa_don.khach_can_tra) as total_revenue'),
+        //         DB::raw('COUNT(*) as order_count')
+        //     )
+        //     ->orderByDesc('total_revenue')
+        //     ->limit(10)
+        //     ->get();
+
+        // tiền trả lại hóa đơn của nhân viên
         $staffPerformance = DB::table('hoa_don')
-            ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
-            ->leftJoinSub($returnedByInvoiceSub, 'doi_tra_tra_hang', function ($join) {
-                $join->on('hoa_don.id', '=', 'doi_tra_tra_hang.id_hoa_don');
-            })
-            ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
-            ->whereIn('hoa_don.trang_thai', $revenueStatuses)
-            ->groupBy('hoa_don.id_nguoi_dung', 'nguoi_dung.ho_ten')
-            ->select(
-                'hoa_don.id_nguoi_dung as staff_id',
-                DB::raw("COALESCE(nguoi_dung.ho_ten, 'Chưa phân công') as staff_name"),
-                DB::raw('SUM(hoa_don.khach_can_tra) as total_revenue'),
-                DB::raw('COUNT(*) as order_count')
-            )
-            ->orderByDesc('total_revenue')
-            ->limit(10)
-            ->get();
+        ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
+        ->leftJoin('doi_tra', 'hoa_don.id', '=', 'doi_tra.id_hoa_don')
+        ->leftJoin('chi_tiet_doi_tra', 'chi_tiet_doi_tra.id_doi_tra', '=', 'doi_tra.id')
+        ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
+        ->whereIn('hoa_don.trang_thai', $revenueStatuses)
+        ->groupBy('hoa_don.id_nguoi_dung', 'nguoi_dung.ho_ten')
+        ->select(
+            'hoa_don.id_nguoi_dung as staff_id',
+            DB::raw("COALESCE(nguoi_dung.ho_ten, 'Chưa phân công') as staff_name"),
+            DB::raw('SUM(hoa_don.khach_can_tra) as total_revenue'),
+            DB::raw('COUNT(*) as order_count'),
+            DB::raw('SUM(chi_tiet_doi_tra.thanh_tien) as tra_lai_khach')
+        )
+        ->orderByDesc('total_revenue')
+        ->limit(10)
+        ->get();
+
+        //tiền mặt trả lại cho khách 
+        $returnCustomerMoney = DB::table('hoa_don')
+        ->leftJoin('doi_tra', 'hoa_don.id', '=', 'doi_tra.id_hoa_don')
+        ->leftJoin('chi_tiet_doi_tra', 'chi_tiet_doi_tra.id_doi_tra', '=', 'doi_tra.id')
+        ->whereBetween('hoa_don.created_at', [$rangeStart, $rangeEnd])
+        ->sum('chi_tiet_doi_tra.thanh_tien');
 
         $dailyOrders = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
@@ -390,6 +416,7 @@ if ($quickFilter === 'nam') {
     'topCustomers',
     'staffPerformance',
     'dailyOrders',
+    'returnCustomerMoney',
 ));
     }
 }

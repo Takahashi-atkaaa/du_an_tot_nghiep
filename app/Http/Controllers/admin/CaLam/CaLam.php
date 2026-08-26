@@ -66,8 +66,8 @@ class CaLam extends Controller
 
         $tong_doanh_thu_chuyen_khoan_cua_ca = HoaDon::where('id_ca_lam_viec', $ca_hien_tai->id)
             ->whereDate('created_at', $ngay_hien_tai)
-            ->where('phuong_thuc_thanh_toan', 'payos')
-            ->where('trang_thai', 'Hoàn thành')
+            ->where('phuong_thuc_thanh_toan', 'PayOS')
+            ->whereIn('trang_thai', ['Hoàn thành', 'Đã đổi/trả hàng', 'Đã trả toàn bộ'])
             ->sum('khach_can_tra');
 
         $tong_doanh_thu_cua_ca = $tong_doanh_thu_tien_mat_cua_ca + $tong_doanh_thu_chuyen_khoan_cua_ca - $tong_tien_tra_lai_khach;
