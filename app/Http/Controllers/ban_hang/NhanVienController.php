@@ -293,12 +293,23 @@ public function hoaDon(Request $request)
             $query->where('hoa_don.trang_thai', $request->trang_thai);
         }
 
+        if ($request->filled('phuong_thuc')) {
+            $query->where('hoa_don.phuong_thuc_thanh_toan', $request->phuong_thuc);
+        }
+
         $hoaDons = $query->paginate(10)->withQueryString();
 
         $caLamViecs = DB::table('ca_lam_viec')
             ->orderBy('gio_bat_dau')
             ->get();
-        return view('ban_hang.hoa-don.index', compact('hoaDons', 'caLamViecs'));
+
+        $phuongThucThanhToans = DB::table('hoa_don')
+            ->whereNotNull('phuong_thuc_thanh_toan')
+            ->distinct()
+            ->orderBy('phuong_thuc_thanh_toan')
+            ->pluck('phuong_thuc_thanh_toan');
+
+        return view('ban_hang.hoa-don.index', compact('hoaDons', 'caLamViecs', 'phuongThucThanhToans'));
     }
 
     public function sanPham(Request $request)

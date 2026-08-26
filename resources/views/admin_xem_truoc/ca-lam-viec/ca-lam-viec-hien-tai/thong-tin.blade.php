@@ -134,28 +134,34 @@
         </div>
 
         @if($ca_hien_tai)
-
         
 
+        
         <div class="col-md-3">
+                
             <div class="card info-card">
-                <div class="card-body d-flex align-items-center">
-                    <div class="icon-box icon-danger me-3">
-                        <i class="bi bi-receipt-cutoff"></i>
-                    </div>
-
-                    <div>
-                        <div class="text-muted">
-                            Số hóa đơn đổi trả trong ca
+                    <a href="{{ route('hoa-don-cua-ca.doi-tra', ['ngay' => $ngay_hien_tai,'id_ca' => $ca_hien_tai->id]) }}"
+                class="the-thong-ke hoa-don" style="text-decoration:none;">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="icon-box icon-danger me-3">
+                            <i class="bi bi-receipt-cutoff"></i>
                         </div>
 
-                        <h5 class="mb-0 text-danger">
-                            {{ number_format($cac_hoa_don_doi_tra_trong_ca) }}
-                        </h5>
+                        <div>
+                            <div class="text-muted">
+                                Số hóa đơn đổi trả trong ca
+                            </div>
+
+                            <h5 class="mb-0 text-danger">
+                                {{ number_format($cac_hoa_don_doi_tra_trong_ca) }}
+                            </h5>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
+                
         </div>
+        
 
 
         @endif

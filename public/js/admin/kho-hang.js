@@ -1346,7 +1346,7 @@ function addLoRow(id, sl, gia, hsd) {
     $('#lo-ds-sp').append(`<tr>
         <td><select class="form-select form-select-sm" name="chi_tiet[${idx}][variant_id]">${opts || '<option value="">-- Chon --</option>'}</select></td>
         <td><input type="number" class="form-control form-control-sm" name="chi_tiet[${idx}][so_luong_nhap]" value="${sl || 1}" min="1"></td>
-        <td><input type="number" class="form-control form-control-sm" name="chi_tiet[${idx}][gia_nhap]" value="${gia || 0}" min="0" step="100"></td>
+        <td><input type="text" class="form-control form-control-sm money-input" name="chi_tiet[${idx}][gia_nhap]" value="${gia ? Number(gia).toLocaleString('vi-VN') : ''}" inputmode="numeric"></td>
         <td><input type="date" class="form-control form-control-sm" name="chi_tiet[${idx}][han_su_dung]" value="${hsd || ''}"></td>
         <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLoRow(this)"><i class="fas fa-times"></i></button></td>
     </tr>`);

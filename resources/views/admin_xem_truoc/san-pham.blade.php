@@ -418,14 +418,14 @@
                                 <div class="col-3">
                                     <label class="form-label">Giá vốn</label>
                                     <div class="input-group">
-                                        <input type="number" name="gia_von" class="form-control" placeholder="0" min="0">
+                                        <input type="text" name="gia_von" class="form-control money-input" placeholder="0" inputmode="numeric">
                                         <span class="input-group-text">đ</span>
                                     </div>
                                 </div>
                                 <div class="col-3">
                                     <label class="form-label">Giá bán <span class="text-danger">*</span></label>
                                     <div class="input-group">
-                                        <input type="number" name="gia_ban" class="form-control" placeholder="0" min="0" required>
+                                        <input type="text" name="gia_ban" class="form-control money-input" placeholder="0" inputmode="numeric" required>
                                         <span class="input-group-text">đ</span>
                                     </div>
                                 </div>
@@ -1352,7 +1352,7 @@
                 </td>
                 <td>
                     <div class="input-group input-group-sm">
-                        <input type="number" class="form-control" name="bien_the[${idx}][gia_ban]" value="${giaBanMacDinh || ''}" placeholder="0" required>
+                        <input type="text" class="form-control money-input" name="bien_the[${idx}][gia_ban]" value="${giaBanMacDinh ? Number(giaBanMacDinh).toLocaleString('vi-VN') : ''}" placeholder="0" inputmode="numeric" required>
                         <span class="input-group-text">đ</span>
                     </div>
                 </td>

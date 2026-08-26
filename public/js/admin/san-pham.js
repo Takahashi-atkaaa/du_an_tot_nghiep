@@ -1052,10 +1052,10 @@ window.deleteVariant = async function(variantId, productId) {
                 '<input type="number" name="bien_the[' + variantIdx + '][units][' + unitIdx + '][so_luong_san_pham_trong_don_vi]" class="form-control form-control-sm" placeholder="VD: 24" min="1" value="1">' +
             '</td>' +
             '<td>' +
-                '<input type="number" name="bien_the[' + variantIdx + '][units][' + unitIdx + '][gia_von_quy_doi]" class="form-control form-control-sm" placeholder="0" min="0" step="0.01" value="">' +
+                '<input type="text" name="bien_the[' + variantIdx + '][units][' + unitIdx + '][gia_von_quy_doi]" class="form-control form-control-sm money-input" placeholder="0" inputmode="numeric" value="">' +
             '</td>' +
             '<td>' +
-                '<input type="number" name="bien_the[' + variantIdx + '][units][' + unitIdx + '][gia_ban_quy_doi]" class="form-control form-control-sm" placeholder="0" min="0" step="0.01" value="">' +
+                '<input type="text" name="bien_the[' + variantIdx + '][units][' + unitIdx + '][gia_ban_quy_doi]" class="form-control form-control-sm money-input" placeholder="0" inputmode="numeric" value="">' +
             '</td>' +
             '<td>' +
                 '<input type="text" name="bien_the[' + variantIdx + '][units][' + unitIdx + '][ma_vach]" class="form-control form-control-sm" placeholder="Mã vạch" value="">' +
@@ -1109,7 +1109,7 @@ window.deleteVariant = async function(variantId, productId) {
                         '</div>' +
                         '<div class="col-2">' +
                             '<label class="form-label small fw-medium">Giá bán</label>' +
-                            '<input type="number" name="bien_the[' + window.variantCounterEdit + '][gia_ban]" class="form-control form-control-sm" placeholder="0" min="0" step="0.01" value="0">' +
+                            '<input type="text" name="bien_the[' + window.variantCounterEdit + '][gia_ban]" class="form-control form-control-sm money-input" placeholder="0" inputmode="numeric" value="0">' +
                         '</div>' +
                         '<div class="col-2">' +
                             '<label class="form-label small fw-medium">Tồn kho</label>' +

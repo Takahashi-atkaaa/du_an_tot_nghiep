@@ -9,6 +9,83 @@
     const DATA = window.__CREATE_PRODUCT_DATA__ || { danhMucs: [], csrfToken: '' };
     const uid = () => 'id_' + Math.random().toString(36).slice(2, 10);
 
+    // ============================================================
+    // DIRECTIVE v-money: format hiển thị tiền tệ VNĐ cho input
+    // - input: chỉ giữ chữ số, format dấu chấm ngàn ngay khi gõ.
+    // - focus: bỏ dấu chấm để dễ sửa.
+    // - blur: format lại, đồng thời đẩy raw number về v-model.
+    // - Tương thích với v-model.number (model vẫn là Number khi submit payload).
+    // ============================================================
+    function vMoneyParse(str) {
+        if (str === null || str === undefined) return 0;
+        var raw = String(str).replace(/\D/g, '');
+        return raw === '' ? 0 : parseInt(raw, 10);
+    }
+    function vMoneyFormat(num, decimals) {
+        var n = Number(num) || 0;
+        if (decimals > 0) {
+            var factor = Math.pow(10, decimals);
+            n = Math.round(n * factor) / factor;
+            return n.toLocaleString('vi-VN', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
+        }
+        return Math.round(n).toLocaleString('vi-VN');
+    }
+    function vMoneyDirective(el, binding) {
+        if (el.__vMoneyBound) return;
+        el.__vMoneyBound = true;
+
+        var decimals = 0;
+        if (binding && binding.value && typeof binding.value === 'object') {
+            decimals = parseInt(binding.value.decimals, 10) || 0;
+        } else if (el.hasAttribute('data-money-decimals')) {
+            decimals = parseInt(el.getAttribute('data-money-decimals'), 10) || 0;
+        }
+
+        // Lưu raw digits vào __moneyRaw để tránh xung đột với v-model.number.
+        // Vue's v-model.number đọc el.value; nếu el.value có dấu chấm -> parseFloat sai.
+        // Vì vậy ta để el.value = raw digits lúc input, format lại display ở nextTick.
+        Object.defineProperty(el, '__moneyRaw', {
+            value: el.value,
+            writable: true,
+            configurable: true
+        });
+
+        // Format giá trị khởi tạo (nếu có sẵn từ v-model)
+        if (el.value !== '' && el.value !== null && el.value !== undefined) {
+            var initNum = vMoneyParse(el.value);
+            el.__moneyRaw = String(initNum);
+            el.value = vMoneyFormat(initNum, decimals);
+        }
+
+        el.addEventListener('input', function () {
+            // Lấy raw digits từ những gì user vừa gõ
+            var rawDigits = vMoneyParse(el.value);
+            el.__moneyRaw = (rawDigits === 0 && el.value.trim() === '') ? '' : String(rawDigits);
+            // Trong cùng tick, Vue v-model.number sẽ đọc el.value để parseFloat.
+            // Để Vue parse đúng, ta để el.value là raw digits (không dấu chấm).
+            el.value = el.__moneyRaw;
+            // Format lại display sau khi Vue đã cập nhật model.
+            Vue.nextTick(function () {
+                if (document.activeElement === el) return; // đang focus -> không format đè
+                var v = parseInt(el.__moneyRaw, 10) || 0;
+                if (v > 0) el.value = vMoneyFormat(v, decimals);
+            });
+        });
+
+        el.addEventListener('focus', function () {
+            var v = parseInt(el.__moneyRaw, 10) || 0;
+            el.value = v === 0 ? '' : String(v);
+        });
+
+        el.addEventListener('blur', function () {
+            var v = parseInt(el.__moneyRaw, 10) || 0;
+            el.value = v === 0 ? '' : vMoneyFormat(v, decimals);
+        });
+    }
+
     // ============ APP ============
     const app = createApp({
         setup() {
@@ -708,7 +785,9 @@
             function onGridInput(row, field, e) {
                 const v = e.target.value;
                 if (field === 'giaVon' || field === 'giaBan' || field === 'soLuong' || field === 'dinhMucToiThieu') {
-                    row[field] = parseFloat(v) || 0;
+                    // Bỏ dấu chấm (do v-money format) rồi parseFloat
+                    const raw = String(v).replace(/\./g, '').replace(/,/g, '.');
+                    row[field] = parseFloat(raw) || 0;
                 } else {
                     row[field] = v;
                 }
@@ -1300,8 +1379,8 @@
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-medium text-slate-600 mb-1">Giá bán <span class="text-slate-400">(đv cơ bản)</span></label>
-                                <input v-model.number="basicInfo.defaultPrice" type="number" min="0" step="any"
-                                    class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                <input v-model.number="basicInfo.defaultPrice" v-money type="number" min="0" step="any"
+                                    class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none money-input">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-slate-600 mb-1">Định mức tối thiểu <span class="text-slate-400">(đv cơ bản)</span></label>
@@ -1355,8 +1434,8 @@
                             </div>
                             <div class="col-span-6">
                                 <label class="block text-xs font-medium text-slate-600 mb-1">Giá bán (đơn vị cơ bản)</label>
-                                <input v-model.number="unitConfig.basePrice" type="number" min="0" step="any"
-                                    class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <input v-model.number="unitConfig.basePrice" v-money type="number" min="0" step="any"
+                                    class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none money-input">
                             </div>
                         </div>
 
@@ -1394,8 +1473,8 @@
                                             </div>
                                         </td>
                                         <td class="p-2">
-                                            <input v-model.number="u.price" type="number" min="0" step="any"
-                                                class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm text-right focus:ring-2 focus:ring-indigo-500 outline-none">
+                                            <input v-model.number="u.price" v-money type="number" min="0" step="any"
+                                                class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm text-right focus:ring-2 focus:ring-indigo-500 outline-none money-input">
                                         </td>
                                         <td class="p-2 text-center">
                                             <button type="button" @click="removeConversion(i)" class="text-slate-400 hover:text-red-500" title="Xóa">
@@ -1618,8 +1697,8 @@
                                         <span v-else class="text-xs text-slate-400">—</span>
                                     </td>
                                     <td class="px-2 py-1.5">
-                                        <input :value="row.giaBan" @input="onGridInput(row, 'giaBan', $event)" type="number" min="0" step="any"
-                                            class="w-full rounded border border-slate-300 px-2 py-1 text-xs text-right focus:ring-2 focus:ring-emerald-500 outline-none">
+                                        <input :value="row.giaBan" @input="onGridInput(row, 'giaBan', $event)" v-money type="number" min="0" step="any"
+                                            class="w-full rounded border border-slate-300 px-2 py-1 text-xs text-right focus:ring-2 focus:ring-emerald-500 outline-none money-input">
                                     </td>
                                 </tr>
                             </tbody>
@@ -1630,6 +1709,7 @@
         </div>
         `
     });
+    app.directive('money', vMoneyDirective);
 
     // Mount & bind submit handler lên form cha
     let vueInstance = null;

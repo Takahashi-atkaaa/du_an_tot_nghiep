@@ -274,9 +274,10 @@
 
                             <input
                                 type="text"
-                                class="form-control money"
+                                class="form-control money-input"
                                 name="tien_mat_dau_ca"
-                                value="{{ old('tien_mat_dau_ca') }}">
+                                value="{{ old('tien_mat_dau_ca') ? number_format((int)old('tien_mat_dau_ca'), 0, ',', '.') : '' }}"
+                                inputmode="numeric">
                         </div>
 
                         <div class="col-md-3">
@@ -286,9 +287,10 @@
 
                             <input
                                 type="text"
-                                class="form-control money"
+                                class="form-control money-input"
                                 name="tien_mat_cuoi_ca"
-                                value="{{ old('tien_mat_cuoi_ca') }}">
+                                value="{{ old('tien_mat_cuoi_ca') ? number_format((int)old('tien_mat_cuoi_ca'), 0, ',', '.') : '' }}"
+                                inputmode="numeric">
                         </div>
 
                         <div class="col-md-3">
@@ -298,9 +300,10 @@
 
                             <input
                                 type="text"
-                                class="form-control money"
+                                class="form-control money-input"
                                 name="chenh_lech"
-                                value="{{ old('chenh_lech') }}">
+                                value="{{ old('chenh_lech') ? number_format((int)old('chenh_lech'), 0, ',', '.') : '' }}"
+                                inputmode="numeric">
                         </div>
 
                         <div class="col-md-3 mt-3">
@@ -348,50 +351,4 @@
     </div>
 
 </div>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-    const moneyInputs = document.querySelectorAll('.money');
-
-    moneyInputs.forEach(function(input) {
-
-        // Khi rời khỏi ô input -> format
-        input.addEventListener('blur', function () {
-
-            let value = this.value.replace(/\D/g, '');
-
-            if (value === '') {
-                this.value = '';
-                return;
-            }
-
-            this.value = Number(value).toLocaleString('vi-VN');
-
-        });
-
-
-        // Khi click vào nhập lại -> bỏ format để nhập dễ hơn
-        input.addEventListener('focus', function () {
-
-            this.value = this.value.replace(/\./g, '');
-
-        });
-
-
-    });
-
-
-    // Submit -> bỏ dấu chấm gửi về Laravel
-    document.querySelector('form').addEventListener('submit', function () {
-
-        moneyInputs.forEach(function(input){
-
-            input.value = input.value.replace(/\./g, '');
-
-        });
-
-    });
-
-});
-</script>
 @endsection

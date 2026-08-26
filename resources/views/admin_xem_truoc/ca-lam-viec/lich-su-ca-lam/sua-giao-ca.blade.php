@@ -201,10 +201,11 @@
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Doanh thu chuyển khoản</label>
 
-                        <input type="number"
-                            class="form-control"
+                        <input type="text"
+                            class="form-control money-input"
                             name="doanh_thu_chuyen_khoan"
-                            value="{{ $giaoCa->doanh_thu_chuyen_khoan }}">
+                            value="{{ $giaoCa->doanh_thu_chuyen_khoan !== null ? number_format((int)$giaoCa->doanh_thu_chuyen_khoan, 0, ',', '.') : '' }}"
+                            inputmode="numeric">
                     </div>
 
                 {{-- Thông tin tiền mặt --}}
@@ -217,31 +218,34 @@
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Tiền đầu ca</label>
 
-                        <input type="number"
-                            class="form-control"
+                        <input type="text"
+                            class="form-control money-input"
                             id="tien_mat_dau_ca"
                             name="tien_mat_dau_ca"
-                            value="{{ $giaoCa->tien_mat_dau_ca }}">
+                            value="{{ $giaoCa->tien_mat_dau_ca !== null ? number_format((int)$giaoCa->tien_mat_dau_ca, 0, ',', '.') : '' }}"
+                            inputmode="numeric">
                     </div>
 
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Tiền cuối ca</label>
 
-                        <input type="number"
-                            class="form-control"
+                        <input type="text"
+                            class="form-control money-input"
                             id="tien_cuoi_ca"
                             name="tien_mat_cuoi_ca"
-                            value="{{ $giaoCa->tien_mat_cuoi_ca }}">
+                            value="{{ $giaoCa->tien_mat_cuoi_ca !== null ? number_format((int)$giaoCa->tien_mat_cuoi_ca, 0, ',', '.') : '' }}"
+                            inputmode="numeric">
                     </div>
 
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Chênh lệch</label>
 
-                        <input type="number"
-                            class="form-control"
+                        <input type="text"
+                            class="form-control money-input"
                             id="chenh_lech"
                             name="chenh_lech"
-                            value="{{ $giaoCa->chenh_lech }}">
+                            value="{{ $giaoCa->chenh_lech !== null ? number_format((int)$giaoCa->chenh_lech, 0, ',', '.') : '' }}"
+                            inputmode="numeric">
                     </div>
 
                 </div>

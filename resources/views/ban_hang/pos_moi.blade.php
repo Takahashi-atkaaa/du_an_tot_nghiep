@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartMart POS — Bán lẻ</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="payos-create-url" content="{{ route('payos.create') }}">
+    <meta name="payos-pending-url" content="{{ route('nhan-vien.ban-hang.don-cho-thanh-toan') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -909,6 +911,12 @@
             </a>
         </div>
         <div class="nav-item">
+            <a href="javascript:void(0)" class="nav-link" onclick="openDonChoPayOS()">
+                <i class="fa-solid fa-qrcode"></i>
+                <span>QR đang chờ</span>
+            </a>
+        </div>
+        <div class="nav-item">
             <a href="{{ url('/hoa-don') }}" class="nav-link">
                 <i class="fa-solid fa-file-invoice"></i>
                 <span>Hóa đơn</span>
@@ -1111,10 +1119,6 @@
                         <i class="fa-solid fa-money-bill-wave"></i>
                         <div>Tiền mặt</div>
                     </div>
-                    <div class="pay-method" data-method="vietqr">
-                        <i class="fa-solid fa-qrcode"></i>
-                        <div>VietQR</div>
-                    </div>
                     <div class="pay-method" data-method="payos">
                         <i class="fa-solid fa-mobile-screen"></i>
                         <div>PayOS</div>
@@ -1124,7 +1128,7 @@
                 <div id="cashBox">
                     <label class="form-label fw-bold">Tiền khách đưa</label>
                     <div class="input-group">
-                        <input id="customerMoney" type="text" class="form-control" placeholder="0">
+                        <input id="customerMoney" type="text" class="form-control money-input" placeholder="0">
                         <span class="input-group-text">đ</span>
                     </div>
                     <div class="d-flex gap-2 mt-2 flex-wrap">
@@ -1145,7 +1149,32 @@
     </div>
 </div>
 
+<!-- MODAL: Đơn chờ thanh toán PayOS -->
+<div class="modal fade" id="donChoPayOSModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: var(--pos-primary); color: #fff;">
+                <h5 class="modal-title">
+                    <i class="fa-solid fa-qrcode me-2"></i>Đơn chờ thanh toán PayOS
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="donChoPayOSList" class="py-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-primary" onclick="loadDonChoPayOS()">
+                    <i class="fa-solid fa-rotate me-1"></i>Làm mới
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ asset('js/admin/money-input.js') }}"></script>
+<script src="{{ asset('js/pos/payos.js') }}"></script>
 <script>
 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 const productListUrl = '{{ route('nhan-vien.ban-hang.san-pham') }}';
@@ -1156,6 +1185,9 @@ const promotionListUrl = '{{ route('nhan-vien.ban-hang.khuyen-mai') }}';
 const sellerListUrl = '{{ route('nhan-vien.ban-hang.nhan-vien') }}';
 const payOSCreateUrl = '{{ route('payos.create') }}';
 const invoicePrintUrl = '{{ url('/hoa-don') }}';
+
+// Stub cho payos.js (sau thanh toán PayOS, tab đã được reset ngay tại handler xác nhận)
+window.closePaidInvoiceTab = function () { /* tab reset tại btnConfirmPay handler */ };
 
 const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Number(n || 0)) + ' đ';
 const parseMoney = (v) => parseInt(String(v || '').replace(/\D/g, ''), 10) || 0;
@@ -2106,12 +2138,16 @@ document.querySelectorAll('.pay-method').forEach(el => {
 document.querySelectorAll('.quick-money').forEach(btn => {
     btn.onclick = () => {
         const amt = btn.dataset.amt;
+        const inputEl = document.getElementById('customerMoney');
         if (amt) {
-            document.getElementById('customerMoney').value = amt;
+            inputEl.value = amt;
         } else {
             const t = calcTotals().total;
-            document.getElementById('customerMoney').value = t;
+            inputEl.value = String(t);
         }
+        // Kích hoạt format tiền tệ: money-input utility lắng nghe event 'input' để format.
+        // Set value thẳng không trigger event -> phải dispatch thủ công.
+        inputEl.dispatchEvent(new Event('input', { bubbles: true }));
         updateChange();
     };
 });

@@ -574,7 +574,7 @@ function addPnRow(id, sl, gia, hsd) {
             <small class="text-muted pn-sl-hint d-block mt-1">SL theo đơn vị đã chọn</small>
         </td>
         <td>
-            <input type="number" class="form-control form-control-sm pn-gia-input" name="chi_tiet[${idx}][gia_nhap]" value="${gia || 0}" min="0" step="100">
+            <input type="text" class="form-control form-control-sm pn-gia-input money-input" name="chi_tiet[${idx}][gia_nhap]" value="${gia ? Number(gia).toLocaleString('vi-VN') : ''}" inputmode="numeric">
             <small class="text-muted pn-gia-hint d-block mt-1">đơn giá / đơn vị đã chọn</small>
         </td>
         <td><input type="date" class="form-control form-control-sm" name="chi_tiet[${idx}][han_su_dung]" value="${hsd || ''}"></td>

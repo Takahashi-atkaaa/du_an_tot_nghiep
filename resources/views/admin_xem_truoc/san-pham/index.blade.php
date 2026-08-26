@@ -151,21 +151,19 @@
                         <div class="col-12 col-md-6 col-lg-3">
                             <label class="form-label filter-label">Khoảng giá bán</label>
                             <div class="d-flex gap-2 align-items-center">
-                                <input type="number"
-                                       class="form-control form-control-sm filter-input"
+                                <input type="text"
+                                       class="form-control form-control-sm filter-input money-input"
                                        name="gia_tu"
-                                       value="{{ $giaTu ?? '' }}"
+                                       value="{{ isset($giaTu) && $giaTu !== '' ? number_format((int)$giaTu, 0, ',', '.') : '' }}"
                                        placeholder="Từ"
-                                       min="0"
-                                       step="1000">
+                                       inputmode="numeric">
                                 <span class="text-muted small">—</span>
-                                <input type="number"
-                                       class="form-control form-control-sm filter-input"
+                                <input type="text"
+                                       class="form-control form-control-sm filter-input money-input"
                                        name="gia_den"
-                                       value="{{ $giaDen ?? '' }}"
+                                       value="{{ isset($giaDen) && $giaDen !== '' ? number_format((int)$giaDen, 0, ',', '.') : '' }}"
                                        placeholder="Đến"
-                                       min="0"
-                                       step="1000">
+                                       inputmode="numeric">
                             </div>
                         </div>
 

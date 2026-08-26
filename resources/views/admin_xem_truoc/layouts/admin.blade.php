@@ -488,6 +488,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js"></script>
     <!-- SweetAlert2 (confirmation dialogs) -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.1/dist/sweetalert2.all.min.js"></script>
+    <!-- Money Input Utility (format tiền tệ VNĐ toàn site) -->
+    <script src="{{ asset('js/admin/money-input.js') }}"></script>
 
     <script>
         // Cấu hình toastr mặc định

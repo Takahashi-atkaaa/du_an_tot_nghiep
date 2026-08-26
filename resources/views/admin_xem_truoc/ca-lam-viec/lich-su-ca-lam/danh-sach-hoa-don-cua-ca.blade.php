@@ -120,7 +120,7 @@
 
                                     <td>
                                         <strong>
-                                            {{ $hoaDon->ma_hoa_don }}
+                                            #HH00{{ $hoaDon->id}}
                                         </strong>
                                     </td>
 
@@ -134,37 +134,42 @@
 
                                     <td class="text-end">
                                         <strong>
-                                            {{ number_format($hoaDon->tong_tien) }} đ
+                                            {{ number_format($hoaDon->khach_can_tra) }} đ
                                         </strong>
                                     </td>
 
                                     <td class="text-center">
-                                        @if($hoaDon->trang_thai == 'Hoàn thành')
-                                            <span class="badge bg-success">
+                                        <td>
+                                            @if($hoaDon->trang_thai == 'Hoàn thành')
+                                                <span class="badge bg-success">
+                                                    {{ $hoaDon->trang_thai }}
+                                                </span>
+                                            @elseif($hoaDon->trang_thai == 'Đã hủy')
+                                                <span class="badge bg-danger">
+                                                    {{ $hoaDon->trang_thai }}
+                                                </span>
+                                            @elseif($hoaDon->trang_thai == 'Đã đổi/trả hàng')
+                                            <span class="badge bg-info text-dark">
                                                 {{ $hoaDon->trang_thai }}
                                             </span>
-                                        @elseif($hoaDon->trang_thai == 'Đã hủy')
+                                            @elseif($hoaDon->trang_thai == 'Đã trả toàn bộ')
                                             <span class="badge bg-danger">
                                                 {{ $hoaDon->trang_thai }}
                                             </span>
-                                        @elseif($hoaDon->trang_thai == 'Đã đổi/trả hàng')
-                                        <span class="badge bg-success">
-                                            {{ $hoaDon->trang_thai }}
-                                        </span>
-                                        @else
-                                            <span class="badge bg-warning">
-                                                Đang xử lý
-                                            </span>
-                                        @endif
+                                            @else
+                                                <span class="badge bg-warning">
+                                                    Đang xử lý
+                                                </span>
+                                            @endif
                                     </td>
 
                                     <td class="text-center">
 
                                         {{-- Thay route này bằng route xem chi tiết hóa đơn của bạn --}}
-                                        <a href="#"
-                                           class="btn btn-sm btn-outline-primary">
-                                            Xem
-                                        </a>
+                                        <a href="{{ route('admin.hoa-don.show', $hoaDon->id) }}"
+                                            class="btn btn-sm btn-outline-primary">
+                                                Xem
+                                            </a>
 
                                     </td>
 

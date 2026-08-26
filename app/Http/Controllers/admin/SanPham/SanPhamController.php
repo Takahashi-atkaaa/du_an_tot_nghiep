@@ -899,20 +899,28 @@ class SanPhamController extends Controller
 
         switch ($action) {
             case 'delete':
-                $variants = BienTheSanPham::with('units')->whereIn('id', $ids)->get();
-                foreach ($variants as $variant) {
-                    foreach ($variant->units as $unit) {
-                        if ($unit->hinh_anh && !str_starts_with($unit->hinh_anh, 'http')) {
-                            $this->deleteImageIfUnused($unit->hinh_anh);
+                // Lấy Products theo IDs (checkbox gửi Product IDs, không phải Variant IDs)
+                // Sau đó cascade xoá variants và xoá mềm Products
+                $products = Product::with('variants.units')->whereIn('id', $ids)->get();
+
+                foreach ($products as $product) {
+                    // Xoá cascade variants và units (giống destroy())
+                    foreach ($product->variants as $variant) {
+                        foreach ($variant->units as $unit) {
+                            if ($unit->hinh_anh && !str_starts_with($unit->hinh_anh, 'http')) {
+                                $this->deleteImageIfUnused($unit->hinh_anh);
+                            }
+                            $unit->delete();
                         }
-                        $unit->delete();
+                        if ($variant->hinh_anh && !str_starts_with($variant->hinh_anh, 'http')) {
+                            $this->deleteImageIfUnused($variant->hinh_anh);
+                        }
+                        $variant->delete();
                     }
-                    if ($variant->hinh_anh && !str_starts_with($variant->hinh_anh, 'http')) {
-                        $this->deleteImageIfUnused($variant->hinh_anh);
-                    }
-                    $variant->delete();
+                    // Xoá mềm Product
+                    $product->delete();
                 }
-                $message = 'Đã xóa ' . count($ids) . ' biến thể.';
+                $message = 'Đã xóa ' . count($ids) . ' sản phẩm.';
                 break;
 
             case 'activate':

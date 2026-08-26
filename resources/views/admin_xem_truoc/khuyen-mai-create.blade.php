@@ -92,11 +92,12 @@
 
                         <div class="input-group">
 
-                            <input type="number"
+                            <input type="text"
                                    name="gia_tri_giam"
-                                   class="form-control"
-                                   value="0"
-                                   min="0">
+                                   class="form-control money-input"
+                                   data-money-decimals="2"
+                                   value="{{ old('gia_tri_giam', isset($khuyenMai) ? number_format((float)$khuyenMai->gia_tri_giam, 2, ',', '.') : '0') }}"
+                                   inputmode="decimal">
 
                             <span class="input-group-text">
                                 % / đ
@@ -169,11 +170,11 @@
 
                         <div class="input-group">
 
-                            <input type="number"
+                            <input type="text"
                                    name="don_hang_toi_thieu"
-                                   class="form-control"
-                                   value="0"
-                                   min="0">
+                                   class="form-control money-input"
+                                   value="{{ old('don_hang_toi_thieu', isset($khuyenMai) ? number_format((float)$khuyenMai->don_hang_toi_thieu, 0, ',', '.') : '') }}"
+                                   inputmode="numeric">
 
                             <span class="input-group-text">đ</span>
 
@@ -193,11 +194,11 @@
 
                     <div class="input-group">
 
-                        <input type="number"
+                        <input type="text"
                                name="giam_toi_da"
-                               class="form-control"
-                               value="0"
-                               min="0">
+                               class="form-control money-input"
+                               value="{{ old('giam_toi_da', isset($khuyenMai) ? number_format((float)$khuyenMai->giam_toi_da, 0, ',', '.') : '') }}"
+                               inputmode="numeric">
 
                         <span class="input-group-text">đ</span>
 

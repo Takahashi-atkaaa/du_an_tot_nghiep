@@ -130,12 +130,12 @@
 
                     <div class="input-group">
                         <input
-                            type="number"
-                            step="0.01"
-                            min="0"
+                            type="text"
                             name="gia_tri_giam"
-                            value="{{ old('gia_tri_giam', $promo->gia_tri_giam) }}"
-                            class="form-control @error('gia_tri_giam') is-invalid @enderror"
+                            class="form-control money-input @error('gia_tri_giam') is-invalid @enderror"
+                            data-money-decimals="2"
+                            value="{{ old('gia_tri_giam', $promo->gia_tri_giam ? number_format((float)$promo->gia_tri_giam, 2, ',', '.') : '') }}"
+                            inputmode="decimal"
                             required
                         >
 
@@ -159,13 +159,12 @@
 
                     <div class="input-group">
                         <input
-                            type="number"
-                            step="0.01"
-                            min="0"
+                            type="text"
                             name="giam_toi_da"
-                            value="{{ old('giam_toi_da', $promo->giam_toi_da) }}"
-                            class="form-control @error('giam_toi_da') is-invalid @enderror"
+                            class="form-control money-input @error('giam_toi_da') is-invalid @enderror"
+                            value="{{ old('giam_toi_da', $promo->giam_toi_da ? number_format((float)$promo->giam_toi_da, 0, ',', '.') : '') }}"
                             placeholder="0"
+                            inputmode="numeric"
                         >
 
                         <span class="input-group-text">đ</span>
