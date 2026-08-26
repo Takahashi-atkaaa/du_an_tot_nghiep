@@ -31,9 +31,9 @@ $nguoiBanMacDinh = old(
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label for="id_nguoi_dung" class="form-label fw-bold">Người bán</label>
+                    <label for="id_nguoi_dung" class="form-label fw-bold">Người thực hiện đổi/trả</label>
                     <select name="id_nguoi_dung" id="id_nguoi_dung" class="form-select @error('id_nguoi_dung') is-invalid @enderror" required>
-                        <option value="">Chọn người bán phụ trách</option>
+                        <option value="">Chọn người thực hiện đổi/trả</option>
                         @foreach($danhSachNguoiBan as $nguoiBan)
                             <option value="{{ $nguoiBan->id }}" @selected((string) $nguoiBanMacDinh === (string) $nguoiBan->id)>
                                 {{ $nguoiBan->ho_ten_kem_vai_tro }}

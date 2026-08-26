@@ -309,7 +309,7 @@
                                         Ngày thực hiện: {{ optional($doiTra->ngay)->format('d/m/Y H:i') }}
                                     </div>
                                     <div class="small text-muted">
-                                        Nhân viên: {{ $doiTra->nguoiDung->ho_ten ?? 'N/A' }}
+                                        Người thực hiện đổi/trả: {{ $doiTra->nguoi_thuc_hien_doi_tra_hien_thi ?? ($doiTra->nguoiDung->ho_ten_kem_vai_tro ?? 'N/A') }}
                                     </div>
                                 </div>
                                 <div class="text-end">

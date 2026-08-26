@@ -42,13 +42,6 @@ class HangLoiController extends Controller
         }
 
         $hangLois = $query->paginate(15)->withQueryString();
-        $hangLois->getCollection()->transform(function (HangLoi $hangLoi) {
-            if ($hangLoi->doiTra?->nguoiDung) {
-                $hangLoi->doiTra->nguoiDung->setAttribute('ho_ten', $hangLoi->doiTra->nguoiDung->ho_ten_kem_vai_tro);
-            }
-
-            return $hangLoi;
-        });
 
         return view('admin_xem_truoc.hang-loi.index', compact('hangLois', 'schemaReady', 'migrationMessage'));
     }

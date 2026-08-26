@@ -393,7 +393,7 @@ class DoiTraService
 
         if (!$nguoiBan || !$this->isEligibleSellerRole(optional($nguoiBan->vaiTro)->ten_vai_tro)) {
             throw ValidationException::withMessages([
-                'id_nguoi_dung' => 'Người bán phải là người dùng đang hoạt động với vai trò Admin, Nhân viên hoặc Trưởng ca.',
+                'id_nguoi_dung' => 'Người thực hiện đổi/trả phải là người dùng đang hoạt động với vai trò Admin, Nhân viên hoặc Trưởng ca.',
             ]);
         }
 
@@ -403,7 +403,7 @@ class DoiTraService
     private function hydrateSellerDisplayName(DoiTra $doiTra): void
     {
         if ($doiTra->relationLoaded('nguoiDung') && $doiTra->nguoiDung) {
-            $doiTra->nguoiDung->setAttribute('ho_ten', $doiTra->nguoiDung->ho_ten_kem_vai_tro);
+            $doiTra->setAttribute('nguoi_thuc_hien_doi_tra_hien_thi', $doiTra->nguoiDung->ho_ten_kem_vai_tro);
         }
     }
 
