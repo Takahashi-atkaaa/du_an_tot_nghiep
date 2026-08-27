@@ -5,82 +5,73 @@
 @section('content')
 
 <style>
-    /* ================================
-       CUSTOMER DETAIL
-    ================================= */
-
     .customer-detail-page {
-        --customer-primary: #0d6efd;
-        --customer-primary-light: #eef5ff;
-        --customer-success: #198754;
-        --customer-success-light: #edf9f3;
-        --customer-warning: #f59f00;
-        --customer-danger: #dc3545;
-        --customer-text: #1e293b;
-        --customer-muted: #64748b;
-        --customer-border: #e9eef5;
-        --customer-bg: #f8fafc;
+        --primary: #0d6efd;
+        --primary-light: #eef5ff;
+        --success: #198754;
+        --success-light: #e7f7ee;
+        --warning: #f59f00;
+        --warning-light: #fff4d6;
+        --danger: #dc3545;
+        --danger-light: #fdebec;
+        --text: #1e293b;
+        --muted: #64748b;
+        --border: #e9eef5;
+        --bg: #f8fafc;
     }
 
-    /* Header */
     .customer-page-header {
         margin-bottom: 1.5rem;
     }
 
     .customer-page-header h4 {
-        color: var(--customer-text);
+        color: var(--text);
         font-size: 1.35rem;
         letter-spacing: -0.02em;
     }
 
     .customer-page-header .breadcrumb {
-        font-size: 0.875rem;
+        font-size: .875rem;
     }
 
     .customer-page-header .breadcrumb-item a {
-        color: var(--customer-muted);
+        color: var(--muted);
         text-decoration: none;
     }
 
     .customer-page-header .breadcrumb-item a:hover {
-        color: var(--customer-primary);
+        color: var(--primary);
     }
 
-    /* Button */
     .customer-action-btn {
-        border-radius: 0.65rem;
-        padding: 0.6rem 1rem;
+        border-radius: .65rem;
+        padding: .6rem 1rem;
         font-weight: 600;
-        font-size: 0.875rem;
+        font-size: .875rem;
     }
 
-    /* Common card */
     .customer-card {
-        border: 1px solid var(--customer-border);
+        border: 1px solid var(--border);
         border-radius: 1rem;
         background: #fff;
-        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+        box-shadow: 0 4px 18px rgba(15,23,42,.05);
         overflow: hidden;
     }
 
     .customer-card-header {
         padding: 1rem 1.25rem;
         background: #fff;
-        border-bottom: 1px solid var(--customer-border);
+        border-bottom: 1px solid var(--border);
     }
 
     .customer-card-header h5 {
         margin: 0;
         font-size: 1rem;
         font-weight: 700;
-        color: var(--customer-text);
+        color: var(--text);
     }
 
-    /* Customer profile */
-    .customer-profile {
-        position: relative;
-        height: 100%;
-    }
+    /* PROFILE */
 
     .customer-profile-body {
         padding: 2rem 1.5rem;
@@ -97,30 +88,30 @@
         color: #fff;
         font-size: 1.75rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #0d6efd, #20c997);
-        box-shadow: 0 10px 25px rgba(13, 110, 253, 0.2);
+        background: linear-gradient(135deg,#0d6efd,#20c997);
+        box-shadow: 0 10px 25px rgba(13,110,253,.2);
     }
 
     .customer-name {
         font-size: 1.2rem;
         font-weight: 700;
-        color: var(--customer-text);
-        margin-bottom: 0.25rem;
+        color: var(--text);
+        margin-bottom: .25rem;
     }
 
     .customer-code {
-        color: var(--customer-muted);
-        font-size: 0.85rem;
+        color: var(--muted);
+        font-size: .85rem;
         margin-bottom: 1rem;
     }
 
     .customer-status {
         display: inline-flex;
         align-items: center;
-        gap: 0.4rem;
-        padding: 0.4rem 0.8rem;
+        gap: .4rem;
+        padding: .4rem .8rem;
         border-radius: 999px;
-        font-size: 0.78rem;
+        font-size: .78rem;
         font-weight: 600;
     }
 
@@ -135,7 +126,7 @@
     }
 
     .customer-info {
-        border-top: 1px solid var(--customer-border);
+        border-top: 1px solid var(--border);
         margin-top: 1.5rem;
         padding-top: 1.25rem;
     }
@@ -143,10 +134,10 @@
     .customer-info-item {
         display: flex;
         align-items: flex-start;
-        gap: 0.75rem;
-        padding: 0.7rem 0;
-        color: var(--customer-text);
-        font-size: 0.9rem;
+        gap: .75rem;
+        padding: .7rem 0;
+        font-size: .9rem;
+        color: var(--text);
     }
 
     .customer-info-icon {
@@ -156,10 +147,10 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 0.55rem;
-        background: var(--customer-primary-light);
-        color: var(--customer-primary);
-        font-size: 0.8rem;
+        border-radius: .55rem;
+        background: var(--primary-light);
+        color: var(--primary);
+        font-size: .8rem;
     }
 
     .customer-info-content {
@@ -170,25 +161,26 @@
 
     .customer-info-label {
         display: block;
-        color: var(--customer-muted);
-        font-size: 0.72rem;
-        margin-bottom: 0.15rem;
+        color: var(--muted);
+        font-size: .72rem;
+        margin-bottom: .15rem;
     }
 
     .customer-info-value {
-        color: var(--customer-text);
+        color: var(--text);
         font-weight: 500;
     }
 
-    /* Statistics */
+    /* STAT */
+
     .customer-stat-card {
         position: relative;
         height: 100%;
         padding: 1.25rem;
-        border: 1px solid var(--customer-border);
+        border: 1px solid var(--border);
         border-radius: 1rem;
         background: #fff;
-        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+        box-shadow: 0 4px 18px rgba(15,23,42,.05);
         overflow: hidden;
     }
 
@@ -200,7 +192,7 @@
         right: -35px;
         top: -35px;
         border-radius: 50%;
-        opacity: 0.35;
+        opacity: .35;
     }
 
     .customer-stat-card.blue::after {
@@ -230,71 +222,46 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 0.8rem;
+        border-radius: .8rem;
         font-size: 1.15rem;
     }
 
-    .customer-stat-card.blue .customer-stat-icon {
+    .blue .customer-stat-icon {
         background: #eaf2ff;
         color: #0d6efd;
     }
 
-    .customer-stat-card.green .customer-stat-icon {
+    .green .customer-stat-icon {
         background: #eaf8f0;
         color: #198754;
     }
 
-    .customer-stat-card.purple .customer-stat-icon {
+    .purple .customer-stat-icon {
         background: #f2ebff;
         color: #6f42c1;
     }
 
     .customer-stat-label {
-        margin-bottom: 0.25rem;
-        color: var(--customer-muted);
-        font-size: 0.78rem;
+        margin-bottom: .25rem;
+        color: var(--muted);
+        font-size: .78rem;
         font-weight: 500;
     }
 
     .customer-stat-value {
         margin: 0;
-        color: var(--customer-text);
-        font-size: 1.55rem;
+        color: var(--text);
+        font-size: 1.5rem;
         font-weight: 750;
         line-height: 1.2;
     }
 
-    /* Section */
+    /* TABLE */
+
     .customer-section {
         margin-top: 1.25rem;
     }
 
-    /* Transaction summary */
-    .transaction-summary {
-        padding: 1.25rem;
-    }
-
-    .transaction-box {
-        height: 100%;
-        padding: 1rem 1.1rem;
-        border: 1px solid var(--customer-border);
-        border-radius: 0.8rem;
-        background: var(--customer-bg);
-    }
-
-    .transaction-label {
-        color: var(--customer-muted);
-        font-size: 0.78rem;
-        margin-bottom: 0.3rem;
-    }
-
-    .transaction-value {
-        color: var(--customer-text);
-        font-size: 1.45rem;
-        font-weight: 750;
-    }
-
-    /* Points history */
     .points-history-card {
         margin-top: 1.25rem;
     }
@@ -308,11 +275,11 @@
     }
 
     .points-count {
-        padding: 0.4rem 0.75rem;
+        padding: .4rem .75rem;
         border-radius: 999px;
         background: #f1f5f9;
         color: #475569;
-        font-size: 0.75rem;
+        font-size: .75rem;
         font-weight: 600;
     }
 
@@ -321,35 +288,37 @@
     }
 
     .points-table thead th {
-        padding: 0.85rem 1rem;
+        padding: .85rem 1rem;
         background: #f8fafc;
-        border-bottom: 1px solid var(--customer-border);
+        border-bottom: 1px solid var(--border);
         color: #64748b;
-        font-size: 0.75rem;
+        font-size: .75rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.025em;
+        letter-spacing: .025em;
         white-space: nowrap;
     }
 
     .points-table tbody td {
-        padding: 0.9rem 1rem;
+        padding: .9rem 1rem;
         border-color: #f0f3f7;
-        color: var(--customer-text);
-        font-size: 0.86rem;
+        color: var(--text);
+        font-size: .86rem;
         vertical-align: middle;
-    }
-
-    .points-table tbody tr {
-        transition: background 0.15s ease;
     }
 
     .points-table tbody tr:hover {
         background: #f8fbff;
     }
 
+    .points-table-wrapper {
+        overflow-x: auto;
+    }
+
+    /* INVOICE */
+
     .invoice-link {
-        color: var(--customer-primary);
+        color: var(--primary);
         text-decoration: none;
         font-weight: 700;
     }
@@ -358,13 +327,60 @@
         text-decoration: underline;
     }
 
+    .payment-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        padding: .35rem .65rem;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #475569;
+        font-size: .74rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .invoice-status {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        padding: .35rem .7rem;
+        border-radius: 999px;
+        font-size: .74rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .invoice-status.success {
+        color: #157347;
+        background: var(--success-light);
+    }
+
+    .invoice-status.warning {
+        color: #9a6700;
+        background: var(--warning-light);
+    }
+
+    .invoice-status.danger {
+        color: #b02a37;
+        background: var(--danger-light);
+    }
+
+    .invoice-status.secondary {
+        color: #475569;
+        background: #f1f5f9;
+    }
+
+    /* POINT */
+
     .point-badge {
         display: inline-flex;
         align-items: center;
-        padding: 0.35rem 0.7rem;
+        padding: .35rem .7rem;
         border-radius: 999px;
-        font-size: 0.74rem;
+        font-size: .74rem;
         font-weight: 700;
+        white-space: nowrap;
     }
 
     .point-badge.up {
@@ -387,6 +403,8 @@
         font-weight: 750;
     }
 
+    /* EMPTY */
+
     .empty-history {
         padding: 3rem 1rem;
         text-align: center;
@@ -406,21 +424,20 @@
     }
 
     .empty-history h6 {
-        color: var(--customer-text);
+        color: var(--text);
         font-weight: 700;
-        margin-bottom: 0.35rem;
+        margin-bottom: .35rem;
     }
 
     .empty-history p {
-        color: var(--customer-muted);
+        color: var(--muted);
         margin: 0;
-        font-size: 0.85rem;
+        font-size: .85rem;
     }
 
-    /* Pagination */
     .points-pagination {
         padding: 1rem 1.25rem;
-        border-top: 1px solid var(--customer-border);
+        border-top: 1px solid var(--border);
         background: #fff;
     }
 
@@ -429,135 +446,110 @@
         justify-content: flex-end;
     }
 
-    /* Modal */
+    /* MODAL */
+
+    #hoaDonModal .modal-dialog {
+        max-width: 1100px;
+    }
+
     #hoaDonModal .modal-content {
         border: 0;
         border-radius: 1rem;
         overflow: hidden;
-        box-shadow: 0 1rem 3rem rgba(15, 23, 42, 0.2);
+        box-shadow: 0 1rem 3rem rgba(15,23,42,.2);
     }
 
-    /* Responsive */
-    @media (max-width: 991.98px) {
-        .customer-profile-body {
-            padding: 1.5rem;
-        }
-
-        .customer-stat-value {
-            font-size: 1.35rem;
-        }
+    #hoaDonModal .modal-body {
+        background: #fff;
     }
 
-    @media (max-width: 767.98px) {
-        .customer-page-header {
-            align-items: flex-start !important;
-        }
+    .modal-loading {
+        padding: 4rem 1rem;
+        text-align: center;
+    }
 
-        .customer-page-header .d-flex {
-            width: 100%;
-        }
-
+    @media(max-width:767.98px) {
         .customer-action-btn {
             flex: 1;
         }
 
         .points-table {
-            min-width: 700px;
-        }
-
-        .points-table-wrapper {
-            overflow-x: auto;
-        }
-    }
-
-    @media (max-width: 575.98px) {
-        .customer-profile-body {
-            padding: 1.25rem;
-        }
-
-        .customer-stat-card {
-            padding: 1rem;
-        }
-
-        .customer-stat-icon {
-            width: 44px;
-            height: 44px;
-            flex-basis: 44px;
-        }
-
-        .customer-stat-value {
-            font-size: 1.2rem;
-        }
-
-        .transaction-summary {
-            padding: 1rem;
+            min-width: 900px;
         }
     }
 </style>
 
 @php
-    $initials = collect(explode(' ', trim($khachHang->ten_khach_hang)))
-        ->filter()
-        ->map(fn ($part) => mb_substr($part, 0, 1))
-        ->take(2)
-        ->implode('');
+    $initials = collect(
+        preg_split('/\s+/', trim($khachHang->ten_khach_hang))
+    )
+    ->filter()
+    ->map(fn($part) => mb_substr($part, 0, 1))
+    ->take(2)
+    ->implode('');
 @endphp
 
 <div class="customer-detail-page">
 
-    {{-- =========================
-         HEADER
-    ========================== --}}
+    {{-- HEADER --}}
     <div class="customer-page-header d-flex justify-content-between align-items-start flex-wrap gap-3">
 
         <div>
-            <h4 class="fw-bold mb-1">Chi tiết khách hàng</h4>
+            <h4 class="fw-bold mb-1">
+                Chi tiết khách hàng
+            </h4>
 
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
+
                     <li class="breadcrumb-item">
-                        <a href="{{ url('admin/dashboard') }}">Dashboard</a>
+                        <a href="{{ url('admin/dashboard') }}">
+                            Dashboard
+                        </a>
                     </li>
 
                     <li class="breadcrumb-item">
-                        <a href="{{ route('khach-hang.index') }}">Khách hàng</a>
+                        <a href="{{ route('khach-hang.index') }}">
+                            Khách hàng
+                        </a>
                     </li>
 
                     <li class="breadcrumb-item active">
                         Chi tiết
                     </li>
+
                 </ol>
             </nav>
         </div>
 
         <div class="d-flex gap-2">
-            <a href="{{ route('khach-hang.edit', $khachHang) }}"
-               class="btn btn-primary customer-action-btn">
+
+            <a
+                href="{{ route('khach-hang.edit', $khachHang) }}"
+                class="btn btn-primary customer-action-btn"
+            >
                 <i class="fas fa-pen me-2"></i>
                 Chỉnh sửa
             </a>
 
-            <a href="{{ route('khach-hang.index') }}"
-               class="btn btn-outline-secondary customer-action-btn">
+            <a
+                href="{{ route('khach-hang.index') }}"
+                class="btn btn-outline-secondary customer-action-btn"
+            >
                 <i class="fas fa-arrow-left me-2"></i>
                 Quay lại
             </a>
-        </div>
 
+        </div>
     </div>
 
 
-    {{-- =========================
-         MAIN CONTENT
-    ========================== --}}
     <div class="row g-4">
 
-        {{-- =========================
-             CUSTOMER INFORMATION
-        ========================== --}}
+        {{-- ================= CUSTOMER ================= --}}
         <div class="col-lg-4">
 
-            <div class="customer-card customer-profile">
+            <div class="customer-card h-100">
 
                 <div class="customer-profile-body">
 
@@ -572,7 +564,12 @@
                         </div>
 
                         <div class="customer-code">
-                            Mã KH{{ str_pad((string) $khachHang->id, 4, '0', STR_PAD_LEFT) }}
+                            Mã KH{{ str_pad(
+                                $khachHang->id,
+                                4,
+                                '0',
+                                STR_PAD_LEFT
+                            ) }}
                         </div>
 
                         @if($khachHang->trang_thai)
@@ -594,10 +591,9 @@
                     </div>
 
 
-                    {{-- Customer information --}}
                     <div class="customer-info">
 
-                        {{-- Phone --}}
+                        {{-- PHONE --}}
                         <div class="customer-info-item">
 
                             <div class="customer-info-icon">
@@ -615,11 +611,10 @@
                                 </span>
 
                             </div>
-
                         </div>
 
 
-                        {{-- Email --}}
+                        {{-- EMAIL --}}
                         <div class="customer-info-item">
 
                             <div class="customer-info-icon">
@@ -637,11 +632,10 @@
                                 </span>
 
                             </div>
-
                         </div>
 
 
-                        {{-- Address --}}
+                        {{-- ADDRESS --}}
                         <div class="customer-info-item">
 
                             <div class="customer-info-icon">
@@ -659,11 +653,10 @@
                                 </span>
 
                             </div>
-
                         </div>
 
 
-                        {{-- Note --}}
+                        {{-- NOTE --}}
                         <div class="customer-info-item">
 
                             <div class="customer-info-icon">
@@ -681,7 +674,6 @@
                                 </span>
 
                             </div>
-
                         </div>
 
                     </div>
@@ -693,17 +685,13 @@
         </div>
 
 
-        {{-- =========================
-             RIGHT CONTENT
-        ========================== --}}
+        {{-- ================= RIGHT ================= --}}
         <div class="col-lg-8">
 
-            {{-- =========================
-                 STATISTICS
-            ========================== --}}
+            {{-- STATISTICS --}}
             <div class="row g-3">
 
-                {{-- Points --}}
+                {{-- POINT --}}
                 <div class="col-md-4">
 
                     <div class="customer-stat-card blue">
@@ -721,7 +709,9 @@
                                 </div>
 
                                 <h3 class="customer-stat-value">
-                                    {{ number_format($khachHang->diem_tich_luy ?? 0) }}
+                                    {{ number_format(
+                                        $khachHang->diem_tich_luy ?? 0
+                                    ) }}
                                 </h3>
 
                             </div>
@@ -733,7 +723,7 @@
                 </div>
 
 
-                {{-- Spending --}}
+                {{-- SPENDING --}}
                 <div class="col-md-4">
 
                     <div class="customer-stat-card green">
@@ -751,8 +741,18 @@
                                 </div>
 
                                 <h3 class="customer-stat-value">
-                                    {{ number_format($khachHang->tong_chi_tieu ?? 0, 0, ',', '.') }}
-                                    <small class="fs-6">đ</small>
+
+                                    {{ number_format(
+                                        $tongTienDaMua ?? 0,
+                                        0,
+                                        ',',
+                                        '.'
+                                    ) }}
+
+                                    <small class="fs-6">
+                                        đ
+                                    </small>
+
                                 </h3>
 
                             </div>
@@ -764,7 +764,7 @@
                 </div>
 
 
-                {{-- Invoices --}}
+                {{-- INVOICE --}}
                 <div class="col-md-4">
 
                     <div class="customer-stat-card purple">
@@ -782,7 +782,9 @@
                                 </div>
 
                                 <h3 class="customer-stat-value">
-                                    {{ number_format($tongSoHoaDon) }}
+                                    {{ number_format(
+                                        $tongSoHoaDon ?? 0
+                                    ) }}
                                 </h3>
 
                             </div>
@@ -796,11 +798,269 @@
             </div>
 
 
-            {{-- =========================
-                 POINT HISTORY
-            ========================== --}}
-            <div class="customer-card points-history-card"
-                 id="lich-su-tich-diem">
+            {{-- ================= INVOICE HISTORY ================= --}}
+            <div class="customer-card points-history-card">
+
+                <div class="customer-card-header">
+
+                    <div class="points-history-header">
+
+                        <h5>
+                            <i class="fas fa-file-invoice text-primary me-2"></i>
+                            Lịch sử mua hàng
+                        </h5>
+
+                        <span class="points-count">
+                            {{ $tongSoHoaDon }} hóa đơn
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <div class="points-table-wrapper">
+
+                    <table class="table points-table align-middle">
+
+                        <thead>
+                            <tr>
+                                <th>Ngày</th>
+                                <th>Hóa đơn</th>
+                                <th>Tổng tiền</th>
+                                <th>Thanh toán</th>
+                                <th>Trạng thái</th>
+                                <th class="text-center">Xem</th>
+                            </tr>
+                        </thead>
+
+
+                        <tbody>
+
+                        @forelse($hoaDons as $hoaDon)
+
+                            <tr>
+
+                                {{-- DATE --}}
+                                <td>
+                                    <span class="text-nowrap">
+                                        {{ optional($hoaDon->created_at)
+                                            ->format('d/m/Y H:i') }}
+                                    </span>
+                                </td>
+
+
+                                {{-- INVOICE --}}
+                                <td>
+
+                                    <button
+                                        type="button"
+                                        class="btn btn-link p-0 invoice-link hoa-don-modal-button"
+                                        data-id="{{ $hoaDon->id }}"
+                                    >
+                                        #HD{{ str_pad(
+                                            $hoaDon->id,
+                                            4,
+                                            '0',
+                                            STR_PAD_LEFT
+                                        ) }}
+                                    </button>
+
+                                </td>
+
+
+                                {{-- TOTAL --}}
+                                <td>
+
+                                    <strong>
+                                        {{ number_format(
+                                            $hoaDon->khach_can_tra ?? 0,
+                                            0,
+                                            ',',
+                                            '.'
+                                        ) }}
+                                        đ
+                                    </strong>
+
+                                </td>
+
+
+                                {{-- PAYMENT --}}
+                                <td>
+
+                                    @php
+                                        $phuongThuc = mb_strtolower(
+                                            trim(
+                                                $hoaDon->phuong_thuc_thanh_toan
+                                                ?? ''
+                                            )
+                                        );
+                                    @endphp
+
+                                    @if(
+                                        str_contains($phuongThuc, 'tiền mặt')
+                                        ||
+                                        str_contains($phuongThuc, 'tien mat')
+                                    )
+
+                                        <span class="payment-badge">
+                                            <i class="fas fa-money-bill-wave"></i>
+                                            Tiền mặt
+                                        </span>
+
+                                    @elseif(
+                                        str_contains($phuongThuc, 'tài khoản')
+                                        ||
+                                        str_contains($phuongThuc, 'tai khoan')
+                                        ||
+                                        str_contains($phuongThuc, 'chuyển khoản')
+                                        ||
+                                        str_contains($phuongThuc, 'chuyen khoan')
+                                        ||
+                                        str_contains($phuongThuc, 'payos')
+                                    )
+
+                                        <span class="payment-badge">
+                                            <i class="fas fa-building-columns"></i>
+                                            Tài khoản
+                                        </span>
+
+                                    @else
+
+                                        <span class="payment-badge">
+                                            <i class="fas fa-credit-card"></i>
+                                            {{ $hoaDon->phuong_thuc_thanh_toan ?: '-' }}
+                                        </span>
+
+                                    @endif
+
+                                </td>
+
+
+                                {{-- STATUS --}}
+                                <td>
+
+                                    @php
+                                        $trangThai = trim(
+                                            $hoaDon->trang_thai ?? ''
+                                        );
+                                    @endphp
+
+
+                                    @if($trangThai === 'Hoàn thành')
+
+                                        <span class="invoice-status success">
+                                            <i class="fas fa-check"></i>
+                                            Hoàn thành
+                                        </span>
+
+
+                                    @elseif($trangThai === 'Đã đổi/trả hàng')
+
+                                        <span class="invoice-status warning">
+                                            <i class="fas fa-rotate-left"></i>
+                                            Đã đổi/trả hàng
+                                        </span>
+
+
+                                    @elseif($trangThai === 'Đã trả toàn bộ')
+
+                                        <span class="invoice-status danger">
+                                            <i class="fas fa-rotate-left"></i>
+                                            Đã trả toàn bộ
+                                        </span>
+
+
+                                    @elseif($trangThai === 'Đã hủy')
+
+                                        <span class="invoice-status danger">
+                                            <i class="fas fa-xmark"></i>
+                                            Đã hủy
+                                        </span>
+
+
+                                    @else
+
+                                        <span class="invoice-status secondary">
+                                            {{ $trangThai ?: '-' }}
+                                        </span>
+
+                                    @endif
+
+                                </td>
+
+
+                                {{-- VIEW --}}
+                                <td class="text-center">
+
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-primary hoa-don-modal-button"
+                                        data-id="{{ $hoaDon->id }}"
+                                        title="Xem chi tiết hóa đơn"
+                                    >
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+
+                                </td>
+
+                            </tr>
+
+                        @empty
+
+                            <tr>
+
+                                <td colspan="6">
+
+                                    <div class="empty-history">
+
+                                        <div class="empty-history-icon">
+                                            <i class="fas fa-receipt"></i>
+                                        </div>
+
+                                        <h6>
+                                            Chưa có hóa đơn
+                                        </h6>
+
+                                        <p>
+                                            Khách hàng chưa phát sinh hóa đơn mua hàng.
+                                        </p>
+
+                                    </div>
+
+                                </td>
+
+                            </tr>
+
+                        @endforelse
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+                @if($hoaDons->hasPages())
+
+                    <div class="points-pagination">
+
+                        {{ $hoaDons->appends([
+                            'diem_page' => request('diem_page')
+                        ])->links() }}
+
+                    </div>
+
+                @endif
+
+            </div>
+
+
+            {{-- ================= POINT HISTORY ================= --}}
+            <div
+                class="customer-card points-history-card"
+                id="lich-su-tich-diem"
+            >
 
                 <div class="customer-card-header">
 
@@ -812,7 +1072,8 @@
                         </h5>
 
                         <span class="points-count">
-                            {{ $lichSuTichDiems->total() }} giao dịch
+                            {{ $lichSuTichDiems->total() }}
+                            giao dịch
                         </span>
 
                     </div>
@@ -827,17 +1088,11 @@
                         <thead>
 
                             <tr>
-
                                 <th>Ngày</th>
-
                                 <th>Hóa đơn</th>
-
                                 <th>Loại biến động</th>
-
                                 <th>Số điểm</th>
-
                                 <th>Lý do</th>
-
                             </tr>
 
                         </thead>
@@ -845,148 +1100,177 @@
 
                         <tbody>
 
-                            @forelse($lichSuTichDiems as $lichSu)
+                        @forelse($lichSuTichDiems as $lichSu)
 
-                                @php
+                            @php
 
-                                    $loaiBienDong = mb_strtolower(
-                                        trim($lichSu->loai_bien_dong ?? '')
+                                $loaiBienDong = mb_strtolower(
+                                    trim(
+                                        $lichSu->loai_bien_dong ?? ''
+                                    )
+                                );
+
+                                $soDiem = (float) (
+                                    $lichSu->so_diem ?? 0
+                                );
+
+                                $isCong =
+                                    in_array(
+                                        $loaiBienDong,
+                                        [
+                                            'cong',
+                                            'tang',
+                                            'tăng'
+                                        ],
+                                        true
                                     );
 
-                                    $isCong =
-                                        in_array(
-                                            $loaiBienDong,
-                                            ['cong', 'tang', 'tăng']
-                                        )
-                                        ||
-                                        (
-                                            $loaiBienDong === ''
-                                            &&
-                                            $lichSu->so_diem >= 0
-                                        );
+                                if (
+                                    in_array(
+                                        $loaiBienDong,
+                                        [
+                                            'tru',
+                                            'thu',
+                                            'giảm',
+                                            'giam'
+                                        ],
+                                        true
+                                    )
+                                ) {
+                                    $isCong = false;
+                                }
 
-                                    if (
-                                        in_array(
-                                            $loaiBienDong,
-                                            ['tru', 'thu']
-                                        )
-                                    ) {
-                                        $isCong = false;
-                                    }
+                                if (
+                                    $loaiBienDong === ''
+                                    && $soDiem >= 0
+                                ) {
+                                    $isCong = true;
+                                }
 
-                                    $labelBienDong =
-                                        $isCong
-                                            ? 'Tăng điểm'
-                                            : 'Giảm điểm';
-
-                                @endphp
+                            @endphp
 
 
-                                <tr>
+                            <tr>
 
-                                    {{-- Date --}}
-                                    <td>
-                                        <span class="text-nowrap">
-                                            {{ optional($lichSu->created_at)->format('d/m/Y H:i') }}
-                                        </span>
-                                    </td>
+                                <td>
 
+                                    <span class="text-nowrap">
+                                        {{ optional($lichSu->created_at)
+                                            ->format('d/m/Y H:i') }}
+                                    </span>
 
-                                    {{-- Invoice --}}
-                                    <td>
-
-                                        @if($lichSu->hoaDon)
-
-                                            <button
-                                                type="button"
-                                                class="btn btn-link p-0 invoice-link hoa-don-modal-button"
-                                                data-id="{{ $lichSu->hoaDon->id }}"
-                                            >
-                                                #HD{{ str_pad(
-                                                    (string) $lichSu->hoaDon->id,
-                                                    4,
-                                                    '0',
-                                                    STR_PAD_LEFT
-                                                ) }}
-                                            </button>
-
-                                        @else
-
-                                            <span class="text-muted">
-                                                -
-                                            </span>
-
-                                        @endif
-
-                                    </td>
+                                </td>
 
 
-                                    {{-- Type --}}
-                                    <td>
+                                <td>
 
-                                        <span class="point-badge {{ $isCong ? 'up' : 'down' }}">
+                                    @if($lichSu->hoaDon)
 
-                                            <i class="fas {{ $isCong ? 'fa-arrow-up' : 'fa-arrow-down' }} me-1"></i>
+                                        <button
+                                            type="button"
+                                            class="btn btn-link p-0 invoice-link hoa-don-modal-button"
+                                            data-id="{{ $lichSu->hoaDon->id }}"
+                                        >
+                                            #HD{{ str_pad(
+                                                $lichSu->hoaDon->id,
+                                                4,
+                                                '0',
+                                                STR_PAD_LEFT
+                                            ) }}
+                                        </button>
 
-                                            {{ $labelBienDong }}
-
-                                        </span>
-
-                                    </td>
-
-
-                                    {{-- Points --}}
-                                    <td>
-
-                                        <span class="{{ $isCong ? 'point-value-up' : 'point-value-down' }}">
-
-                                            {{ $isCong ? '+' : '-' }}{{ number_format(abs($lichSu->so_diem)) }}
-
-                                        </span>
-
-                                    </td>
-
-
-                                    {{-- Reason --}}
-                                    <td>
+                                    @else
 
                                         <span class="text-muted">
-                                            {{ $lichSu->ly_do ?: '-' }}
+                                            -
                                         </span>
 
-                                    </td>
+                                    @endif
 
-                                </tr>
+                                </td>
 
 
-                            @empty
+                                <td>
 
-                                {{-- Không có dữ liệu mẫu --}}
-                                <tr>
+                                    <span
+                                        class="point-badge {{ $isCong ? 'up' : 'down' }}"
+                                    >
 
-                                    <td colspan="5">
+                                        <i
+                                            class="fas {{
+                                                $isCong
+                                                ? 'fa-arrow-up'
+                                                : 'fa-arrow-down'
+                                            }} me-1"
+                                        ></i>
 
-                                        <div class="empty-history">
+                                        {{ $isCong
+                                            ? 'Tăng điểm'
+                                            : 'Giảm điểm' }}
 
-                                            <div class="empty-history-icon">
-                                                <i class="fas fa-star"></i>
-                                            </div>
+                                    </span>
 
-                                            <h6>
-                                                Chưa có lịch sử tích điểm
-                                            </h6>
+                                </td>
 
-                                            <p>
-                                                Khách hàng chưa phát sinh giao dịch tích điểm.
-                                            </p>
 
+                                <td>
+
+                                    <span
+                                        class="{{
+                                            $isCong
+                                            ? 'point-value-up'
+                                            : 'point-value-down'
+                                        }}"
+                                    >
+
+                                        {{ $isCong ? '+' : '-' }}{{
+                                            number_format(
+                                                abs($soDiem)
+                                            )
+                                        }}
+
+                                    </span>
+
+                                </td>
+
+
+                                <td>
+
+                                    <span class="text-muted">
+                                        {{ $lichSu->ly_do ?: '-' }}
+                                    </span>
+
+                                </td>
+
+                            </tr>
+
+                        @empty
+
+                            <tr>
+
+                                <td colspan="5">
+
+                                    <div class="empty-history">
+
+                                        <div class="empty-history-icon">
+                                            <i class="fas fa-star"></i>
                                         </div>
 
-                                    </td>
+                                        <h6>
+                                            Chưa có lịch sử tích điểm
+                                        </h6>
 
-                                </tr>
+                                        <p>
+                                            Khách hàng chưa phát sinh giao dịch tích điểm.
+                                        </p>
 
-                            @endforelse
+                                    </div>
+
+                                </td>
+
+                            </tr>
+
+                        @endforelse
 
                         </tbody>
 
@@ -995,12 +1279,13 @@
                 </div>
 
 
-                {{-- Pagination --}}
                 @if($lichSuTichDiems->hasPages())
 
                     <div class="points-pagination">
 
-                        {{ $lichSuTichDiems->links() }}
+                        {{ $lichSuTichDiems->appends([
+                            'hoa_don_page' => request('hoa_don_page')
+                        ])->links() }}
 
                     </div>
 
@@ -1015,9 +1300,10 @@
 </div>
 
 
-{{-- =========================
-     INVOICE MODAL
-========================== --}}
+{{-- =========================================================
+     POPUP CHI TIẾT HÓA ĐƠN
+========================================================= --}}
+
 <div
     class="modal fade"
     id="hoaDonModal"
@@ -1026,14 +1312,16 @@
     aria-hidden="true"
 >
 
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div
+        class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"
+    >
 
         <div
             class="modal-content"
             id="hoa-don-modal-content"
         >
 
-            <div class="modal-body text-center py-5">
+            <div class="modal-loading">
 
                 <div
                     class="spinner-border text-primary"
@@ -1056,118 +1344,287 @@
 
 </div>
 
-
 @endsection
 
 
 @section('scripts')
 
 <script>
-
 document.addEventListener('DOMContentLoaded', function () {
 
-    const modalEl =
+    const modalElement =
         document.getElementById('hoaDonModal');
 
-    const modalBody =
-        document.getElementById('hoa-don-modal-content');
+    const modalContent =
+        document.getElementById(
+            'hoa-don-modal-content'
+        );
 
-    if (!modalEl || !modalBody) {
+    if (!modalElement || !modalContent) {
         return;
     }
 
 
-    const hoaDonModal =
-        new bootstrap.Modal(modalEl, {
-            backdrop: 'static',
-            keyboard: false
-        });
+    const invoiceModal =
+        bootstrap.Modal.getOrCreateInstance(
+            modalElement,
+            {
+                backdrop: true,
+                keyboard: true
+            }
+        );
 
 
-    document
-        .querySelectorAll('.hoa-don-modal-button')
-        .forEach(function (button) {
+    /*
+    |--------------------------------------------------------------------------
+    | URL POPUP
+    |--------------------------------------------------------------------------
+    |
+    | Route:
+    | admin.hoa-don.modal
+    |
+    */
+    const modalUrlTemplate =
+        @json(
+            route(
+                'admin.hoa-don.modal',
+                ['id' => '__ID__']
+            )
+        );
 
-            button.addEventListener('click', function () {
 
-                const hoaDonId =
-                    this.dataset.id;
+    /*
+    |--------------------------------------------------------------------------
+    | LOADING
+    |--------------------------------------------------------------------------
+    */
+    function showLoading() {
 
-                if (!hoaDonId) {
-                    return;
+        modalContent.innerHTML = `
+            <div class="modal-loading">
+                <div
+                    class="spinner-border text-primary"
+                    role="status"
+                >
+                    <span class="visually-hidden">
+                        Đang tải...
+                    </span>
+                </div>
+
+                <p class="mt-3 mb-0 text-muted">
+                    Đang tải chi tiết hóa đơn...
+                </p>
+            </div>
+        `;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ERROR
+    |--------------------------------------------------------------------------
+    */
+    function showError(message) {
+
+        modalContent.innerHTML = `
+            <div class="modal-header">
+                <h5
+                    class="modal-title text-danger"
+                    id="hoaDonModalLabel"
+                >
+                    <i class="fas fa-circle-exclamation me-2"></i>
+                    Không thể tải hóa đơn
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Đóng"
+                ></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="alert alert-danger mb-0">
+                    ${message}
+                </div>
+
+            </div>
+        `;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CLICK XEM HÓA ĐƠN
+    |--------------------------------------------------------------------------
+    */
+    document.addEventListener(
+        'click',
+        function (event) {
+
+            const button =
+                event.target.closest(
+                    '.hoa-don-modal-button'
+                );
+
+            if (!button) {
+                return;
+            }
+
+
+            event.preventDefault();
+
+
+            const hoaDonId =
+                button.dataset.id;
+
+
+            if (!hoaDonId) {
+                showError(
+                    'Không xác định được mã hóa đơn.'
+                );
+
+                invoiceModal.show();
+
+                return;
+            }
+
+
+            showLoading();
+
+            invoiceModal.show();
+
+
+            const url =
+                modalUrlTemplate.replace(
+                    '__ID__',
+                    encodeURIComponent(
+                        hoaDonId
+                    )
+                );
+
+
+            fetch(url, {
+                method: 'GET',
+
+                headers: {
+                    'X-Requested-With':
+                        'XMLHttpRequest',
+
+                    'Accept':
+                        'text/html'
+                },
+
+                credentials: 'same-origin'
+            })
+
+            .then(function (response) {
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        'HTTP ' +
+                        response.status
+                    );
+                }
+
+                return response.text();
+            })
+
+            .then(function (html) {
+
+                if (!html.trim()) {
+
+                    throw new Error(
+                        'Máy chủ không trả về dữ liệu.'
+                    );
                 }
 
 
-                /* Loading */
-                modalBody.innerHTML = `
-                    <div class="modal-body text-center py-5">
-                        <div
-                            class="spinner-border text-primary"
-                            role="status"
-                        >
-                            <span class="visually-hidden">
-                                Đang tải...
-                            </span>
-                        </div>
-
-                        <p class="mt-3 mb-0 text-muted">
-                            Đang tải chi tiết hóa đơn...
-                        </p>
-                    </div>
-                `;
+                modalContent.innerHTML =
+                    html;
 
 
-                hoaDonModal.show();
+                /*
+                |--------------------------------------------------------------------------
+                | FIX NÚT ĐÓNG SAU KHI LOAD AJAX
+                |--------------------------------------------------------------------------
+                */
+                const closeButtons =
+                    modalContent.querySelectorAll(
+                        '[data-bs-dismiss="modal"]'
+                    );
 
+                closeButtons.forEach(
+                    function (closeButton) {
 
-                /* Load invoice */
-                fetch(
-                    `{{ url('admin/hoa-don') }}/${hoaDonId}/modal`
-                )
+                        closeButton.addEventListener(
+                            'click',
+                            function () {
 
-                .then(function (response) {
+                                invoiceModal.hide();
 
-                    if (!response.ok) {
-                        throw new Error(
-                            'Lỗi khi tải chi tiết hóa đơn.'
+                            }
                         );
+
                     }
+                );
 
-                    return response.text();
+            })
 
-                })
+            .catch(function (error) {
 
-                .then(function (html) {
+                console.error(
+                    'Lỗi tải chi tiết hóa đơn:',
+                    error
+                );
 
-                    modalBody.innerHTML = html;
-
-                })
-
-                .catch(function (error) {
-
-                    modalBody.innerHTML = `
-                        <div class="modal-body">
-                            <div
-                                class="alert alert-danger mb-0"
-                                role="alert"
-                            >
-                                <i class="fas fa-circle-exclamation me-2"></i>
-                                Không thể tải chi tiết hóa đơn.
-                                Vui lòng thử lại.
-                            </div>
-                        </div>
-                    `;
-
-                    console.error(error);
-
-                });
+                showError(
+                    'Không thể tải chi tiết hóa đơn #' +
+                    hoaDonId +
+                    '. Vui lòng thử lại.'
+                );
 
             });
 
-        });
+        }
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESET MODAL KHI ĐÓNG
+    |--------------------------------------------------------------------------
+    */
+    modalElement.addEventListener(
+        'hidden.bs.modal',
+        function () {
+
+            modalContent.innerHTML = `
+                <div class="modal-loading">
+
+                    <div
+                        class="spinner-border text-primary"
+                        role="status"
+                    >
+                        <span class="visually-hidden">
+                            Đang tải...
+                        </span>
+                    </div>
+
+                    <p class="mt-3 mb-0 text-muted">
+                        Đang tải chi tiết hóa đơn...
+                    </p>
+
+                </div>
+            `;
+
+        }
+    );
 
 });
-
 </script>
 
 @endsection

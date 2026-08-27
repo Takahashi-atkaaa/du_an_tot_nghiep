@@ -170,6 +170,22 @@ class HoaDonController extends Controller
             : null;
         $tongHopDoiTra = $returnSummary['tongHopDoiTra'];
         $chiTietTheoBienThe = $returnSummary['chiTietTheoBienThe'];
+        $tongTienHoanThucTe = 0;
+
+foreach ($lichSuDoiTra as $doiTra) {
+
+    $loaiDoiTra = $doiTra->Loai ?? $doiTra->loai ?? '';
+
+    // Chỉ trả hàng mới tính là tiền hoàn làm giảm doanh thu
+    if ($loaiDoiTra === 'tra_hang') {
+
+        foreach ($doiTra->chiTietDoiTras ?? [] as $chiTietDoiTra) {
+            $tongTienHoanThucTe += (float) (
+                $chiTietDoiTra->thanh_tien ?? 0
+            );
+        }
+    }
+}
 
         foreach ($chiTiet as $item) {
             $returnItem = $chiTietTheoBienThe->get($item->id_bien_the_san_pham);
@@ -181,13 +197,14 @@ class HoaDonController extends Controller
         $this->ganThuocTinhBienTheChoChiTiet($chiTiet);
 
         return view('admin_xem_truoc.hoa-don-chi-tiet', compact(
-            'hoaDon',
-            'chiTiet',
-            'diemTichDiems',
-            'lichSuDoiTra',
-            'doiTraMoiNhat',
-            'tongHopDoiTra'
-        ));
+    'hoaDon',
+    'chiTiet',
+    'diemTichDiems',
+    'lichSuDoiTra',
+    'doiTraMoiNhat',
+    'tongHopDoiTra',
+    'tongTienHoanThucTe'
+));
     }
 
     public function showModal($id, DoiTraService $doiTraService)
