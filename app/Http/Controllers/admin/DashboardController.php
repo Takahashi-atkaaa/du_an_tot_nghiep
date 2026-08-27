@@ -159,43 +159,32 @@ foreach ($paymentRows as $row) {
     }
 }
 
-       /*
+   
+/*
 |--------------------------------------------------------------------------
 | BIỂU ĐỒ DOANH THU
 |--------------------------------------------------------------------------
-| 1 ngày        → theo giờ
-| 3 / 7 ngày    → theo ngày
-| Tháng         → theo ngày
-| Năm           → theo tháng
+|
+| 1 ngày  -> theo giờ
+| Nhiều ngày -> theo ngày
+| Năm -> theo tháng
+|--------------------------------------------------------------------------
 */
 
-$startDate = Carbon::parse($selectedStartDate);
-$endDate = Carbon::parse($selectedEndDate);
-
-$numberOfDays = $startDate->diffInDays($endDate) + 1;
+$startDate = Carbon::parse($selectedStartDate)->startOfDay();
+$endDate = Carbon::parse($selectedEndDate)->startOfDay();
 
 $chartLabels = [];
 $chartData = [];
 $chartTitle = 'Doanh thu';
 
+
 /*
 |--------------------------------------------------------------------------
-| BIỂU ĐỒ DOANH THU RÒNG SAU ĐỔI/TRẢ
-|--------------------------------------------------------------------------
-| 1 ngày        → theo giờ
-| 3 / 7 ngày    → theo ngày
-| Tháng         → theo ngày
-| Năm           → theo tháng
-|
-| Công thức:
-| Doanh thu ròng = khach_can_tra - tiền đổi/trả
-|
-| Tiền đổi/trả được gom theo từng hóa đơn trước khi JOIN
-| để tránh làm nhân doanh thu khi một hóa đơn có nhiều sản phẩm trả.
+| SUBQUERY TIỀN ĐỔI/TRẢ THEO HÓA ĐƠN
 |--------------------------------------------------------------------------
 */
 
-// Subquery tiền đổi/trả theo từng hóa đơn
 $returnedAmountSub = DB::table('chi_tiet_doi_tra')
     ->join(
         'doi_tra',
@@ -203,28 +192,16 @@ $returnedAmountSub = DB::table('chi_tiet_doi_tra')
         '=',
         'doi_tra.id'
     )
-    ->select(
-        'doi_tra.id_hoa_don'
-    )
+    ->select('doi_tra.id_hoa_don')
     ->selectRaw(
-        'SUM(chi_tiet_doi_tra.thanh_tien) as tien_doi_tra'
+        'SUM(chi_tiet_doi_tra.thanh_tien) AS tien_doi_tra'
     )
     ->groupBy('doi_tra.id_hoa_don');
 
 
-$startDate = Carbon::parse($selectedStartDate);
-$endDate = Carbon::parse($selectedEndDate);
-
-$numberOfDays = $startDate->diffInDays($endDate) + 1;
-
-$chartLabels = [];
-$chartData = [];
-$chartTitle = 'Doanh thu';
-
-
 /*
 |--------------------------------------------------------------------------
-| HÀM TẠO QUERY DOANH THU RÒNG
+| QUERY DOANH THU
 |--------------------------------------------------------------------------
 */
 
@@ -267,7 +244,7 @@ if ($quickFilter === 'nam') {
 
     $monthlyRows = $chartRevenueQuery()
         ->selectRaw(
-            'MONTH(hoa_don.created_at) as month'
+            'MONTH(hoa_don.created_at) AS month'
         )
         ->selectRaw(
             'SUM(
@@ -276,7 +253,7 @@ if ($quickFilter === 'nam') {
                     doi_tra_theo_hoa_don.tien_doi_tra,
                     0
                 )
-            ) as revenue'
+            ) AS revenue'
         )
         ->groupByRaw(
             'MONTH(hoa_don.created_at)'
@@ -305,11 +282,11 @@ if ($quickFilter === 'nam') {
 |--------------------------------------------------------------------------
 */
 
-} elseif ($numberOfDays === 1) {
+} elseif ($startDate->isSameDay($endDate)) {
 
     $hourlyRows = $chartRevenueQuery()
         ->selectRaw(
-            'HOUR(hoa_don.created_at) as hour'
+            'HOUR(hoa_don.created_at) AS hour'
         )
         ->selectRaw(
             'SUM(
@@ -318,7 +295,7 @@ if ($quickFilter === 'nam') {
                     doi_tra_theo_hoa_don.tien_doi_tra,
                     0
                 )
-            ) as revenue'
+            ) AS revenue'
         )
         ->groupByRaw(
             'HOUR(hoa_don.created_at)'
@@ -329,7 +306,14 @@ if ($quickFilter === 'nam') {
         ->get()
         ->keyBy('hour');
 
-    for ($hour = 0; $hour < 24; $hour++) {
+
+    /*
+    |--------------------------------------------------------------------------
+    | LUÔN HIỂN THỊ ĐỦ 24 GIỜ
+    |--------------------------------------------------------------------------
+    */
+
+    for ($hour = 0; $hour <= 23; $hour++) {
 
         $chartLabels[] = sprintf(
             '%02d:00',
@@ -346,8 +330,7 @@ if ($quickFilter === 'nam') {
 
 /*
 |--------------------------------------------------------------------------
-| 3. 3 NGÀY / 7 NGÀY / THÁNG / KHOẢNG NGÀY TỰ CHỌN
-| → THEO NGÀY
+| 3. NHIỀU NGÀY → THEO NGÀY
 |--------------------------------------------------------------------------
 */
 
@@ -355,7 +338,7 @@ if ($quickFilter === 'nam') {
 
     $dailyRows = $chartRevenueQuery()
         ->selectRaw(
-            'DATE(hoa_don.created_at) as report_date'
+            'DATE(hoa_don.created_at) AS report_date'
         )
         ->selectRaw(
             'SUM(
@@ -364,7 +347,7 @@ if ($quickFilter === 'nam') {
                     doi_tra_theo_hoa_don.tien_doi_tra,
                     0
                 )
-            ) as revenue'
+            ) AS revenue'
         )
         ->groupByRaw(
             'DATE(hoa_don.created_at)'
@@ -374,6 +357,7 @@ if ($quickFilter === 'nam') {
         )
         ->get()
         ->keyBy('report_date');
+
 
     $currentDate = $startDate->copy();
 
@@ -392,7 +376,6 @@ if ($quickFilter === 'nam') {
 
     $chartTitle = 'Doanh thu ròng theo ngày';
 }
-
 
         $topProductsSold = DB::table('chi_tiet_hoa_don')
             ->join('hoa_don', 'chi_tiet_hoa_don.id_hoa_don', '=', 'hoa_don.id')
