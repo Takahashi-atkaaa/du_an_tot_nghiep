@@ -107,11 +107,35 @@ class LichSuCaLam extends Controller
                 ->whereDate('thoi_gian_bat_dau_ca', $ngay)
                 ->first();
 
-            $tongDoanhThuNgay = $revenueStatisticsService->sumInvoiceNetRevenue(
-                $revenueStatisticsService->invoiceNetRevenueQuery()
-                    ->whereDate('hoa_don.created_at', $ngay)
-                    ->whereIn('hoa_don.trang_thai', $revenueStatuses)
-            );
+            $tongDoanhThuNgay = HoaDon::whereDate('created_at', $ngay)
+                ->whereIn('trang_thai', [
+                    'Đã trả toàn bộ','Đã đổi/trả hàng','Hoàn thành'
+                ])
+                ->where('id_ca_lam_viec', $id_ca)
+                ->whereIn('phuong_thuc_thanh_toan', ['Tiền mặt', 'PayOS'])
+                ->sum('khach_can_tra');
+
+            $danhSachHoaDonNgay = HoaDon::whereDate('created_at', $ngay)
+                ->whereIn('trang_thai', ['Đã trả toàn bộ','Đã đổi/trả hàng','Hoàn thành'])
+                ->whereIn('phuong_thuc_thanh_toan', ['Tiền mặt', 'PayOS'])
+                ->get();
+
+
+            //tính tiền trả lại cho khách của cả ngày
+            $tienTraKhachCuaNgay = 0;
+
+            foreach($danhSachHoaDonNgay as $hoaDon){
+                $hoaDon->tienTraKhach = $hoaDon->doiTras
+                ?->flatMap(function ($doitra){
+                    return $doitra->chiTietDoiTras ?? [];
+                })
+                ->sum('thanh_tien') ?? 0;
+
+                $tienTraKhachCuaNgay += $hoaDon->tienTraKhach;
+            }
+
+            $tongDoanhThuNgay -= $tienTraKhachCuaNgay;
+
 
             $tongSoHoaDonNgay = HoaDon::whereDate('created_at', $ngay)->count('id');
 
