@@ -97,6 +97,10 @@ class HoaDonController extends Controller
             $query->whereBetween('hoa_don.created_at', [$startDate, $endDate]);
         } elseif ($request->filled('ngay')) {
             $query->whereDate('hoa_don.created_at', $request->ngay);
+        } else {
+            $today = Carbon::now()->toDateString();
+            $request->merge(['ngay' => $today]);
+            $query->whereDate('hoa_don.created_at', $today);
         }
 
         if ($request->filled('trang_thai')) {
@@ -163,6 +167,30 @@ class HoaDonController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
 
+        // =====================================================
+        // KHUYẾN MÃI ĐÃ ÁP DỤNG (đồng bộ với bán hàng)
+        // =====================================================
+        $khuyenMaiDaApDung = DB::table('hoa_don_khuyen_mai')
+            ->join('khuyen_mai', 'hoa_don_khuyen_mai.id_khuyen_mai', '=', 'khuyen_mai.id')
+            ->where('hoa_don_khuyen_mai.id_hoa_don', $id)
+            ->select(
+                'hoa_don_khuyen_mai.id_khuyen_mai',
+                'hoa_don_khuyen_mai.tien_giam',
+                'hoa_don_khuyen_mai.loai_ap_dung',
+                'khuyen_mai.ten_chuong_trinh',
+                'khuyen_mai.loai_giam_gia',
+                'khuyen_mai.gia_tri_giam'
+            )
+            ->get();
+
+        $giamSanPham = $khuyenMaiDaApDung
+            ->where('loai_ap_dung', 'san_pham')
+            ->sum('tien_giam');
+
+        $giamHoaDon = $khuyenMaiDaApDung
+            ->where('loai_ap_dung', 'hoa_don')
+            ->sum('tien_giam');
+
         $returnSummary = $doiTraService->getInvoiceReturnSummary((int) $id);
         $lichSuDoiTra = $returnSummary['lichSuDoiTra'];
         $doiTraMoiNhat = session('last_doi_tra_id')
@@ -186,7 +214,10 @@ class HoaDonController extends Controller
             'diemTichDiems',
             'lichSuDoiTra',
             'doiTraMoiNhat',
-            'tongHopDoiTra'
+            'tongHopDoiTra',
+            'khuyenMaiDaApDung',
+            'giamSanPham',
+            'giamHoaDon'
         ));
     }
 
@@ -227,6 +258,27 @@ class HoaDonController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
 
+        $khuyenMaiDaApDung = DB::table('hoa_don_khuyen_mai')
+            ->join('khuyen_mai', 'hoa_don_khuyen_mai.id_khuyen_mai', '=', 'khuyen_mai.id')
+            ->where('hoa_don_khuyen_mai.id_hoa_don', $id)
+            ->select(
+                'hoa_don_khuyen_mai.id_khuyen_mai',
+                'hoa_don_khuyen_mai.tien_giam',
+                'hoa_don_khuyen_mai.loai_ap_dung',
+                'khuyen_mai.ten_chuong_trinh',
+                'khuyen_mai.loai_giam_gia',
+                'khuyen_mai.gia_tri_giam'
+            )
+            ->get();
+
+        $giamSanPham = $khuyenMaiDaApDung
+            ->where('loai_ap_dung', 'san_pham')
+            ->sum('tien_giam');
+
+        $giamHoaDon = $khuyenMaiDaApDung
+            ->where('loai_ap_dung', 'hoa_don')
+            ->sum('tien_giam');
+
         $returnSummary = $doiTraService->getInvoiceReturnSummary((int) $id);
         $chiTietTheoBienThe = $returnSummary['chiTietTheoBienThe'];
 
@@ -247,7 +299,10 @@ class HoaDonController extends Controller
             'chiTiet',
             'diemTichDiems',
             'lichSuDoiTra',
-            'tongHopDoiTra'
+            'tongHopDoiTra',
+            'khuyenMaiDaApDung',
+            'giamSanPham',
+            'giamHoaDon'
         ));
     }
 
