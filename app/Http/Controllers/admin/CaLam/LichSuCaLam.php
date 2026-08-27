@@ -48,6 +48,7 @@ class LichSuCaLam extends Controller
 
             $danhSachHoaDon = HoaDon::whereDate('created_at', $ngay)
                 ->where('id_ca_lam_viec', $id_ca)
+                ->whereIn('trang_thai', ['Hoàn thành', 'Đã đổi/trả hàng', 'Đã trả toàn bộ'])
                 ->orderByDesc('created_at')
                 ->get();
 
@@ -74,8 +75,8 @@ class LichSuCaLam extends Controller
 
             $doanhThuChuyenKhoan = HoaDon::where('id_ca_lam_viec', $id_ca)
                 ->whereDate('created_at', $ngay)
-                ->where('phuong_thuc_thanh_toan','payos')
-                ->whereIn('trang_thai', ['Hoàn thành', 'Đã đổi/trả hàng'])
+                ->where('phuong_thuc_thanh_toan','PayOS')
+                ->whereIn('trang_thai', ['Hoàn thành', 'Đã đổi/trả hàng', 'Đã trả toàn bộ'])
                 ->sum('khach_can_tra');
 
             $tongDoanhThuCuaCa = $doanhThuTienMatCuaCa + $doanhThuChuyenKhoan - $tongTienTraLaiKhachTrongCa;
@@ -111,7 +112,6 @@ class LichSuCaLam extends Controller
                 ->whereIn('trang_thai', [
                     'Đã trả toàn bộ','Đã đổi/trả hàng','Hoàn thành'
                 ])
-                ->where('id_ca_lam_viec', $id_ca)
                 ->whereIn('phuong_thuc_thanh_toan', ['Tiền mặt', 'PayOS'])
                 ->sum('khach_can_tra');
 
