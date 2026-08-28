@@ -877,6 +877,94 @@
         .scroll-thin::-webkit-scrollbar { width: 6px; }
         .scroll-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
         .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+        /* ================================
+   THÊM KHÁCH HÀNG NHANH
+================================ */
+
+.customer-search-group {
+    position: relative;
+}
+
+.btn-add-customer {
+    width: 42px;
+    height: 38px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0 8px 8px 0;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.btn-add-customer:hover {
+    background: var(--pos-primary-dark);
+}
+
+.customer-search-group .form-control {
+    min-width: 0;
+}
+
+/* Modal thêm khách hàng */
+
+#addCustomerModal .modal-dialog {
+    max-width: 480px;
+}
+
+#addCustomerModal .modal-content {
+    border: 0;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 15px 45px rgba(15, 23, 42, 0.18);
+}
+
+#addCustomerModal .modal-header {
+    background: linear-gradient(
+        90deg,
+        var(--pos-primary-dark),
+        var(--pos-primary)
+    );
+    color: #fff;
+    border-bottom: 0;
+    padding: 16px 20px;
+}
+
+#addCustomerModal .modal-title {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+#addCustomerModal .modal-body {
+    padding: 20px;
+}
+
+#addCustomerModal .form-label {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+#addCustomerModal .form-control {
+    height: 42px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+#addCustomerModal .form-control:focus {
+    border-color: var(--pos-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+#addCustomerModal .modal-footer {
+    padding: 12px 20px;
+    background: #f8fafc;
+    border-top: 1px solid var(--pos-border);
+}
+
+#btnSaveCustomer {
+    min-width: 130px;
+    font-weight: 600;
+}
     </style>
 </head>
 <body>
@@ -994,12 +1082,30 @@
 
             <div class="search-panels">
                 <div class="suggest-wrap">
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
-                        <input id="searchCustomer" class="form-control" placeholder="Tìm khách hàng (tên / SĐT)..." autocomplete="off">
-                    </div>
-                    <div class="suggest-box" id="customerSuggest"></div>
-                </div>
+    <div class="input-group customer-search-group">
+        <span class="input-group-text">
+            <i class="fa-solid fa-user"></i>
+        </span>
+
+        <input
+            id="searchCustomer"
+            class="form-control"
+            placeholder="Tìm khách hàng (tên / SĐT)..."
+            autocomplete="off"
+        >
+
+        <button
+            type="button"
+            class="btn btn-primary btn-add-customer"
+            id="btnAddCustomer"
+            title="Thêm khách hàng"
+        >
+            <i class="fa-solid fa-plus"></i>
+        </button>
+    </div>
+
+    <div class="suggest-box" id="customerSuggest"></div>
+</div>
                 <div class="input-group">
                     <span class="input-group-text"><i class="fa-solid fa-barcode"></i></span>
                     <input id="barcodeInput" class="form-control" placeholder="Quét mã vạch / Enter để thêm nhanh..." autocomplete="off">
@@ -1168,6 +1274,152 @@
                 </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
             </div>
+        </div>
+    </div>
+</div>
+<!-- =========================================================
+     MODAL: THÊM KHÁCH HÀNG NHANH
+========================================================= -->
+<div
+    class="modal fade"
+    id="addCustomerModal"
+    tabindex="-1"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fa-solid fa-user-plus me-2"></i>
+                    Thêm khách hàng
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close btn-close-white"
+                    data-bs-dismiss="modal"
+                    aria-label="Đóng"
+                ></button>
+            </div>
+
+            <form id="addCustomerForm">
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Tên khách hàng
+                            <span class="text-danger">*</span>
+                        </label>
+
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fa-solid fa-user"></i>
+                            </span>
+
+                            <input
+                                type="text"
+                                id="newCustomerName"
+                                class="form-control"
+                                placeholder="Nhập tên khách hàng"
+                                maxlength="255"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Số điện thoại
+                             <span class="text-danger">*</span>
+                        </label>
+
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fa-solid fa-phone"></i>
+                            </span>
+
+                            <input
+                                type="text"
+                                id="newCustomerPhone"
+                                class="form-control"
+                                placeholder="Nhập số điện thoại"
+                                maxlength="20"
+                            >
+                        </div>
+
+                        <div
+                            id="customerPhoneError"
+                            class="text-danger mt-1"
+                            style="font-size:12px; display:none;"
+                        ></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Email
+                        </label>
+
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fa-solid fa-envelope"></i>
+                            </span>
+
+                            <input
+                                type="email"
+                                id="newCustomerEmail"
+                                class="form-control"
+                                placeholder="Nhập email nếu có"
+                                maxlength="255"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="mb-1">
+                        <label class="form-label">
+                            Địa chỉ
+                        </label>
+
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fa-solid fa-location-dot"></i>
+                            </span>
+
+                            <input
+                                type="text"
+                                id="newCustomerAddress"
+                                class="form-control"
+                                placeholder="Nhập địa chỉ nếu có"
+                                maxlength="255"
+                            >
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal"
+                    >
+                        Hủy
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                        id="btnSaveCustomer"
+                    >
+                        <i class="fa-solid fa-check me-1"></i>
+                        Lưu khách hàng
+                    </button>
+
+                </div>
+
+            </form>
         </div>
     </div>
 </div>
@@ -1857,67 +2109,466 @@ function renderTotals() {
 // =========================================================
 // CUSTOMER
 // =========================================================
+
+// ================================
+// TÌM KIẾM KHÁCH HÀNG
+// ================================
 document.getElementById('searchCustomer').addEventListener('input', async function() {
+
     const kw = this.value.trim();
     const box = document.getElementById('customerSuggest');
-    if (kw.length < 1) { box.classList.remove('show'); box.innerHTML = ''; return; }
+
+    // Không nhập gì
+    if (kw.length < 1) {
+        box.classList.remove('show');
+        box.innerHTML = '';
+        return;
+    }
+
     try {
-        const res = await fetch(customerListUrl + '?q=' + encodeURIComponent(kw), { headers: { 'Accept': 'application/json' } });
+
+        const res = await fetch(
+            customerListUrl + '?q=' + encodeURIComponent(kw),
+            {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            }
+        );
+
         const list = await res.json();
+
+        // Không tìm thấy
         if (!list || list.length === 0) {
-            box.innerHTML = '<div class="suggest-item text-muted">Không tìm thấy khách hàng</div>';
+
+            box.innerHTML = `
+                <div class="suggest-item text-muted">
+                    <i class="fa-solid fa-user-slash me-1"></i>
+                    Không tìm thấy khách hàng
+                </div>
+            `;
+
             box.classList.add('show');
+
             return;
         }
+
+        // Hiển thị danh sách khách hàng
         box.innerHTML = list.map(c => `
-            <div class="suggest-item" data-id="${c.id}">
-                <div class="name">${c.ten_khach_hang} ${c.so_dien_thoai ? '(' + c.so_dien_thoai + ')' : ''}</div>
-                <div class="meta"><i class="fa-solid fa-star me-1"></i>${c.diem_tich_luy || 0} điểm · Chi tiêu: ${fmt(c.tong_chi_tieu || 0)}</div>
+            <div
+                class="suggest-item"
+                data-id="${c.id}"
+            >
+                <div class="name">
+                    <i class="fa-solid fa-user me-1 text-primary"></i>
+                    ${c.ten_khach_hang}
+
+                    ${
+                        c.so_dien_thoai
+                            ? `(${c.so_dien_thoai})`
+                            : ''
+                    }
+                </div>
+
+                <div class="meta">
+                    <i class="fa-solid fa-star me-1"></i>
+                    ${c.diem_tich_luy || 0} điểm
+                    ·
+                    Chi tiêu: ${fmt(c.tong_chi_tieu || 0)}
+                </div>
             </div>
         `).join('');
+
         box.classList.add('show');
-        box.querySelectorAll('.suggest-item').forEach(it => {
-            if (it.dataset.id) {
-                it.onclick = () => selectCustomer(JSON.parse(it.dataset.c || 'null'));
-            }
-        });
-        // Pass via dataset object
-        box.querySelectorAll('.suggest-item').forEach((it, idx) => {
-            const c = list[idx];
-            if (!c) return;
-            it.onclick = () => {
-                selectCustomer(c);
+
+
+        // ================================
+        // CLICK CHỌN KHÁCH HÀNG
+        // ================================
+        box.querySelectorAll('.suggest-item').forEach((item, index) => {
+
+            const customer = list[index];
+
+            if (!customer) return;
+
+            item.addEventListener('click', function() {
+
+                selectCustomer(customer);
+
                 box.classList.remove('show');
-            };
+                box.innerHTML = '';
+
+            });
+
         });
-    } catch (err) { console.error(err); }
+
+    } catch (err) {
+
+        console.error(
+            'Lỗi tìm kiếm khách hàng:',
+            err
+        );
+
+    }
+
 });
 
+
+// ================================
+// CHỌN KHÁCH HÀNG
+// ================================
 function selectCustomer(c) {
+
+    if (!c) return;
+
     selectedCustomer = c;
+
+    // Lưu khách hàng vào hóa đơn hiện tại
     getActiveInvoice().customer = c;
+
+    // Hiển thị thông tin khách hàng
     renderCustomerInfo();
-    document.getElementById('searchCustomer').value = c.ten_khach_hang + (c.so_dien_thoai ? ' (' + c.so_dien_thoai + ')' : '');
+
+    // Hiển thị tên trong ô tìm kiếm
+    document.getElementById('searchCustomer').value =
+        c.ten_khach_hang +
+        (
+            c.so_dien_thoai
+                ? ' (' + c.so_dien_thoai + ')'
+                : ''
+        );
+
+    // Đóng danh sách gợi ý
+    const box = document.getElementById('customerSuggest');
+
+    box.classList.remove('show');
+    box.innerHTML = '';
 }
 
+
+// ================================
+// HIỂN THỊ KHÁCH HÀNG ĐÃ CHỌN
+// ================================
 function renderCustomerInfo() {
+
     const info = document.getElementById('customerInfo');
+
     if (selectedCustomer) {
+
         info.classList.add('show');
-        document.getElementById('customerName').textContent = selectedCustomer.ten_khach_hang + (selectedCustomer.so_dien_thoai ? ' - ' + selectedCustomer.so_dien_thoai : '');
-        document.getElementById('customerPoints').textContent = selectedCustomer.diem_tich_luy || 0;
+
+        document.getElementById('customerName').textContent =
+            selectedCustomer.ten_khach_hang +
+            (
+                selectedCustomer.so_dien_thoai
+                    ? ' - ' + selectedCustomer.so_dien_thoai
+                    : ''
+            );
+
+        document.getElementById('customerPoints').textContent =
+            selectedCustomer.diem_tich_luy || 0;
+
     } else {
+
         info.classList.remove('show');
+
     }
 }
 
+
+// ================================
+// XÓA KHÁCH HÀNG KHỎI HÓA ĐƠN
+// ================================
 document.getElementById('btnRemoveCustomer').onclick = () => {
+
     selectedCustomer = null;
+
     getActiveInvoice().customer = null;
+
     document.getElementById('searchCustomer').value = '';
+
+    const box = document.getElementById('customerSuggest');
+
+    box.classList.remove('show');
+    box.innerHTML = '';
+
     renderCustomerInfo();
 };
 
+
+// =========================================================
+// QUICK ADD CUSTOMER
+// =========================================================
+
+// Route tạo khách hàng
+const createCustomerUrl =
+    '{{ route('nhan-vien.khach-hang.them-nhanh') }}';
+
+
+// Bootstrap Modal
+const addCustomerModalElement =
+    document.getElementById('addCustomerModal');
+
+const addCustomerModal =
+    bootstrap.Modal.getOrCreateInstance(
+        addCustomerModalElement
+    );
+
+
+// ================================
+// MỞ MODAL THÊM KHÁCH HÀNG
+// ================================
+document.getElementById('btnAddCustomer').addEventListener(
+    'click',
+    function() {
+
+        // Reset form
+        document.getElementById('addCustomerForm').reset();
+
+        // Xóa lỗi SĐT
+        const phoneError =
+            document.getElementById('customerPhoneError');
+
+        phoneError.textContent = '';
+        phoneError.style.display = 'none';
+
+        // Đóng suggestion
+        const box =
+            document.getElementById('customerSuggest');
+
+        box.classList.remove('show');
+        box.innerHTML = '';
+
+        // Mở modal
+        addCustomerModal.show();
+
+        // Focus tên khách hàng
+        setTimeout(() => {
+
+            document
+                .getElementById('newCustomerName')
+                .focus();
+
+        }, 300);
+
+    }
+);
+
+
+// ================================
+// SUBMIT THÊM KHÁCH HÀNG
+// ================================
+document.getElementById('addCustomerForm').addEventListener(
+    'submit',
+    async function(e) {
+
+        e.preventDefault();
+
+        const name =
+            document
+                .getElementById('newCustomerName')
+                .value
+                .trim();
+
+        const phone =
+            document
+                .getElementById('newCustomerPhone')
+                .value
+                .trim();
+
+        const email =
+            document
+                .getElementById('newCustomerEmail')
+                .value
+                .trim();
+
+        const address =
+            document
+                .getElementById('newCustomerAddress')
+                .value
+                .trim();
+
+        const btn =
+            document.getElementById('btnSaveCustomer');
+
+        const phoneError =
+            document.getElementById('customerPhoneError');
+
+
+        // ================================
+        // VALIDATE TÊN
+        // ================================
+        if (!name) {
+
+            showToast(
+                'Vui lòng nhập tên khách hàng',
+                'error'
+            );
+
+            document
+                .getElementById('newCustomerName')
+                .focus();
+
+            return;
+        }
+
+
+        // ================================
+        // VALIDATE SỐ ĐIỆN THOẠI
+        // ================================
+        if (phone) {
+
+            const phoneRegex =
+                /^(0|\+84)[0-9]{8,10}$/;
+
+            if (!phoneRegex.test(phone)) {
+
+                phoneError.textContent =
+                    'Số điện thoại không đúng định dạng';
+
+                phoneError.style.display = 'block';
+
+                document
+                    .getElementById('newCustomerPhone')
+                    .focus();
+
+                return;
+            }
+
+        }
+
+        phoneError.textContent = '';
+        phoneError.style.display = 'none';
+
+
+        // ================================
+        // LOADING
+        // ================================
+        btn.disabled = true;
+
+        btn.innerHTML = `
+            <span
+                class="spinner-border spinner-border-sm me-1"
+            ></span>
+            Đang lưu...
+        `;
+
+
+        try {
+
+            const res = await fetch(
+                createCustomerUrl,
+                {
+                    method: 'POST',
+
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+
+                    body: JSON.stringify({
+
+                        ten_khach_hang: name,
+                        so_dien_thoai: phone || null,
+                        email: email || null,
+                        dia_chi: address || null
+
+                    })
+                }
+            );
+
+
+            const data = await res.json();
+
+
+            // ================================
+            // XỬ LÝ LỖI
+            // ================================
+            if (!res.ok || !data.success) {
+
+                // Lỗi trùng SĐT
+                if (
+                    data.errors &&
+                    data.errors.so_dien_thoai
+                ) {
+
+                    phoneError.textContent =
+                        data.errors.so_dien_thoai[0];
+
+                    phoneError.style.display = 'block';
+
+                } else {
+
+                    showToast(
+                        data.message ||
+                        'Không thể thêm khách hàng',
+                        'error'
+                    );
+
+                }
+
+                return;
+            }
+
+
+            // ================================
+            // KHÁCH HÀNG TẠO THÀNH CÔNG
+            // ================================
+            const customer = data.customer;
+
+
+            if (!customer) {
+
+                showToast(
+                    'Server không trả về thông tin khách hàng',
+                    'error'
+                );
+
+                return;
+            }
+
+
+            // Gán ngay vào hóa đơn hiện tại
+            selectCustomer(customer);
+
+
+            // Đóng modal
+            addCustomerModal.hide();
+
+
+            // Thông báo
+            showToast(
+                'Đã thêm khách hàng: ' +
+                customer.ten_khach_hang
+            );
+
+
+        } catch (err) {
+
+            console.error(
+                'Lỗi thêm khách hàng:',
+                err
+            );
+
+            showToast(
+                'Lỗi kết nối máy chủ!',
+                'error'
+            );
+
+        } finally {
+
+            btn.disabled = false;
+
+            btn.innerHTML = `
+                <i class="fa-solid fa-check me-1"></i>
+                Lưu khách hàng
+            `;
+
+        }
+
+    }
+);
 // =========================================================
 // BARCODE SCAN
 // =========================================================

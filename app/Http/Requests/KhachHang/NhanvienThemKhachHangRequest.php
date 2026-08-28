@@ -54,15 +54,11 @@ class NhanvienThemKhachHangRequest extends FormRequest
 
 
 
-            'so_dien_thoai' => [
-
-                'required',
-
-                'regex:/^(0[3|5|7|8|9])[0-9]{8}$/',
-
-                'unique:khach_hang,so_dien_thoai',
-
-            ],
+           'so_dien_thoai' => [
+    'required',
+    'regex:/^0[35789][0-9]{8}$/',
+    'unique:khach_hang,so_dien_thoai',
+],
 
 
 

@@ -320,9 +320,11 @@
 <h5 class="mb-0 fw-bold">
     {{ $chartTitle ?? 'Doanh thu' }}
 </h5>            </div>
-            <div class="card-body">
-                <canvas id="revenueChart"></canvas>
-            </div>
+           <div class="card-body">
+    <div style="height: 350px; position: relative;">
+        <canvas id="revenueChart"></canvas>
+    </div>
+</div>
         </div>
     </div>
     <div class="col-xl-6">
@@ -542,56 +544,93 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
+    const labels = @json($chartLabels ?? []);
+    const data = @json($chartData ?? []);
+    const title = @json($chartTitle ?? 'Doanh thu');
+
+    console.log('Chart title:', title);
+    console.log('Chart labels:', labels);
+    console.log('Chart data:', data);
+
     new Chart(chartElement, {
+
         type: 'line',
 
         data: {
-            labels: @json($chartLabels ?? []),
+            labels: labels,
 
             datasets: [{
-                label: @json($chartTitle ?? 'Doanh thu'),
+                label: title,
 
-                data: @json($chartData ?? []),
+                data: data,
 
                 borderColor: '#0d6efd',
                 backgroundColor: 'rgba(13, 110, 253, 0.15)',
 
                 borderWidth: 2,
+
                 fill: true,
+
                 tension: 0.3,
 
                 pointRadius: 3,
-                pointHoverRadius: 5
+
+                pointHoverRadius: 6
             }]
         },
 
         options: {
+
             responsive: true,
+
             maintainAspectRatio: false,
 
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
+
             plugins: {
+
                 legend: {
                     display: true
                 },
 
                 tooltip: {
+
                     callbacks: {
+
                         label: function(context) {
+
                             return new Intl.NumberFormat('vi-VN')
-                                .format(context.raw) + ' đ';
+                                .format(context.raw || 0)
+                                + ' đ';
                         }
                     }
                 }
             },
 
             scales: {
+
+                x: {
+                    ticks: {
+                        autoSkip: false,
+                        maxRotation: 45,
+                        minRotation: 0
+                    }
+                },
+
                 y: {
+
                     beginAtZero: true,
 
                     ticks: {
+
                         callback: function(value) {
+
                             return new Intl.NumberFormat('vi-VN')
-                                .format(value) + ' đ';
+                                .format(value)
+                                + ' đ';
                         }
                     }
                 }
