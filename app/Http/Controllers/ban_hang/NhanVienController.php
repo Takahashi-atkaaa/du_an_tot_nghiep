@@ -287,6 +287,10 @@ public function hoaDon(Request $request)
 
         if ($request->filled('ngay')) {
             $query->whereDate('hoa_don.created_at', $request->ngay);
+        } else {
+            $today = Carbon::now()->toDateString();
+            $request->merge(['ngay' => $today]);
+            $query->whereDate('hoa_don.created_at', $today);
         }
 
         if ($request->filled('trang_thai')) {

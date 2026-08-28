@@ -1318,6 +1318,22 @@ $doanhThuRong = max(
 
                                 ---
 
+                            <div class="fw-bold">
+                                {{ $item->ten_san_pham }}
+                            </div>
+
+                            @if(!empty($item->ten_bien_the))
+                                <div class="small text-muted mt-1">
+                                    <i class="fas fa-layer-group me-1"></i>
+                                    Biến thể: {{ $item->ten_bien_the }}
+                                </div>
+                            @endif
+
+                            @if(!empty($item->thuoc_tinh_hien_thi))
+                                <div class="small text-muted mt-1">
+                                    <i class="fas fa-tags me-1"></i>
+                                    {{ implode(' • ', $item->thuoc_tinh_hien_thi) }}
+                                </div>
                             @endif
 
                         </td>
@@ -1418,13 +1434,88 @@ $doanhThuRong = max(
                     </tr>
 
                 @endforeach
+            </tbody>
+        </table>
 
-                </tbody>
+        {{-- ====================================== --}}
+        {{-- TỔNG KẾT THANH TOÁN --}}
+        {{-- ====================================== --}}
+        <div class="row mt-4">
+            <div class="col-md-7">
+                {{-- Khuyến mãi đã áp dụng --}}
+                @if(isset($khuyenMaiDaApDung) && $khuyenMaiDaApDung->count())
+                    <div class="border rounded p-3">
+                        <div class="fw-bold mb-2">
+                            <i class="fas fa-tags text-danger me-1"></i>
+                            Khuyến mãi đã áp dụng
+                        </div>
 
-            </table>
+                        @foreach($khuyenMaiDaApDung as $km)
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>
+                                    {{ $km->ten_chuong_trinh ?? 'Khuyến mãi' }}
+                                    @if(($km->loai_ap_dung ?? '') === 'san_pham')
+                                        <span class="badge bg-warning text-dark ms-1">Sản phẩm</span>
+                                    @else
+                                        <span class="badge bg-primary ms-1">Hóa đơn</span>
+                                    @endif
+                                </span>
+                                <strong class="text-danger">
+                                    -{{ number_format($km->tien_giam ?? 0, 0, ',', '.') }}đ
+                                </strong>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
 
+            <div class="col-md-5">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <td>Tạm tính:</td>
+                        <td class="text-end fw-semibold">
+                            {{ number_format($hoaDon->tong_tien_hang ?? 0, 0, ',', '.') }}đ
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Giảm giá:</td>
+                        <td class="text-end text-danger fw-semibold">
+                            -{{ number_format($hoaDon->tien_giam_gia ?? 0, 0, ',', '.') }}đ
+                        </td>
+                    </tr>
+
+                    @if(($hoaDon->diem_su_dung ?? 0) > 0)
+                        <tr>
+                            <td>Điểm đã sử dụng:</td>
+                            <td class="text-end">
+                                {{ number_format($hoaDon->diem_su_dung, 0, ',', '.') }} điểm
+                            </td>
+                        </tr>
+                    @endif
+
+                    <tr class="border-top">
+                        <td class="fw-bold fs-5">Khách cần trả:</td>
+                        <td class="text-end fw-bold fs-5 text-primary">
+                            {{ number_format($hoaDon->khach_can_tra ?? 0, 0, ',', '.') }}đ
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Tiền khách đưa:</td>
+                        <td class="text-end">
+                            {{ number_format($hoaDon->tien_khach_dua ?? 0, 0, ',', '.') }}đ
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Tiền thừa:</td>
+                        <td class="text-end text-success fw-semibold">
+                            {{ number_format($hoaDon->tien_thua ?? 0, 0, ',', '.') }}đ
+                        </td>
+                    </tr>
+                </table>
+            </div>
         </div>
-
     </div>
 
 </div>

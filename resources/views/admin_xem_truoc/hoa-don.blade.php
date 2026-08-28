@@ -37,6 +37,11 @@
                 </div>
 
                 <div class="col-md-2">
+                    <label class="form-label">Ngày</label>
+                    <input type="date" name="ngay" class="form-control" value="{{ request('ngay') }}">
+                </div>
+
+                <div class="col-md-2">
                     <label class="form-label">Từ ngày</label>
                     <input type="date" name="tu_ngay" class="form-control" value="{{ request('tu_ngay') }}">
                 </div>
