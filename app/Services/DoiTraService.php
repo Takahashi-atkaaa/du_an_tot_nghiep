@@ -71,6 +71,24 @@ class DoiTraService
         ];
     }
 
+    public function getInvoiceReturnHistoryPageData(int $hoaDonId): array
+    {
+        $hoaDon = HoaDon::query()
+            ->with([
+                'khachHang',
+                'nguoiDung.vaiTro',
+            ])
+            ->findOrFail($hoaDonId);
+
+        $lichSuDoiTra = $this->getDoiTraHistory($hoaDonId);
+
+        return [
+            'hoaDon' => $hoaDon,
+            'lichSuDoiTra' => $lichSuDoiTra,
+            'coDoiTra' => $lichSuDoiTra->isNotEmpty(),
+        ];
+    }
+
     public function getInvoiceReturnData(int $hoaDonId): array
     {
         $hoaDon = HoaDon::query()
@@ -141,6 +159,9 @@ class DoiTraService
                 'nguoiDung.vaiTro',
                 'chiTietDoiTras.bienTheSanPham.product',
                 'chiTietDoiTras.bienTheThayThe.product',
+                'chiTietDoiTras.hangLois.nguoiDungTieuHuy.vaiTro',
+                'hangLois.bienTheSanPham.product',
+                'hangLois.nguoiDungTieuHuy.vaiTro',
             ])
             ->where('id_hoa_don', $hoaDonId)
             ->orderByDesc('ngay')

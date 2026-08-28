@@ -178,15 +178,13 @@ $doanhThuRong = max(
         {{-- Modal chi tiết --}}
         @if(isset($lichSuDoiTra) && $lichSuDoiTra->count())
 
-            <button
-                type="button"
+            <a
                 class="btn btn-outline-warning"
-                data-bs-toggle="modal"
-                data-bs-target="#chiTietDoiTraModal"
+                href="{{ route('admin.hoa-don.chi-tiet-doi-tra', $hoaDon->id) }}"
             >
                 <i class="fas fa-history me-1"></i>
                 Chi tiết đổi/trả
-            </button>
+            </a>
 
         @endif
 
@@ -1528,7 +1526,7 @@ $doanhThuRong = max(
      MODAL CHI TIẾT ĐỔI / TRẢ
 ============================================================ --}}
 
-@if(isset($lichSuDoiTra) && $lichSuDoiTra->count())
+@if(false && isset($lichSuDoiTra) && $lichSuDoiTra->count())
 
 <div
     class="modal fade"

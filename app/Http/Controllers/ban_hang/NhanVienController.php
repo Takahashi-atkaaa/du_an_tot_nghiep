@@ -1508,6 +1508,13 @@ foreach ($chiTiet as $item) {
     );
 }
 
+    public function chiTietDoiTra($id, DoiTraService $doiTraService)
+    {
+        $data = $doiTraService->getInvoiceReturnHistoryPageData((int) $id);
+
+        return view('ban_hang.hoa-don.chi-tiet-doi-tra', $data);
+    }
+
     public function formDoiTra($id, DoiTraService $doiTraService)
     {
         $data = $doiTraService->getInvoiceReturnData((int) $id);

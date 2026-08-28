@@ -216,7 +216,7 @@
                                 </a>
 
                                 @if(($hoaDon->so_lan_doi_tra ?? 0) > 0)
-                                    <a href="{{ route('admin.hoa-don.show', $hoaDon->id) }}#chi-tiet-doi-tra"
+                                    <a href="{{ route('admin.hoa-don.chi-tiet-doi-tra', $hoaDon->id) }}"
                                        class="btn btn-sm btn-outline-warning btn-action"
                                        title="Chi tiết đổi/trả">
                                         <i class="fas fa-rotate-left"></i>

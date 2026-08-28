@@ -39,9 +39,9 @@
             <i class="fas fa-undo me-1"></i> Đổi / Trả hàng
         </a>
         @if(isset($lichSuDoiTra) && $lichSuDoiTra->count())
-            <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#chiTietDoiTraModal">
+            <a href="{{ route('nhan-vien.hoa-don.chi-tiet-doi-tra', $hoaDon->id) }}" class="btn btn-outline-warning">
                 <i class="fas fa-rotate-left me-1"></i> Chi tiết đổi/trả
-            </button>
+            </a>
         @endif
     </div>
 </div>
@@ -288,7 +288,7 @@
     </div>
 </div>
 
-@if(isset($lichSuDoiTra) && $lichSuDoiTra->count())
+@if(false && isset($lichSuDoiTra) && $lichSuDoiTra->count())
     <div class="modal fade" id="chiTietDoiTraModal" tabindex="-1" aria-labelledby="chiTietDoiTraModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content" id="chi-tiet-doi-tra">
