@@ -233,7 +233,7 @@ foreach ($lichSuDoiTra as $doiTra) {
             'tongHopDoiTra',
             'khuyenMaiDaApDung',
             'giamSanPham',
-            'giamHoaDon'
+            'giamHoaDon',
             'tongTienHoanThucTe'
         ));
     }
