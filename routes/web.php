@@ -257,6 +257,7 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::get('/admin/hoa-don/search-product', [HoaDonController::class, 'searchProduct'])->name('admin.hoa-don.search-product');
     Route::get('/admin/hoa-don/{id}/doi-tra', [HoaDonController::class, 'formDoiTra'])->name('admin.hoa-don.doi-tra');
     Route::post('/admin/hoa-don/{id}/doi-tra', [HoaDonController::class, 'xuLyDoiTra'])->name('admin.hoa-don.xu-ly-doi-tra');
+    Route::get('/admin/hoa-don/{id}/chi-tiet-doi-tra', [HoaDonController::class, 'chiTietDoiTra'])->name('admin.hoa-don.chi-tiet-doi-tra');
     Route::get('/admin/hoa-don/{id}', [HoaDonController::class, 'show'])->name('admin.hoa-don.show');
     Route::post('/admin/hoa-don/{id}/huy', [HoaDonController::class, 'huy'])->name('admin.hoa-don.huy');
     Route::get('/admin/hang-loi', [HangLoiController::class, 'index'])->name('admin.hang-loi.index');
@@ -372,6 +373,7 @@ Route::middleware([KTVaiTro::class])->group(function () {
     // Đổi / Trả hàng - nhân viên uses admin logic via wrapper methods
     Route::get('/hoa-don/{id}/doi-tra', [NhanVienController::class, 'formDoiTra'])->name('nhan-vien.hoa-don.doi-tra')->middleware('permission:ban_hang');
     Route::post('/hoa-don/{id}/doi-tra', [NhanVienController::class, 'xuLyDoiTraNhanVien'])->name('nhan-vien.hoa-don.xu-ly-doi-tra')->middleware('permission:ban_hang');
+    Route::get('/hoa-don/{id}/chi-tiet-doi-tra', [NhanVienController::class, 'chiTietDoiTra'])->name('nhan-vien.hoa-don.chi-tiet-doi-tra')->middleware('permission:ban_hang');
     //   Route::post('/hoa-don/{id}/huy', [NhanVienController::class, 'huyHoaDon'])
     //   ->name('nhan-vien.hoa-don.huy');
     Route::get('/ban-hang/khach-hang', [NhanVienController::class, 'layKhachHang'])->name('nhan-vien.ban-hang.khach-hang')->middleware('permission:ban_hang');

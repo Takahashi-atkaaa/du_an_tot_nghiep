@@ -270,6 +270,13 @@ $doanhThuRong = max(
 ));
     }
 
+    public function chiTietDoiTra($id, DoiTraService $doiTraService)
+    {
+        $data = $doiTraService->getInvoiceReturnHistoryPageData((int) $id);
+
+        return view('admin_xem_truoc.hoa-don-chi-tiet-doi-tra', $data);
+    }
+
     public function showModal($id, DoiTraService $doiTraService)
     {
         $hoaDon = DB::table('hoa_don')

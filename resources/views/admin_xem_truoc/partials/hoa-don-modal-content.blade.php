@@ -61,12 +61,12 @@
 
     @if(isset($lichSuDoiTra) && $lichSuDoiTra->count())
         <div class="mb-3">
-            <button class="btn btn-outline-warning btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDoiTra">
+            <a class="btn btn-outline-warning btn-sm" href="{{ route('admin.hoa-don.chi-tiet-doi-tra', $hoaDon->id) }}">
                 <i class="fas fa-rotate-left me-1"></i> Chi tiết đổi/trả
-            </button>
+            </a>
         </div>
 
-        <div class="collapse show" id="collapseDoiTra">
+        <div class="collapse d-none" id="collapseDoiTra">
             @foreach($lichSuDoiTra as $doiTra)
                 <div class="border rounded p-3 mb-3">
                     <div class="d-flex justify-content-between flex-wrap gap-2 mb-3">
