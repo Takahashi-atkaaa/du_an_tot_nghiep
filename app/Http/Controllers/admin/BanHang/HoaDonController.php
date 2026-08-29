@@ -198,22 +198,50 @@ class HoaDonController extends Controller
             : null;
         $tongHopDoiTra = $returnSummary['tongHopDoiTra'];
         $chiTietTheoBienThe = $returnSummary['chiTietTheoBienThe'];
-        $tongTienHoanThucTe = 0;
+        // =====================================================
+// TỔNG TIỀN HOÀN THỰC TẾ TỪ TRẢ HÀNG
+// =====================================================
+
+$tongTienHoanThucTe = 0;
 
 foreach ($lichSuDoiTra as $doiTra) {
 
-    $loaiDoiTra = $doiTra->Loai ?? $doiTra->loai ?? '';
+    $loaiDoiTra = $doiTra->Loai
+        ?? $doiTra->loai
+        ?? null;
 
-    // Chỉ trả hàng mới tính là tiền hoàn làm giảm doanh thu
-    if ($loaiDoiTra === 'tra_hang') {
+    // Chỉ trả hàng mới làm giảm doanh thu
+    if ($loaiDoiTra !== 'tra_hang') {
+        continue;
+    }
 
-        foreach ($doiTra->chiTietDoiTras ?? [] as $chiTietDoiTra) {
-            $tongTienHoanThucTe += (float) (
-                $chiTietDoiTra->thanh_tien ?? 0
-            );
-        }
+    foreach ($doiTra->chiTietDoiTras ?? [] as $chiTietDoiTra) {
+
+        $tongTienHoanThucTe += (float) (
+            $chiTietDoiTra->thanh_tien ?? 0
+        );
     }
 }
+
+
+// =====================================================
+// TỔNG KẾT THANH TOÁN
+// =====================================================
+
+// Tổng tiền hàng trước giảm giá
+$tamTinh = (float) ($hoaDon->tong_tien_hang ?? 0);
+
+// Tổng giảm giá
+$giamGia = (float) ($hoaDon->tien_giam_gia ?? 0);
+
+// Khách cần trả theo hóa đơn
+$khachCanTra = (float) ($hoaDon->khach_can_tra ?? 0);
+
+// Doanh thu thực tế sau khi hoàn tiền
+$doanhThuRong = max(
+    0,
+    $khachCanTra - $tongTienHoanThucTe
+);
 
         foreach ($chiTiet as $item) {
             $returnItem = $chiTietTheoBienThe->get($item->id_bien_the_san_pham);
@@ -225,17 +253,21 @@ foreach ($lichSuDoiTra as $doiTra) {
         $this->ganThuocTinhBienTheChoChiTiet($chiTiet);
 
         return view('admin_xem_truoc.hoa-don-chi-tiet', compact(
-            'hoaDon',
-            'chiTiet',
-            'diemTichDiems',
-            'lichSuDoiTra',
-            'doiTraMoiNhat',
-            'tongHopDoiTra',
-            'khuyenMaiDaApDung',
-            'giamSanPham',
-            'giamHoaDon',
-            'tongTienHoanThucTe'
-        ));
+    'hoaDon',
+    'chiTiet',
+    'diemTichDiems',
+    'lichSuDoiTra',
+    'doiTraMoiNhat',
+    'tongHopDoiTra',
+    'khuyenMaiDaApDung',
+    'giamSanPham',
+    'giamHoaDon',
+    'tongTienHoanThucTe',
+    'tamTinh',
+    'giamGia',
+    'khachCanTra',
+    'doanhThuRong'
+));
     }
 
     public function showModal($id, DoiTraService $doiTraService)

@@ -99,22 +99,15 @@ $doanhThuRong = max(
     // ---------------------------------------------------------
     // Tổng tiền sản phẩm
     // ---------------------------------------------------------
-    $tamTinh = (float) (
-        $hoaDon->tong_tien
-        ?? $hoaDon->tam_tinh
-        ?? 0
-    );
+    
 
 
     // ---------------------------------------------------------
     // Giảm giá
     // ---------------------------------------------------------
-    $giamGia = (float) (
-        $hoaDon->giam_gia
-        ?? $hoaDon->tien_giam
-        ?? $hoaDon->tong_giam_gia
-        ?? 0
-    );
+  $giamGia = (float) (
+    ($giamSanPham ?? 0) + ($giamHoaDon ?? 0)
+);
 @endphp
 
 
@@ -863,89 +856,58 @@ $doanhThuRong = max(
 
     <div class="col-lg-7"></div>
 
-
     <div class="col-lg-5">
 
         <div class="card border-0 shadow-sm">
 
             <div class="card-header bg-white">
-
                 <h5 class="fw-bold mb-0">
                     <i class="fas fa-calculator text-primary me-2"></i>
                     Tổng kết thanh toán
                 </h5>
-
             </div>
-
 
             <div class="card-body">
 
-                {{-- Tạm tính --}}
-                <div class="d-flex justify-content-between mb-3">
-
-                    <span class="text-muted">
-                        Tạm tính
-                    </span>
-
-                    <span class="fw-semibold">
-                        {{ number_format($tamTinh, 0, ',', '.') }}đ
-                    </span>
-
-                </div>
+               
 
 
-                {{-- Giảm giá --}}
-                <div class="d-flex justify-content-between mb-3">
+                {{-- GIẢM GIÁ --}}
+<div class="d-flex justify-content-between mb-3">
 
-                    <span class="text-muted">
-                        Giảm giá
-                    </span>
+    <span class="text-muted">
+        Giảm giá
+    </span>
 
-                    <span class="text-success fw-semibold">
+    <span class="text-danger fw-semibold">
 
-                        @if($giamGia > 0)
-                            -{{ number_format($giamGia, 0, ',', '.') }}đ
-                        @else
-                            0đ
-                        @endif
+        @if($giamGia > 0)
 
-                    </span>
+            -{{ number_format($giamGia, 0, ',', '.') }}đ
 
-                </div>
+        @else
 
+            0đ
 
-                <hr>
+        @endif
 
+    </span>
 
-                {{-- Khách cần trả --}}
-                <div class="d-flex justify-content-between mb-3">
-
-                    <span class="fw-bold">
-                        Khách cần trả
-                    </span>
-
-                    <span class="fw-bold text-primary">
-
-                        {{ number_format($khachCanTra, 0, ',', '.') }}đ
-
-                    </span>
-
-                </div>
+</div>
 
 
-                {{-- Đổi trả --}}
-                @if($tongTienHoanThucTe > 0)
+                {{-- ĐIỂM ĐÃ SỬ DỤNG --}}
+                @if(($hoaDon->diem_su_dung ?? 0) > 0)
 
                     <div class="d-flex justify-content-between mb-3">
 
-                        <span class="text-danger">
-                            Hoàn tiền đổi / trả
+                        <span class="text-muted">
+                            Điểm đã sử dụng
                         </span>
 
-                        <span class="fw-semibold text-danger">
-
-                            -{{ number_format($tongTienHoanThucTe, 0, ',', '.') }}đ
-
+                        <span class="fw-semibold">
+                            {{ number_format($hoaDon->diem_su_dung, 0, ',', '.') }}
+                            điểm
                         </span>
 
                     </div>
@@ -956,7 +918,74 @@ $doanhThuRong = max(
                 <hr>
 
 
-                {{-- Doanh thu ròng --}}
+                {{-- KHÁCH CẦN TRẢ --}}
+                <div class="d-flex justify-content-between mb-3">
+
+                    <span class="fw-bold">
+                        Khách cần trả
+                    </span>
+
+                    <span class="fw-bold text-primary">
+                        {{ number_format($khachCanTra ?? 0, 0, ',', '.') }}đ
+                    </span>
+
+                </div>
+
+
+                {{-- TIỀN KHÁCH ĐƯA --}}
+                <div class="d-flex justify-content-between mb-3">
+
+                    <span class="text-muted">
+                        Tiền khách đưa
+                    </span>
+
+                    <span class="fw-semibold">
+                        {{ number_format($hoaDon->tien_khach_dua ?? 0, 0, ',', '.') }}đ
+                    </span>
+
+                </div>
+
+
+                {{-- TIỀN THỪA --}}
+                @if(($hoaDon->tien_thua ?? 0) > 0)
+
+                    <div class="d-flex justify-content-between mb-3">
+
+                        <span class="text-muted">
+                            Tiền thừa
+                        </span>
+
+                        <span class="text-success fw-semibold">
+                            {{ number_format($hoaDon->tien_thua, 0, ',', '.') }}đ
+                        </span>
+
+                    </div>
+
+                @endif
+
+
+                {{-- HOÀN TIỀN ĐỔI / TRẢ --}}
+                @if(($tongTienHoanThucTe ?? 0) > 0)
+
+                    <div class="d-flex justify-content-between mb-3">
+
+                        <span class="text-danger">
+                            Đã hoàn trả
+                        </span>
+
+                        <span class="fw-semibold text-danger">
+                            -{{ number_format($tongTienHoanThucTe, 0, ',', '.') }}đ
+                        </span>
+
+                    </div>
+
+                @endif
+
+
+                <hr>
+
+
+                {{-- DOANH THU RÒNG --}}
                 <div class="p-3 rounded bg-success-subtle">
 
                     <div class="d-flex justify-content-between align-items-center">
@@ -966,16 +995,14 @@ $doanhThuRong = max(
                         </span>
 
                         <span class="fw-bold text-success fs-5">
-
-                            {{ number_format($doanhThuRong, 0, ',', '.') }}đ
-
+                            {{ number_format($doanhThuRong ?? 0, 0, ',', '.') }}đ
                         </span>
 
                     </div>
 
-                   <small class="text-muted d-block mt-1">
-                    Khách cần trả - tiền hoàn thực tế
-                </small>
+                    <small class="text-muted d-block mt-1">
+                        Khách cần trả − tiền hoàn thực tế
+                    </small>
 
                 </div>
 
@@ -986,8 +1013,6 @@ $doanhThuRong = max(
     </div>
 
 </div>
-
-
 
 {{-- ============================================================
      LỊCH SỬ ĐỔI / TRẢ
@@ -1259,17 +1284,11 @@ $doanhThuRong = max(
 <div class="card border-0 shadow-sm mb-4">
 
     <div class="card-header bg-white">
-
         <h5 class="fw-bold mb-0">
-
             <i class="fas fa-star text-warning me-2"></i>
-
             Lịch sử điểm khách hàng
-
         </h5>
-
     </div>
-
 
     <div class="card-body">
 
@@ -1278,132 +1297,123 @@ $doanhThuRong = max(
             <table class="table table-hover align-middle mb-0">
 
                 <thead class="table-light">
-
                     <tr>
-
-                        <th>
-                            Thời gian
-                        </th>
-
-                        <th>
-                            Nội dung
-                        </th>
-
-                        <th class="text-center">
-                            Điểm
-                        </th>
-
+                        <th>Thời gian</th>
+                        <th>Nội dung</th>
+                        <th class="text-center">Điểm</th>
                     </tr>
-
                 </thead>
-
 
                 <tbody>
 
                 @foreach($diemTichDiems as $diem)
 
+                    @php
+                        /*
+                        |--------------------------------------------------------------------------
+                        | LẤY THỜI GIAN
+                        |--------------------------------------------------------------------------
+                        */
+                        $thoiGian = null;
+
+                        if (!empty($diem->created_at)) {
+                            $thoiGian = $diem->created_at;
+                        } elseif (!empty($diem->ngay)) {
+                            $thoiGian = $diem->ngay;
+                        }
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | LẤY NỘI DUNG
+                        |--------------------------------------------------------------------------
+                        */
+                        $noiDung =
+                            $diem->noi_dung
+                            ?? $diem->ly_do
+                            ?? $diem->mo_ta
+                            ?? 'Thay đổi điểm';
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | LẤY SỐ ĐIỂM
+                        |--------------------------------------------------------------------------
+                        */
+                        $soDiem =
+                            $diem->so_diem
+                            ?? $diem->diem
+                            ?? $diem->so_diem_thay_doi
+                            ?? 0;
+
+                        $soDiem = abs((int) $soDiem);
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | XÁC ĐỊNH CỘNG / TRỪ ĐIỂM
+                        |--------------------------------------------------------------------------
+                        */
+                        $noiDungLower = mb_strtolower(
+                            trim($noiDung),
+                            'UTF-8'
+                        );
+
+                        $laDiemTru =
+                            str_contains($noiDungLower, 'sử dụng điểm')
+                            || str_contains($noiDungLower, 'trừ điểm')
+                            || str_contains($noiDungLower, 'tru diem')
+                            || str_contains($noiDungLower, 'sử dụng')
+                            || str_contains($noiDungLower, 'trả hàng')
+                            || str_contains($noiDungLower, 'đổi hàng')
+                            || str_contains($noiDungLower, 'đổi/trả')
+                            || str_contains($noiDungLower, 'đổi trả')
+                            || str_contains($noiDungLower, 'đổi/trả hàng')
+                            || str_contains($noiDungLower, 'hoàn điểm');
+                    @endphp
+
+
                     <tr>
 
+                        {{-- =========================
+                             THỜI GIAN
+                        ========================== --}}
                         <td>
 
-                            @if(isset($diem->created_at))
+                            @if($thoiGian)
 
-                                {{ \Carbon\Carbon::parse($diem->created_at)->format('d/m/Y H:i') }}
-
-                            @elseif(isset($diem->ngay))
-
-                                {{ \Carbon\Carbon::parse($diem->ngay)->format('d/m/Y H:i') }}
+                                {{ \Carbon\Carbon::parse($thoiGian)->format('d/m/Y H:i') }}
 
                             @else
 
-                                ---
+                                <span class="text-muted">---</span>
 
-                            <div class="fw-bold">
-                                {{ $item->ten_san_pham }}
-                            </div>
-
-                            @if(!empty($item->ten_bien_the))
-                                <div class="small text-muted mt-1">
-                                    <i class="fas fa-layer-group me-1"></i>
-                                    Biến thể: {{ $item->ten_bien_the }}
-                                </div>
-                            @endif
-
-                            @if(!empty($item->thuoc_tinh_hien_thi))
-                                <div class="small text-muted mt-1">
-                                    <i class="fas fa-tags me-1"></i>
-                                    {{ implode(' • ', $item->thuoc_tinh_hien_thi) }}
-                                </div>
                             @endif
 
                         </td>
 
 
+                        {{-- =========================
+                             NỘI DUNG
+                        ========================== --}}
                         <td>
 
-                            {{ $diem->noi_dung
-                                ?? $diem->ly_do
-                                ?? $diem->mo_ta
-                                ?? 'Thay đổi điểm' }}
+                            {{ $noiDung }}
 
                         </td>
 
+
+                        {{-- =========================
+                             ĐIỂM
+                        ========================== --}}
                         <td class="text-center">
-
-                            @php
-
-                                // ---------------------------------------------------------
-                                // Lấy số điểm
-                                // ---------------------------------------------------------
-                                $soDiem =
-                                    $diem->so_diem
-                                    ?? $diem->diem
-                                    ?? $diem->so_diem_thay_doi
-                                    ?? 0;
-
-                                $soDiem = abs((int) $soDiem);
-
-
-                                // ---------------------------------------------------------
-                                // Lấy nội dung giao dịch
-                                // ---------------------------------------------------------
-                                $noiDung =
-                                    $diem->noi_dung
-                                    ?? $diem->ly_do
-                                    ?? $diem->mo_ta
-                                    ?? '';
-
-                                $noiDungLower = mb_strtolower(
-                                    trim($noiDung),
-                                    'UTF-8'
-                                );
-
-
-                                // ---------------------------------------------------------
-                                // Xác định giao dịch TRỪ điểm
-                                // ---------------------------------------------------------
-                                $laDiemTru =
-                                    str_contains($noiDungLower, 'sử dụng điểm')
-                                    || str_contains($noiDungLower, 'trừ điểm')
-                                    || str_contains($noiDungLower, 'tru diem')
-                                    || str_contains($noiDungLower, 'sử dụng')
-                                    || str_contains($noiDungLower, 'trả hàng')
-                                    || str_contains($noiDungLower, 'đổi hàng')
-                                    || str_contains($noiDungLower, 'đổi/trả')
-                                    || str_contains($noiDungLower, 'đổi trả')
-                                    || str_contains($noiDungLower, 'đổi/trả hàng')
-                                    || str_contains($noiDungLower, 'hoàn điểm');
-
-                            @endphp
-
 
                             @if($soDiem == 0)
 
-                                {{-- Không thay đổi điểm --}}
+                                {{-- Không thay đổi --}}
                                 <span class="badge bg-secondary px-2 py-1">
                                     0
                                 </span>
-
 
                             @elseif($laDiemTru)
 
@@ -1415,7 +1425,6 @@ $doanhThuRong = max(
                                     {{ $soDiem }}
 
                                 </span>
-
 
                             @else
 
@@ -1431,96 +1440,25 @@ $doanhThuRong = max(
                             @endif
 
                         </td>
+
                     </tr>
 
                 @endforeach
-            </tbody>
-        </table>
 
-        {{-- ====================================== --}}
-        {{-- TỔNG KẾT THANH TOÁN --}}
-        {{-- ====================================== --}}
-        <div class="row mt-4">
-            <div class="col-md-7">
-                {{-- Khuyến mãi đã áp dụng --}}
-                @if(isset($khuyenMaiDaApDung) && $khuyenMaiDaApDung->count())
-                    <div class="border rounded p-3">
-                        <div class="fw-bold mb-2">
-                            <i class="fas fa-tags text-danger me-1"></i>
-                            Khuyến mãi đã áp dụng
-                        </div>
+                </tbody>
 
-                        @foreach($khuyenMaiDaApDung as $km)
-                            <div class="d-flex justify-content-between mb-1">
-                                <span>
-                                    {{ $km->ten_chuong_trinh ?? 'Khuyến mãi' }}
-                                    @if(($km->loai_ap_dung ?? '') === 'san_pham')
-                                        <span class="badge bg-warning text-dark ms-1">Sản phẩm</span>
-                                    @else
-                                        <span class="badge bg-primary ms-1">Hóa đơn</span>
-                                    @endif
-                                </span>
-                                <strong class="text-danger">
-                                    -{{ number_format($km->tien_giam ?? 0, 0, ',', '.') }}đ
-                                </strong>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
-            </div>
+            </table>
 
-            <div class="col-md-5">
-                <table class="table table-borderless mb-0">
-                    <tr>
-                        <td>Tạm tính:</td>
-                        <td class="text-end fw-semibold">
-                            {{ number_format($hoaDon->tong_tien_hang ?? 0, 0, ',', '.') }}đ
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Giảm giá:</td>
-                        <td class="text-end text-danger fw-semibold">
-                            -{{ number_format($hoaDon->tien_giam_gia ?? 0, 0, ',', '.') }}đ
-                        </td>
-                    </tr>
-
-                    @if(($hoaDon->diem_su_dung ?? 0) > 0)
-                        <tr>
-                            <td>Điểm đã sử dụng:</td>
-                            <td class="text-end">
-                                {{ number_format($hoaDon->diem_su_dung, 0, ',', '.') }} điểm
-                            </td>
-                        </tr>
-                    @endif
-
-                    <tr class="border-top">
-                        <td class="fw-bold fs-5">Khách cần trả:</td>
-                        <td class="text-end fw-bold fs-5 text-primary">
-                            {{ number_format($hoaDon->khach_can_tra ?? 0, 0, ',', '.') }}đ
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Tiền khách đưa:</td>
-                        <td class="text-end">
-                            {{ number_format($hoaDon->tien_khach_dua ?? 0, 0, ',', '.') }}đ
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Tiền thừa:</td>
-                        <td class="text-end text-success fw-semibold">
-                            {{ number_format($hoaDon->tien_thua ?? 0, 0, ',', '.') }}đ
-                        </td>
-                    </tr>
-                </table>
-            </div>
         </div>
+
     </div>
 
 </div>
 
 @endif
+
+       
+
 
 
 
