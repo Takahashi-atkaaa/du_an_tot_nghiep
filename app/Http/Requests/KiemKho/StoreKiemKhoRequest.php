@@ -3,19 +3,7 @@
 namespace App\Http\Requests\KiemKho;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
-/**
- * Validate payload cho việc LƯU NHÁP phiếu kiểm kho.
- * Được inject vào KiemKhoApiController::storeDraft và updateDraft.
- *
- * Quy tắc:
- *  - Mảng items phải có ít nhất 1 dòng.
- *  - Mỗi item phải có id_chi_tiet_lo_hang, variant_id tồn tại trong DB.
- *  - ma_vach (nếu có) phải tồn tại trong bảng bien_the_san_pham.
- *  - so_luong_thuc_te phải >= 0.
- *  - Không cho phép trùng variant_id + id_chi_tiet_lo_hang (check tại controller).
- */
 class StoreKiemKhoRequest extends FormRequest
 {
     public function authorize(): bool
@@ -26,75 +14,27 @@ class StoreKiemKhoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'ghi_chu' => ['nullable', 'string', 'max:2000'],
-
-            'items' => ['required', 'array', 'min:1'],
-
-            'items.*.id_chi_tiet_lo_hang' => [
-                'required',
-                'integer',
-                Rule::exists('chi_tiet_lo_hang', 'id'),
-            ],
-            'items.*.variant_id' => [
-                'required',
-                'integer',
-                Rule::exists('bien_the_san_pham', 'id'),
-            ],
-            'items.*.ma_vach' => [
-                'nullable',
-                'string',
-                'max:100',
-                Rule::exists('bien_the_san_pham', 'ma_vach'),
-            ],
-            'items.*.ten_san_pham' => ['nullable', 'string', 'max:255'],
-            'items.*.ten_bien_the' => ['nullable', 'string', 'max:255'],
-            'items.*.ten_don_vi' => ['nullable', 'string', 'max:100'],
-            'items.*.han_su_dung' => ['nullable', 'date'],
-            'items.*.ma_lo' => ['nullable', 'string', 'max:100'],
-            'items.*.so_luong_ton' => ['required', 'integer', 'min:0'],
-            'items.*.so_luong_thuc_te' => ['nullable', 'integer', 'min:0', 'max:9999999'],
-            'items.*.gia_von' => ['nullable', 'numeric', 'min:0'],
+            'id_nguoi_kiem' => 'required|integer|exists:nguoi_dung,id',
+            'pham_vi' => 'required|in:toan_bo,theo_danh_muc,chon_san_pham',
+            'id_danh_muc' => 'nullable|required_if:pham_vi,theo_danh_muc|integer|exists:danh_muc_san_pham,id',
+            'variant_ids' => 'nullable|required_if:pham_vi,chon_san_pham|array',
+            'variant_ids.*' => 'integer|exists:bien_the_san_pham,id',
+            'ngay_kiem' => 'nullable|date',
+            'ghi_chu' => 'nullable|string|max:1000',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'items.required' => 'Phiếu kiểm kho phải có ít nhất 1 dòng chi tiết.',
-            'items.min' => 'Phiếu kiểm kho phải có ít nhất 1 dòng chi tiết.',
-            'items.*.id_chi_tiet_lo_hang.required' => 'Thiếu ID lô hàng ở dòng :position.',
-            'items.*.id_chi_tiet_lo_hang.exists' => 'Lô hàng dòng :position không tồn tại trong kho.',
-            'items.*.variant_id.required' => 'Thiếu ID biến thể ở dòng :position.',
-            'items.*.variant_id.exists' => 'Biến thể dòng :position không tồn tại.',
-            'items.*.ma_vach.exists' => 'Mã vạch dòng :position không tồn tại trong hệ thống.',
-            'items.*.so_luong_ton.required' => 'Thiếu tồn kho dòng :position.',
-            'items.*.so_luong_thuc_te.min' => 'Số lượng thực tế dòng :position không được âm.',
-            'items.*.so_luong_thuc_te.max' => 'Số lượng thực tế dòng :position quá lớn.',
+            'id_nguoi_kiem.required' => 'Vui lòng chọn người kiểm.',
+            'id_nguoi_kiem.exists' => 'Người kiểm không tồn tại.',
+            'pham_vi.required' => 'Vui lòng chọn phạm vi kiểm.',
+            'pham_vi.in' => 'Phạm vi không hợp lệ.',
+            'id_danh_muc.required_if' => 'Vui lòng chọn danh mục.',
+            'variant_ids.required_if' => 'Vui lòng chọn ít nhất một sản phẩm.',
+            'ngay_kiem.date' => 'Ngày kiểm không hợp lệ.',
+            'ghi_chu.max' => 'Ghi chú không được vượt quá 1000 ký tự.',
         ];
-    }
-
-    /**
-     * Trả về mảng items đã chuẩn hoá (int / float / date).
-     */
-    public function items(): array
-    {
-        return collect($this->input('items', []))
-            ->map(fn ($it) => [
-                'id_chi_tiet_lo_hang' => (int) ($it['id_chi_tiet_lo_hang'] ?? 0),
-                'variant_id' => (int) ($it['variant_id'] ?? 0),
-                'ma_vach' => $it['ma_vach'] ?? null,
-                'ten_san_pham' => $it['ten_san_pham'] ?? null,
-                'ten_bien_the' => $it['ten_bien_the'] ?? null,
-                'ten_don_vi' => $it['ten_don_vi'] ?? null,
-                'han_su_dung' => $it['han_su_dung'] ?? null,
-                'ma_lo' => $it['ma_lo'] ?? null,
-                'so_luong_ton' => (int) ($it['so_luong_ton'] ?? 0),
-                'so_luong_thuc_te' => isset($it['so_luong_thuc_te']) && $it['so_luong_thuc_te'] !== null
-                    ? (int) $it['so_luong_thuc_te']
-                    : null,
-                'gia_von' => (float) ($it['gia_von'] ?? 0),
-            ])
-            ->values()
-            ->all();
     }
 }

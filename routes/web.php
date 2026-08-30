@@ -117,47 +117,7 @@ Route::post('/admin/api/phieu-xuat', [PhieuXuatApiController::class, 'store']);
 Route::put('/admin/api/phieu-xuat/{id}', [PhieuXuatApiController::class, 'update']);
 Route::delete('/admin/api/phieu-xuat/{id}', [PhieuXuatApiController::class, 'destroy']);
 
-// ===== KIỂM KHO =====
-// [TEST MODE] Đã tạm bỏ middleware 'permission:*' để test thử.
-// Sau khi test xong, sẽ khôi phục lại các permission middleware.
-Route::prefix('/admin/api/kiem-kho')->name('admin.api.kiem-kho.')
-    ->middleware([AuthAdmin::class])
-    ->group(function () {
-        Route::get('/search', [KiemKhoApiController::class, 'searchItems']);
-        Route::get('/draft', [KiemKhoApiController::class, 'getDraft']);
-        Route::post('/draft', [KiemKhoApiController::class, 'storeDraft']);
-        Route::post('/import-preview', [KiemKhoApiController::class, 'importPreview']);
-        Route::post('/import-execute', [KiemKhoApiController::class, 'importExecute']);
-        Route::get('/history', [KiemKhoApiController::class, 'history']);
-        Route::get('/trash', [KiemKhoApiController::class, 'trash']);
-        Route::post('/bulk-action', [KiemKhoApiController::class, 'bulkAction']);
-        Route::post('/{id}/balance', [KiemKhoApiController::class, 'balanceInventory'])
-            ->whereNumber('id');
-        Route::post('/{id}/cancel', [KiemKhoApiController::class, 'cancel'])
-            ->whereNumber('id');
-        Route::post('/{id}/restore', [KiemKhoApiController::class, 'restore'])
-            ->whereNumber('id');
-        Route::put('/{id}', [KiemKhoApiController::class, 'updateDraft'])
-            ->whereNumber('id');
-        Route::delete('/{id}/force', [KiemKhoApiController::class, 'forceDelete'])
-            ->whereNumber('id');
-        Route::delete('/{id}', [KiemKhoApiController::class, 'softDelete'])
-            ->whereNumber('id');
-        Route::get('/{id}', [KiemKhoApiController::class, 'show'])
-            ->whereNumber('id');
-    });
-
-// View (Blade) - [TEST MODE] không check permission
-Route::get('/admin/kho-hang/kiem-kho', [KiemKhoController::class, 'index'])
-    ->name('kiem-kho.create');
-Route::get('/admin/kho-hang/kiem-kho/lich-su', [KiemKhoController::class, 'history'])
-    ->name('kiem-kho.history');
-Route::get('/admin/kho-hang/kiem-kho/thung-rac', [KiemKhoController::class, 'trash'])
-    ->name('kiem-kho.trash');
-Route::get('/admin/kho-hang/kiem-kho/{id}', [KiemKhoController::class, 'show'])
-    ->whereNumber('id')
-    ->name('kiem-kho.show');
-
+// Trang tạo phiếu nhập (chuyển từ modal sang trang riêng)
 Route::middleware([KTVaiTro::class])->group(function () {
     // Admin Routes - Preview
     Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
@@ -224,6 +184,7 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::get('/admin/san-pham/trash', [SanPhamController::class, 'trash'])->middleware('permission:xoa_san_pham')->name('san-pham.trash');
     Route::post('/admin/san-pham/bulk-restore', [SanPhamController::class, 'bulkRestore'])->middleware('permission:xoa_san_pham');
     Route::delete('/admin/san-pham/bulk-force', [SanPhamController::class, 'bulkForceDelete'])->middleware('permission:xoa_san_pham');
+    Route::get('/admin/san-pham/{id}/constraints', [SanPhamController::class, 'getConstraints'])->middleware('permission:xoa_san_pham');
     Route::post('/admin/san-pham/import', [SanPhamController::class, 'import'])->middleware('permission:them_san_pham');
     Route::post('/admin/san-pham/{id}/restore', [SanPhamController::class, 'restore'])->middleware('permission:xoa_san_pham');
     Route::delete('/admin/san-pham/{id}/force', [SanPhamController::class, 'forceDelete'])->middleware('permission:xoa_san_pham');
@@ -262,6 +223,40 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::post('/admin/hoa-don/{id}/huy', [HoaDonController::class, 'huy'])->name('admin.hoa-don.huy');
     Route::get('/admin/hang-loi', [HangLoiController::class, 'index'])->name('admin.hang-loi.index');
     Route::post('/admin/hang-loi/{id}/xac-nhan-tieu-huy', [HangLoiController::class, 'xacNhanTieuHuy'])->name('admin.hang-loi.xac-nhan-tieu-huy');
+
+    // Kiểm kho - View
+    Route::prefix('/admin/kho-hang/kiem-kho')->name('kiem-kho.')->group(function () {
+        Route::get('/', [KiemKhoController::class, 'index'])->name('index');
+        Route::get('/tao-moi', [KiemKhoController::class, 'create'])->name('create');
+        Route::post('/', [KiemKhoController::class, 'store'])->name('store');
+        Route::get('/thung-rac', [KiemKhoController::class, 'trash'])->name('trash');
+        Route::get('/bao-cao', [KiemKhoController::class, 'baoCao'])->name('bao-cao');
+        Route::get('/{id}', [KiemKhoController::class, 'show'])->whereNumber('id')->name('show');
+        Route::get('/{id}/dem', [KiemKhoController::class, 'dem'])->whereNumber('id')->name('dem');
+        Route::get('/{id}/sua', [KiemKhoController::class, 'edit'])->whereNumber('id')->name('edit');
+        Route::put('/{id}', [KiemKhoController::class, 'update'])->whereNumber('id')->name('update');
+        Route::delete('/{id}', [KiemKhoController::class, 'destroy'])->whereNumber('id')->name('destroy');
+        Route::post('/{id}/khoi-phuc', [KiemKhoController::class, 'restore'])->whereNumber('id')->name('restore');
+        Route::delete('/{id}/xoa-vinh-vien', [KiemKhoController::class, 'forceDelete'])->whereNumber('id')->name('force-delete');
+        Route::get('/{id}/in', [KiemKhoController::class, 'print'])->whereNumber('id')->name('print');
+    });
+
+    // Kiểm kho - API
+    Route::prefix('/admin/api/kiem-kho')->name('admin.api.kiem-kho.')->group(function () {
+        Route::get('/tim-variant', [KiemKhoApiController::class, 'timVariant'])->name('tim-variant');
+        Route::get('/bao-cao', [KiemKhoApiController::class, 'baoCao'])->name('bao-cao');
+        Route::get('/{id}/detail', [KiemKhoApiController::class, 'layChiTietPhieu'])->whereNumber('id')->name('detail');
+        Route::get('/{id}/thong-ke', [KiemKhoApiController::class, 'thongKe'])->whereNumber('id')->name('thong-ke');
+        Route::post('/{id}/items/bulk', [KiemKhoApiController::class, 'capNhatHangLo'])->whereNumber('id')->name('items.bulk');
+        Route::post('/{id}/items/{itemId}', [KiemKhoApiController::class, 'capNhatSoLuongThucTe'])->whereNumber('id')->whereNumber('itemId')->name('items.update');
+        Route::post('/{id}/bat-dau-kiem', [KiemKhoApiController::class, 'batDauKiem'])->whereNumber('id')->name('bat-dau-kiem');
+        Route::post('/{id}/hoan-tat-kiem', [KiemKhoApiController::class, 'hoanTatKiem'])->whereNumber('id')->name('hoan-tat-kiem');
+        Route::post('/{id}/duyet', [KiemKhoApiController::class, 'duyet'])->whereNumber('id')->name('duyet');
+        Route::post('/{id}/tu-choi', [KiemKhoApiController::class, 'tuChoi'])->whereNumber('id')->name('tu-choi');
+        Route::post('/{id}/dem-lai', [KiemKhoApiController::class, 'demLai'])->whereNumber('id')->name('dem-lai');
+        Route::post('/{id}/hoan-tat', [KiemKhoApiController::class, 'hoanTat'])->whereNumber('id')->name('hoan-tat');
+        Route::post('/{id}/huy', [KiemKhoApiController::class, 'huy'])->whereNumber('id')->name('huy');
+    });
 
     // Trang kho hang
     Route::get('/admin/kho-hang', [KhoHangController::class, 'index']);

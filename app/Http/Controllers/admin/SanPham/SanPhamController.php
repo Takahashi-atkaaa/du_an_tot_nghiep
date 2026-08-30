@@ -1045,9 +1045,53 @@ class SanPhamController extends Controller
         }
     }
 
+    public function getConstraints(int $id)
+    {
+        $variant = BienTheSanPham::onlyTrashed()->findOrFail($id);
+
+        // Đếm các ràng buộc
+        $chiTietHoaDon = \DB::table('chi_tiet_hoa_don')->where('id_bien_the_san_pham', $id)->count();
+        $chiTietDoiTra = \DB::table('chi_tiet_doi_tra')
+            ->where('id_bien_the', $id)
+            ->orWhere('id_bien_the_thay_the', $id)
+            ->count();
+        $hangLoi = \DB::table('hang_loi')->where('id_bien_the', $id)->count();
+        
+        // chi_tiet_phieu chứa cả phiếu nhập và xuất, cần join với phieu để phân loại
+        $chiTietPhieuNhap = \DB::table('chi_tiet_phieu as ctp')
+            ->join('phieu as p', 'ctp.id_phieu', '=', 'p.id')
+            ->whereIn('p.loai_phieu', ['nhap_hang', 'tra_lai_tu_khach'])
+            ->where('ctp.id_san_pham', $id)
+            ->count();
+            
+        $chiTietPhieuXuat = \DB::table('chi_tiet_phieu as ctp')
+            ->join('phieu as p', 'ctp.id_phieu', '=', 'p.id')
+            ->whereIn('p.loai_phieu', ['xuat_tra_ncc', 'xuat_tieu_huy'])
+            ->where('ctp.id_san_pham', $id)
+            ->count();
+
+        return response()->json([
+            'variant_name' => $variant->ten_bien_the ?: 'Mặc định',
+            'product_name' => $variant->product->ten_san_pham ?? 'N/A',
+            'constraints' => [
+                'chi_tiet_hoa_don' => $chiTietHoaDon,
+                'chi_tiet_doi_tra' => $chiTietDoiTra,
+                'hang_loi' => $hangLoi,
+                'chi_tiet_phieu_nhap' => $chiTietPhieuNhap,
+                'chi_tiet_phieu_xuat' => $chiTietPhieuXuat,
+            ],
+            'total' => $chiTietHoaDon + $chiTietDoiTra + $hangLoi + $chiTietPhieuNhap + $chiTietPhieuXuat,
+        ]);
+    }
+
     public function forceDelete(int $id): RedirectResponse
     {
         $variant = BienTheSanPham::onlyTrashed()->with('units')->findOrFail($id);
+
+        // Xóa các bản ghi có khóa ngoại tham chiếu đến variant này
+        \DB::table('hang_loi')->where('id_bien_the', $id)->delete();
+        \DB::table('chi_tiet_doi_tra')->where('id_bien_the', $id)->delete();
+        \DB::table('chi_tiet_doi_tra')->where('id_bien_the_thay_the', $id)->delete();
 
         foreach ($variant->units as $unit) {
             if ($unit->hinh_anh && !str_starts_with($unit->hinh_anh, 'http')) {

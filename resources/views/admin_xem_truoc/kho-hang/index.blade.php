@@ -173,6 +173,11 @@
         </button>
     </li>
     <li class="nav-item" role="presentation">
+        <a href="{{ route('kiem-kho.index') }}" class="nav-link">
+            <i class="fas fa-clipboard-check me-1"></i>Kiểm kho
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
         <button class="nav-link" id="tab-nhap-hang" data-bs-toggle="tab" data-bs-target="#content-nhap-hang" type="button">
             <i class="fas fa-arrow-down text-success me-1"></i>Nhập hàng
         </button>
@@ -306,12 +311,6 @@
                                                     title="Xem chi tiết"
                                                     @click="expanded = !expanded">
                                                 <i class="fas fa-eye"></i>
-                                            </button>
-                                            <button type="button"
-                                                    class="btn btn-icon btn-icon-soft-secondary"
-                                                    title="Kiểm kho nhanh"
-                                                    @click="window.location.href='/admin/kho-hang/kiem-kho?sp={{ $sp->id }}'">
-                                                <i class="fas fa-clipboard-check"></i>
                                             </button>
                                         </div>
                                     </td>

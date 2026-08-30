@@ -43,10 +43,6 @@ class QuyenSeeder extends Seeder
             'ten_quyen' => 'Quản lý kho hàng'
         ],
         [
-            'ma_quyen' => 'kiem_kho',
-            'ten_quyen' => 'Kiểm kho'
-        ],
-        [
             'ma_quyen' => 'quan_ly_ca_lam',
             'ten_quyen' => 'Quản lý ca làm'
         ],

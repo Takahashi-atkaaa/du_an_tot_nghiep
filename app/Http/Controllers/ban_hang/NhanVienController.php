@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\KhachHang;
 use App\Services\DoiTraService;
+use App\Services\KiemKhoService;
 
 
 class NhanVienController extends Controller
@@ -538,7 +539,7 @@ public function hoaDon(Request $request)
                 ->get()
         );
     }
-    public function thanhToan(Request $request)
+    public function thanhToan(Request $request, KiemKhoService $kiemKhoService)
     {
         $request->validate([
             'cart' => 'required|array|min:1',
@@ -553,6 +554,17 @@ public function hoaDon(Request $request)
             'id_khuyen_mai' => 'nullable|integer|exists:khuyen_mai,id',
             'diem_su_dung' => 'nullable|integer|min:0',
         ]);
+
+        // CHAN: kiem tra tung variant trong cart co bi khoa boi phieu kiem kho khong
+        foreach ($request->cart as $item) {
+            $phieuKhoa = $kiemKhoService->phieuDangKhoaBienThe((int) $item['id']);
+            if ($phieuKhoa) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Sản phẩm ID {$item['id']} đang bị khoá bởi phiếu kiểm kho {$phieuKhoa->ma_kiem_kho}. Không thể bán.",
+                ], 422);
+            }
+        }
 
         // Xác định id người bán:
         //  - Ưu tiên id_nguoi_ban từ request (do dropdown POS chọn)

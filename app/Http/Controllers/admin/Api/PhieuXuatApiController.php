@@ -11,6 +11,7 @@ use App\Models\ChiTietPhieu;
 use App\Models\BienTheSanPham;
 use App\Models\DonViQuyDoi;
 use App\Models\LoHang;
+use App\Services\KiemKhoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -94,7 +95,7 @@ class PhieuXuatApiController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, KiemKhoService $kiemKhoService): JsonResponse
     {
         $data = $request->validate([
             'loai_xuat' => 'required|in:tra_hang_nha_cung_cap,tieu_huy',
@@ -111,6 +112,18 @@ class PhieuXuatApiController extends Controller
             'chi_tiet.*.so_luong.min' => 'Số lượng xuất phải lớn hơn 0.',
             'chi_tiet.*.id_chi_tiet_lo_hang.required' => 'Phải chọn lô hàng cho từng sản phẩm.',
         ]);
+
+        // CHAN: kiem tra variant co bi khoa boi phieu kiem kho
+        $variantIds = collect($data['chi_tiet'])->pluck('variant_id')->unique()->all();
+        foreach ($variantIds as $vid) {
+            $phieuKhoa = $kiemKhoService->phieuDangKhoaBienThe((int) $vid);
+            if ($phieuKhoa) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Biến thể ID {$vid} đang bị khoá bởi phiếu kiểm kho {$phieuKhoa->ma_kiem_kho}. Không thể xuất kho.",
+                ], 422);
+            }
+        }
 
         $loaiPhieuEnum = $data['loai_xuat'] === 'tra_hang_nha_cung_cap'
             ? 'xuat_tra_hang_nha_cung_cap'

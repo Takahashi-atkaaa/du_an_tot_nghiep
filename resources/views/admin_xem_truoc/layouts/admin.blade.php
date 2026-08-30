@@ -285,12 +285,6 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ route('kiem-kho.history') }}" class="nav-link {{ request()->is('admin/kho-hang/kiem-kho*') ? 'active' : '' }}">
-                    <i class="fas fa-clipboard-check"></i>
-                    <span>Kiểm kho</span>
-                </a>
-            </li>
-            <li class="nav-item">
                 <a href="{{ route('admin.hang-loi.index') }}" class="nav-link {{ request()->is('admin/hang-loi*') ? 'active' : '' }}">
                     <i class="fas fa-triangle-exclamation"></i>
                     <span>Hàng lỗi</span>

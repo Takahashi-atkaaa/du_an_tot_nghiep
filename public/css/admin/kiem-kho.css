@@ -1,0 +1,107 @@
+/* ============================================================
+   KIỂM KHO - Admin SmartMart
+   ============================================================ */
+:root {
+    --kk-primary: #4f46e5;
+    --kk-primary-hover: #4338ca;
+    --kk-success: #10b981;
+    --kk-warning: #f59e0b;
+    --kk-danger: #ef4444;
+    --kk-info: #06b6d4;
+    --kk-bg: #f8fafc;
+    --kk-border: #e2e8f0;
+}
+
+.kk-page-header {
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    color: #fff;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+}
+
+.kk-page-header h2 { margin: 0; font-size: 22px; font-weight: 700; }
+.kk-page-header .subtitle { opacity: 0.9; font-size: 13px; margin-top: 4px; }
+
+/* Stat Cards */
+.kk-stat-card {
+    border-radius: 10px;
+    padding: 16px 20px;
+    background: #fff;
+    border: 1px solid var(--kk-border);
+    transition: all 0.2s;
+}
+.kk-stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); transform: translateY(-1px); }
+.kk-stat-card .label { font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.kk-stat-card .value { font-size: 24px; font-weight: 700; color: #0f172a; margin-top: 4px; }
+.kk-stat-card.bg-blue { background: linear-gradient(135deg, #dbeafe, #bfdbfe); border-color: #93c5fd; }
+.kk-stat-card.bg-green { background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-color: #6ee7b7; }
+.kk-stat-card.bg-yellow { background: linear-gradient(135deg, #fef3c7, #fde68a); border-color: #fcd34d; }
+.kk-stat-card.bg-red { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: #fca5a5; }
+
+/* Table */
+.kk-table { background: #fff; border-radius: 8px; overflow: hidden; }
+.kk-table thead th { background: #f1f5f9; font-weight: 600; font-size: 13px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px; }
+.kk-table tbody td { padding: 10px 12px; vertical-align: middle; border-color: #f1f5f9; }
+.kk-table tbody tr:hover { background: #f8fafc; }
+
+/* Input so luong dem */
+.kk-input-qty {
+    font-size: 20px;
+    font-weight: 600;
+    text-align: center;
+    width: 100px;
+    height: 44px;
+    border: 2px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+}
+.kk-input-qty:focus { outline: none; border-color: var(--kk-primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.15); }
+.kk-input-qty.is-edited { background: #fef9c3; border-color: #facc15; }
+
+/* Filter Panel */
+.kk-filter-panel {
+    background: #fff;
+    border-radius: 10px;
+    padding: 16px;
+    border: 1px solid var(--kk-border);
+}
+.kk-filter-panel .form-label { font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; }
+
+/* Action bar trong trang dem */
+.kk-action-bar {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 100;
+    padding: 12px 16px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Status badges */
+.kk-status { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+.kk-status.draft { background: #e2e8f0; color: #475569; }
+.kk-status.counting { background: #cffafe; color: #0e7490; }
+.kk-status.pending { background: #fef3c7; color: #92400e; }
+.kk-status.approved { background: #ddd6fe; color: #5b21b6; }
+.kk-status.completed { background: #d1fae5; color: #065f46; }
+.kk-status.rejected { background: #fee2e2; color: #991b1b; }
+.kk-status.cancelled { background: #1e293b; color: #f1f5f9; }
+
+/* Row highlighting */
+.kk-row-thieu { background: #fee2e2 !important; }
+.kk-row-thua { background: #fef3c7 !important; }
+.kk-row-du { background: #d1fae5 !important; }
+.kk-row-chua-dem { background: #f8fafc; color: #94a3b8; }
+
+@media (max-width: 768px) {
+    .kk-action-bar { flex-direction: column; align-items: stretch; }
+    .kk-input-qty { font-size: 16px; width: 80px; height: 38px; }
+}

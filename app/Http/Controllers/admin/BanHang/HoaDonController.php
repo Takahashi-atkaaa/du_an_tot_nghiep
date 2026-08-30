@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\BanHang\XuLyDoiTraRequest;
 use App\Models\HoaDon;
 use App\Services\DoiTraService;
+use App\Services\KiemKhoService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -456,7 +457,7 @@ $doanhThuRong = max(
         });
     }
 
-    public function searchProduct(Request $request)
+    public function searchProduct(Request $request, KiemKhoService $kiemKhoService)
     {
         $keyword = $request->q;
 
@@ -483,7 +484,15 @@ $doanhThuRong = max(
             });
         }
 
-        return response()->json($query->limit(20)->get());
+        $items = $query->limit(20)->get();
+        // Check tung variant co bi khoa boi phieu kiem kho nao khong
+        foreach ($items as $item) {
+            $phieuKhoa = $kiemKhoService->phieuDangKhoaBienThe((int) $item->id);
+            $item->dang_bi_khoa_kiem_kho = $phieuKhoa !== null;
+            $item->phieu_kiem_kho_khoa = $phieuKhoa?->ma_kiem_kho;
+        }
+
+        return response()->json($items);
     }
 
     public function formDoiTra($id, DoiTraService $doiTraService)

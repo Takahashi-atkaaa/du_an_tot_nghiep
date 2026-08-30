@@ -178,16 +178,12 @@
                                             <i class="fas fa-trash-restore me-1"></i>Khôi phục
                                         </button>
                                     </form>
-                                    <form action="{{ url('admin/san-pham/' . $item->id . '/force') }}"
-                                          method="POST"
-                                          class="d-inline"
-                                          onsubmit="return confirm('Bạn có chắc chắn muốn XÓA VĨNH VIỄN biến thể này? Hành động này không thể hoàn tác.')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" title="Xóa vĩnh viễn">
-                                            <i class="fas fa-times-circle me-1"></i>Xóa VV
-                                        </button>
-                                    </form>
+                                    <button type="button" 
+                                            class="btn btn-sm btn-danger" 
+                                            title="Xóa vĩnh viễn"
+                                            onclick="showConstraintsModal({{ $item->id }})">
+                                        <i class="fas fa-times-circle me-1"></i>Xóa VV
+                                    </button>
                                 </td>
                             </tr>
                         @endforeach
@@ -217,6 +213,37 @@
     </div>
 </div>
 
+{{-- Modal hiển thị thông tin ràng buộc --}}
+<div class="modal fade" id="constraintsModal" tabindex="-1" aria-labelledby="constraintsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="constraintsModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Cảnh báo xóa vĩnh viễn
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="constraintsModalBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Đang tải...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" id="constraintsModalFooter" style="display:none;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <form id="confirmForceDeleteForm" method="POST" class="d-inline">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt me-1"></i>Xác nhận xóa
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="mt-4 p-3 bg-light rounded border">
     <div class="d-flex align-items-start gap-2">
         <i class="fas fa-info-circle text-info mt-1"></i>
@@ -235,6 +262,128 @@
 
 @section('page_scripts')
 <script>
+// Function to show constraints modal
+window.showConstraintsModal = function(variantId) {
+    const modal = new bootstrap.Modal(document.getElementById('constraintsModal'));
+    const modalBody = document.getElementById('constraintsModalBody');
+    const modalFooter = document.getElementById('constraintsModalFooter');
+    const confirmForm = document.getElementById('confirmForceDeleteForm');
+    
+    // Reset modal
+    modalFooter.style.display = 'none';
+    modalBody.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Đang tải...</span>
+            </div>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Fetch constraints data
+    fetch(`/admin/san-pham/${variantId}/constraints`)
+        .then(response => {
+            return response.json();
+        })
+        .then(data => {
+            const constraints = data.constraints;
+            const total = data.total;
+            
+            let html = `
+                <div class="mb-3">
+                    <h6 class="fw-bold">Sản phẩm: ${data.product_name}</h6>
+                    <p class="text-muted mb-0">Biến thể: ${data.variant_name}</p>
+                </div>
+                <hr>
+                <div class="alert ${total > 0 ? 'alert-warning' : 'alert-success'} mb-3">
+                    <i class="fas ${total > 0 ? 'fa-exclamation-triangle' : 'fa-check-circle'} me-2"></i>
+                    ${total > 0 
+                        ? `<strong>Phát hiện ${total} ràng buộc dữ liệu!</strong><br>Các dữ liệu liên quan sẽ bị xóa cùng.` 
+                        : '<strong>An toàn để xóa!</strong><br>Không có dữ liệu liên quan nào.'}
+                </div>
+            `;
+            
+            if (total > 0) {
+                html += '<h6 class="fw-bold mb-3">Chi tiết ràng buộc:</h6><ul class="list-group mb-3">';
+                
+                if (constraints.chi_tiet_hoa_don > 0) {
+                    html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-receipt text-primary me-2"></i>Hóa đơn bán hàng</span>
+                            <span class="badge bg-primary rounded-pill">${constraints.chi_tiet_hoa_don}</span>
+                        </li>
+                    `;
+                }
+                
+                if (constraints.chi_tiet_doi_tra > 0) {
+                    html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-exchange-alt text-warning me-2"></i>Đơn đổi/trả hàng</span>
+                            <span class="badge bg-warning rounded-pill">${constraints.chi_tiet_doi_tra}</span>
+                        </li>
+                    `;
+                }
+                
+                if (constraints.hang_loi > 0) {
+                    html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-bug text-danger me-2"></i>Hàng lỗi</span>
+                            <span class="badge bg-danger rounded-pill">${constraints.hang_loi}</span>
+                        </li>
+                    `;
+                }
+                
+                if (constraints.chi_tiet_phieu_nhap > 0) {
+                    html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-arrow-down text-success me-2"></i>Phiếu nhập kho</span>
+                            <span class="badge bg-success rounded-pill">${constraints.chi_tiet_phieu_nhap}</span>
+                        </li>
+                    `;
+                }
+                
+                if (constraints.chi_tiet_phieu_xuat > 0) {
+                    html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-arrow-up text-info me-2"></i>Phiếu xuất kho</span>
+                            <span class="badge bg-info rounded-pill">${constraints.chi_tiet_phieu_xuat}</span>
+                        </li>
+                    `;
+                }
+                
+                html += '</ul>';
+                html += `
+                    <div class="alert alert-danger mb-0">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <strong>Lưu ý:</strong> Hành động này sẽ xóa vĩnh viễn biến thể và TẤT CẢ ${total} dữ liệu liên quan ở trên. 
+                        Hành động này <strong>KHÔNG THỂ HOÀN TÁC</strong>.
+                    </div>
+                `;
+            } else {
+                html += `
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Biến thể này không có dữ liệu liên quan nào. Bạn có thể xóa an toàn.
+                    </p>
+                `;
+            }
+            
+            modalBody.innerHTML = html;
+            modalFooter.style.display = 'flex';
+            confirmForm.action = `/admin/san-pham/${variantId}/force`;
+        })
+        .catch(error => {
+            modalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Lỗi khi tải thông tin: ${error.message}
+                </div>
+            `;
+            console.error('Error:', error);
+        });
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     const selectAllCheckbox = document.getElementById('selectAllTrash');
     const checkboxes = document.querySelectorAll('.trash-checkbox');

@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             QuyenSeeder::class,
             PhanQuyenSeeder::class,
             NhanSuSeeder::class,
+            KiemKhoQuyenSeeder::class,
 
             // Nhom danh muc (DanhMucDonViSeeder, ThuocTinhSeeder da xoa - tao du lieu thu cong)
             KhachHangSeeder::class,
@@ -35,9 +36,6 @@ class DatabaseSeeder extends Seeder
             ThanhToanHoaDonSeeder::class,
             GiaoDichSeeder::class,
             LichSuTichDiemSeeder::class,
-
-            // Nhom kiem kho
-            PhieuKiemKhoSeeder::class,
 
             // Nhom giao ca
             GiaoCaSeeder::class,
