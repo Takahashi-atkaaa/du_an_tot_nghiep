@@ -1531,9 +1531,48 @@ function getActiveInvoice() {
 }
 
 function applyActiveInvoice() {
-    selectedCustomer = getActiveInvoice().customer;
-    document.getElementById('ckUsePoint') && (document.getElementById('ckUsePoint').value = getActiveInvoice().usePoint || 0);
-    selectedVoucherId = getActiveInvoice().voucherId || null;
+    const inv = getActiveInvoice();
+
+    // Đồng bộ khách hàng của hóa đơn hiện tại
+    selectedCustomer = inv.customer;
+
+    // Đồng bộ điểm sử dụng
+    const ckUsePoint = document.getElementById('ckUsePoint');
+    if (ckUsePoint) {
+        ckUsePoint.value = inv.usePoint || 0;
+    }
+
+    // Đồng bộ voucher
+    selectedVoucherId = inv.voucherId || null;
+
+    // =====================================================
+    // ĐỒNG BỘ Ô TÌM KIẾM KHÁCH HÀNG
+    // =====================================================
+    const searchCustomer = document.getElementById('searchCustomer');
+    const customerSuggest = document.getElementById('customerSuggest');
+
+    if (searchCustomer) {
+        if (selectedCustomer) {
+            searchCustomer.value =
+                selectedCustomer.ten_khach_hang +
+                (
+                    selectedCustomer.so_dien_thoai
+                        ? ' (' + selectedCustomer.so_dien_thoai + ')'
+                        : ''
+                );
+        } else {
+            // Không có khách hàng => xóa ô tìm kiếm
+            searchCustomer.value = '';
+        }
+    }
+
+    // Đóng danh sách gợi ý
+    if (customerSuggest) {
+        customerSuggest.classList.remove('show');
+        customerSuggest.innerHTML = '';
+    }
+
+    // Render lại giao diện
     renderCustomerInfo();
     renderInvoiceItems();
     renderTotals();
