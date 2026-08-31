@@ -92,11 +92,10 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Loại dòng</th>
-                                <th>Sản phẩm trả</th>
-                                <th>Sản phẩm nhận đổi</th>
+                                <th>Sản phẩm</th>
                                 <th>Mã vạch</th>
                                 <th class="text-center">Số lượng</th>
-                                <th class="text-end">Giá lúc mua</th>
+                                <th class="text-end">Đơn giá ghi nhận</th>
                                 <th class="text-end">Thành tiền</th>
                                 <th>Hàng lỗi / tiêu hủy</th>
                             </tr>
@@ -105,7 +104,6 @@
                             @foreach($doiTra->chiTietDoiTras as $chiTietDoiTra)
                                 @php
                                     $bienTheTra = $chiTietDoiTra->bienTheSanPham;
-                                    $bienTheNhan = $chiTietDoiTra->bienTheThayThe;
                                     $hangLoiChiTiet = $chiTietDoiTra->hangLois;
                                     $loaiDong = $chiTietDoiTra->loai === 'doi_hang' ? 'Đổi hàng' : 'Trả hàng';
                                 @endphp
@@ -123,19 +121,7 @@
                                             <div class="small text-muted">Biến thể: {{ $bienTheTra->ten_bien_the }}</div>
                                         @endif
                                     </td>
-                                    <td>
-                                        @if($chiTietDoiTra->loai === 'doi_hang' && $bienTheNhan)
-                                            <div class="fw-semibold">{{ $bienTheNhan->ten_hien_thi ?? ($bienTheNhan->product->ten_san_pham ?? 'Sản phẩm') }}</div>
-                                            @if(!empty($bienTheNhan?->ten_hien_thi_don_vi))
-                                                <div class="small text-muted">Biến thể: {{ $bienTheNhan->ten_hien_thi_don_vi }}</div>
-                                            @elseif(!empty($bienTheNhan?->ten_bien_the))
-                                                <div class="small text-muted">Biến thể: {{ $bienTheNhan->ten_bien_the }}</div>
-                                            @endif
-                                        @else
-                                            <span class="text-muted">Không áp dụng</span>
-                                        @endif
-                                    </td>
-                                    <td>{{ $bienTheTra->ma_vach ?? ($bienTheNhan->ma_vach ?? 'N/A') }}</td>
+                                    <td>{{ $bienTheTra->ma_vach ?? 'N/A' }}</td>
                                     <td class="text-center">{{ $chiTietDoiTra->so_luong }}</td>
                                     <td class="text-end">{{ number_format((float) ($chiTietDoiTra->gia_ban ?? 0), 0, ',', '.') }}đ</td>
                                     <td class="text-end fw-semibold">{{ number_format((float) ($chiTietDoiTra->thanh_tien ?? 0), 0, ',', '.') }}đ</td>
