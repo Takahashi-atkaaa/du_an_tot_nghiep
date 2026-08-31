@@ -49,7 +49,7 @@ class LichSuCaLam extends Controller
             $danhSachHoaDon = HoaDon::whereDate('created_at', $ngay)
                 ->where('id_ca_lam_viec', $id_ca)
                 ->whereIn('trang_thai', ['Hoàn thành', 'Đã đổi/trả hàng', 'Đã trả toàn bộ'])
-                ->orderByDesc('created_at')
+                ->orderByDesc('created_at') 
                 ->get();
 
             $tongTienTraLaiKhachTrongCa = 0;

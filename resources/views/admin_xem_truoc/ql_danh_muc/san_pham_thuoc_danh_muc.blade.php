@@ -42,10 +42,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th>#</th>
-                                <th>Hình ảnh</th>
                                 <th>Tên sản phẩm</th>
-                                <th>Giá bán</th>
-                                <th>Định mức tối thiểu</th>
                                 <th>Trạng thái</th>
                                 <th>Hành động</th>
                             </tr>
@@ -57,33 +54,9 @@
                                     <td>{{ $index + 1 }}</td>
 
                                     <td>
-                                        @if($sp->hinh_anh)
-                                            <img
-                                                src="{{ asset('storage/' . $sp->hinh_anh) }}"
-                                                alt="{{ $sp->ten_san_pham }}"
-                                                width="60"
-                                                height="60"
-                                                style="object-fit: cover; border-radius: 8px;"
-                                            >
-                                        @else
-                                            <span class="text-muted">
-                                                Không có ảnh
-                                            </span>
-                                        @endif
-                                    </td>
-
-                                    <td>
                                         <strong>
                                             {{ $sp->ten_san_pham }}
                                         </strong>
-                                    </td>
-
-                                    <td>
-                                        {{ number_format($sp->gia_ban, 0, ',', '.') }} đ
-                                    </td>
-
-                                    <td>
-                                        {{ $sp->dinh_muc_toi_thieu }}
                                     </td>
 
                                     <td>
