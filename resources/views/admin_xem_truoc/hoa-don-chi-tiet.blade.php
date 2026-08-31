@@ -1191,7 +1191,7 @@ $doanhThuRong = max(
                                 </th>
 
                                 <th class="text-end">
-                                    Giá lúc mua
+                                    Đơn giá ghi nhận
                                 </th>
 
                                 <th class="text-end">
@@ -1629,7 +1629,7 @@ $doanhThuRong = max(
                                         </th>
 
                                         <th class="text-end">
-                                            Giá lúc mua
+                                            Đơn giá ghi nhận
                                         </th>
 
                                         <th class="text-end">

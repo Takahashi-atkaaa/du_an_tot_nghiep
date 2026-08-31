@@ -116,10 +116,14 @@ if ($quickFilter === '3_ngay') {
       $discountTotal = (clone $revenueOrdersQuery)
     ->sum('tien_giam_gia');
 
-// Điểm thưởng kiếm được:
-// Chỉ cộng đúng cột diem_thu_duoc của các hóa đơn đã hoàn thành.
-$pointsEarned = (clone $revenueOrdersQuery)
-    ->sum('diem_thu_duoc');
+// Tổng số tiền nhập hàng theo khoảng thời gian
+$totalPurchaseAmount = DB::table('chi_tiet_phieu')
+    ->join('phieu', 'chi_tiet_phieu.id_phieu', '=', 'phieu.id')
+    ->join('phieu_nhap', 'phieu_nhap.id_phieu', '=', 'phieu.id')
+    ->whereBetween('phieu.created_at', [$rangeStart, $rangeEnd])
+    ->where('phieu.loai_phieu', 'Nhập hàng')
+    ->whereNull('phieu.deleted_at')
+    ->sum(DB::raw('chi_tiet_phieu.so_luong * chi_tiet_phieu.gia_nhap'));
 
 $pointsUsed = (clone $revenueOrdersQuery)
     ->sum('diem_su_dung');
@@ -510,7 +514,7 @@ if ($quickFilter === 'nam') {
             'customers' => (int) $uniqueCustomerCount,
             'new_customers' => (int) $newCustomerCount,
             'discount_total' => (float) $discountTotal,
-            'points_earned' => (int) $pointsEarned,
+            'total_purchase_amount' => (float) $totalPurchaseAmount,
             'points_used' => (int) $pointsUsed,
             'average_order_value' => (float) $averageOrderValue,
         ];

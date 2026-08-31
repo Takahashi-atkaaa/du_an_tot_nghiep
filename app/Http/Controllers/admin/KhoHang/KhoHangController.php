@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\KhoHang;
 use App\Http\Controllers\Controller;
 use App\Models\NhaCungCap;
 use App\Models\SanPham;
+use App\Models\LoHang;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -74,6 +75,12 @@ class KhoHangController extends Controller
             $tongTon = (int) ($sp->bien_the_san_phams_sum_so_luong_ton ?? 0);
             $tongGiaTriVon = (float) ($sp->tong_gia_tri_von ?? 0);
 
+            // #region agent log
+            if ($sp->id <= 30) { // Log only first few products
+                file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-af1b9e.log', json_encode(['sessionId'=>'af1b9e','location'=>'KhoHangController.php:76','message'=>'Product transform - tong_gia_tri_von','data'=>['product_id'=>$sp->id,'product_name'=>$sp->ten_san_pham,'tong_ton'=>$tongTon,'tong_gia_tri_von'=>$tongGiaTriVon,'raw_tong_gia_tri_von'=>$sp->tong_gia_tri_von],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'A,C']) . "\n", FILE_APPEND);
+            }
+            // #endregion
+
             $sp->tong_ton = $tongTon;
             $sp->tong_gia_tri_ton = $tongGiaTriVon;
 
@@ -104,9 +111,19 @@ class KhoHangController extends Controller
 
         // ===== DẢI KPI — góc nhìn Giám đốc / Kế toán =====
         // 1) Tổng giá trị kho (VND) = tổng các SUM(so_luong_ton * gia_von) trên toàn bộ SP
+        
+        // #region agent log
+        $sampleVariants = DB::table('bien_the_san_pham')->whereNull('deleted_at')->where('so_luong_ton', '>', 0)->limit(3)->get(['id', 'so_luong_ton', 'gia_von']);
+        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-af1b9e.log', json_encode(['sessionId'=>'af1b9e','location'=>'KhoHangController.php:109','message'=>'Sample variants before calculating tong_gia_tri_kho','data'=>['sample_variants'=>$sampleVariants->map(fn($v)=>['id'=>$v->id,'so_luong_ton'=>$v->so_luong_ton,'gia_von'=>$v->gia_von])->toArray()],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'A,C']) . "\n", FILE_APPEND);
+        // #endregion
+        
         $tongGiaTriKho = (float) DB::table('bien_the_san_pham')
             ->whereNull('deleted_at')
             ->sum(DB::raw('so_luong_ton * gia_von'));
+        
+        // #region agent log
+        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-af1b9e.log', json_encode(['sessionId'=>'af1b9e','location'=>'KhoHangController.php:116','message'=>'Calculated tong_gia_tri_kho','data'=>['tong_gia_tri_kho'=>$tongGiaTriKho],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'A,C']) . "\n", FILE_APPEND);
+        // #endregion
 
         // 2) Số SẢN PHẨM CHA có ít nhất 1 biến thể dưới định mức (còn tồn nhưng < định mức)
         $spDuoiDinhMuc = DB::table('bien_the_san_pham as bt')
@@ -150,5 +167,84 @@ class KhoHangController extends Controller
             return $bt->so_luong_ton > 0 && $bt->so_luong_ton < $bt->dinh_muc_toi_thieu;
         });
         return $hasLow ? 'co-thieu' : 'an-toan';
+    }
+
+    /**
+     * Chi tiết lô hàng - trang riêng biệt
+     */
+    public function chiTietLoHang($id)
+    {
+        $loHang = LoHang::with([
+            'nhaCungCap:id,ten_nha_cung_cap,email,so_dien_thoai',
+            'phieu.nguoiDung:id,ho_ten',
+            'chiTietLoHang' => function ($q) {
+                $q->orderBy('han_su_dung', 'asc');
+            },
+            'chiTietLoHang.variant.product.danhMuc:id,ten_danh_muc',
+            'chiTietLoHang.product.danhMuc:id,ten_danh_muc',
+        ])->findOrFail($id);
+
+        // Tính toán các giá trị
+        $chiTiet = $loHang->chiTietLoHang;
+        
+        $tongGiaTriBanDau = 0;
+        $tongGiaTriConLai = 0;
+        $tongSlNhap = 0;
+        $tongSlTon = 0;
+        $tongSlXuat = 0;
+
+        foreach ($chiTiet as $ct) {
+            $slNhap = (int) $ct->so_luong_nhap;
+            $slTon = (int) $ct->so_luong_ton;
+            $giaNhap = (float) $ct->gia_nhap;
+
+            $tongGiaTriBanDau += $slNhap * $giaNhap;
+            $tongGiaTriConLai += $slTon * $giaNhap;
+            $tongSlNhap += $slNhap;
+            $tongSlTon += $slTon;
+            $tongSlXuat += ($slNhap - $slTon);
+        }
+
+        // Tỷ lệ tồn kho
+        $tyLeTonKho = $tongSlNhap > 0 ? ($tongSlTon / $tongSlNhap) * 100 : 0;
+
+        // Lịch sử xuất hàng từ lô này
+        // Tìm các phiếu xuất đã trừ từ chi_tiet_lo_hang của lô này
+        $lichSuXuat = DB::table('chi_tiet_phieu as ctp')
+            ->join('chi_tiet_lo_hang as ctlh', 'ctp.id_chi_tiet_lo_hang', '=', 'ctlh.id')
+            ->join('phieu as p', 'ctp.id_phieu', '=', 'p.id')
+            ->join('phieu_xuat as px', 'p.id', '=', 'px.id_phieu')
+            ->leftJoin('nguoi_dung as u', 'p.id_nguoi_dung', '=', 'u.id')
+            ->leftJoin('bien_the_san_pham as bt', 'ctlh.variant_id', '=', 'bt.id')
+            ->leftJoin('san_pham as sp', function ($join) {
+                $join->on('bt.product_id', '=', 'sp.id')
+                     ->orOn('ctlh.id_san_pham', '=', 'sp.id');
+            })
+            ->where('ctlh.id_lo_hang', $id)
+            ->where('p.loai_phieu', 'xuat')
+            ->select(
+                'px.id as phieu_xuat_id',
+                'p.id as ma_phieu',
+                'px.loai_xuat',
+                'p.created_at as ngay_xuat',
+                'u.ho_ten as nguoi_tao',
+                'sp.ten_san_pham',
+                'bt.ten_bien_the',
+                'ctp.so_luong as so_luong_xuat'
+            )
+            ->orderBy('p.created_at', 'desc')
+            ->get();
+
+        return view('admin_xem_truoc.kho-hang.chi-tiet', [
+            'loHang' => $loHang,
+            'chiTiet' => $chiTiet,
+            'tongGiaTriBanDau' => $tongGiaTriBanDau,
+            'tongGiaTriConLai' => $tongGiaTriConLai,
+            'tongSlNhap' => $tongSlNhap,
+            'tongSlTon' => $tongSlTon,
+            'tongSlXuat' => $tongSlXuat,
+            'tyLeTonKho' => $tyLeTonKho,
+            'lichSuXuat' => $lichSuXuat,
+        ]);
     }
 }

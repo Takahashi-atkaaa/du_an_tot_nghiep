@@ -45,31 +45,84 @@
 
     // ===== Bind cho 1 input =====
     function bindInput(el) {
+        // #region agent log
+        fetch('http://127.0.0.1:7249/ingest/61cdda37-75e2-47ee-9a7a-608a4741bbba',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'51a869'},body:JSON.stringify({sessionId:'51a869',location:'money-input.js:53',message:'bindInput called',data:{alreadyBound:!!el.__moneyBound,elementName:el.name,elementValue:el.value},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         if (el.__moneyBound) return; // Tránh bind 2 lần (VD: sau khi DOM thay đổi)
         el.__moneyBound = true;
 
         var decimals = getDecimals(el);
 
         // Khi gõ: format liên tục
-        el.addEventListener('input', function () {
+        el.addEventListener('input', function (e) {
+            // #region agent log
+            var cursorPos = el.selectionStart; var cursorEnd = el.selectionEnd;
+            fetch('http://127.0.0.1:7249/ingest/61cdda37-75e2-47ee-9a7a-608a4741bbba',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'51a869'},body:JSON.stringify({sessionId:'51a869',location:'money-input.js:62',message:'input event - before format',data:{elementName:el.name,valueBefore:el.value,cursorStart:cursorPos,cursorEnd:cursorEnd,decimals:decimals},timestamp:Date.now(),hypothesisId:'A',runId:'post-fix'})}).catch(()=>{});
+            // #endregion
+            
+            var oldValue = el.value;
+            var oldCursorPos = el.selectionStart;
+            
             var num = parseMoneyVN(el.value);
             if (num === 0 && el.value.trim() === '') {
                 el.value = '';
             } else {
-                el.value = formatMoneyVN(num, decimals);
+                var newValue = formatMoneyVN(num, decimals);
+                
+                // Tính số ký tự phân cách trước cursor trong chuỗi cũ
+                var beforeCursor = oldValue.substring(0, oldCursorPos);
+                var separatorsBeforeOld = (beforeCursor.match(/[.,]/g) || []).length;
+                
+                // Tính số ký tự phân cách trong chuỗi mới
+                var digitsBeforeCursor = beforeCursor.replace(/\D/g, '').length;
+                var newBeforeCursor = newValue.substring(0, newValue.length);
+                var digitsCount = 0;
+                var newCursorPos = 0;
+                
+                for (var i = 0; i < newValue.length; i++) {
+                    if (/\d/.test(newValue[i])) {
+                        digitsCount++;
+                    }
+                    if (digitsCount >= digitsBeforeCursor) {
+                        newCursorPos = i + 1;
+                        break;
+                    }
+                }
+                
+                el.value = newValue;
+                
+                // Restore cursor position
+                if (newCursorPos > 0 && newCursorPos <= newValue.length) {
+                    el.setSelectionRange(newCursorPos, newCursorPos);
+                }
             }
+            // #region agent log
+            fetch('http://127.0.0.1:7249/ingest/61cdda37-75e2-47ee-9a7a-608a4741bbba',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'51a869'},body:JSON.stringify({sessionId:'51a869',location:'money-input.js:95',message:'input event - after format',data:{elementName:el.name,valueAfter:el.value,newCursorPos:el.selectionStart},timestamp:Date.now(),hypothesisId:'A',runId:'post-fix'})}).catch(()=>{});
+            // #endregion
         });
 
         // Khi focus: bỏ dấu chấm để dễ sửa
         el.addEventListener('focus', function () {
+            // #region agent log
+            fetch('http://127.0.0.1:7249/ingest/61cdda37-75e2-47ee-9a7a-608a4741bbba',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'51a869'},body:JSON.stringify({sessionId:'51a869',location:'money-input.js:75',message:'focus event',data:{elementName:el.name,valueBefore:el.value},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
             var num = parseMoneyVN(el.value);
             el.value = num === 0 ? '' : String(num);
+            // #region agent log
+            fetch('http://127.0.0.1:7249/ingest/61cdda37-75e2-47ee-9a7a-608a4741bbba',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'51a869'},body:JSON.stringify({sessionId:'51a869',location:'money-input.js:79',message:'focus event - after unformat',data:{elementName:el.name,valueAfter:el.value},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
         });
 
         // Khi blur: format lại lần cuối
         el.addEventListener('blur', function () {
+            // #region agent log
+            fetch('http://127.0.0.1:7249/ingest/61cdda37-75e2-47ee-9a7a-608a4741bbba',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'51a869'},body:JSON.stringify({sessionId:'51a869',location:'money-input.js:86',message:'blur event',data:{elementName:el.name,valueBefore:el.value},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
             var num = parseMoneyVN(el.value);
             el.value = num === 0 ? '' : formatMoneyVN(num, decimals);
+            // #region agent log
+            fetch('http://127.0.0.1:7249/ingest/61cdda37-75e2-47ee-9a7a-608a4741bbba',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'51a869'},body:JSON.stringify({sessionId:'51a869',location:'money-input.js:90',message:'blur event - after format',data:{elementName:el.name,valueAfter:el.value},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
         });
     }
 
@@ -106,6 +159,9 @@
 
     // ===== Auto-init khi DOM ready =====
     function init() {
+        // #region agent log
+        fetch('http://127.0.0.1:7249/ingest/61cdda37-75e2-47ee-9a7a-608a4741bbba',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'51a869'},body:JSON.stringify({sessionId:'51a869',location:'money-input.js:109',message:'MoneyInput init called',data:{},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         scan(document);
 
         // Theo dõi DOM thay đổi (cho nội dung load bằng AJAX / template engine)
@@ -118,9 +174,15 @@
                     m.addedNodes.forEach(function (node) {
                         if (node.nodeType !== 1) return;
                         if (node.classList && node.classList.contains('money-input')) {
+                            // #region agent log
+                            fetch('http://127.0.0.1:7249/ingest/61cdda37-75e2-47ee-9a7a-608a4741bbba',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'51a869'},body:JSON.stringify({sessionId:'51a869',location:'money-input.js:121',message:'MutationObserver detected money-input added',data:{nodeName:node.name},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+                            // #endregion
                             bindInput(node);
                             needScan = true;
                         } else if (node.querySelectorAll && node.querySelector('.money-input')) {
+                            // #region agent log
+                            fetch('http://127.0.0.1:7249/ingest/61cdda37-75e2-47ee-9a7a-608a4741bbba',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'51a869'},body:JSON.stringify({sessionId:'51a869',location:'money-input.js:127',message:'MutationObserver detected container with money-input',data:{},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+                            // #endregion
                             scan(node);
                             needScan = true;
                         }

@@ -61,7 +61,7 @@ $nguoiBanMacDinh = old(
                             <th class="text-center">Đã mua</th>
                             <th class="text-center">Đã trả/đổi</th>
                             <th class="text-center">Còn xử lý</th>
-                            <th class="text-end">Giá gốc</th>
+                            <th class="text-end">Đơn giá hoàn</th>
                             <th width="500">Nghiệp vụ</th>
                         </tr>
                     </thead>
@@ -74,7 +74,7 @@ $nguoiBanMacDinh = old(
                                     $exchangeStock = (int) ($replacement->so_luong_ton ?? $item->so_luong_ton ?? 0);
                                 @endphp
                                 <tr class="return-item-row"
-                                    data-price="{{ $item->gia_ban }}"
+                                    data-price="{{ $item->gia_hoan_du_kien }}"
                                     data-max="{{ $item->so_luong_con_lai }}"
                                     data-index="{{ $index }}">
                                     <td>
@@ -88,7 +88,12 @@ $nguoiBanMacDinh = old(
                                     <td class="text-center">
                                         <span class="badge bg-info">{{ $item->so_luong_con_lai }}</span>
                                     </td>
-                                    <td class="text-end">{{ number_format($item->gia_ban, 0, ',', '.') }}đ</td>
+                                    <td class="text-end">
+                                        <strong>{{ number_format($item->gia_hoan_du_kien, 0, ',', '.') }}đ</strong>
+                                        @if((float) $item->gia_hoan_du_kien !== (float) $item->gia_ban)
+                                            <div class="small text-muted">Giá gốc: {{ number_format($item->gia_ban, 0, ',', '.') }}đ</div>
+                                        @endif
+                                    </td>
                                     <td>
                                         <input type="hidden" name="items[{{ $index }}][id_chi_tiet_hoa_don]" value="{{ $item->id }}">
                                         <input type="hidden" name="items[{{ $index }}][hang_loi]" class="hang-loi-hidden" value="{{ old("items.$index.hang_loi", 0) ? 1 : 0 }}">

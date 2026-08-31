@@ -263,6 +263,7 @@ class PhieuNhapApiController extends Controller
                 "chi_tiet.{$variantId}.gia_nhap" => 'Giá nhập không được âm.',
             ]);
         }
+        
         // Giá nhập luôn lưu theo đơn vị cơ bản; nếu user nhập theo đơn vị quy đổi thì chia cho hệ số
         $giaNhapCoBan = $heSoQuyDoi > 1
             ? round($giaNhapNhap / $heSoQuyDoi, 2)

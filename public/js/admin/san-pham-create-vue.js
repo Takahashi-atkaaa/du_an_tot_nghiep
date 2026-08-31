@@ -299,7 +299,8 @@
                     unitConfig.basePrice = prod.unitConfig?.basePrice ?? (prod.basicInfo?.defaultPrice ?? 0);
                     unitConfig.conversionUnits = (prod.unitConfig?.conversionUnits || []).map(u => ({
                         id: u.id || uid(),
-                        name: u.name || '',
+                        name: u.name || u.ten_don_vi || '',
+                        ten_don_vi: u.ten_don_vi || u.name || '',
                         name_input: '', // cho phép gõ đơn vị mới on-the-fly
                         rate: u.ty_le_quy_doi ?? u.rate ?? 1,
                         price: u.gia_ban_quy_doi ?? u.price ?? 0
@@ -441,10 +442,13 @@
                     });
                 }
                 unitConfig.conversionUnits.forEach((u, i) => {
-                    if (!u.name.trim()) return;
+                    // Dữ liệu cũ dùng `name`, form hiện tại dùng `ten_don_vi`.
+                    // Đọc cả hai để thao tác thêm và sửa đơn vị đều hoạt động.
+                    const unitName = String(u.ten_don_vi || u.name || '').trim();
+                    if (!unitName) return;
                     list.push({
                         key: 'cv_' + u.id,
-                        name: u.name.trim(),
+                        name: unitName,
                         tyLe: parseInt(u.rate) || 1,
                         price: parseFloat(u.price) || 0,
                         isBase: false
@@ -575,7 +579,7 @@
             }
             watch(() => unitConfig.baseUnit, debouncedRegen);
             watch(() => unitConfig.basePrice, debouncedRegen);
-            watch(() => unitConfig.conversionUnits.map(u => u.name + '|' + u.rate + '|' + u.price).join(';'), debouncedRegen);
+            watch(() => unitConfig.conversionUnits.map(u => (u.ten_don_vi || u.name || '') + '|' + u.rate + '|' + u.price).join(';'), debouncedRegen);
             watch(() => attributesConfig.groups.map(g => g.name + '|' + g.values.join(',')).join(';'), debouncedRegen);
             watch(() => basicInfo.ten_san_pham + '|' + basicInfo.code, debouncedRegen);
 
@@ -595,6 +599,7 @@
                         const found = availableUnits.value.find(a => a.id === u.don_vi_chuan_id);
                         if (found) {
                             u.ten_don_vi = found.ten_don_vi;
+                            u.name = found.ten_don_vi;
                             u.rate = found.qty;
                         }
                     }
@@ -622,7 +627,7 @@
             const lastUnitPriceMap = new Map();
             watch(() => ({
                 base: parseFloat(unitConfig.basePrice) || 0,
-                conversions: unitConfig.conversionUnits.map(u => ({ key: 'cv_' + u.id, name: u.name, price: parseFloat(u.price) || 0, rate: parseInt(u.rate) || 1 }))
+                conversions: unitConfig.conversionUnits.map(u => ({ key: 'cv_' + u.id, name: u.ten_don_vi || u.name || '', price: parseFloat(u.price) || 0, rate: parseInt(u.rate) || 1 }))
             }), (newVal) => {
                 // Base
                 const baseKey = 'base';
@@ -1338,12 +1343,12 @@
                                     <img v-if="basicInfo.imagePreview" :src="basicInfo.imagePreview" class="w-full h-full object-cover">
                                     <div v-else class="text-center text-slate-400">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                                        <p class="text-[11px] mt-1">Chọn ảnh</p>
+                                        <p class="text-[11px] mt-1">Hình ảnh tự động cập nhật từ biến thể</p>
                                     </div>
                                     <input ref="imgInput" id="hinhAnhInputVue" type="file" accept="image/*" class="hidden" @change="onImageSelect">
                                 </div>
                                 <div class="flex-1">
-                                    <p class="text-[11px] text-slate-500">Hỗ trợ: JPEG, PNG, JPG, GIF, WEBP. Dung lượng tối đa: 5MB.</p>
+                                    <p class="text-[11px] text-slate-500">Hình ảnh tự động </p>
                                     <button v-if="basicInfo.imagePreview" type="button" @click="clearImage"
                                         class="mt-2 px-3 py-1.5 text-xs rounded-md border border-red-300 text-red-600 hover:bg-red-50">Xóa ảnh</button>
                                 </div>
@@ -1462,7 +1467,7 @@
                                                     placeholder="Gõ đơn vị mới..."
                                                     class="flex-1 rounded border border-slate-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                                                     style="min-width: 100px;"
-                                                    @input="u.name_input = $event.target.value; u.ten_don_vi = $event.target.value">
+                                                    @input="u.name_input = $event.target.value; u.ten_don_vi = $event.target.value; u.name = $event.target.value">
                                             </div>
                                         </td>
                                         <td class="p-2">

@@ -354,7 +354,14 @@ function buildChiTietPage(tableId) {
             const name = $(this).attr('name');
             if (!name) return;
             const m = name.match(new RegExp('chi_tiet\\[\\d+\\]\\[(.+)\\]'));
-            if (m) row[m[1]] = $(this).val();
+            if (m) {
+                let value = $(this).val();
+                // Nếu là money-input, parse về raw number (bỏ dấu chấm phân cách)
+                if ($(this).hasClass('money-input') && window.MoneyInput) {
+                    value = String(window.MoneyInput.parse(value));
+                }
+                row[m[1]] = value;
+            }
         });
         // Đổi '__base__' về rỗng để backend hiểu là đơn vị cơ bản
         if (row.don_vi_id === '__base__') row.don_vi_id = '';

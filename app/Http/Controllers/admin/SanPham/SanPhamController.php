@@ -52,7 +52,8 @@ class SanPhamController extends Controller
             )
             ->when($danhMucId, fn($q) => $q->where('id_danh_muc', $danhMucId))
             ->when(!is_null($trangThai), fn($q) => $q->where('trang_thai', $trangThai))
-            ->orderBy('id')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate(10)
             ->withQueryString();
 

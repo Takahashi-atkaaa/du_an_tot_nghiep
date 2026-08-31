@@ -380,6 +380,7 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                                         $firstImgSrc = \App\Models\BienTheSanPham::resolveImageUrl($firstImg);
                                     @endphp
                                     <img src="{{ $firstImgSrc }}" alt="{{ $sp->ten_san_pham }}"
+                                         class="product-thumbnail-img"
                                          style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
                                 @else
                                     <div style="width:48px;height:48px;border-radius:6px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;">
@@ -533,12 +534,6 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                                     <ul class="nav nav-tabs nav-tabs-sm mb-3" role="tablist">
                                         <li class="nav-item">
                                             <button type="button" class="nav-link active" data-tab-key="summary" onclick="event.stopPropagation(); window.switchProductTab({{ $sp->id }}, 'summary')">Tổng quan</button>
-                                        </li>
-                                        <li class="nav-item">
-                                            <button type="button" class="nav-link" data-tab-key="variants" onclick="event.stopPropagation(); window.switchProductTab({{ $sp->id }}, 'variants')">Biến thể</button>
-                                        </li>
-                                        <li class="nav-item">
-                                            <button type="button" class="nav-link" data-tab-key="stock" onclick="event.stopPropagation(); window.switchProductTab({{ $sp->id }}, 'stock')">Kho</button>
                                         </li>
                                     </ul>
 
@@ -699,10 +694,24 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
 {{-- san-pham.js cung cấp: toggleVariants, switchProductTab, deleteProductByUrl, ... cho Expandable Row / Quick View --}}
 <script src="{{ asset('js/admin/san-pham.js') }}?v={{ time() }}"></script>
+<script>
+// #region agent log
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        const images = document.querySelectorAll('.product-thumbnail-img');
+        images.forEach(function(img, idx) {
+            const computedStyle = window.getComputedStyle(img);
+            const rect = img.getBoundingClientRect();
+            fetch('http://127.0.0.1:7249/ingest/61cdda37-75e2-47ee-9a7a-608a4741bbba',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'096b03'},body:JSON.stringify({sessionId:'096b03',location:'index.blade.php:IMG_STYLE',message:'Image computed style',data:{index:idx,width:computedStyle.width,height:computedStyle.height,maxWidth:computedStyle.maxWidth,maxHeight:computedStyle.maxHeight,objectFit:computedStyle.objectFit,display:computedStyle.display,rectWidth:rect.width,rectHeight:rect.height,inlineStyle:img.getAttribute('style'),classList:Array.from(img.classList)},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+        });
+    }, 1000);
+});
+// #endregion
+</script>
 @endsection
 
 @section('styles')
-<link rel="stylesheet" href="{{ asset('css/admin/san-pham.css') }}">
+<link rel="stylesheet" href="{{ asset('css/admin/san-pham.css') }}?v={{ time() }}">
 <style>
     [v-cloak] { display: none !important; }
 

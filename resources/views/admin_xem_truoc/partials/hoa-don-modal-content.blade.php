@@ -98,7 +98,7 @@
                                 <tr>
                                     <th>Sản phẩm / biến thể</th>
                                     <th class="text-center">Số lượng</th>
-                                    <th class="text-end">Giá lúc mua</th>
+                                    <th class="text-end">Đơn giá ghi nhận</th>
                                     <th class="text-end">Thành tiền</th>
                                 </tr>
                             </thead>
