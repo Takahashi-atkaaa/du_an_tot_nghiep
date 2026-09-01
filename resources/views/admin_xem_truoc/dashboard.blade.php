@@ -294,10 +294,10 @@
     <div class="col-xl-4 col-md-6">
         <div class="card table-admin h-100">
             <div class="card-header bg-white py-3">
-                <h5 class="mb-0 fw-bold">Điểm thưởng kiếm được</h5>
+                <h5 class="mb-0 fw-bold">Tổng số tiền nhập hàng</h5>
             </div>
             <div class="card-body">
-                <h3>{{ number_format($dailyStats['points_earned'] ?? 0) }}</h3>
+                <h3>{{ number_format($dailyStats['total_purchase_amount'] ?? 0, 0, ',', '.') }} đ</h3>
             </div>
         </div>
     </div>

@@ -472,8 +472,8 @@
                                 <th>Mã lô</th>
                                 <th>NCC</th>
                                 <th class="text-center">Ngày nhập</th>
-                                <th class="text-center">Số SP</th>
-                                <th class="text-center">Tổng tồn</th>
+                                <th class="text-center">Số lượng nhập</th>
+                                <th class="text-center">Còn lại</th>
                                 <th class="text-center">Thao tác</th>
                             </tr>
                         </thead>

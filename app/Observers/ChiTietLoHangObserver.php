@@ -22,10 +22,15 @@ class ChiTietLoHangObserver
             $this->syncGiaVonVariant($model->getOriginal('variant_id'));
             $this->syncTonKhoVariant($model->variant_id);
             $this->syncGiaVonVariant($model->variant_id);
-        } elseif ($model->wasChanged(['so_luong_ton', 'gia_nhap'])) {
+        } elseif ($model->wasChanged('so_luong_ton') && $model->wasChanged('gia_nhap')) {
+            // Cả số lượng tồn VÀ giá nhập thay đổi → cần tính lại giá vốn
             $this->syncTonKhoVariant($model->variant_id);
             $this->syncGiaVonVariant($model->variant_id);
+        } elseif ($model->wasChanged('gia_nhap')) {
+            // Chỉ giá nhập thay đổi (hiếm khi xảy ra) → vẫn cần tính lại giá vốn
+            $this->syncGiaVonVariant($model->variant_id);
         } elseif ($model->wasChanged('so_luong_ton')) {
+            // Chỉ số lượng tồn thay đổi (bán hàng) → KHÔNG tính lại giá vốn
             $this->syncTonKhoVariant($model->variant_id);
         }
     }

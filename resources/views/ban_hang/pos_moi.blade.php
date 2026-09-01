@@ -342,11 +342,12 @@
             background: #fff;
             border-right: 1px solid var(--pos-border);
             display: grid;
-            grid-template-rows: auto auto 1fr auto;
+            grid-template-rows: auto auto auto minmax(0, 1fr) auto;
             overflow: hidden;
         }
 
         .invoice-tabs {
+            grid-row: 1;
             display: flex;
             align-items: center;
             gap: 6px;
@@ -398,6 +399,7 @@
         .invoice-tab-add:hover { color: var(--pos-primary); border-color: var(--pos-primary); }
 
         .search-panels {
+            grid-row: 2;
             padding: 12px;
             display: grid;
             grid-template-columns: 1fr;
@@ -420,11 +422,13 @@
         .search-panels .form-control:focus { box-shadow: none; border-color: var(--pos-border); }
 
         .customer-info {
-            margin: 0 12px 8px;
-            padding: 10px 12px;
+            grid-row: 3;
+            margin: 0 8px 4px;
+            padding: 4px 8px;
             background: var(--pos-primary-light);
-            border-radius: 10px;
-            font-size: 13px;
+            border-radius: 6px;
+            font-size: 11px;
+            line-height: 1.2;
             display: none;
             align-items: center;
             justify-content: space-between;
@@ -432,10 +436,13 @@
 
         .customer-info.show { display: flex; }
 
-        .customer-info .name { font-weight: 700; color: var(--pos-primary-dark); }
-        .customer-info .points { color: var(--pos-primary-dark); font-weight: 600; font-size: 12px; }
+        .customer-info .name { font-weight: 700; color: var(--pos-primary-dark); font-size: 11px; }
+        .customer-info .points { color: var(--pos-primary-dark); font-weight: 600; font-size: 10px; }
+        .customer-info .btn { padding: 2px 5px; font-size: 10px; line-height: 1; }
 
         .invoice-items {
+            grid-row: 4;
+            min-height: 0;
             overflow-y: auto;
             padding: 8px 12px;
         }
@@ -527,6 +534,7 @@
         }
 
         .invoice-footer {
+            grid-row: 5;
             border-top: 1px solid var(--pos-border);
             padding: 14px 16px;
             background: #fff;
@@ -1637,7 +1645,16 @@ async function loadProducts() {
         grid.innerHTML = '<div class="product-grid-empty"><i class="fa-solid fa-circle-exclamation"></i><p>Lỗi tải sản phẩm</p></div>';
     }
 }
-function getBestPromotionForProduct(product, qty = 1) {
+function normalizePromotionType(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase()
+        .replace(/[ -]+/g, '_');
+}
+
+function getBestPromotionForProduct(product, qty = 1, orderSubtotal = 0) {
     if (!Array.isArray(allPromotions) || allPromotions.length === 0) {
         return {
             promotion: null,
@@ -1704,11 +1721,12 @@ function getBestPromotionForProduct(product, qty = 1) {
             return;
         }
 
-        const type = String(
-            km.loai_giam_gia || ''
-        )
-            .trim()
-            .toLowerCase();
+        const minOrder = Number(km.don_hang_toi_thieu || 0);
+        if (minOrder > 0 && Number(orderSubtotal) < minOrder) {
+            return;
+        }
+
+        const type = normalizePromotionType(km.loai_giam_gia);
 
         const value = Number(
             km.gia_tri_giam || 0
@@ -1781,6 +1799,7 @@ function getBestPromotionForProduct(product, qty = 1) {
             Math.max(0, discount),
             itemTotal
         );
+        discount = Math.round(discount * 100) / 100;
 
         // Nếu có nhiều KM,
         // lấy KM giảm nhiều nhất
@@ -1832,7 +1851,7 @@ function renderProducts() {
         // KIỂM TRA KHUYẾN MÃI CỦA SẢN PHẨM
         // =====================================
 
-        const result = getBestPromotionForProduct(p, 1);
+        const result = getBestPromotionForProduct(p, 1, 0);
 
         const promotion = result.promotion;
         const promotionDiscount = Number(result.discount || 0);
@@ -2110,21 +2129,32 @@ function renderInvoiceItems() {
 function calcTotals() {
     const inv = getActiveInvoice();
     const subtotal = inv.items.reduce((s, x) => s + x.gia_ban * x.qty, 0);
-    const productDiscount = calcProductDiscount(inv.items);
-    const pointDiscount = (Number(inv.usePoint) || 0) * 100;
-    const voucherDiscount = Number(inv.voucherDiscount) || 0;
+    const productDiscount = calcProductDiscount(inv.items, subtotal);
+    const voucherDiscount = calcVoucherDiscount(inv, subtotal, productDiscount);
+    const amountBeforePoints = Math.max(0, subtotal - productDiscount - voucherDiscount);
+    const customerPoints = inv.customer ? Number(inv.customer.diem_tich_luy || 0) : 0;
+    const maxPointsByAmount = Math.floor(amountBeforePoints / 100);
+    const usedPoints = Math.min(
+        Math.max(0, Number(inv.usePoint) || 0),
+        customerPoints,
+        maxPointsByAmount
+    );
+    inv.usePoint = usedPoints;
+    inv.voucherDiscount = voucherDiscount;
+    const pointDiscount = usedPoints * 100;
     const total = Math.max(0, subtotal - productDiscount - voucherDiscount - pointDiscount);
     return { subtotal, productDiscount, pointDiscount, voucherDiscount, total };
 }
 
-function calcProductDiscount(items) {
+function calcProductDiscount(items, subtotal) {
     let totalDiscount = 0;
 
     items.forEach(it => {
 
         const result = getBestPromotionForProduct(
             it,
-            Number(it.qty || 1)
+            Number(it.qty || 1),
+            subtotal
         );
 
         totalDiscount += Number(
@@ -2134,6 +2164,39 @@ function calcProductDiscount(items) {
     });
 
     return totalDiscount;
+}
+
+function calcVoucherDiscount(inv, subtotal, productDiscount) {
+    if (!inv.voucherId) return 0;
+
+    const km = (allPromotions || []).find(x => String(x.id) === String(inv.voucherId));
+    if (!km || km.la_khuyen_mai_san_pham) return 0;
+
+    const totalQty = inv.items.reduce((sum, item) => sum + Number(item.qty || 0), 0);
+    const minOrder = Number(km.don_hang_toi_thieu || 0);
+    const minQty = Number(km.so_luong_sp_toi_thieu || 0);
+    if (subtotal < minOrder || totalQty < minQty) return 0;
+
+    const eligibleAmount = Math.max(0, subtotal - productDiscount);
+    const value = Number(km.gia_tri_giam || 0);
+    const type = normalizePromotionType(km.loai_giam_gia);
+    let discount = 0;
+
+    if (['percent', 'phan_tram', 'percentage'].includes(type)) {
+        discount = eligibleAmount * value / 100;
+    } else if (['amount', 'fixed', 'tien_mat', 'so_tien', 'giam_tien'].includes(type)) {
+        discount = value;
+    } else if (['bogo', 'mua_1_tang_1'].includes(type)) {
+        discount = inv.items.reduce(
+            (sum, item) => sum + Math.floor(Number(item.qty || 0) / 2) * Number(item.gia_ban || 0),
+            0
+        );
+    }
+
+    const maxDiscount = Number(km.giam_toi_da || 0);
+    if (maxDiscount > 0) discount = Math.min(discount, maxDiscount);
+
+    return Math.round(Math.min(Math.max(0, discount), eligibleAmount) * 100) / 100;
 }
 
 function renderTotals() {
@@ -2306,6 +2369,10 @@ function renderCustomerInfo() {
 
         document.getElementById('customerPoints').textContent =
             selectedCustomer.diem_tich_luy || 0;
+
+        // #region agent log
+        setTimeout(()=>{const cs=window.getComputedStyle(info);const innerDiv=info.querySelector('div');const innerCS=innerDiv?window.getComputedStyle(innerDiv):null;fetch('http://127.0.0.1:7249/ingest/61cdda37-75e2-47ee-9a7a-608a4741bbba',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aa4cc5'},body:JSON.stringify({sessionId:'aa4cc5',location:'pos_moi.blade.php:2297',message:'customerInfo after show detailed',data:{padding:cs.padding,fontSize:cs.fontSize,lineHeight:cs.lineHeight,margin:cs.margin,height:info.offsetHeight,scrollHeight:info.scrollHeight,clientHeight:info.clientHeight,display:cs.display,flexDirection:cs.flexDirection,alignItems:cs.alignItems,minHeight:cs.minHeight,maxHeight:cs.maxHeight,innerDivHeight:innerDiv?innerDiv.offsetHeight:null,classes:info.className},timestamp:Date.now(),runId:'shown',hypothesisId:'C'})}).catch(()=>{});},50);
+        // #endregion
 
     } else {
 
@@ -2761,8 +2828,14 @@ function populateCheckout() {
         const opt = document.createElement('option');
         opt.value = km.id;
         let label = km.ten_chuong_trinh;
-        if (km.loai_giam_gia === 'phan_tram') label += ` (-${km.gia_tri_giam}%)`;
-        else if (km.loai_giam_gia === 'amount') label += ` (-${fmt(km.gia_tri_giam)})`;
+        const type = normalizePromotionType(km.loai_giam_gia);
+        if (['percent', 'phan_tram', 'percentage'].includes(type)) {
+            label += ` (-${Number(km.gia_tri_giam || 0)}%)`;
+        } else if (['amount', 'fixed', 'tien_mat', 'so_tien', 'giam_tien'].includes(type)) {
+            label += ` (-${fmt(km.gia_tri_giam)})`;
+        } else if (['bogo', 'mua_1_tang_1'].includes(type)) {
+            label += ' (Mua 1 tặng 1)';
+        }
         opt.textContent = label;
         voucherSel.appendChild(opt);
     });
@@ -2785,25 +2858,20 @@ function recomputeCheckout() {
     document.getElementById('ckVoucherDiscount').textContent = fmt(t.voucherDiscount);
     document.getElementById('ckPointDiscount').textContent = fmt(t.pointDiscount);
     document.getElementById('ckTotal').textContent = fmt(t.total);
+    document.getElementById('ckUsePoint').value = inv.usePoint || 0;
     updateChange();
 }
 
 document.getElementById('ckVoucher').addEventListener('change', function() {
     const inv = getActiveInvoice();
     inv.voucherId = this.value || null;
-    const km = (allPromotions || []).find(x => String(x.id) === String(this.value));
-    let vd = 0;
-    if (km) {
-        const t = calcTotals();
-        if (km.loai_giam_gia === 'phan_tram') {
-            vd = Math.max(0, (t.subtotal - t.productDiscount) * Number(km.gia_tri_giam) / 100);
-            if (km.giam_toi_da) vd = Math.min(vd, Number(km.giam_toi_da));
-        } else if (km.loai_giam_gia === 'amount') {
-            vd = Math.min(t.subtotal - t.productDiscount, Number(km.gia_tri_giam));
-        }
-    }
-    inv.voucherDiscount = vd;
+    inv.voucherDiscount = 0;
     recomputeCheckout();
+
+    const km = (allPromotions || []).find(x => String(x.id) === String(inv.voucherId));
+    if (km && inv.voucherDiscount <= 0) {
+        showToast('Hóa đơn chưa đạt điều kiện của khuyến mãi này', 'warn');
+    }
 });
 
 document.getElementById('ckUsePoint').addEventListener('input', function() {
@@ -3046,6 +3114,10 @@ loadCategories();
 loadProducts();
 loadPromotions();
 loadSellers();
+
+// #region agent log
+setTimeout(()=>{const el=document.getElementById('customerInfo');if(el){const cs=window.getComputedStyle(el);fetch('http://127.0.0.1:7249/ingest/61cdda37-75e2-47ee-9a7a-608a4741bbba',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aa4cc5'},body:JSON.stringify({sessionId:'aa4cc5',location:'pos_moi.blade.php:3046',message:'customerInfo computed styles',data:{padding:cs.padding,paddingTop:cs.paddingTop,paddingBottom:cs.paddingBottom,fontSize:cs.fontSize,margin:cs.margin,height:el.offsetHeight,classes:el.className},timestamp:Date.now(),runId:'initial',hypothesisId:'A'})}).catch(()=>{});}},500);
+// #endregion
 </script>
 </body>
 </html>

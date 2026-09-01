@@ -115,10 +115,6 @@
                             Mua 1 tặng 1
                         </option>
 
-                        <option value="gift"
-                            {{ old('loai_giam_gia', $promo->loai_giam_gia) == 'gift' ? 'selected' : '' }}>
-                            Quà tặng
-                        </option>
                     </select>
 
                     @error('loai_giam_gia')

@@ -504,7 +504,7 @@ function loadLoHang(page = 1) {
                 <td class="text-center">${hsdBadge}</td>
                 <td class="text-center">${loBadge}</td>
                 <td class="text-center">
-                    <button class="btn btn-sm btn-outline-primary btn-xem-lo" data-id="${item.id}"><i class="fas fa-eye"></i></button>
+                    <a href="/admin/kho-hang/lo-hang/${item.id}" class="btn btn-sm btn-outline-primary" title="Xem chi tiết"><i class="fas fa-eye"></i></a>
                     <button class="btn btn-sm btn-outline-danger btn-xoa-lo" data-id="${item.id}"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`;
@@ -836,55 +836,8 @@ $(document).on('click', '.btn-xem-lo-bt', function (e) {
     });
 });
 
-$(document).on('click', '.btn-xem-lo', function () {
-    const id = $(this).data('id');
-    $.get('/admin/api/lo-hang/' + id, res => {
-        if (!res.success) return;
-        const lo = res.data;
-        const tongNhap = (lo.chi_tiet_lo_hang || []).reduce((s, c) => s + (c.so_luong_nhap || 0), 0);
-        const tongTon = (lo.chi_tiet_lo_hang || []).reduce((s, c) => s + (c.so_luong_ton || 0), 0);
-        const rows = (lo.chi_tiet_lo_hang || []).map(ct => {
-            const variant = ct.variant || {};
-            const product = variant.product || {};
-            const baseName = variant.ten_bien_the && variant.ten_bien_the !== product.ten_san_pham
-                ? `${product.ten_san_pham || ''} - ${variant.ten_bien_the}`
-                : (product.ten_san_pham || ct.variant_id);
-            const attrs = (ct.thuoc_tinh_labels && ct.thuoc_tinh_labels.length)
-                ? ` - ${ct.thuoc_tinh_labels.join(', ')}`
-                : '';
-            const code = variant.ma_vach || ct.variant_id;
-            const displayName = `${baseName}${attrs} (${code})`;
-            return `
-            <tr>
-                <td>${displayName}</td>
-                <td class="text-center">${(ct.so_luong_nhap || 0).toLocaleString()}</td>
-                <td class="text-center">${(ct.so_luong_ton || 0).toLocaleString()}</td>
-                <td class="text-center">${Number(ct.gia_nhap || 0).toLocaleString()} d</td>
-                <td class="text-center">${(ct.han_su_dung || '').split('T')[0]}</td>
-                <td class="text-center">
-                    ${ct.so_luong_ton > 0 ? '<span class="badge bg-success">Còn hàng</span>' : '<span class="badge bg-secondary">Hết</span>'}
-                </td>
-            </tr>`;
-        }).join('') || '<tr><td colspan="6" class="text-center text-muted">Không có chi tiết</td></tr>';
-        $('#modal-xem-lo-body').html(`
-            <div class="row mb-3">
-                <div class="col-md-3"><strong>Mã lô:</strong> ${lo.ma_lo || 'L-' + lo.id}</div>
-                <div class="col-md-3"><strong>NCC:</strong> ${lo.nha_cung_cap?.ten_nha_cung_cap || '--'}</div>
-                <div class="col-md-3"><strong>Ngày nhập:</strong> ${lo.ngay_nhap || ''}</div>
-                <div class="col-md-3"><strong>Ghi chú:</strong> ${lo.ghi_chu || '--'}</div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-3"><strong>Tổng nhập:</strong> ${tongNhap.toLocaleString()}</div>
-                <div class="col-md-3"><strong>Tổng tồn:</strong> ${tongTon.toLocaleString()}</div>
-            </div>
-            <table class="table table-sm table-bordered">
-                <thead class="table-light"><tr><th>Sản phẩm</th><th class="text-center">SL nhập</th><th class="text-center">SL tồn</th><th class="text-center">Giá nhập</th><th class="text-center">HSD</th><th class="text-center">Trạng thái</th></tr></thead>
-                <tbody>${rows}</tbody>
-            </table>
-        `);
-        new bootstrap.Modal(document.getElementById('modal-xem-lo')).show();
-    });
-});
+// Removed: Old modal-based detail view - now using dedicated page
+// Users click the link in loadLoHang() which redirects to /admin/kho-hang/lo-hang/{id}
 
 $(document).on('click', '.btn-xoa-lo', function () {
     if (!confirm('Xóa lô hàng này?')) return;

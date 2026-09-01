@@ -115,7 +115,6 @@
                         <option value="percent" {{ request('loai') == 'percent' ? 'selected' : '' }}>Giảm %</option>
                         <option value="amount" {{ request('loai') == 'amount' ? 'selected' : '' }}>Giảm tiền</option>
                         <option value="bogo" {{ request('loai') == 'bogo' ? 'selected' : '' }}>Buy 1 Get 1</option>
-                        <option value="gift" {{ request('loai') == 'gift' ? 'selected' : '' }}>Quà tặng</option>
                     </select>
                 </div>
 
@@ -336,7 +335,6 @@
                                 <option value="percent">Giảm %</option>
                                 <option value="amount">Giảm tiền</option>
                                 <option value="bogo">Buy 1 Get 1</option>
-                                <option value="gift">Quà tặng</option>
                             </select>
                         </div>
 

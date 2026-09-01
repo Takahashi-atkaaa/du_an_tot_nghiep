@@ -122,13 +122,17 @@ class DoiTraService
         $replacementOptions = $this->getReplacementOptionsByVariantIds(
             $chiTiet->pluck('id_bien_the_san_pham')->unique()->values()->all()
         );
-
         foreach ($chiTiet as $item) {
             $item->da_doi_tra = (int) ($daDoiTraTheoBienThe[$item->id_bien_the_san_pham] ?? 0);
             $item->so_luong_con_lai = max(0, (int) $item->so_luong - $item->da_doi_tra);
             $replacement = $replacementOptions->get((int) $item->id_bien_the_san_pham);
             $item->replacement_options = $replacement ? collect([$replacement]) : collect();
             $item->tong_da_tra = $item->da_doi_tra;
+            $item->gia_hoan_du_kien = $this->calculateRefundUnitPrice(
+                (float) $item->gia_ban,
+                (float) $hoaDon->tong_tien_hang,
+                (float) $hoaDon->khach_can_tra
+            );
         }
 
         return [
@@ -283,6 +287,14 @@ class DoiTraService
 
                 $replacementVariantId = null;
                 $lineLoai = $action === 'exchange' ? 'doi_hang' : 'tra_hang';
+                $giaHoan = $this->calculateRefundUnitPrice(
+                    (float) $chiTiet->gia_ban,
+                    (float) $hoaDon->tong_tien_hang,
+                    (float) $hoaDon->khach_can_tra
+                );
+                $thanhTienHoan = $action === 'return'
+                    ? round($soLuong * $giaHoan, 2)
+                    : 0;
 
                 if ($action === 'exchange') {
                     if (!$isHangLoi) {
@@ -321,7 +333,7 @@ class DoiTraService
                         $this->restoreVariantStock($chiTiet->id_bien_the_san_pham, $soLuong);
                     }
 
-                    $tongTienTra += $soLuong * (float) $chiTiet->gia_ban;
+                    $tongTienTra += $thanhTienHoan;
                     $coTraHang = true;
                 }
 
@@ -336,8 +348,8 @@ class DoiTraService
                     'so_luong' => $soLuong,
                     'hang_loi' => $isHangLoi,
                     'id_bien_the_thay_the' => $replacementVariantId ?: null,
-                    'gia_ban' => (float) $chiTiet->gia_ban,
-                    'thanh_tien' => $soLuong * (float) $chiTiet->gia_ban,
+                    'gia_ban' => $action === 'return' ? $giaHoan : (float) $chiTiet->gia_ban,
+                    'thanh_tien' => $thanhTienHoan,
                 ];
             }
 
@@ -419,6 +431,17 @@ class DoiTraService
         }
 
         return $nguoiBan;
+    }
+
+    private function calculateRefundUnitPrice(float $unitPrice, float $grossTotal, float $paidTotal): float
+    {
+        if ($unitPrice <= 0 || $grossTotal <= 0 || $paidTotal <= 0) {
+            return 0;
+        }
+
+        $paidRatio = min(1, max(0, $paidTotal / $grossTotal));
+
+        return round($unitPrice * $paidRatio, 2);
     }
 
     private function hydrateSellerDisplayName(DoiTra $doiTra): void

@@ -754,6 +754,7 @@ foreach ($items as $item) {
             max(0, $giam),
             $thanhTien
         );
+        $giam = round($giam, 2);
 
         // Chọn KM giảm nhiều nhất
         if ($giam > $giamTotNhat) {
@@ -799,6 +800,7 @@ foreach ($items as $item) {
 // ==========================================
 
 $tienGiamVoucher = 0;
+$idVoucherApDung = null;
 
 if ($request->id_khuyen_mai) {
 
@@ -833,6 +835,9 @@ if ($request->id_khuyen_mai) {
 
             $tongSoLuong = collect($items)
                 ->sum('so_luong');
+
+            // Voucher hóa đơn được áp sau khuyến mãi sản phẩm.
+            $giaTriDuDieuKien = max(0, $tongTienHang - $tienGiamGia);
 
             $donHangToiThieu =
                 (float) ($khuyenMai->don_hang_toi_thieu ?? 0);
@@ -876,7 +881,7 @@ if ($request->id_khuyen_mai) {
                     case 'percentage':
 
                         $tienGiamVoucher =
-                            $tongTienHang
+                            $giaTriDuDieuKien
                             * $giaTriGiam
                             / 100;
 
@@ -950,8 +955,10 @@ if ($request->id_khuyen_mai) {
                  */
                 $tienGiamVoucher = min(
                     max(0, $tienGiamVoucher),
-                    $tongTienHang
+                    $giaTriDuDieuKien
                 );
+
+                $tienGiamVoucher = round($tienGiamVoucher, 2);
             }
         }
     }
@@ -970,12 +977,12 @@ if (
     $tienGiamVoucher > 0
 ) {
 
-    $idVoucher =
+    $idVoucherApDung =
         (int) $request->id_khuyen_mai;
 
-    $khuyenMaiDaApDung[$idVoucher] = [
+    $khuyenMaiDaApDung[$idVoucherApDung] = [
         'id_khuyen_mai' =>
-            $idVoucher,
+            $idVoucherApDung,
 
         'tien_giam' =>
             $tienGiamVoucher,
@@ -1041,7 +1048,7 @@ $tienGiamGia += $tienGiamVoucher;
                 'id_nguoi_dung' => $idNguoiBan,
                 'id_khach_hang' => $request->id_khach_hang,
                 'id_ca_lam_viec' => $caHienTai->id,
-                'id_khuyen_mai' => $request->id_khuyen_mai,
+                'id_khuyen_mai' => $idVoucherApDung,
                 'tong_tien_hang' => $tongTienHang,
                 'tien_giam_gia' => $tienGiamGia,
                 'khach_can_tra' => $khachCanTra,

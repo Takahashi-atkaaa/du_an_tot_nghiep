@@ -422,6 +422,17 @@ tr.is-unit-switched .js-donvi {
 }
 
 /* =========================================================
+   PRODUCT LIST TABLE — Thumbnail images
+   ========================================================= */
+.product-thumbnail-img {
+    width: 48px !important;
+    height: 48px !important;
+    object-fit: cover !important;
+    border-radius: 6px !important;
+    display: block !important;
+}
+
+/* =========================================================
    PRODUCT DETAIL PAGE — UI Refactor (Tailwind-inspired classes)
    ------------------------------------------------------------
    Cung cấp các utility class theo chuẩn Tailwind để trang chi

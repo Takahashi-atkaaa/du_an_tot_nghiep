@@ -136,11 +136,11 @@
                     </div>
                     <div class="stock-kpi-cell stock-kpi-cell--orange">
                         <div class="kpi-value">{{ number_format($tongVon, 0, ',', '.') }}</div>
-                        <div class="kpi-label">Tổng vốn (đ)</div>
+                        <div class="kpi-label">Tổng vốn hàng tồn (đ)</div>
                     </div>
                     <div class="stock-kpi-cell stock-kpi-cell--red">
                         <div class="kpi-value">{{ number_format($tongGiaTri, 0, ',', '.') }}</div>
-                        <div class="kpi-label">Giá trị bán (đ)</div>
+                        <div class="kpi-label">Giá trị bán hàng tồn (đ)</div>
                     </div>
                 </div>
             </div>

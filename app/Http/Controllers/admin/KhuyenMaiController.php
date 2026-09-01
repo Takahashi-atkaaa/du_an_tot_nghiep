@@ -139,7 +139,7 @@ class KhuyenMaiController extends Controller
             'required|string|max:255',
 
         'loai_giam_gia' =>
-            'required|string|max:50',
+            'required|in:percent,amount,bogo',
 
         'gia_tri_giam' => [
     'required',
@@ -739,8 +739,7 @@ $hoaDonGanDay = $hoaDonQuery
 
             'loai_giam_gia' => [
                 'required',
-                'string',
-                'max:50',
+                'in:percent,amount,bogo',
             ],
 
             'gia_tri_giam' => [

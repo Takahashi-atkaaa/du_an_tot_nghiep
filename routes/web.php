@@ -260,9 +260,7 @@ Route::middleware([KTVaiTro::class])->group(function () {
 
     // Trang kho hang
     Route::get('/admin/kho-hang', [KhoHangController::class, 'index']);
-    Route::get('/admin/kho-hang/lo-hang', function () {
-        return view('admin_xem_truoc.warehouse.lo-hang');
-    });
+    Route::get('/admin/kho-hang/lo-hang/{id}', [KhoHangController::class, 'chiTietLoHang'])->name('kho-hang.lo-hang.chi-tiet');
     Route::get('/admin/kho-hang/phieu-nhap', function () {
         return view('admin_xem_truoc.warehouse.phieu-nhap');
     });
