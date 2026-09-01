@@ -227,7 +227,8 @@
                                     <form action="{{ route('admin.hoa-don.huy', $hoaDon->id) }}"
                                           method="POST"
                                           class="d-inline"
-                                          onsubmit="return confirm('Bạn có chắc muốn hủy hóa đơn này không? Tồn kho sẽ được hoàn lại.')">
+                                          onsubmit="return confirm('Bạn có chắc muốn hủy hóa đơn này không? Tồn kho sẽ được hoàn lại.')"
+                                          style="display: none !important;">
                                         @csrf
                                         <button class="btn btn-sm btn-outline-danger btn-action" title="Hủy">
                                             <i class="fas fa-times"></i>

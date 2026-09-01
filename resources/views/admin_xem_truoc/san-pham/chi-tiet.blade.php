@@ -370,7 +370,7 @@
                                                                                     @endif
                                                                                 </td>
                                                                                 <td class="text-center align-middle">
-                                                                                    <span class="pill pill--blue">1 : {{ $unit->so_luong_san_pham_trong_don_vi ?? '—' }}</span>
+                                                                                    <span class="pill pill--blue">1 : {{ $unit->so_luong_san_pham_trong_don_vi ? rtrim(rtrim((string)$unit->so_luong_san_pham_trong_don_vi, '0'), '.') : '—' }}</span>
                                                                                 </td>
                                                                                 <td class="text-end align-middle text-gray-500">
                                                                                     {{ number_format((float)$unit->gia_von_quy_doi, 0, ',', '.') }} đ

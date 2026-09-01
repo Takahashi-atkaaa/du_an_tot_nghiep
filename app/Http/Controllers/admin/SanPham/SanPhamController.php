@@ -23,17 +23,9 @@ class SanPhamController extends Controller
 {
     public function index(Request $request): View
     {
-        // #region agent log
-        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'SanPhamController.php:24','message'=>'Controller index entry','data'=>['request_url'=>$request->url()],'hypothesisId'=>'F','timestamp'=>time()*1000])."\n", FILE_APPEND);
-        // #endregion
-
         $keyword = $request->input('keyword');
         $danhMucId = $request->input('danh_muc');
         $trangThai = $request->filled('trang_thai') ? $request->boolean('trang_thai') : null;
-
-        // #region agent log
-        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'SanPhamController.php:32','message'=>'Query params parsed','data'=>['keyword'=>$keyword,'danhMucId'=>$danhMucId,'trangThai'=>$trangThai],'hypothesisId'=>'F','timestamp'=>time()*1000])."\n", FILE_APPEND);
-        // #endregion
 
         $danhMucs = DanhMucSanPham::query()->orderBy('ten_danh_muc')->get();
         $thuocTinhChas = ThuocTinhSanPham::whereNull('thuoc_tinh_cha_id')
@@ -78,10 +70,6 @@ class SanPhamController extends Controller
             'qty'  => $u->so_luong_san_pham_trong_don_vi,
         ])->values()->all();
 
-        // #region agent log
-        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'SanPhamController.php:82','message'=>'Data prepared, returning view','data'=>['sanPhams_count'=>$sanPhams->count(),'danhMucs_count'=>$danhMucs->count(),'view_name'=>'admin_xem_truoc.san-pham.index'],'hypothesisId'=>'F','timestamp'=>time()*1000])."\n", FILE_APPEND);
-        // #endregion
-
         return view('admin_xem_truoc.san-pham.index', [
             'sanPhams' => $sanPhams,
             'danhMucs' => $danhMucs,
@@ -125,7 +113,10 @@ class SanPhamController extends Controller
 
             // Tạo/ánh xạ thuộc tính trước khi kiểm tra và gom biến thể.
             // Nhờ đó chữ ký biến thể luôn dùng ID thật trong database.
-            $newAttrMap = $this->processNewAttributes($data['new_attributes'] ?? []);
+            $newAttrMap = $this->processNewAttributes($this->normalizeNewAttributePayload(
+                $data['new_attributes'] ?? [],
+                $data['thuoc_tinhs'] ?? []
+            ));
             $data['bien_the'] = $this->resolveThuocTinhIdsWithNew($data['bien_the'] ?? [], $newAttrMap);
 
             // ============================================================
@@ -404,7 +395,10 @@ class SanPhamController extends Controller
 
         // Tạo/ánh xạ thuộc tính trước khi kiểm tra và gom biến thể.
         // Nhờ đó chữ ký biến thể luôn dùng ID thật trong database.
-        $newAttrMap = $this->processNewAttributes($data['new_attributes'] ?? []);
+        $newAttrMap = $this->processNewAttributes($this->normalizeNewAttributePayload(
+            $data['new_attributes'] ?? [],
+            $data['thuoc_tinhs'] ?? []
+        ));
         $data['bien_the'] = $this->resolveThuocTinhIdsWithNew($data['bien_the'] ?? [], $newAttrMap);
 
         // ============================================================
@@ -1684,6 +1678,95 @@ class SanPhamController extends Controller
     }
 
     /**
+     * Chuẩn hóa các dạng payload thuộc tính về danh sách phẳng.
+     *
+     * Frontend mới gửi `new_attributes[]` (mỗi phần tử là một giá trị),
+     * còn một số màn hình cũ gửi `thuoc_tinhs[]` dạng nhóm có `gia_tri[]`.
+     * Giữ lại các ID tạm/alias để processNewAttributes() ánh xạ được chúng.
+     */
+    protected function normalizeNewAttributePayload(array $flatAttributes, array $groupedAttributes = []): array
+    {
+        $normalized = [];
+        $asList = static function (array $items): array {
+            return $items === [] || array_is_list($items) ? $items : [$items];
+        };
+
+        foreach (array_merge($asList($flatAttributes), $asList($groupedAttributes)) as $groupOrValue) {
+            if (!is_array($groupOrValue)) {
+                continue;
+            }
+
+            $groupName = trim((string) (
+                $groupOrValue['group_name']
+                ?? $groupOrValue['groupName']
+                ?? $groupOrValue['ten']
+                ?? $groupOrValue['name']
+                ?? ''
+            ));
+            $parentId = $groupOrValue['parent_id'] ?? $groupOrValue['parentId'] ?? null;
+            $values = $groupOrValue['gia_tri']
+                ?? $groupOrValue['giaTri']
+                ?? $groupOrValue['values']
+                ?? $groupOrValue['items']
+                ?? null;
+
+            // Dạng nhóm: {ten: "Vị", gia_tri: [{ten: "Cam", ...}]}.
+            if (is_array($values)) {
+                foreach ($values as $value) {
+                    if (is_array($value)) {
+                        $label = trim((string) (
+                            $value['label']
+                            ?? $value['ten']
+                            ?? $value['name']
+                            ?? $value['value']
+                            ?? ''
+                        ));
+                        $alias = $value['id_tam_hoac_ten']
+                            ?? $value['id_tam']
+                            ?? $value['temp_id']
+                            ?? $value['temporary_id']
+                            ?? $value['id']
+                            ?? null;
+                        $normalized[] = [
+                            'group_name' => $groupName,
+                            'label' => $label,
+                            'parent_id' => $parentId,
+                            'id_tam_hoac_ten' => $alias,
+                            'id' => $value['id'] ?? null,
+                        ];
+                    } elseif (is_scalar($value)) {
+                        $normalized[] = [
+                            'group_name' => $groupName,
+                            'label' => trim((string) $value),
+                            'parent_id' => $parentId,
+                        ];
+                    }
+                }
+                continue;
+            }
+
+            // Dạng phẳng: {group_name: "Vị", label: "Cam"}.
+            $label = trim((string) (
+                $groupOrValue['label']
+                ?? $groupOrValue['ten']
+                ?? $groupOrValue['name']
+                ?? $groupOrValue['value']
+                ?? ''
+            ));
+            if ($groupName !== '' || $label !== '') {
+                $normalized[] = [
+                    ...$groupOrValue,
+                    'group_name' => $groupName,
+                    'label' => $label,
+                    'parent_id' => $parentId,
+                ];
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
      * Tạo thuộc tính cha/con mới và trả về mapping ổn định cho request.
      * Mapping chính có dạng "ten_nhom|ten_gia_tri" => ID con thực tế.
      */
@@ -1751,7 +1834,7 @@ class SanPhamController extends Controller
             $mapping[$this->attributeMapKey($groupName, $label)] = $id;
             $mapping['label:' . $this->normalizeAttributeText($label)] ??= $id;
 
-            foreach (['id', 'id_tam', 'temp_id', 'temporary_id'] as $aliasKey) {
+            foreach (['id', 'id_tam_hoac_ten', 'id_tam', 'temp_id', 'temporary_id'] as $aliasKey) {
                 if (isset($item[$aliasKey]) && trim((string) $item[$aliasKey]) !== '') {
                     $mapping[trim((string) $item[$aliasKey])] = $id;
                 }

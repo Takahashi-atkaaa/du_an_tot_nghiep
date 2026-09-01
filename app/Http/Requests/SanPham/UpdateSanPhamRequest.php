@@ -95,6 +95,27 @@ class UpdateSanPhamRequest extends FormRequest
             'new_attributes.*.group_name' => 'required|string|max:255',
             'new_attributes.*.label' => 'required|string|max:255',
             'new_attributes.*.parent_id' => 'nullable|integer|exists:thuoc_tinh_san_pham,id',
+            'new_attributes.*.id' => 'nullable',
+            'new_attributes.*.id_tam_hoac_ten' => 'nullable|string|max:255',
+            'new_attributes.*.id_tam' => 'nullable|string|max:255',
+            'new_attributes.*.temp_id' => 'nullable|string|max:255',
+            'new_attributes.*.temporary_id' => 'nullable|string|max:255',
+
+            // Tương thích payload nhóm thuộc tính dạng {ten, gia_tri[]} từ các giao diện cũ.
+            'thuoc_tinhs' => 'sometimes|array',
+            'thuoc_tinhs.*' => 'array',
+            'thuoc_tinhs.*.ten' => 'nullable|string|max:255',
+            'thuoc_tinhs.*.name' => 'nullable|string|max:255',
+            'thuoc_tinhs.*.group_name' => 'nullable|string|max:255',
+            'thuoc_tinhs.*.parent_id' => 'nullable|integer|exists:thuoc_tinh_san_pham,id',
+            'thuoc_tinhs.*.gia_tri' => 'sometimes|array',
+            'thuoc_tinhs.*.gia_tri.*.ten' => 'nullable|string|max:255',
+            'thuoc_tinhs.*.gia_tri.*.label' => 'nullable|string|max:255',
+            'thuoc_tinhs.*.gia_tri.*.id' => 'nullable',
+            'thuoc_tinhs.*.gia_tri.*.id_tam_hoac_ten' => 'nullable|string|max:255',
+            'thuoc_tinhs.*.gia_tri.*.id_tam' => 'nullable|string|max:255',
+            'thuoc_tinhs.*.gia_tri.*.temp_id' => 'nullable|string|max:255',
+            'thuoc_tinhs.*.gia_tri.*.temporary_id' => 'nullable|string|max:255',
         ];
     }
 

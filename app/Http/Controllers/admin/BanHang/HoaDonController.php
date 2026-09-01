@@ -47,10 +47,6 @@ class HoaDonController extends Controller
 
     public function index(Request $request)
     {
-        // #region agent log
-        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'HoaDonController.php:49','message'=>'HoaDon Controller index entry','data'=>['request_url'=>$request->url()],'hypothesisId'=>'G','timestamp'=>time()*1000])."\n", FILE_APPEND);
-        // #endregion
-
         $doiTraSummarySub = DB::table('doi_tra')
             ->selectRaw('id_hoa_don, COUNT(*) as so_lan_doi_tra')
             ->whereNull('deleted_at')
@@ -131,10 +127,6 @@ class HoaDonController extends Controller
             ->distinct()
             ->orderBy('phuong_thuc_thanh_toan')
             ->pluck('phuong_thuc_thanh_toan');
-
-        // #region agent log
-        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'HoaDonController.php:136','message'=>'HoaDon data prepared, returning view','data'=>['hoaDons_count'=>$hoaDons->count(),'caLamViecs_count'=>$caLamViecs->count(),'view_name'=>'admin_xem_truoc.hoa-don'],'hypothesisId'=>'G','timestamp'=>time()*1000])."\n", FILE_APPEND);
-        // #endregion
 
         return view('admin_xem_truoc.hoa-don', compact('hoaDons', 'caLamViecs', 'phuongThucThanhToans'));
     }

@@ -75,11 +75,7 @@ class KhoHangController extends Controller
             $tongTon = (int) ($sp->bien_the_san_phams_sum_so_luong_ton ?? 0);
             $tongGiaTriVon = (float) ($sp->tong_gia_tri_von ?? 0);
 
-            // #region agent log
-            if ($sp->id <= 30) { // Log only first few products
-                file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-af1b9e.log', json_encode(['sessionId'=>'af1b9e','location'=>'KhoHangController.php:76','message'=>'Product transform - tong_gia_tri_von','data'=>['product_id'=>$sp->id,'product_name'=>$sp->ten_san_pham,'tong_ton'=>$tongTon,'tong_gia_tri_von'=>$tongGiaTriVon,'raw_tong_gia_tri_von'=>$sp->tong_gia_tri_von],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'A,C']) . "\n", FILE_APPEND);
-            }
-            // #endregion
+
 
             $sp->tong_ton = $tongTon;
             $sp->tong_gia_tri_ton = $tongGiaTriVon;
@@ -112,18 +108,9 @@ class KhoHangController extends Controller
         // ===== DẢI KPI — góc nhìn Giám đốc / Kế toán =====
         // 1) Tổng giá trị kho (VND) = tổng các SUM(so_luong_ton * gia_von) trên toàn bộ SP
         
-        // #region agent log
-        $sampleVariants = DB::table('bien_the_san_pham')->whereNull('deleted_at')->where('so_luong_ton', '>', 0)->limit(3)->get(['id', 'so_luong_ton', 'gia_von']);
-        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-af1b9e.log', json_encode(['sessionId'=>'af1b9e','location'=>'KhoHangController.php:109','message'=>'Sample variants before calculating tong_gia_tri_kho','data'=>['sample_variants'=>$sampleVariants->map(fn($v)=>['id'=>$v->id,'so_luong_ton'=>$v->so_luong_ton,'gia_von'=>$v->gia_von])->toArray()],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'A,C']) . "\n", FILE_APPEND);
-        // #endregion
-        
         $tongGiaTriKho = (float) DB::table('bien_the_san_pham')
             ->whereNull('deleted_at')
             ->sum(DB::raw('so_luong_ton * gia_von'));
-        
-        // #region agent log
-        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-af1b9e.log', json_encode(['sessionId'=>'af1b9e','location'=>'KhoHangController.php:116','message'=>'Calculated tong_gia_tri_kho','data'=>['tong_gia_tri_kho'=>$tongGiaTriKho],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'A,C']) . "\n", FILE_APPEND);
-        // #endregion
 
         // 2) Số SẢN PHẨM CHA có ít nhất 1 biến thể dưới định mức (còn tồn nhưng < định mức)
         $spDuoiDinhMuc = DB::table('bien_the_san_pham as bt')

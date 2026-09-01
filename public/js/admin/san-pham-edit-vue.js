@@ -1004,7 +1004,7 @@
             function addAttrValue(g) {
                 const v = (g.valueInput || '').trim();
                 if (!v) return;
-                if (group.values.find(x => x.label === v)) {
+                if (g.values.find(x => x.label === v)) {
                     g.valueInput = '';
                     return;
                 }

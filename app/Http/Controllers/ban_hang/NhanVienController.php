@@ -256,10 +256,6 @@ public function donChoThanhToan(Request $request): \Illuminate\Http\JsonResponse
 
 public function hoaDon(Request $request)
     {
-        // #region agent log
-        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'NhanVienController.php:258','message'=>'hoaDon method entry','data'=>['auth_check'=>auth()->check(),'timestamp'=>time()],'hypothesisId'=>'G','timestamp'=>time()*1000])."\n", FILE_APPEND);
-        // #endregion
-
         $doiTraSummarySub = DB::table('doi_tra')
             ->selectRaw('id_hoa_don, COUNT(*) as so_lan_doi_tra')
             ->whereNull('deleted_at')
@@ -318,34 +314,19 @@ public function hoaDon(Request $request)
             ->orderBy('phuong_thuc_thanh_toan')
             ->pluck('phuong_thuc_thanh_toan');
 
-        // #region agent log
-        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'NhanVienController.php:321','message'=>'hoaDon data prepared, returning view','data'=>['hoaDons_count'=>$hoaDons->count(),'caLamViecs_count'=>$caLamViecs->count(),'view_name'=>'ban_hang.hoa-don.index'],'hypothesisId'=>'G','timestamp'=>time()*1000])."\n", FILE_APPEND);
-        // #endregion
-
         return view('ban_hang.hoa-don.index', compact('hoaDons', 'caLamViecs', 'phuongThucThanhToans'));
     }
 
     public function sanPham()
     {
-        // #region agent log
-        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'NhanVienController.php:321','message'=>'sanPham method entry','data'=>['auth_check'=>auth()->check(),'timestamp'=>time()],'hypothesisId'=>'A,B','timestamp'=>time()*1000])."\n", FILE_APPEND);
-        // #endregion
-
         // Kiểm tra quyền truy cập
         if (!auth()->check()) {
-            // #region agent log
-            file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'NhanVienController.php:328','message'=>'User not authenticated','data'=>[],'hypothesisId'=>'B','timestamp'=>time()*1000])."\n", FILE_APPEND);
-            // #endregion
             return redirect()->route('admin.login')
                 ->with('error', 'Vui lòng đăng nhập để tiếp tục.');
         }
 
         $user = auth()->user();
         
-        // #region agent log
-        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'NhanVienController.php:336','message'=>'User authenticated','data'=>['user_id'=>$user->id,'id_vai_tro'=>$user->id_vai_tro,'ho_ten'=>$user->ho_ten],'hypothesisId'=>'B,C','timestamp'=>time()*1000])."\n", FILE_APPEND);
-        // #endregion
-
         // Trả về view danh sách sản phẩm cho POS
         $keyword = request()->input('keyword');
         $danhMucId = request()->input('danh_muc');
@@ -374,10 +355,6 @@ public function hoaDon(Request $request)
             ->orderByDesc('id')
             ->paginate(10)
             ->withQueryString();
-
-        // #region agent log
-        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'NhanVienController.php:385','message'=>'Returning POS san pham view','data'=>['sanPhams_count'=>$sanPhams->count()],'hypothesisId'=>'A','timestamp'=>time()*1000])."\n", FILE_APPEND);
-        // #endregion
 
         return view('ban_hang.san-pham.index', [
             'sanPhams' => $sanPhams,
