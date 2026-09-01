@@ -673,8 +673,8 @@
             overflow-y: auto;
             padding: 14px 18px;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-            gap: 14px;
+            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+            gap: 16px;
             align-content: start;
         }
 
@@ -695,10 +695,16 @@
             border-color: var(--pos-primary);
         }
 
+        .product-card:focus-visible {
+            outline: 3px solid rgba(37, 99, 235, 0.35);
+            outline-offset: 2px;
+            border-color: var(--pos-primary);
+        }
+
         .product-card .img-wrap {
             position: relative;
             width: 100%;
-            aspect-ratio: 1 / 1;
+            aspect-ratio: 4 / 3;
             background: #f8fafc;
             overflow: hidden;
         }
@@ -742,9 +748,27 @@
             border-radius: 6px;
             font-size: 10px;
             font-weight: 600;
+            z-index: 10;
+        }
+
+        .product-card .badge-promotion {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+            left: 6px;
+            right: auto;
+            padding: 4px 8px !important;
+            font-weight: 700 !important;
+            box-shadow: 0 2px 8px rgba(220, 53, 69, 0.4);
+            animation: pulse-promo 2s ease-in-out infinite;
+            z-index: 11 !important;
+        }
+
+        @keyframes pulse-promo {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         .product-card .info {
+            position: relative;
             padding: 10px;
             display: flex;
             flex-direction: column;
@@ -770,9 +794,29 @@
         }
 
         .product-card .info .barcode {
-            color: var(--pos-muted);
+            position: absolute;
+            left: 10px;
+            right: 10px;
+            bottom: 6px;
+            margin: 0;
+            padding: 4px 6px;
+            border-radius: 4px;
+            background: rgba(15, 23, 42, 0.94);
+            color: #fff;
             font-size: 11px;
-            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            opacity: 0;
+            transform: translateY(4px);
+            pointer-events: none;
+            transition: opacity 0.15s ease, transform 0.15s ease;
+        }
+
+        .product-card:hover .info .barcode,
+        .product-card:focus-visible .info .barcode {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .product-card.out-of-stock { opacity: 0.55; cursor: not-allowed; }
@@ -872,14 +916,84 @@
 
         .pay-method i { font-size: 22px; display: block; margin-bottom: 6px; }
 
+        /* ===== VARIANT PICKER ===== */
+        .variant-picker-list {
+            display: grid;
+            gap: 8px;
+            max-height: min(60vh, 520px);
+            overflow-y: auto;
+        }
+
+        .variant-picker-option {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 12px 14px;
+            border: 1px solid var(--pos-border);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--pos-text);
+            text-align: left;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+
+        .variant-picker-option:hover,
+        .variant-picker-option:focus-visible {
+            border-color: var(--pos-primary);
+            background: var(--pos-primary-light);
+            outline: none;
+        }
+
+        .variant-picker-option .variant-label {
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+        .variant-picker-option .variant-meta {
+            margin-top: 3px;
+            color: var(--pos-muted);
+            font-size: 11px;
+        }
+
+        .variant-picker-option .variant-price {
+            flex-shrink: 0;
+            color: var(--pos-primary);
+            font-size: 15px;
+            font-weight: 800;
+            text-align: right;
+        }
+
         /* ===== RESPONSIVE ===== */
         @media (max-width: 1100px) {
             .pos-main { grid-template-columns: 380px 1fr; }
         }
 
         @media (max-width: 900px) {
-            .pos-main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+            html, body { overflow: auto; }
+            .pos-shell { height: auto; min-height: 100vh; }
+            .pos-main {
+                min-height: calc(100vh - 56px);
+                grid-template-columns: 1fr;
+                grid-template-rows: minmax(360px, 48vh) minmax(560px, 1fr);
+                overflow-y: auto;
+            }
             .pos-left { border-right: 0; border-bottom: 1px solid var(--pos-border); }
+            .pos-right { min-height: 560px; }
+            .filter-bar .search-row { grid-template-columns: 1fr; }
+            .product-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                padding: 12px;
+                gap: 10px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .pos-header { padding: 0 12px; }
+            .pos-header .meta { display: none; }
+            .pos-header .user-block { font-size: 12px; }
         }
 
         .scroll-thin::-webkit-scrollbar { width: 6px; }
@@ -1013,17 +1127,19 @@
             </a>
         </div>
         <div class="nav-item">
-            <a href="{{ url('/hoa-don') }}" class="nav-link">
+            <a href="{{ url('/admin/hoa-don') }}" class="nav-link">
                 <i class="fa-solid fa-file-invoice"></i>
                 <span>Hóa đơn</span>
             </a>
         </div>
+       
         <div class="nav-item">
-            <a href="{{ url('/san-pham') }}" class="nav-link">
+            <a href="{{ url('/admin/san-pham') }}" class="nav-link">
                 <i class="fa-solid fa-box"></i>
                 <span>Sản phẩm</span>
             </a>
         </div>
+   
         <div class="nav-item">
             <a href="{{ url('/khach-hang') }}" class="nav-link">
                 <i class="fa-solid fa-users"></i>
@@ -1141,7 +1257,14 @@
             <div class="invoice-footer">
                 <div class="totals">
                     <div class="row-line"><span>Tạm tính</span><strong id="subtotal">0 đ</strong></div>
-                    <div class="row-line"><span>Giảm giá</span><strong id="discount">0 đ</strong></div>
+                    <div class="row-line" id="productDiscountRow" style="display:none;">
+                        <span style="color:#dc3545;"><i class="fa-solid fa-tag me-1"></i>KM sản phẩm</span>
+                        <strong id="productDiscount" style="color:#dc3545;">0 đ</strong>
+                    </div>
+                    <div class="row-line" id="voucherDiscountRow" style="display:none;">
+                        <span style="color:#dc3545;"><i class="fa-solid fa-ticket me-1"></i>Voucher</span>
+                        <strong id="voucherDiscount" style="color:#dc3545;">0 đ</strong>
+                    </div>
                     <div class="row-line"><span>Điểm sử dụng</span><strong id="pointUse">0 đ</strong></div>
                     <div class="row-line big"><span>Khách cần trả</span><strong id="total">0 đ</strong></div>
                 </div>
@@ -1184,6 +1307,21 @@
             </div>
         </section>
     </main>
+</div>
+
+<!-- Variant/unit picker -->
+<div class="modal fade" id="variantPickerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="variantPickerTitle">Chọn biến thể / đơn vị</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <div class="variant-picker-list" id="variantPickerList"></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="pos-toast" id="posToast"><i class="fa-solid fa-circle-check me-2"></i><span id="toastMessage">OK</span></div>
@@ -1433,7 +1571,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="{{ asset('js/admin/money-input.js') }}"></script>
+<script src="{{ asset('js/admin/money-input.js') }}?v={{ filemtime(public_path('js/admin/money-input.js')) }}"></script>
 <script src="{{ asset('js/pos/payos.js') }}"></script>
 <script>
 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
@@ -1683,6 +1821,16 @@ function getBestPromotionForProduct(product, qty = 1, orderSubtotal = 0) {
 
     const itemTotal = price * Number(qty || 1);
 
+    console.log('🔍 Check promotion for:', product.ten_san_pham, {
+        productId: productId,
+        variantId: variantId,
+        qty: qty,
+        price: price,
+        itemTotal: itemTotal,
+        orderSubtotal: orderSubtotal,
+        totalPromotions: allPromotions?.length || 0
+    });
+
     let bestPromotion = null;
     let bestDiscount = 0;
 
@@ -1809,10 +1957,158 @@ function getBestPromotionForProduct(product, qty = 1, orderSubtotal = 0) {
         }
     });
 
+    console.log('✅ Best promotion result:', {
+        productName: product.ten_san_pham,
+        promotion: bestPromotion?.ten_chuong_trinh || 'None',
+        discount: bestDiscount
+    });
+
     return {
         promotion: bestPromotion,
         discount: bestDiscount
     };
+}
+
+function groupProducts(products) {
+    const groups = new Map();
+
+    products.forEach(product => {
+        const key = String(product.id_san_pham ?? product.product_id ?? product.id);
+        if (!groups.has(key)) {
+            groups.set(key, {
+                key,
+                name: product.ten_san_pham_goc || product.ten_san_pham || 'Sản phẩm',
+                variants: [],
+            });
+        }
+        groups.get(key).variants.push(product);
+    });
+
+    return Array.from(groups.values()).map(group => {
+        group.variants.sort((a, b) => {
+            if (Boolean(a.la_don_vi) !== Boolean(b.la_don_vi)) {
+                return a.la_don_vi ? -1 : 1;
+            }
+            return Number(a.id) - Number(b.id);
+        });
+        group.primary = group.variants[0];
+        return group;
+    });
+}
+
+function getSaleOptions(group) {
+    return group.variants.flatMap(product => {
+        const options = [{ product, unit: null }];
+        const conversionUnits = (product.don_vi_quy_doi || [])
+            .filter(unit => Number(unit.so_luong_ton_kho || 0) > 0)
+            .map(unit => ({ product, unit }));
+        return options.concat(conversionUnits);
+    });
+}
+
+function getVariantLabel(product) {
+    const variant = String(product.ten_bien_the || '').trim();
+    const unit = String(product.ten_don_vi || '').trim();
+    const attributes = Object.entries(product.thuoc_tinh_hien_thi || {})
+        .map(([group, value]) => `${group}: ${value}`)
+        .filter(Boolean);
+
+    if (attributes.length) {
+        if (unit) attributes.push(unit);
+        return attributes.join(' / ');
+    }
+
+    if (product.la_don_vi && unit) return unit;
+    if (variant && unit) return `${variant} / ${unit}`;
+    if (variant || unit) return variant || unit;
+    if (product.la_don_vi) return 'Đơn vị cơ bản';
+    return product.ma_hang ? `Mã hàng ${product.ma_hang}` : `Biến thể #${product.id}`;
+}
+
+function getSaleOptionLabel(option) {
+    const product = option.product;
+    const unit = option.unit;
+    const attributes = Object.entries(product.thuoc_tinh_hien_thi || {})
+        .map(([group, value]) => value)
+        .filter(Boolean);
+    const variant = String(product.ten_bien_the || '').trim();
+    const unitName = String(unit?.ten_don_vi || product.ten_don_vi || '').trim();
+
+    if (attributes.length) {
+        if (unitName) attributes.push(unitName);
+        return attributes.join(' / ');
+    }
+    if (variant && unitName) return `${variant} / ${unitName}`;
+    return variant || unitName || 'Đơn vị cơ bản';
+}
+
+function getSaleOptionDisplayName(option) {
+    const baseName = option.product.ten_san_pham_goc || option.product.ten_san_pham || 'Sản phẩm';
+    return `${baseName} / ${getSaleOptionLabel(option)}`;
+}
+
+function getProductDisplayName(product) {
+    const baseName = product.ten_san_pham_goc || product.ten_san_pham || 'Sản phẩm';
+    const hasUnitOrVariant = Boolean(
+        String(product.ten_bien_the || '').trim() ||
+        String(product.ten_don_vi || '').trim()
+    );
+
+    return hasUnitOrVariant
+        ? `${baseName} / ${getVariantLabel(product)}`
+        : (product.ten_san_pham || baseName);
+}
+
+function showVariantPicker(group) {
+    const title = document.getElementById('variantPickerTitle');
+    const list = document.getElementById('variantPickerList');
+    if (!title || !list) return;
+
+    title.textContent = `Chọn biến thể / đơn vị: ${group.name}`;
+    list.innerHTML = '';
+
+    getSaleOptions(group).forEach(optionData => {
+        const product = optionData.product;
+        const unit = optionData.unit;
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.className = 'variant-picker-option';
+
+        const info = document.createElement('span');
+        const label = document.createElement('span');
+        label.className = 'variant-label';
+        label.textContent = getSaleOptionLabel(optionData);
+
+        const meta = document.createElement('span');
+        meta.className = 'variant-meta';
+        const metaParts = [`Kho: ${Number(unit?.so_luong_ton_kho ?? product.so_luong_ton_kho ?? 0)}`];
+        if (unit) {
+            metaParts.push(`Quy đổi x${Number(unit.so_luong_san_pham_trong_don_vi || 1)}`);
+            if (unit.ma_vach) metaParts.push(`Mã vạch: ${unit.ma_vach}`);
+        } else if (product.ma_vach) {
+            metaParts.push(`Mã vạch: ${product.ma_vach}`);
+        }
+        meta.textContent = metaParts.join(' / ');
+
+        info.append(label, meta);
+
+        const price = document.createElement('span');
+        price.className = 'variant-price';
+        price.textContent = fmt(unit ? unit.gia_ban_quy_doi : product.gia_ban);
+
+        option.append(info, price);
+        option.addEventListener('click', () => {
+            addToCart(Number(product.id), unit);
+            bootstrap.Modal.getOrCreateInstance(
+                document.getElementById('variantPickerModal')
+            ).hide();
+        });
+        list.appendChild(option);
+    });
+
+    bootstrap.Modal.getOrCreateInstance(
+        document.getElementById('variantPickerModal')
+    ).show();
 }
 
 function renderProducts() {
@@ -1828,9 +2124,16 @@ function renderProducts() {
         return;
     }
 
-    grid.innerHTML = allProducts.map(p => {
+    const productGroups = groupProducts(allProducts);
 
-        const oos = Number(p.so_luong_ton_kho) <= 0;
+    grid.innerHTML = productGroups.map(group => {
+        const p = group.primary;
+        const saleOptions = getSaleOptions(group);
+        const cardName = group.variants.length > 1
+            ? group.name
+            : getProductDisplayName(p);
+
+        const oos = group.variants.every(item => Number(item.so_luong_ton_kho) <= 0);
 
         const imgHtml = p.hinh_anh
             ? `
@@ -1851,12 +2154,16 @@ function renderProducts() {
         // KIỂM TRA KHUYẾN MÃI CỦA SẢN PHẨM
         // =====================================
 
-        const result = getBestPromotionForProduct(p, 1, 0);
+        const result = group.variants.reduce((best, variant) => {
+            const candidate = getBestPromotionForProduct(variant, 1, 0);
+            return candidate.discount > best.discount ? candidate : best;
+        }, { promotion: null, discount: 0 });
 
         const promotion = result.promotion;
         const promotionDiscount = Number(result.discount || 0);
 
-        const giaGoc = Number(p.gia_ban || 0);
+        const prices = group.variants.map(item => Number(item.gia_ban || 0));
+        const giaGoc = Math.min(...prices);
 
         const giaSauGiam = Math.max(
             0,
@@ -1870,7 +2177,7 @@ function renderProducts() {
 
         let promotionBadge = '';
 
-        if (promotion && promotionDiscount > 0) {
+        if (group.variants.length === 1 && promotion && promotionDiscount > 0) {
 
             const type = String(
                 promotion.loai_giam_gia || ''
@@ -1888,14 +2195,10 @@ function renderProducts() {
 
                 promotionBadge = `
                     <div
-                        class="badge-stock"
-                        style="
-                            background:#dc3545;
-                            left:6px;
-                            right:auto;
-                        "
+                        class="badge-stock badge-promotion"
+                        title="${promotion.ten_chuong_trinh || 'Khuyến mãi'}"
                     >
-                        Giảm ${Number(
+                        <i class="fa-solid fa-tag me-1"></i>Giảm ${Number(
                             promotion.gia_tri_giam || 0
                         )}%
                     </div>
@@ -1905,14 +2208,10 @@ function renderProducts() {
 
                 promotionBadge = `
                     <div
-                        class="badge-stock"
-                        style="
-                            background:#dc3545;
-                            left:6px;
-                            right:auto;
-                        "
+                        class="badge-stock badge-promotion"
+                        title="${promotion.ten_chuong_trinh || 'Khuyến mãi'}"
                     >
-                        Giảm ${fmt(promotionDiscount)}
+                        <i class="fa-solid fa-tag me-1"></i>Giảm ${fmt(promotionDiscount)}
                     </div>
                 `;
 
@@ -1926,7 +2225,13 @@ function renderProducts() {
 
         let priceHtml = '';
 
-        if (promotion && promotionDiscount > 0) {
+        if (saleOptions.length > 1) {
+            priceHtml = `
+                <div class="price">
+                    Từ ${fmt(giaGoc)}
+                </div>
+            `;
+        } else if (promotion && promotionDiscount > 0) {
 
             priceHtml = `
                 <div class="price">
@@ -1962,7 +2267,9 @@ function renderProducts() {
         return `
             <div
                 class="product-card ${oos ? 'out-of-stock' : ''}"
-                data-id="${p.id}"
+                data-group-id="${group.key}"
+                role="button"
+                tabindex="0"
             >
 
                 <div class="img-wrap">
@@ -1983,7 +2290,9 @@ function renderProducts() {
                             `
                             : `
                                 <div class="badge-stock">
-                                    Kho: ${p.so_luong_ton_kho}
+                                    ${saleOptions.length > 1
+                                        ? `${saleOptions.length} lựa chọn`
+                                        : `Kho: ${p.so_luong_ton_kho}`}
                                 </div>
                             `
                     }
@@ -1993,13 +2302,13 @@ function renderProducts() {
                 <div class="info">
 
                     <div class="name">
-                        ${p.ten_san_pham || ''}
+                        ${cardName}
                     </div>
 
                     ${priceHtml}
 
                     ${
-                        p.ma_vach
+                        saleOptions.length === 1 && p.ma_vach
                             ? `
                                 <div class="barcode">
                                     <i class="fa-solid fa-barcode me-1"></i>
@@ -2032,12 +2341,22 @@ function renderProducts() {
                 return;
             }
 
-            const id = parseInt(
-                card.dataset.id,
-                10
-            );
+            const group = productGroups.find(item => item.key === card.dataset.groupId);
+            if (!group) return;
 
-            addToCart(id);
+            const saleOptions = getSaleOptions(group);
+            if (saleOptions.length === 1) {
+                addToCart(Number(saleOptions[0].product.id), saleOptions[0].unit);
+            } else {
+                showVariantPicker(group);
+            }
+        };
+
+        card.onkeydown = (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                card.click();
+            }
         };
 
     });
@@ -2046,42 +2365,57 @@ function renderProducts() {
 // =========================================================
 // CART
 // =========================================================
-function addToCart(productId) {
+function addToCart(productId, conversionUnit = null) {
     const p = allProducts.find(x => x.id === productId);
     if (!p) return;
 
     const inv = getActiveInvoice();
-    const existing = inv.items.find(x => x.id === productId);
+    const unitId = conversionUnit ? Number(conversionUnit.id) : null;
+    const existing = inv.items.find(x =>
+        x.id === productId && Number(x.id_don_vi_quy_doi || 0) === Number(unitId || 0)
+    );
     if (existing) {
         existing.qty += 1;
     } else {
         inv.items.push({
             id: p.id,
             id_san_pham: p.id_san_pham,
-            ten_san_pham: p.ten_san_pham,
+            ten_san_pham: getSaleOptionDisplayName({ product: p, unit: conversionUnit }),
+            ten_bien_the: p.ten_bien_the,
+            ten_don_vi: p.ten_don_vi,
             hinh_anh: p.hinh_anh,
-            gia_ban: p.gia_ban,
-            ma_vach: p.ma_vach,
+            gia_ban: conversionUnit ? Number(conversionUnit.gia_ban_quy_doi || 0) : p.gia_ban,
+            gia_ban_goc: p.gia_ban,
+            id_don_vi_quy_doi: unitId,
+            he_so_quy_doi: conversionUnit
+                ? Number(conversionUnit.so_luong_san_pham_trong_don_vi || 1)
+                : 1,
+            ma_vach: conversionUnit?.ma_vach || p.ma_vach,
             qty: 1,
         });
     }
-    showToast('Đã thêm: ' + p.ten_san_pham);
+    showToast('Đã thêm: ' + getSaleOptionDisplayName({ product: p, unit: conversionUnit }));
     renderInvoiceItems();
     renderTotals();
     renderInvoiceTabs();
 }
 
-function removeFromCart(productId) {
+function isSameCartItem(item, productId, unitId = null) {
+    return item.id === productId
+        && Number(item.id_don_vi_quy_doi || 0) === Number(unitId || 0);
+}
+
+function removeFromCart(productId, unitId = null) {
     const inv = getActiveInvoice();
-    inv.items = inv.items.filter(x => x.id !== productId);
+    inv.items = inv.items.filter(x => !isSameCartItem(x, productId, unitId));
     renderInvoiceItems();
     renderTotals();
     renderInvoiceTabs();
 }
 
-function updateQty(productId, newQty) {
+function updateQty(productId, newQty, unitId = null) {
     const inv = getActiveInvoice();
-    const it = inv.items.find(x => x.id === productId);
+    const it = inv.items.find(x => isSameCartItem(x, productId, unitId));
     if (!it) return;
     it.qty = Math.max(1, newQty);
     renderInvoiceItems();
@@ -2099,25 +2433,83 @@ function renderInvoiceItems() {
         </div>`;
         return;
     }
+    
+    const subtotal = inv.items.reduce((s, x) => s + x.gia_ban * x.qty, 0);
+    
     box.innerHTML = inv.items.map(it => {
+        // Tính khuyến mãi cho item
+        const promotionResult = getBestPromotionForProduct(it, it.qty, subtotal);
+        const discount = Number(promotionResult.discount || 0);
+        const promotion = promotionResult.promotion;
+        
+        const priceOriginal = it.gia_ban * it.qty;
+        const priceAfterDiscount = Math.max(0, priceOriginal - discount);
+        
+        // Badge khuyến mãi trong cart
+        let promotionInfo = '';
+        if (promotion && discount > 0) {
+            const type = normalizePromotionType(promotion.loai_giam_gia);
+            const isPercent = ['percent', 'phan_tram', 'percentage'].includes(type);
+            
+            promotionInfo = `
+                <div style="display:flex;align-items:center;gap:4px;margin-top:4px;">
+                    <span style="
+                        background:#dc3545;
+                        color:white;
+                        font-size:11px;
+                        padding:2px 6px;
+                        border-radius:4px;
+                        font-weight:600;
+                    ">
+                        <i class="fa-solid fa-tag me-1"></i>
+                        ${isPercent ? '-' + promotion.gia_tri_giam + '%' : '-' + fmt(discount)}
+                    </span>
+                    <span style="font-size:11px;color:#64748b;" title="${promotion.ten_chuong_trinh || ''}">
+                        ${promotion.ten_chuong_trinh || 'Khuyến mãi'}
+                    </span>
+                </div>
+            `;
+        }
+        
+        // Hiển thị giá
+        let priceHtml = '';
+        if (discount > 0) {
+            priceHtml = `
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+                    <span style="text-decoration:line-through;color:#94a3b8;font-size:12px;">
+                        ${fmt(priceOriginal)}
+                    </span>
+                    <span style="color:#dc3545;font-weight:700;font-size:16px;">
+                        ${fmt(priceAfterDiscount)}
+                    </span>
+                </div>
+            `;
+        } else {
+            priceHtml = `<div class="total">${fmt(priceOriginal)}</div>`;
+        }
+        
         const img = it.hinh_anh
             ? `<img src="${it.hinh_anh}" onerror="this.outerHTML='<div class=\\'no-img\\' style=\\'background:#e2e8f0;width:56px;height:56px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:#94a3b8;\\'><i class=\\'fa-solid fa-box\\'></i></div>'">`
             : `<div style="background:#e2e8f0;width:56px;height:56px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:#94a3b8;"><i class="fa-solid fa-box"></i></div>`;
+        
         return `
         <div class="invoice-item" data-id="${it.id}">
             ${img}
-            <div>
+            <div style="flex:1;">
                 <div class="name">${it.ten_san_pham}</div>
                 <div class="price">${fmt(it.gia_ban)}</div>
+                ${promotionInfo}
                 <div class="qty-control">
-                    <button class="qty-btn" onclick="updateQty(${it.id}, ${it.qty - 1})">−</button>
-                    <input class="qty-input" type="number" min="1" value="${it.qty}" onchange="updateQty(${it.id}, parseInt(this.value||1))">
-                    <button class="qty-btn" onclick="updateQty(${it.id}, ${it.qty + 1})">+</button>
+                    <button class="qty-btn" onclick="updateQty(${it.id}, ${it.qty - 1}, ${it.id_don_vi_quy_doi || 'null'})">−</button>
+                    <input class="qty-input" type="number" min="1" value="${it.qty}" onchange="updateQty(${it.id}, parseInt(this.value||1), ${it.id_don_vi_quy_doi || 'null'})">
+                    <button class="qty-btn" onclick="updateQty(${it.id}, ${it.qty + 1}, ${it.id_don_vi_quy_doi || 'null'})">+</button>
                 </div>
             </div>
-            <div>
-                <div class="total">${fmt(it.gia_ban * it.qty)}</div>
-                <span class="remove-btn" onclick="removeFromCart(${it.id})"><i class="fa-solid fa-trash-can me-1"></i>Xóa</span>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+                ${priceHtml}
+                <span class="remove-btn" onclick="removeFromCart(${it.id}, ${it.id_don_vi_quy_doi || 'null'})">
+                    <i class="fa-solid fa-trash-can me-1"></i>Xóa
+                </span>
             </div>
         </div>`;
     }).join('');
@@ -2202,7 +2594,23 @@ function calcVoucherDiscount(inv, subtotal, productDiscount) {
 function renderTotals() {
     const t = calcTotals();
     document.getElementById('subtotal').textContent = fmt(t.subtotal);
-    document.getElementById('discount').textContent = fmt(t.productDiscount + t.voucherDiscount);
+    
+    // Tách riêng khuyến mãi sản phẩm
+    if (t.productDiscount > 0) {
+        document.getElementById('productDiscount').textContent = '- ' + fmt(t.productDiscount);
+        document.getElementById('productDiscountRow').style.display = 'flex';
+    } else {
+        document.getElementById('productDiscountRow').style.display = 'none';
+    }
+    
+    // Voucher/khuyến mãi toàn đơn
+    if (t.voucherDiscount > 0) {
+        document.getElementById('voucherDiscount').textContent = '- ' + fmt(t.voucherDiscount);
+        document.getElementById('voucherDiscountRow').style.display = 'flex';
+    } else {
+        document.getElementById('voucherDiscountRow').style.display = 'none';
+    }
+    
     document.getElementById('pointUse').textContent = fmt(t.pointDiscount);
     document.getElementById('total').textContent = fmt(t.total);
     document.getElementById('btnCheckout').disabled = (getActiveInvoice().items.length === 0);
@@ -2369,10 +2777,6 @@ function renderCustomerInfo() {
 
         document.getElementById('customerPoints').textContent =
             selectedCustomer.diem_tich_luy || 0;
-
-        // #region agent log
-        setTimeout(()=>{const cs=window.getComputedStyle(info);const innerDiv=info.querySelector('div');const innerCS=innerDiv?window.getComputedStyle(innerDiv):null;fetch('http://127.0.0.1:7249/ingest/61cdda37-75e2-47ee-9a7a-608a4741bbba',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aa4cc5'},body:JSON.stringify({sessionId:'aa4cc5',location:'pos_moi.blade.php:2297',message:'customerInfo after show detailed',data:{padding:cs.padding,fontSize:cs.fontSize,lineHeight:cs.lineHeight,margin:cs.margin,height:info.offsetHeight,scrollHeight:info.scrollHeight,clientHeight:info.clientHeight,display:cs.display,flexDirection:cs.flexDirection,alignItems:cs.alignItems,minHeight:cs.minHeight,maxHeight:cs.maxHeight,innerDivHeight:innerDiv?innerDiv.offsetHeight:null,classes:info.className},timestamp:Date.now(),runId:'shown',hypothesisId:'C'})}).catch(()=>{});},50);
-        // #endregion
 
     } else {
 
@@ -2686,7 +3090,18 @@ document.getElementById('barcodeInput').addEventListener('keydown', async functi
         const res = await fetch(productListUrl + '?q=' + encodeURIComponent(code), { headers: { 'Accept': 'application/json' } });
         const list = await res.json();
         if (list && list.length > 0) {
-            addToCart(list[0].id);
+            const matched = list.find(item => String(item.ma_vach || '') === code);
+            const matchedUnit = matched
+                ? (matched.don_vi_quy_doi || []).find(unit => String(unit.ma_vach || '') === code)
+                : list.flatMap(item => (item.don_vi_quy_doi || []).map(unit => ({ item, unit })))
+                    .find(result => String(result.unit.ma_vach || '') === code);
+            if (matched) {
+                addToCart(matched.id, matchedUnit || null);
+            } else if (matchedUnit) {
+                addToCart(matchedUnit.item.id, matchedUnit.unit);
+            } else {
+                addToCart(list[0].id);
+            }
             this.value = '';
         } else {
             showToast('Không tìm thấy sản phẩm với mã: ' + code, 'error');
@@ -2729,9 +3144,11 @@ async function loadPromotions() {
         allPromotions = await res.json();
 
         console.log(
-            'Khuyến mãi POS:',
-            allPromotions
+            '🎉 Loaded promotions:',
+            allPromotions.length,
+            'items'
         );
+        console.log('📋 Promotion details:', allPromotions);
 
         // Nếu sản phẩm đã tải rồi
         // thì render lại để hiện giá khuyến mãi
@@ -2744,7 +3161,7 @@ async function loadPromotions() {
 
     } catch (err) {
         console.error(
-            'Lỗi tải khuyến mãi:',
+            '❌ Lỗi tải khuyến mãi:',
             err
         );
     }
@@ -2943,7 +3360,11 @@ document.getElementById('btnConfirmPay').onclick = async () => {
     const idNguoiBan = document.getElementById('sellerSelect').value || null;
 
     const body = {
-        cart: inv.items.map(it => ({ id: it.id, qty: it.qty })),
+        cart: inv.items.map(it => ({
+            id: it.id,
+            qty: it.qty,
+            id_don_vi_quy_doi: it.id_don_vi_quy_doi || null,
+        })),
         id_khach_hang: inv.customer ? inv.customer.id : null,
         id_nguoi_ban: idNguoiBan,
         id_khuyen_mai: inv.voucherId || null,
@@ -3115,9 +3536,6 @@ loadProducts();
 loadPromotions();
 loadSellers();
 
-// #region agent log
-setTimeout(()=>{const el=document.getElementById('customerInfo');if(el){const cs=window.getComputedStyle(el);fetch('http://127.0.0.1:7249/ingest/61cdda37-75e2-47ee-9a7a-608a4741bbba',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aa4cc5'},body:JSON.stringify({sessionId:'aa4cc5',location:'pos_moi.blade.php:3046',message:'customerInfo computed styles',data:{padding:cs.padding,paddingTop:cs.paddingTop,paddingBottom:cs.paddingBottom,fontSize:cs.fontSize,margin:cs.margin,height:el.offsetHeight,classes:el.className},timestamp:Date.now(),runId:'initial',hypothesisId:'A'})}).catch(()=>{});}},500);
-// #endregion
 </script>
 </body>
 </html>

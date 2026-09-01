@@ -97,7 +97,7 @@ window.__CREATE_PRODUCT_DATA__ = {
     availableUnits: @json($unitsPayload)
 };
 </script>
-<script src="{{ asset('js/admin/san-pham-edit-vue.js') }}"></script>
+<script src="{{ asset('js/admin/san-pham-edit-vue.js') }}?v={{ filemtime(public_path('js/admin/san-pham-edit-vue.js')) }}"></script>
 <script src="{{ asset('js/admin/san-pham.js') }}"></script>
 @endsection
 

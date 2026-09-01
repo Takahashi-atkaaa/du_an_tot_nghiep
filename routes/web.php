@@ -120,7 +120,7 @@ Route::delete('/admin/api/phieu-xuat/{id}', [PhieuXuatApiController::class, 'des
 // Trang tạo phiếu nhập (chuyển từ modal sang trang riêng)
 Route::middleware([KTVaiTro::class])->group(function () {
     // Admin Routes - Preview
-    Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+    Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard')->middleware('permission:xem_dashboard');
 
 
     // API - phải đặt TRƯỚC san-pham/{id} để tránh bị match nhầm (KHÔNG bị chặn bởi KTVaiTro)
@@ -210,22 +210,22 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::put('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'update'])->name('ca-lam-viec.update')->middleware('permission:quan_ly_ca_lam');
     Route::delete('/admin/ca-lam-viec/{caLamViec}', [CaLamViecController::class, 'destroy'])->name('ca-lam-viec.destroy')->middleware('permission:quan_ly_ca_lam');
 
-    Route::get('/admin/hoa-don', [HoaDonController::class, 'index'])->name('admin.hoa-don.index');
-    Route::get('/admin/hoa-don/{id}/modal', [HoaDonController::class, 'showModal'])->name('admin.hoa-don.modal');
+    Route::get('/admin/hoa-don', [HoaDonController::class, 'index'])->name('admin.hoa-don.index')->middleware('permission:quan_ly_hoa_don');
+    Route::get('/admin/hoa-don/{id}/modal', [HoaDonController::class, 'showModal'])->name('admin.hoa-don.modal')->middleware('permission:quan_ly_hoa_don');
 
 
     // Đổi trả hàng
-    Route::get('/admin/hoa-don/search-product', [HoaDonController::class, 'searchProduct'])->name('admin.hoa-don.search-product');
-    Route::get('/admin/hoa-don/{id}/doi-tra', [HoaDonController::class, 'formDoiTra'])->name('admin.hoa-don.doi-tra');
-    Route::post('/admin/hoa-don/{id}/doi-tra', [HoaDonController::class, 'xuLyDoiTra'])->name('admin.hoa-don.xu-ly-doi-tra');
-    Route::get('/admin/hoa-don/{id}/chi-tiet-doi-tra', [HoaDonController::class, 'chiTietDoiTra'])->name('admin.hoa-don.chi-tiet-doi-tra');
-    Route::get('/admin/hoa-don/{id}', [HoaDonController::class, 'show'])->name('admin.hoa-don.show');
-    Route::post('/admin/hoa-don/{id}/huy', [HoaDonController::class, 'huy'])->name('admin.hoa-don.huy');
-    Route::get('/admin/hang-loi', [HangLoiController::class, 'index'])->name('admin.hang-loi.index');
-    Route::post('/admin/hang-loi/{id}/xac-nhan-tieu-huy', [HangLoiController::class, 'xacNhanTieuHuy'])->name('admin.hang-loi.xac-nhan-tieu-huy');
+    Route::get('/admin/hoa-don/search-product', [HoaDonController::class, 'searchProduct'])->name('admin.hoa-don.search-product')->middleware('permission:quan_ly_hoa_don');
+    Route::get('/admin/hoa-don/{id}/doi-tra', [HoaDonController::class, 'formDoiTra'])->name('admin.hoa-don.doi-tra')->middleware('permission:quan_ly_hoa_don');
+    Route::post('/admin/hoa-don/{id}/doi-tra', [HoaDonController::class, 'xuLyDoiTra'])->name('admin.hoa-don.xu-ly-doi-tra')->middleware('permission:quan_ly_hoa_don');
+    Route::get('/admin/hoa-don/{id}/chi-tiet-doi-tra', [HoaDonController::class, 'chiTietDoiTra'])->name('admin.hoa-don.chi-tiet-doi-tra')->middleware('permission:quan_ly_hoa_don');
+    Route::get('/admin/hoa-don/{id}', [HoaDonController::class, 'show'])->name('admin.hoa-don.show')->middleware('permission:quan_ly_hoa_don');
+    Route::post('/admin/hoa-don/{id}/huy', [HoaDonController::class, 'huy'])->name('admin.hoa-don.huy')->middleware('permission:quan_ly_hoa_don');
+    Route::get('/admin/hang-loi', [HangLoiController::class, 'index'])->name('admin.hang-loi.index')->middleware('permission:quan_ly_kho_hang');
+    Route::post('/admin/hang-loi/{id}/xac-nhan-tieu-huy', [HangLoiController::class, 'xacNhanTieuHuy'])->name('admin.hang-loi.xac-nhan-tieu-huy')->middleware('permission:quan_ly_kho_hang');
 
     // Kiểm kho - View
-    Route::prefix('/admin/kho-hang/kiem-kho')->name('kiem-kho.')->group(function () {
+    Route::prefix('/admin/kho-hang/kiem-kho')->name('kiem-kho.')->middleware('permission:quan_ly_kho_hang')->group(function () {
         Route::get('/', [KiemKhoController::class, 'index'])->name('index');
         Route::get('/tao-moi', [KiemKhoController::class, 'create'])->name('create');
         Route::post('/', [KiemKhoController::class, 'store'])->name('store');
@@ -242,7 +242,7 @@ Route::middleware([KTVaiTro::class])->group(function () {
     });
 
     // Kiểm kho - API
-    Route::prefix('/admin/api/kiem-kho')->name('admin.api.kiem-kho.')->group(function () {
+    Route::prefix('/admin/api/kiem-kho')->name('admin.api.kiem-kho.')->middleware('permission:quan_ly_kho_hang')->group(function () {
         Route::get('/tim-variant', [KiemKhoApiController::class, 'timVariant'])->name('tim-variant');
         Route::get('/bao-cao', [KiemKhoApiController::class, 'baoCao'])->name('bao-cao');
         Route::get('/{id}/detail', [KiemKhoApiController::class, 'layChiTietPhieu'])->whereNumber('id')->name('detail');
@@ -259,18 +259,24 @@ Route::middleware([KTVaiTro::class])->group(function () {
     });
 
     // Trang kho hang
-    Route::get('/admin/kho-hang', [KhoHangController::class, 'index']);
-    Route::get('/admin/kho-hang/lo-hang/{id}', [KhoHangController::class, 'chiTietLoHang'])->name('kho-hang.lo-hang.chi-tiet');
+    Route::get('/admin/kho-hang', [KhoHangController::class, 'index'])->middleware('permission:quan_ly_kho_hang');
+    Route::get('/admin/kho-hang/lo-hang/{id}', [KhoHangController::class, 'chiTietLoHang'])->name('kho-hang.lo-hang.chi-tiet')->middleware('permission:quan_ly_kho_hang');
     Route::get('/admin/kho-hang/phieu-nhap', function () {
         return view('admin_xem_truoc.warehouse.phieu-nhap');
-    });
+    })->middleware('permission:quan_ly_kho_hang');
     Route::get('/admin/kho-hang/phieu-xuat', function () {
         return view('admin_xem_truoc.warehouse.phieu-xuat');
-    });
+    })->middleware('permission:quan_ly_kho_hang');
 
     // Trang tạo phiếu nhập (chuyển từ modal sang trang riêng)
     Route::get('/admin/kho-hang/phieu-nhap/create', [PhieuNhapController::class, 'create'])
+        ->middleware('permission:quan_ly_kho_hang')
         ->name('phieu-nhap.create');
+
+    // Trang chi tiết phiếu nhập
+    Route::get('/admin/kho-hang/phieu-nhap/{id}', [PhieuNhapController::class, 'show'])
+        ->middleware('permission:quan_ly_kho_hang')
+        ->name('phieu-nhap.show');
 
     // Trang tạo phiếu xuất (trang riêng, không dùng modal)
     Route::get('/admin/kho-hang/phieu-xuat/create', [PhieuXuatController::class, 'create'])
@@ -332,6 +338,7 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::get('/lich-su-ca-lam-viec', [LichSuCaLam::class, 'index'])->name('lich-su-ca-lam-viec.index')->middleware('permission:quan_ly_ca_lam');
     Route::get('/cac-hoa-don-cua-ca-hoan-thanh/{ngay}/{id_ca}', [LichSuCaLam::class, 'hoa_don_cua_ca'])->name('hoa-don-cua-ca')->middleware('permission:quan_ly_ca_lam');
     Route::get('/cac-hoa-don-cua-ca-huy/{ngay}/{id_ca}', [LichSuCaLam::class, 'hoa_don_doi_tra_cua_ca'])->name('hoa-don-cua-ca.doi-tra')->middleware('permission:quan_ly_ca_lam');
+    Route::get('/tat-ca-hoa-don-trong-ngay/{ngay}', [LichSuCaLam::class, 'tat_ca_hoa_don_trong_ngay'])->name('tat-ca-hoa-don-trong-ngay')->middleware('permission:quan_ly_ca_lam');
     // Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}',[LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:quan_ly_ca_lam');
     Route::get('/lich-su-ca-lam-viec-cac-ca/{ngay}/{id_ca?}', [LichSuCaLam::class, 'cacCa'])->name('lich-su-ngay-lam-viec.cac-ca-lam')->middleware('permission:quan_ly_ca_lam');
 
@@ -349,7 +356,7 @@ Route::middleware([KTVaiTro::class])->group(function () {
     Route::put('/lich-su-ca-lam-giao-ca/{id}/tu-choi', [LichSuCaLam::class, 'tu_choi_giao_ca'])->name('giao-ca.tu-choi')->middleware('permission:quan_ly_ca_lam');
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Routes bán hàng
+    // Routes bán hàng  
     Route::get('/dashboard', [NhanVienController::class, 'index'])->name('nhan-vien.dashboard')->middleware('permission:ban_hang');
     Route::get('/ban-hang', [NhanVienController::class, 'banHang'])->name('nhan-vien.ban-hang')->middleware('permission:ban_hang');
     Route::get('/hoa-don', [NhanVienController::class, 'hoaDon'])->name('nhan-vien.hoa-don')->middleware('permission:ban_hang');

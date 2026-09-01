@@ -26,6 +26,8 @@ class StoreSanPhamRequest extends FormRequest
             'bien_the.*.id' => 'nullable|integer',
             'bien_the.*.ten_bien_the' => 'nullable|string|max:255',
             'bien_the.*.thuoc_tinh_ids' => 'nullable|string',
+            'bien_the.*.thuoc_tinh_labels' => 'nullable|array',
+            'bien_the.*.thuoc_tinh_labels.*' => 'nullable|string|max:255',
             'bien_the.*.gia_von' => 'nullable|numeric|min:0',
             'bien_the.*.gia_ban' => 'present|numeric|min:0',
             'bien_the.*.so_luong_ton' => 'nullable|integer|min:0',

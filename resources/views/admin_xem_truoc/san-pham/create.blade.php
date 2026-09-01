@@ -93,7 +93,7 @@ YÊU CẦU 2: CẢNH BÁO TRÙNG LẶP BIẾN THỂ (FRONTEND)
         availableUnits: @json($unitsPayload)
     };
 </script>
-<script src="{{ asset('js/admin/san-pham-create-vue.js') }}"></script>
+<script src="{{ asset('js/admin/san-pham-create-vue.js') }}?v={{ filemtime(public_path('js/admin/san-pham-create-vue.js')) }}"></script>
 <script src="{{ asset('js/admin/san-pham.js') }}?v={{ time() }}"></script>
 @endsection
 

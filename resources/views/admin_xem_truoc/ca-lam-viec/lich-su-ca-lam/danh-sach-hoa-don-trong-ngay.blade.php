@@ -1,6 +1,6 @@
 @extends('admin_xem_truoc.layouts.admin')
 
-@section('title', 'Hóa đơn của ca đã đổi trả - SmartMart')
+@section('title', 'Tất cả hóa đơn trong ngày - SmartMart')
 
 @section('content')
 <div class="container-fluid">
@@ -8,7 +8,7 @@
     {{-- Tiêu đề --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="mb-1" style="color:red;">Hóa đơn đổi trả của ca</h4>
+            <h4 class="mb-1" style="color:blue;">Tất cả hóa đơn trong ngày</h4>
             <div class="text-muted">
                 Ngày: {{ date('d/m/Y', strtotime($ngay)) }}
             </div>
@@ -25,10 +25,7 @@
         <div class="card-body">
 
             <form method="GET"
-                  action="{{ route('hoa-don-cua-ca.doi-tra', [
-                      'ngay' => $ngay,
-                      'id_ca' => $id_ca
-                  ]) }}">
+                  action="{{ route('tat-ca-hoa-don-trong-ngay', ['ngay' => $ngay]) }}">
 
                 <div class="row g-2">
 
@@ -78,19 +75,33 @@
 
                         <thead class="table-light">
                             <tr>
-                                <th class="text-center" style="width: 60px;">STT</th>
+                                <th class="text-center" style="width: 60px;">
+                                    STT
+                                </th>
 
-                                <th>Mã hóa đơn</th>
+                                <th>
+                                    Mã hóa đơn
+                                </th>
 
-                                <th>Khách hàng</th>
+                                <th>
+                                    Khách hàng
+                                </th>
 
-                                <th>Thời gian</th>
+                                <th>
+                                    Thời gian
+                                </th>
 
-                                <th class="text-end">Tổng tiền</th>
+                                <th class="text-end">
+                                    Tổng tiền
+                                </th>
 
-                                <th class="text-center">Trạng thái</th>
+                                <th class="text-center">
+                                    Trạng thái
+                                </th>
 
-                                <th class="text-center">Thao tác</th>
+                                <th class="text-center">
+                                    Thao tác
+                                </th>
                             </tr>
                         </thead>
 
@@ -106,7 +117,7 @@
 
                                     <td>
                                         <strong>
-                                            #HH00{{ $hoaDon->id }}
+                                            #HH00{{ $hoaDon->id}}
                                         </strong>
                                     </td>
 
@@ -125,18 +136,37 @@
                                     </td>
 
                                     <td class="text-center">
-                                        <span class="badge bg-danger">
-                                            {{ $hoaDon->trang_thai }}
-                                        </span>
+                                        <td>
+                                            @if($hoaDon->trang_thai == 'Hoàn thành')
+                                                <span class="badge bg-success">
+                                                    {{ $hoaDon->trang_thai }}
+                                                </span>
+                                            @elseif($hoaDon->trang_thai == 'Đã hủy')
+                                                <span class="badge bg-danger">
+                                                    {{ $hoaDon->trang_thai }}
+                                                </span>
+                                            @elseif($hoaDon->trang_thai == 'Đã đổi/trả hàng')
+                                            <span class="badge bg-info text-dark">
+                                                {{ $hoaDon->trang_thai }}
+                                            </span>
+                                            @elseif($hoaDon->trang_thai == 'Đã trả toàn bộ')
+                                            <span class="badge bg-danger">
+                                                {{ $hoaDon->trang_thai }}
+                                            </span>
+                                            @else
+                                                <span class="badge bg-warning">
+                                                    Đang xử lý
+                                                </span>
+                                            @endif
                                     </td>
 
                                     <td class="text-center">
 
                                         {{-- Thay route này bằng route xem chi tiết hóa đơn của bạn --}}
-                                        <a href="{{route('admin.hoa-don.show', $hoaDon->id)}}"
-                                           class="btn btn-sm btn-outline-primary">
-                                            Xem
-                                        </a>
+                                        <a href="{{ route('admin.hoa-don.show', $hoaDon->id) }}"
+                                            class="btn btn-sm btn-outline-primary">
+                                                Xem
+                                            </a>
 
                                     </td>
 
@@ -163,7 +193,7 @@
                     </h5>
 
                     <p class="text-muted mb-0">
-                        Ca này chưa có hóa đơn phù hợp với từ khóa tìm kiếm.
+                        Không có hóa đơn nào phù hợp với từ khóa tìm kiếm.
                     </p>
 
                 </div>

@@ -231,13 +231,13 @@ class PayOSController extends Controller
     {
         if ($status instanceof \BackedEnum) {
             return match ($status) {
-                \PayOS\Models\V2\PaymentRequests\PaymentLinkStatus::PAID,
-                \PayOS\Models\V2\PaymentRequests\PaymentLinkStatus::PROCESSING => 'thanh_cong',
+                \PayOS\Models\V2\PaymentRequests\PaymentLinkStatus::PAID => 'thanh_cong',
+                \PayOS\Models\V2\PaymentRequests\PaymentLinkStatus::PROCESSING,
+                \PayOS\Models\V2\PaymentRequests\PaymentLinkStatus::PENDING => 'cho_xac_nhan',
                 \PayOS\Models\V2\PaymentRequests\PaymentLinkStatus::CANCELLED,
                 \PayOS\Models\V2\PaymentRequests\PaymentLinkStatus::FAILED,
                 \PayOS\Models\V2\PaymentRequests\PaymentLinkStatus::EXPIRED,
                 \PayOS\Models\V2\PaymentRequests\PaymentLinkStatus::UNDERPAID => 'that_bai',
-                \PayOS\Models\V2\PaymentRequests\PaymentLinkStatus::PENDING => 'cho_xac_nhan',
                 default => 'cho_xac_nhan',
             };
         }
@@ -245,7 +245,7 @@ class PayOSController extends Controller
         $status = strtoupper((string) $status);
 
         return match ($status) {
-            'PAID', 'SUCCESS', 'COMPLETED', 'PROCESSING' => 'thanh_cong',
+            'PAID', 'SUCCESS', 'COMPLETED' => 'thanh_cong',
             'CANCELLED', 'CANCELED', 'FAILED', 'EXPIRED', 'UNDERPAID', 'REFUNDED' => 'that_bai',
             default => 'cho_xac_nhan',
         };

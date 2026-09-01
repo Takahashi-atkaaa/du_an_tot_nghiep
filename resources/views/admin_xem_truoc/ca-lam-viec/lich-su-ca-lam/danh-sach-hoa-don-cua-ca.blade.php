@@ -64,7 +64,7 @@
             <strong>Danh sách hóa đơn</strong>
 
             <span class="badge bg-primary">
-                {{ $hoaDonCuaCa->count() }} hóa đơn
+                {{ $hoaDonCuaCa->total() }} hóa đơn
             </span>
         </div>
 
@@ -115,7 +115,7 @@
                                 <tr>
 
                                     <td class="text-center">
-                                        {{ $index + 1 }}
+                                        {{ ($hoaDonCuaCa->currentPage() - 1) * $hoaDonCuaCa->perPage() + $index + 1 }}
                                     </td>
 
                                     <td>
@@ -204,6 +204,14 @@
             @endif
 
         </div>
+
+        @if($hoaDonCuaCa->hasPages())
+            <div class="card-footer bg-white">
+                <div class="d-flex justify-content-center">
+                    {{ $hoaDonCuaCa->links() }}
+                </div>
+            </div>
+        @endif
     </div>
 
 </div>

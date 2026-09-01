@@ -60,20 +60,43 @@
             el.value = vMoneyFormat(initNum, decimals);
         }
 
+        // Capture để đặt raw value trước khi Vue v-model.number đọc el.value.
         el.addEventListener('input', function () {
+            const oldValue = el.value;
+            const oldCursor = el.selectionStart == null ? oldValue.length : el.selectionStart;
+            const digitsBeforeCursor = oldValue.slice(0, oldCursor).replace(/\D/g, '').length;
             // Lấy raw digits từ những gì user vừa gõ
             var rawDigits = vMoneyParse(el.value);
             el.__moneyRaw = (rawDigits === 0 && el.value.trim() === '') ? '' : String(rawDigits);
             // Trong cùng tick, Vue v-model.number sẽ đọc el.value để parseFloat.
             // Để Vue parse đúng, ta để el.value là raw digits (không dấu chấm).
             el.value = el.__moneyRaw;
-            // Format lại display sau khi Vue đã cập nhật model.
+            // Đợi Vue cập nhật model và render xong rồi mới format lại display.
             Vue.nextTick(function () {
-                if (document.activeElement === el) return; // đang focus -> không format đè
-                var v = parseInt(el.__moneyRaw, 10) || 0;
-                if (v > 0) el.value = vMoneyFormat(v, decimals);
+                // Listener đang ở capture nên nhịp đầu có thể chạy trước flush của v-model.
+                Vue.nextTick(function () {
+                    var v = parseInt(el.__moneyRaw, 10) || 0;
+                    if (v > 0) {
+                        const formatted = vMoneyFormat(v, decimals);
+                        el.value = formatted;
+                        if (document.activeElement === el) {
+                            let count = 0;
+                            let cursor = formatted.length;
+                            for (let i = 0; i < formatted.length; i++) {
+                                if (/\d/.test(formatted[i])) count++;
+                                if (count >= digitsBeforeCursor) {
+                                    cursor = i + 1;
+                                    break;
+                                }
+                            }
+                            el.setSelectionRange(cursor, cursor);
+                        }
+                    } else {
+                        el.value = '';
+                    }
+                });
             });
-        });
+        }, true);
 
         el.addEventListener('focus', function () {
             var v = parseInt(el.__moneyRaw, 10) || 0;
@@ -958,6 +981,7 @@
                         so_luong_ton: parseInt(row.soLuong || row.so_luong_ton) || 0,
                         dinh_muc_toi_thieu: parseInt(row.dinhMucToiThieu || row.dinh_muc_toi_thieu) || 0,
                         thuoc_tinh_ids: Array.isArray(row.attrValueIds) ? row.attrValueIds.join(',') : (row.attrValueIds || ''),
+                        thuoc_tinh_labels: row.attrLabels || {},
                         ten_don_vi_bien_the: row.unitName || '',
                         units: unitsPayload
                     });
@@ -1032,13 +1056,25 @@
                             fd.append(k, payload[k]);
                         }
                     });
+                    (payload.new_attributes || []).forEach((attr, j) => {
+                        fd.append(`new_attributes[${j}][group_name]`, attr.group_name || '');
+                        fd.append(`new_attributes[${j}][label]`, attr.label || '');
+                        if (attr.parent_id !== undefined && attr.parent_id !== null) {
+                            fd.append(`new_attributes[${j}][parent_id]`, attr.parent_id);
+                        }
+                    });
                     // bien_the: phải append dạng bien_the[i][key] để Laravel parse thành mảng
                     (payload.bien_the || []).forEach((bt, i) => {
                         Object.keys(bt).forEach(k => {
-                            if (k === 'units') return;
+                            if (k === 'units' || k === 'thuoc_tinh_labels') return;
                             if (bt[k] !== undefined && bt[k] !== null) {
                                 fd.append(`bien_the[${i}][${k}]`, bt[k]);
                             }
+                        });
+                        Object.entries(bt.thuoc_tinh_labels || {}).forEach(([group, labels]) => {
+                            (Array.isArray(labels) ? labels : [labels]).forEach(label => {
+                                fd.append(`bien_the[${i}][thuoc_tinh_labels][${group}]`, label || '');
+                            });
                         });
                         (bt.units || []).forEach((u, j) => {
                             Object.keys(u).forEach(uk => {
@@ -1065,12 +1101,24 @@
                             fd.append(k, payload[k]);
                         }
                     });
+                    (payload.new_attributes || []).forEach((attr, j) => {
+                        fd.append(`new_attributes[${j}][group_name]`, attr.group_name || '');
+                        fd.append(`new_attributes[${j}][label]`, attr.label || '');
+                        if (attr.parent_id !== undefined && attr.parent_id !== null) {
+                            fd.append(`new_attributes[${j}][parent_id]`, attr.parent_id);
+                        }
+                    });
                     (payload.bien_the || []).forEach((bt, i) => {
                         Object.keys(bt).forEach(k => {
-                            if (k === 'units') return;
+                            if (k === 'units' || k === 'thuoc_tinh_labels') return;
                             if (bt[k] !== undefined && bt[k] !== null) {
                                 fd.append(`bien_the[${i}][${k}]`, bt[k]);
                             }
+                        });
+                        Object.entries(bt.thuoc_tinh_labels || {}).forEach(([group, labels]) => {
+                            (Array.isArray(labels) ? labels : [labels]).forEach(label => {
+                                fd.append(`bien_the[${i}][thuoc_tinh_labels][${group}]`, label || '');
+                            });
                         });
                         (bt.units || []).forEach((u, j) => {
                             Object.keys(u).forEach(uk => {
@@ -1384,8 +1432,8 @@
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-medium text-slate-600 mb-1">Giá bán <span class="text-slate-400">(đv cơ bản)</span></label>
-                                <input v-model.number="basicInfo.defaultPrice" v-money type="number" min="0" step="any"
-                                    class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none money-input">
+                                <input v-model.number="basicInfo.defaultPrice" v-money type="text" inputmode="numeric"
+                                    class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-slate-600 mb-1">Định mức tối thiểu <span class="text-slate-400">(đv cơ bản)</span></label>
@@ -1439,8 +1487,8 @@
                             </div>
                             <div class="col-span-6">
                                 <label class="block text-xs font-medium text-slate-600 mb-1">Giá bán (đơn vị cơ bản)</label>
-                                <input v-model.number="unitConfig.basePrice" v-money type="number" min="0" step="any"
-                                    class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none money-input">
+                                <input v-model.number="unitConfig.basePrice" v-money type="text" inputmode="numeric"
+                                    class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                             </div>
                         </div>
 
@@ -1478,8 +1526,8 @@
                                             </div>
                                         </td>
                                         <td class="p-2">
-                                            <input v-model.number="u.price" v-money type="number" min="0" step="any"
-                                                class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm text-right focus:ring-2 focus:ring-indigo-500 outline-none money-input">
+                                            <input v-model.number="u.price" v-money type="text" inputmode="numeric"
+                                                class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm text-right focus:ring-2 focus:ring-indigo-500 outline-none">
                                         </td>
                                         <td class="p-2 text-center">
                                             <button type="button" @click="removeConversion(i)" class="text-slate-400 hover:text-red-500" title="Xóa">
@@ -1702,8 +1750,8 @@
                                         <span v-else class="text-xs text-slate-400">—</span>
                                     </td>
                                     <td class="px-2 py-1.5">
-                                        <input :value="row.giaBan" @input="onGridInput(row, 'giaBan', $event)" v-money type="number" min="0" step="any"
-                                            class="w-full rounded border border-slate-300 px-2 py-1 text-xs text-right focus:ring-2 focus:ring-emerald-500 outline-none money-input">
+                                        <input :value="row.giaBan" @input="onGridInput(row, 'giaBan', $event)" v-money type="text" inputmode="numeric"
+                                            class="w-full rounded border border-slate-300 px-2 py-1 text-xs text-right focus:ring-2 focus:ring-emerald-500 outline-none">
                                     </td>
                                 </tr>
                             </tbody>

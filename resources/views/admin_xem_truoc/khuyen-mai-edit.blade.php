@@ -135,19 +135,26 @@
                     <div class="input-group">
 
                         <input
-                            type="number"
+                            type="text"
                             name="gia_tri_giam"
                             id="gia_tri_giam"
-                            step="0.01"
-                            min="0"
+                            class="form-control money-input @error('gia_tri_giam') is-invalid @enderror"
+                            data-money-decimals="{{ in_array(old('loai_giam_gia', $promo->loai_giam_gia), ['percent']) ? '2' : '0' }}"
+                            data-money-format-on-input="true"
                             value="{{ old('gia_tri_giam', $promo->gia_tri_giam) }}"
-                            class="form-control @error('gia_tri_giam') is-invalid @enderror"
-                            required
+                            placeholder="0"
+                            inputmode="decimal"
                         >
 
                         <span class="input-group-text"
                               id="donViGiam">
-                            % / đ
+                            @if(old('loai_giam_gia', $promo->loai_giam_gia) == 'percent')
+                                %
+                            @elseif(old('loai_giam_gia', $promo->loai_giam_gia) == 'amount')
+                                đ
+                            @else
+                                % / đ
+                            @endif
                         </span>
 
                         @error('gia_tri_giam')
@@ -523,7 +530,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     // ================================
-    // Hiển thị % / đ
+    // Hiển thị % / đ và thay đổi decimals
     // ================================
     function updateUnit() {
 
@@ -531,14 +538,55 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        if (loaiGiamGia.value === 'percent') {
+        const loai = loaiGiamGia.value;
+        const donViGiam = document.getElementById('donViGiam');
 
-            giaTriGiam.setAttribute('max', '100');
+        if (loai === 'percent') {
+            // Giảm theo %: cho phép thập phân
+            giaTriGiam.setAttribute('data-money-decimals', '2');
+            giaTriGiam.disabled = false;
+            giaTriGiam.readOnly = false;
+            giaTriGiam.required = true;
+            if (donViGiam) donViGiam.textContent = '%';
+            
+            // Re-bind để áp dụng decimals mới
+            if (window.MoneyInput) {
+                var currentValue = giaTriGiam.value;
+                giaTriGiam.value = '';
+                giaTriGiam.__moneyBound = false;
+                window.MoneyInput.bind(giaTriGiam);
+                if (currentValue) {
+                    giaTriGiam.value = currentValue;
+                    giaTriGiam.dispatchEvent(new Event('blur'));
+                }
+            }
 
-        } else {
+        } else if (loai === 'amount') {
+            // Giảm số tiền: chỉ số nguyên
+            giaTriGiam.setAttribute('data-money-decimals', '0');
+            giaTriGiam.disabled = false;
+            giaTriGiam.readOnly = false;
+            giaTriGiam.required = true;
+            if (donViGiam) donViGiam.textContent = 'đ';
+            
+            // Re-bind để áp dụng decimals mới
+            if (window.MoneyInput) {
+                var currentValue = window.MoneyInput.parse(giaTriGiam.value, 2);
+                giaTriGiam.value = '';
+                giaTriGiam.__moneyBound = false;
+                window.MoneyInput.bind(giaTriGiam);
+                if (currentValue !== null && currentValue !== 0) {
+                    giaTriGiam.value = window.MoneyInput.format(currentValue, 0);
+                }
+            }
 
-            giaTriGiam.removeAttribute('max');
-
+        } else if (loai === 'bogo') {
+            // Mua 1 tặng 1 không dùng giá trị giảm, nhưng vẫn gửi 0 lên server.
+            giaTriGiam.value = '0';
+            giaTriGiam.disabled = false;
+            giaTriGiam.readOnly = true;
+            giaTriGiam.required = false;
+            if (donViGiam) donViGiam.textContent = '';
         }
     }
 
