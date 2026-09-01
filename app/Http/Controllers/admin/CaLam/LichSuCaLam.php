@@ -30,9 +30,8 @@ class LichSuCaLam extends Controller
         return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.lich-su-ca-lam', compact('ngay2'));
     }
 
-        public function cacCa(RevenueStatisticsService $revenueStatisticsService, $ngay, $id_ca = null)
+        public function cacCa($ngay, $id_ca = null)
         {
-            $revenueStatuses = $revenueStatisticsService->salesRevenueStatuses();
 
             $caLam = ChiaCaLamViec::with('caLamViec')
                 ->where('ngay', $ngay)
@@ -165,26 +164,36 @@ class LichSuCaLam extends Controller
             ));
         }
 
-    public function tao_giao_ca($id_ca, $ngay, RevenueStatisticsService $revenueStatisticsService)
+    public function tao_giao_ca($id_ca, $ngay)
     {
-        $revenueStatuses = $revenueStatisticsService->salesRevenueStatuses();
         $ca = CaLamViec::findOrFail($id_ca);
 
-        $tongTienMatCuaCa = $revenueStatisticsService->sumInvoiceNetRevenue(
-            $revenueStatisticsService->invoiceNetRevenueQuery()
-                ->whereDate('hoa_don.created_at', $ngay)
-                ->where('hoa_don.id_ca_lam_viec', $id_ca)
-                ->where('hoa_don.phuong_thuc_thanh_toan', '!=', 'payos')
-                ->whereIn('hoa_don.trang_thai', $revenueStatuses)
-        );
+        $danhSachHoaDonCa = HoaDon::where('id_ca_lam_viec', $id_ca)
+            ->whereDate('created_at', $ngay)
+            ->get();
 
-        $tongTienChuyenKhoan = $revenueStatisticsService->sumInvoiceNetRevenue(
-            $revenueStatisticsService->invoiceNetRevenueQuery()
-                ->whereDate('hoa_don.created_at', $ngay)
-                ->where('hoa_don.id_ca_lam_viec', $id_ca)
-                ->where('hoa_don.phuong_thuc_thanh_toan', 'payos')
-                ->whereIn('hoa_don.trang_thai', $revenueStatuses)
-        );
+        $tongTienTraLaiChoKhach = 0;
+        foreach ($danhSachHoaDonCa as $hoaDon) {
+            $hoaDon->tienTraKhach = $hoaDon->doiTras
+                ?->flatMap(function ($doiTra) {
+                    return $doiTra->chiTietDoiTras ?? [];
+                })
+                ->sum('thanh_tien') ?? 0;
+
+            $tongTienTraLaiChoKhach += $hoaDon->tienTraKhach;
+        }
+
+        $tongTienMatCuaCa = HoaDon::where('id_ca_lam_viec', $id_ca)
+            ->whereDate('created_at', $ngay)
+            ->where('phuong_thuc_thanh_toan', 'Tiền mặt')
+            ->sum('khach_can_tra');
+        
+        $tongTienMatCuaCa -= $tongTienTraLaiChoKhach;
+
+        $tongTienChuyenKhoan = HoaDon::where('id_ca_lam_viec', $id_ca)
+            ->where('phuong_thuc_thanh_toan', 'PayOS')
+            ->whereDate('created_at', $ngay)
+            ->sum('khach_can_tra');
 
         $danhSachNhanVienTrongCa = ChiaCaLamViec::with('nguoiDung')
             ->whereDate('ngay', $ngay)
