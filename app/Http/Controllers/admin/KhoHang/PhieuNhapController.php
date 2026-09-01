@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\KhoHang;
 
 use App\Http\Controllers\Controller;
 use App\Models\NhaCungCap;
+use App\Models\PhieuNhap;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -20,5 +21,20 @@ class PhieuNhapController extends Controller
             ->get();
 
         return view('admin_xem_truoc.kho-hang.phieu-nhap.create', compact('nhaCungCaps'));
+    }
+
+    /**
+     * Hiển thị chi tiết phiếu nhập
+     */
+    public function show($id): View
+    {
+        $phieuNhap = PhieuNhap::with([
+            'phieu.nhaCungCap',
+            'phieu.nguoiDung',
+            'chiTietPhieu.sanPham',
+            'chiTietPhieu.loHang'
+        ])->findOrFail($id);
+
+        return view('admin_xem_truoc.warehouse.phieu-nhap-chi-tiet', compact('phieuNhap'));
     }
 }

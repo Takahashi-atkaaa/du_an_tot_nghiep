@@ -23,9 +23,17 @@ class SanPhamController extends Controller
 {
     public function index(Request $request): View
     {
+        // #region agent log
+        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'SanPhamController.php:24','message'=>'Controller index entry','data'=>['request_url'=>$request->url()],'hypothesisId'=>'F','timestamp'=>time()*1000])."\n", FILE_APPEND);
+        // #endregion
+
         $keyword = $request->input('keyword');
         $danhMucId = $request->input('danh_muc');
         $trangThai = $request->filled('trang_thai') ? $request->boolean('trang_thai') : null;
+
+        // #region agent log
+        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'SanPhamController.php:32','message'=>'Query params parsed','data'=>['keyword'=>$keyword,'danhMucId'=>$danhMucId,'trangThai'=>$trangThai],'hypothesisId'=>'F','timestamp'=>time()*1000])."\n", FILE_APPEND);
+        // #endregion
 
         $danhMucs = DanhMucSanPham::query()->orderBy('ten_danh_muc')->get();
         $thuocTinhChas = ThuocTinhSanPham::whereNull('thuoc_tinh_cha_id')
@@ -70,6 +78,10 @@ class SanPhamController extends Controller
             'qty'  => $u->so_luong_san_pham_trong_don_vi,
         ])->values()->all();
 
+        // #region agent log
+        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'SanPhamController.php:82','message'=>'Data prepared, returning view','data'=>['sanPhams_count'=>$sanPhams->count(),'danhMucs_count'=>$danhMucs->count(),'view_name'=>'admin_xem_truoc.san-pham.index'],'hypothesisId'=>'F','timestamp'=>time()*1000])."\n", FILE_APPEND);
+        // #endregion
+
         return view('admin_xem_truoc.san-pham.index', [
             'sanPhams' => $sanPhams,
             'danhMucs' => $danhMucs,
@@ -111,6 +123,11 @@ class SanPhamController extends Controller
         try {
             $data = $request->validated();
 
+            // Tạo/ánh xạ thuộc tính trước khi kiểm tra và gom biến thể.
+            // Nhờ đó chữ ký biến thể luôn dùng ID thật trong database.
+            $newAttrMap = $this->processNewAttributes($data['new_attributes'] ?? []);
+            $data['bien_the'] = $this->resolveThuocTinhIdsWithNew($data['bien_the'] ?? [], $newAttrMap);
+
             // ============================================================
             // YÊU CẦU 1: KIỂM TRA TRÙNG LẶP BIẾN THỂ (BACKEND)
             // ============================================================
@@ -124,10 +141,6 @@ class SanPhamController extends Controller
             if (!empty($barcodes) && BienTheSanPham::whereIn('ma_vach', $barcodes)->exists()) {
                 return redirect()->back()->withInput()->withErrors(['bien_the' => 'Một hoặc nhiều mã vạch biến thể đã tồn tại.']);
             }
-
-            // Xử lý thuộc tính MỚI: tạo vào DB trước, trả về map {label => id}
-            $newAttrMap = $this->processNewAttributes($data['new_attributes'] ?? []);
-            $data['bien_the'] = $this->resolveThuocTinhIdsWithNew($data['bien_the'] ?? [], $newAttrMap);
 
             // ============================================================
             // Xử lý Đơn vị mới on-the-fly (don_vi_co_ban + don_vi_quy_doi):
@@ -389,16 +402,17 @@ class SanPhamController extends Controller
         $product = Product::with('variants.units')->findOrFail($id);
         $data = $request->validated();
 
+        // Tạo/ánh xạ thuộc tính trước khi kiểm tra và gom biến thể.
+        // Nhờ đó chữ ký biến thể luôn dùng ID thật trong database.
+        $newAttrMap = $this->processNewAttributes($data['new_attributes'] ?? []);
+        $data['bien_the'] = $this->resolveThuocTinhIdsWithNew($data['bien_the'] ?? [], $newAttrMap);
+
         // ============================================================
         // YÊU CẦU 1: KIỂM TRA TRÙNG LẶP BIẾN THỂ (BACKEND)
         // ============================================================
         // 1a. Kiểm tra trùng lặp TRONG CHÍNH payload gửi lên
         $this->checkVariantDuplicatesInPayload($data['bien_the'] ?? [], 'update', $product->id);
         // 1b. Kiểm tra trùng lặp với các biến thể ĐÃ TỒN TẠI trong DB cho product này (loại trừ biến thể hiện tại đang sửa)
-
-        // Xử lý thuộc tính MỚI: tạo vào DB trước, trả về map {label => id}
-        $newAttrMap = $this->processNewAttributes($data['new_attributes'] ?? []);
-        $data['bien_the'] = $this->resolveThuocTinhIdsWithNew($data['bien_the'] ?? [], $newAttrMap);
 
         // Xử lý Đơn vị mới on-the-fly (don_vi_co_ban + don_vi_quy_doi) – trước transaction
         $data['bien_the'] = $this->processOnTheFlyDonViForBienThe($data['bien_the'] ?? []);
@@ -1522,7 +1536,14 @@ class SanPhamController extends Controller
             return [];
         }
 
-        $ids = is_array($rawIds) ? $rawIds : explode(',', (string) $rawIds);
+        if (is_string($rawIds)) {
+            $decoded = json_decode($rawIds, true);
+            $ids = (json_last_error() === JSON_ERROR_NONE && is_array($decoded))
+                ? $decoded
+                : explode(',', $rawIds);
+        } else {
+            $ids = is_array($rawIds) ? $rawIds : [$rawIds];
+        }
         $ids = array_map(
             static fn($id) => (int) trim((string) $id),
             array_filter($ids, static fn($id) => trim((string) $id) !== '')
@@ -1663,99 +1684,263 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Xử lý thuộc tính MỚI: tạo vào DB rồi trả về map label => id.
-     * Input: [['group_name' => 'Màu sắc', 'parent_id' => 5, 'label' => 'Xanh Mint'], ...]
-     * Output: ['Màu sắc|Xanh Mint' => 42, ...]
+     * Tạo thuộc tính cha/con mới và trả về mapping ổn định cho request.
+     * Mapping chính có dạng "ten_nhom|ten_gia_tri" => ID con thực tế.
      */
     protected function processNewAttributes(array $newAttributes): array
     {
-        $map = [];
+        $mapping = [];
+        $parentIds = [];
+
+        // Tạo tất cả nhóm cha trước để nhóm mới luôn có parent_id hợp lệ.
         foreach ($newAttributes as $item) {
-            $groupName = trim($item['group_name'] ?? '');
-            $label = trim($item['label'] ?? '');
-            if ($groupName === '' || $label === '') continue;
+            $groupName = trim((string) ($item['group_name'] ?? $item['groupName'] ?? ''));
+            if ($groupName === '') {
+                continue;
+            }
 
-            $key = $groupName . '|' . $label;
-            if (isset($map[$key])) continue;
+            $groupKey = $this->normalizeAttributeText($groupName);
+            if (isset($parentIds[$groupKey])) {
+                continue;
+            }
 
-            $created = ThuocTinhSanPham::firstOrCreate(
+            $parent = null;
+            $candidateParentId = $item['parent_id'] ?? $item['parentId'] ?? null;
+            if (is_numeric($candidateParentId) && (int) $candidateParentId > 0) {
+                $parent = ThuocTinhSanPham::find((int) $candidateParentId);
+                // Nếu FE gửi ID của một giá trị con, đi ngược lên đúng nhóm cha.
+                while ($parent && $parent->thuoc_tinh_cha_id) {
+                    $parent = ThuocTinhSanPham::find($parent->thuoc_tinh_cha_id);
+                }
+            }
+
+            $parent ??= ThuocTinhSanPham::firstOrCreate(
                 [
-                    'ten_thuoc_tinh' => $label,
-                    'thuoc_tinh_cha_id' => $item['parent_id'] ?? null,
+                    'ten_thuoc_tinh' => $groupName,
+                    'thuoc_tinh_cha_id' => null,
                 ],
                 ['trang_thai' => true]
             );
-            $map[$key] = $created->id;
+
+            $parentIds[$groupKey] = (int) $parent->id;
         }
-        return $map;
+
+        // Tạo giá trị con dưới đúng nhóm cha và lưu các alias FE nếu có.
+        foreach ($newAttributes as $item) {
+            $groupName = trim((string) ($item['group_name'] ?? $item['groupName'] ?? ''));
+            $label = trim((string) ($item['label'] ?? $item['name'] ?? ''));
+            if ($groupName === '' || $label === '') {
+                continue;
+            }
+
+            $groupKey = $this->normalizeAttributeText($groupName);
+            $parentId = $parentIds[$groupKey] ?? null;
+            if (!$parentId) {
+                continue;
+            }
+
+            $child = ThuocTinhSanPham::firstOrCreate(
+                [
+                    'ten_thuoc_tinh' => $label,
+                    'thuoc_tinh_cha_id' => $parentId,
+                ],
+                ['trang_thai' => true]
+            );
+
+            $id = (int) $child->id;
+            $mapping[$this->attributeMapKey($groupName, $label)] = $id;
+            $mapping['label:' . $this->normalizeAttributeText($label)] ??= $id;
+
+            foreach (['id', 'id_tam', 'temp_id', 'temporary_id'] as $aliasKey) {
+                if (isset($item[$aliasKey]) && trim((string) $item[$aliasKey]) !== '') {
+                    $mapping[trim((string) $item[$aliasKey])] = $id;
+                }
+            }
+
+            // Tương thích payload cũ dùng id_<nhóm>_<giá trị>.
+            $mapping['id_' . $groupName . '_' . $label] = $id;
+        }
+
+        return $mapping;
     }
 
     /**
-     * Resolve thuoc_tinh_ids trong bien_the: chuyển id=null thành id thực từ newAttrMap.
-     *
-     * Flow:
-     * 1. Với mỗi variant, duyệt tất cả giá trị thuộc tính trong DB cùng nhóm cha
-     * 2. Tìm id của giá trị có label khớp → dùng id đó
-     * 3. Nếu không tìm thấy, dùng newAttrMap (đã tạo ở processNewAttributes)
-     *
-     * @param  array  $bienThe   Mảng variants
-     * @param  array  $newAttrMap  Map ['group|label' => id]
-     * @return array  Mảng variants đã được resolve thuoc_tinh_ids
+     * Đổi các ID tạm/chuỗi label trong từng biến thể thành JSON ID số.
      */
     protected function resolveThuocTinhIdsWithNew(array $bienThe, array $newAttrMap): array
     {
-        // Load all parent attributes to build group name -> id lookup
-        $allParents = ThuocTinhSanPham::whereNull('thuoc_tinh_cha_id')
-            ->pluck('id', 'ten_thuoc_tinh')
-            ->toArray();
+        $allAttributes = ThuocTinhSanPham::query()
+            ->get(['id', 'ten_thuoc_tinh', 'thuoc_tinh_cha_id']);
+        $validIds = $allAttributes->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $validIdSet = array_fill_keys($validIds, true);
+
+        $parentsByName = $allAttributes
+            ->whereNull('thuoc_tinh_cha_id')
+            ->keyBy(fn ($item) => $this->normalizeAttributeText($item->ten_thuoc_tinh));
+        $childrenByKey = [];
+        $labelToIds = [];
+        foreach ($allAttributes as $attribute) {
+            if (!$attribute->thuoc_tinh_cha_id) {
+                continue;
+            }
+
+            $parent = $allAttributes->firstWhere('id', $attribute->thuoc_tinh_cha_id);
+            if (!$parent) {
+                continue;
+            }
+
+            $key = $this->attributeMapKey($parent->ten_thuoc_tinh, $attribute->ten_thuoc_tinh);
+            $childrenByKey[$key] = (int) $attribute->id;
+            $labelKey = $this->normalizeAttributeText($attribute->ten_thuoc_tinh);
+            $labelToIds[$labelKey][] = (int) $attribute->id;
+        }
+
+        $mapId = function ($groupName, $label) use (&$newAttrMap, &$parentsByName, &$childrenByKey, &$labelToIds, &$validIdSet): ?int {
+            $groupName = trim((string) $groupName);
+            $label = trim((string) $label);
+            if ($label === '') {
+                return null;
+            }
+
+            $key = $this->attributeMapKey($groupName, $label);
+            if (isset($newAttrMap[$key])) {
+                return (int) $newAttrMap[$key];
+            }
+            if (isset($childrenByKey[$key])) {
+                return (int) $childrenByKey[$key];
+            }
+
+            $labelKey = $this->normalizeAttributeText($label);
+            if (count($labelToIds[$labelKey] ?? []) === 1) {
+                return (int) $labelToIds[$labelKey][0];
+            }
+
+            // Fallback cho payload cũ thiếu new_attributes: tạo cha/con ngay tại đây.
+            $parentKey = $this->normalizeAttributeText($groupName);
+            $parent = $parentsByName->get($parentKey);
+            if (!$parent && $groupName !== '') {
+                $parent = ThuocTinhSanPham::firstOrCreate(
+                    [
+                        'ten_thuoc_tinh' => $groupName,
+                        'thuoc_tinh_cha_id' => null,
+                    ],
+                    ['trang_thai' => true]
+                );
+                $parentsByName->put($parentKey, $parent);
+            }
+            if (!$parent) {
+                return null;
+            }
+
+            $child = ThuocTinhSanPham::firstOrCreate(
+                [
+                    'ten_thuoc_tinh' => $label,
+                    'thuoc_tinh_cha_id' => $parent->id,
+                ],
+                ['trang_thai' => true]
+            );
+            $id = (int) $child->id;
+            $childrenByKey[$key] = $id;
+            $labelToIds[$labelKey] = [$id];
+            $validIdSet[$id] = true;
+            return $id;
+        };
 
         foreach ($bienThe as &$variant) {
-            $rawIds = $variant['thuoc_tinh_ids'] ?? null;
-            if (blank($rawIds)) continue;
-
-            $idStrings = is_array($rawIds) ? $rawIds : explode(',', $rawIds);
             $resolved = [];
+            $rawIds = $variant['thuoc_tinh_ids'] ?? null;
+            if (is_string($rawIds)) {
+                $decoded = json_decode($rawIds, true);
+                $rawIds = json_last_error() === JSON_ERROR_NONE && is_array($decoded)
+                    ? $decoded
+                    : explode(',', $rawIds);
+            } elseif (!is_array($rawIds)) {
+                $rawIds = $rawIds === null ? [] : [$rawIds];
+            }
 
-            foreach ($idStrings as $idStr) {
-                $idStr = trim($idStr);
-                if ($idStr === '' || $idStr === 'null') continue;
-
-                // Case 1: numeric ID (existing attribute from DB) - use directly
-                if (is_numeric($idStr)) {
-                    $resolved[] = (int) $idStr;
+            foreach ($rawIds as $rawId) {
+                if (is_array($rawId)) {
+                    $rawId = $rawId['id'] ?? $rawId['value'] ?? $rawId['label'] ?? '';
+                }
+                $token = trim((string) $rawId);
+                if ($token === '' || strtolower($token) === 'null') {
                     continue;
                 }
 
-                // Case 2: synthetic ID from JS like "id_Màu sắc_Đỏ" (new attribute)
-                // Parse to extract group name and label
-                if (str_starts_with($idStr, 'id_')) {
-                    $parts = explode('_', $idStr, 3); // ["id", "Màu sắc", "Đỏ"]
-                    if (count($parts) === 3) {
-                        $groupName = $parts[1];
-                        $label = $parts[2];
-                        $parentId = $allParents[$groupName] ?? null;
+                if (is_numeric($token) && isset($validIdSet[(int) $token])) {
+                    $resolved[] = (int) $token;
+                    continue;
+                }
+                if (isset($newAttrMap[$token])) {
+                    $resolved[] = (int) $newAttrMap[$token];
+                    continue;
+                }
 
-                        // Look up in newAttrMap: "groupName|label" => id
-                        $key = $groupName . '|' . $label;
-                        if (isset($newAttrMap[$key])) {
-                            $resolved[] = (int) $newAttrMap[$key];
-                        } else {
-                            // Fallback: create/find in DB directly
-                            $created = ThuocTinhSanPham::firstOrCreate(
-                                ['ten_thuoc_tinh' => $label, 'thuoc_tinh_cha_id' => $parentId],
-                                ['trang_thai' => true]
-                            );
-                            $resolved[] = $created->id;
+                // Hỗ trợ key "nhóm|giá trị" hoặc alias id_<nhóm>_<giá trị>.
+                if (str_contains($token, '|')) {
+                    [$groupName, $label] = explode('|', $token, 2);
+                    if ($id = $mapId($groupName, $label)) {
+                        $resolved[] = $id;
+                        continue;
+                    }
+                }
+
+                if (str_starts_with($token, 'id_')) {
+                    $legacy = substr($token, 3);
+                    $parts = explode('_', $legacy, 2);
+                    if (count($parts) === 2 && ($id = $mapId($parts[0], $parts[1]))) {
+                        $resolved[] = $id;
+                        continue;
+                    }
+                }
+
+                $labelKey = $this->normalizeAttributeText($token);
+                if (count($labelToIds[$labelKey] ?? []) === 1) {
+                    $resolved[] = (int) $labelToIds[$labelKey][0];
+                }
+            }
+
+            // FE mới gửi map nhóm => giá trị để không mất giá trị có id=null.
+            $labels = $variant['thuoc_tinh_labels'] ?? $variant['attribute_labels'] ?? [];
+            if (is_string($labels)) {
+                $decoded = json_decode($labels, true);
+                $labels = json_last_error() === JSON_ERROR_NONE && is_array($decoded) ? $decoded : [];
+            }
+            if (is_array($labels)) {
+                foreach ($labels as $groupName => $labelValues) {
+                    $labelValues = is_array($labelValues) ? $labelValues : [$labelValues];
+                    foreach ($labelValues as $label) {
+                        if ($id = $mapId($groupName, $label)) {
+                            $resolved[] = $id;
                         }
                     }
                 }
             }
 
-            $variant['thuoc_tinh_ids'] = !empty($resolved) ? implode(',', $resolved) : null;
+            $resolved = array_values(array_unique(array_filter(
+                array_map('intval', $resolved),
+                fn ($id) => $id > 0 && isset($validIdSet[$id])
+            )));
+            sort($resolved, SORT_NUMERIC);
+            $variant['thuoc_tinh_ids'] = empty($resolved)
+                ? null
+                : json_encode($resolved, JSON_UNESCAPED_UNICODE);
         }
         unset($variant);
 
         return $bienThe;
+    }
+
+    protected function normalizeAttributeText(string $value): string
+    {
+        return mb_strtolower(trim($value), 'UTF-8');
+    }
+
+    protected function attributeMapKey(string $groupName, string $label): string
+    {
+        return $this->normalizeAttributeText($groupName)
+            . '|'
+            . $this->normalizeAttributeText($label);
     }
 
     /**

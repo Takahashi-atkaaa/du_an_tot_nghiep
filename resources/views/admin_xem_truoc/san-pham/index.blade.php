@@ -491,12 +491,6 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                                             <div class="text-muted small">
                                                 {{ $sp->ten_san_pham }} · {{ $sp->danhMuc?->ten_danh_muc ?? 'Không xác định' }}
                                             </div>
-                                            <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
-                                                <span class="badge bg-secondary">{{ $sp->variants->count() }} biến thể</span>
-                                                <span class="text-muted small">
-                                                    <i class="far fa-eye me-1"></i>Đây là chế độ xem nhanh. Nhấn <strong>“Xem chi tiết”</strong> để mở trang đầy đủ.
-                                                </span>
-                                            </div>
                                         </div>
                                         <div class="d-flex align-items-center gap-2 flex-shrink-0">
                                             {{-- ===========================================================
@@ -531,20 +525,7 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                                         </div>
                                     </div>
 
-                                    <ul class="nav nav-tabs nav-tabs-sm mb-3" role="tablist">
-                                        <li class="nav-item">
-                                            <button type="button" class="nav-link active" data-tab-key="summary" onclick="event.stopPropagation(); window.switchProductTab({{ $sp->id }}, 'summary')">Tổng quan</button>
-                                        </li>
-                                    </ul>
 
-                                    <div class="product-detail-tabs">
-                                        <div id="productSummaryTab{{ $sp->id }}" class="product-tab-content product-summary-tab text-center py-4 text-muted">
-                                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-                                            Đang tải thống kê...
-                                        </div>
-                                        <div id="productVariantsTab{{ $sp->id }}" class="product-tab-content product-variants-tab d-none"></div>
-                                        <div id="productStockTab{{ $sp->id }}" class="product-tab-content product-stock-tab d-none"></div>
-                                    </div>
                                 </div>
                             </td>
                         </tr>

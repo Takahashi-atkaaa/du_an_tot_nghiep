@@ -138,6 +138,12 @@ class LichSuCaLam extends Controller
 
             $tongSoHoaDonNgay = HoaDon::whereDate('created_at', $ngay)->count('id');
 
+            // #region agent log
+            $logPath = '/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-cbbbdd.log';
+            $logEntry = json_encode(['sessionId'=>'cbbbdd','location'=>'LichSuCaLam.php:141','message'=>'tongSoHoaDonNgay calculated','data'=>['ngay'=>$ngay,'tongSoHoaDonNgay'=>$tongSoHoaDonNgay],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'A']) . "\n";
+            @file_put_contents($logPath, $logEntry, FILE_APPEND | LOCK_EX);
+            // #endregion
+
             $cacHoaDonDoiTraTrongCa = HoaDon::whereDate('created_at', $ngay)
                 ->where('id_ca_lam_viec', $id_ca)
                 ->whereIn('trang_thai', ['Đã đổi/trả hàng', 'Đã trả toàn bộ'])
@@ -344,9 +350,27 @@ class LichSuCaLam extends Controller
                 });
             })
             ->latest('created_at')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
         return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.danh-sach-hoa-don-cua-ca', compact('hoaDonCuaCa', 'ngay', 'id_ca', 'tuKhoa'));
+    }
+
+    public function tat_ca_hoa_don_trong_ngay(Request $request, $ngay)
+    {
+        $tuKhoa = $request->input('tu_khoa');
+
+        $hoaDonCuaCa = HoaDon::whereDate('created_at', $ngay)
+            ->when($tuKhoa, function ($query) use ($tuKhoa) {
+                $query->where(function ($q) use ($tuKhoa) {
+                    $q->where('id', 'like', '%' . $tuKhoa . '%');
+                });
+            })
+            ->latest('created_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.danh-sach-hoa-don-trong-ngay', compact('hoaDonCuaCa', 'ngay', 'tuKhoa'));
     }
 
     public function hoa_don_doi_tra_cua_ca(Request $request, $ngay, $id_ca)
@@ -362,7 +386,8 @@ class LichSuCaLam extends Controller
                 });
             })
             ->latest('created_at')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
         return view('admin_xem_truoc.ca-lam-viec.lich-su-ca-lam.danh-sach-hoa-don-doi-tra', compact('hoaDonCuaCa', 'ngay', 'id_ca', 'tuKhoa'));
     }

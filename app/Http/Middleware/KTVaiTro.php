@@ -18,7 +18,7 @@ class KTVaiTro
 
         if($user->trang_thai == 2){
             return redirect('/admin/login')
-                ->with('error', 'Tài khoản của bạn đã bị khóa!'); // Gui thong bao loi
+                ->with('error', 'Tài khoản của bạn đã bị khóa!');
         }
 
         if ($user->id_vai_tro === 1) {
@@ -35,7 +35,9 @@ class KTVaiTro
             abort(403, 'Tài khoản chưa được gán vai trò hợp lệ.');
         }
 
-        if (!$vaiTroQuanHe->hasPermission($permission)) {
+        $hasPermission = $vaiTroQuanHe->hasPermission($permission);
+
+        if (!$hasPermission) {
             abort(403, 'Bạn không có quyền truy cập');
         }
 

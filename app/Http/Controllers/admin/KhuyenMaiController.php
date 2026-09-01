@@ -134,6 +134,20 @@ class KhuyenMaiController extends Controller
 }
    public function store(Request $request)
 {
+    $isBogo = $request->input('loai_giam_gia') === 'bogo';
+    $giaTriGiamRules = $isBogo
+        ? ['nullable', 'numeric', 'min:0']
+        : ['required', 'numeric', 'gt:0'];
+
+    $giaTriGiamRules[] = function ($attribute, $value, $fail) use ($request) {
+        $loai = strtolower(trim((string) $request->loai_giam_gia));
+
+        if (in_array($loai, ['phan_tram', 'percent', 'percentage'], true)
+            && (float) $value > 100) {
+            $fail('Giá trị giảm theo phần trăm không được vượt quá 100%.');
+        }
+    };
+
     $data = $request->validate([
         'ten_chuong_trinh' =>
             'required|string|max:255',
@@ -141,35 +155,7 @@ class KhuyenMaiController extends Controller
         'loai_giam_gia' =>
             'required|in:percent,amount,bogo',
 
-        'gia_tri_giam' => [
-    'required',
-    'numeric',
-    'gt:0',
-
-    function ($attribute, $value, $fail) use ($request) {
-
-        $loai = strtolower(
-            trim((string) $request->loai_giam_gia)
-        );
-
-        if (
-            in_array(
-                $loai,
-                [
-                    'phan_tram',
-                    'percent',
-                    'percentage'
-                ],
-                true
-            )
-            && (float) $value > 100
-        ) {
-            $fail(
-                'Giá trị giảm theo phần trăm không được vượt quá 100%.'
-            );
-        }
-    },
-],
+        'gia_tri_giam' => $giaTriGiamRules,
 
         'giam_toi_da' =>
             'nullable|numeric|min:0',
@@ -278,6 +264,11 @@ class KhuyenMaiController extends Controller
      */
     $data['trang_thai'] =
         $request->boolean('trang_thai');
+
+    // BOGO không có giá trị giảm cố định; lưu 0 để giữ dữ liệu nhất quán.
+    if ($isBogo) {
+        $data['gia_tri_giam'] = 0;
+    }
 
 
     DB::transaction(function () use (
@@ -723,6 +714,11 @@ $hoaDonGanDay = $hoaDonQuery
         $phamViHienTai
     );
 
+    $isBogo = $request->input('loai_giam_gia') === 'bogo';
+    $giaTriGiamRules = $isBogo
+        ? ['nullable', 'numeric', 'min:0']
+        : ['required', 'numeric', 'gt:0'];
+
 
     /*
     |--------------------------------------------------------------------------
@@ -742,11 +738,7 @@ $hoaDonGanDay = $hoaDonQuery
                 'in:percent,amount,bogo',
             ],
 
-            'gia_tri_giam' => [
-                'required',
-                'numeric',
-                'gt:0',
-            ],
+            'gia_tri_giam' => $giaTriGiamRules,
 
             'giam_toi_da' => [
                 'nullable',
@@ -929,6 +921,11 @@ $hoaDonGanDay = $hoaDonQuery
 
     $data['trang_thai'] =
         $request->boolean('trang_thai');
+
+    // BOGO không có giá trị giảm cố định; lưu 0 để giữ dữ liệu nhất quán.
+    if ($isBogo) {
+        $data['gia_tri_giam'] = 0;
+    }
 
 
     /*

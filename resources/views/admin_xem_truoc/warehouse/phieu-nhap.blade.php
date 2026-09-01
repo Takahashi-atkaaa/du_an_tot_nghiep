@@ -213,25 +213,6 @@
     </div>
 </div>
 
-{{-- Modal Xem chi tiết --}}
-<div class="modal fade" id="modal-xem-phieu-nhap" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-file-alt me-2 text-success"></i>Chi tiết phiếu nhập</h5>
-                <button type="button" class="btn btn-sm btn-success" id="btn-export-chi-tiet-pn">
-                    <i class="fas fa-download me-1"></i>Xuất Excel
-                </button>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="modal-xem-phieu-nhap-body"></div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 {{-- Modal Import Excel --}}
 <div class="modal fade" id="modal-import-phieu-nhap" tabindex="-1">
     <div class="modal-dialog">
@@ -381,7 +362,6 @@ $(function () {
 
     // ========== IMPORT EXCEL ==========
     let importFileNhap = null;
-    let currentExportPnId = null;
 
     $('#btn-xuat-excel-nhap').click(function () {
         const loai = $('#filter-loai').val();
@@ -398,12 +378,6 @@ $(function () {
 
     $('#btn-tao-phieu-nhap').click(function () {
         $('#modal-tao-phieu-nhap .btn-outline-success').hide();
-    });
-
-    $(document).on('click', '#btn-export-chi-tiet-pn', function () {
-        if (currentExportPnId) {
-            window.open('/admin/api/phieu-nhap/' + currentExportPnId + '/export', '_blank');
-        }
     });
 
     $('#btn-download-template-nhap').click(function () {
@@ -747,39 +721,7 @@ function taiPhieuNhap(page = 1) {
 
 $(document).on('click', '.btn-xem-pn', function () {
     const id = $(this).data('id');
-    currentExportPnId = id; // Lưu để export chi tiết
-    $.get('/admin/api/phieu-nhap/' + id, res => {
-        if (!res.success) return;
-        const pn = res.data;
-        const loaiLabel = pn.loai_nhap === 'mua_hang' ? 'Nhập mua hàng' : 'Trả lại từ khách';
-        const tongGt = (pn.chi_tiet_phieu || []).reduce((s, ct) => s + (ct.so_luong || 0) * (ct.gia_nhap || 0), 0);
-        const rows = (pn.chi_tiet_phieu || []).map(ct => {
-            const sp = ct.san_pham || {};
-            const lo = ct.lo_hang || {};
-            return `<tr>
-                <td>${sp.ten_san_pham || ct.id_san_pham}</td>
-                <td class="text-center">${(ct.so_luong || 0).toLocaleString()}</td>
-                <td class="text-center">${Number(ct.gia_nhap || 0).toLocaleString()} đ</td>
-                <td class="text-center">${ct.han_su_dung?.slice(0, 10) || ''}</td>
-                <td class="text-center">${lo.ma_lo || 'L-' + lo.id}</td>
-                <td class="text-end fw-bold">${((ct.so_luong || 0) * (ct.gia_nhap || 0)).toLocaleString()} đ</td>
-            </tr>`;
-        }).join('') || '<tr><td colspan="6" class="text-center text-muted">Không có chi tiết</td></tr>';
-        $('#modal-xem-phieu-nhap-body').html(`
-            <div class="row mb-3">
-                <div class="col-md-3"><strong>Mã phiếu:</strong> PN-${pn.id_phieu}</div>
-                <div class="col-md-3"><strong>Loại:</strong> ${loaiLabel}</div>
-                <div class="col-md-3"><strong>NCC:</strong> ${pn.phieu?.nha_cung_cap?.ten_nha_cung_cap || '--'}</div>
-                <div class="col-md-3"><strong>Ngày:</strong> ${pn.created_at?.slice(0, 10) || ''}</div>
-            </div>
-            <p><strong>Ghi chú:</strong> ${pn.ghi_chu || '--'}</p>
-            <table class="table table-sm table-bordered">
-                <thead class="table-light"><tr><th>Sản phẩm</th><th class="text-center">SL nhập</th><th class="text-center">Giá nhập</th><th class="text-center">HSD</th><th class="text-center">Lô</th><th class="text-end">Thành tiền</th></tr></thead>
-                <tbody>${rows}</tbody>
-                <tfoot><tr><td colspan="5" class="text-end fw-bold">Tổng cộng:</td><td class="text-end fw-bold text-danger">${tongGt.toLocaleString()} đ</td></tr></tfoot>
-            </table>`);
-        new bootstrap.Modal(document.getElementById('modal-xem-phieu-nhap')).show();
-    });
+    window.location.href = '/admin/kho-hang/phieu-nhap/' + id;
 });
 
 $(document).on('click', '.btn-sua-pn', function () {

@@ -60,7 +60,9 @@
                         </label>
 
                         <select name="loai_giam_gia"
-                                class="form-select">
+                                id="loai_giam_gia"
+                                class="form-select"
+                                required>
 
                             <option value="">
                                 Chọn loại
@@ -93,14 +95,17 @@
                         <div class="input-group">
 
                             <input type="text"
+                                   id="gia_tri_giam"
                                    name="gia_tri_giam"
                                    class="form-control money-input"
                                    data-money-decimals="2"
-                                   value="{{ old('gia_tri_giam', isset($khuyenMai) ? number_format((float)$khuyenMai->gia_tri_giam, 2, ',', '.') : '0') }}"
+                                   data-money-format-on-input="true"
+                                   value="{{ old('gia_tri_giam', isset($khuyenMai) ? number_format((float)$khuyenMai->gia_tri_giam, 2, ',', '.') : '') }}"
+                                   placeholder="0"
                                    inputmode="decimal">
 
-                            <span class="input-group-text">
-                                % / đ
+                            <span class="input-group-text" id="suffix_unit">
+                                %
                             </span>
 
                         </div>
@@ -553,6 +558,83 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const selectedList =
         document.getElementById('selectedProductList');
+
+
+    // ========================================
+    // THAY ĐỔI INPUT THEO LOẠI KHUYẾN MÃI
+    // ========================================
+
+    const loaiGiamGia = document.getElementById('loai_giam_gia');
+    const giaTriGiamInput = document.getElementById('gia_tri_giam');
+    const suffixUnit = document.getElementById('suffix_unit');
+
+    function updateInputByType() {
+        const loai = loaiGiamGia.value;
+        
+        if (loai === 'percent') {
+            // Giảm theo %: cho phép thập phân
+            giaTriGiamInput.setAttribute('data-money-decimals', '2');
+            giaTriGiamInput.placeholder = '0';
+            giaTriGiamInput.disabled = false;
+            giaTriGiamInput.readOnly = false;
+            giaTriGiamInput.required = true;
+            suffixUnit.textContent = '%';
+            
+            // Re-bind để áp dụng decimals mới
+            if (window.MoneyInput) {
+                var currentValue = giaTriGiamInput.value;
+                giaTriGiamInput.value = '';
+                giaTriGiamInput.__moneyBound = false;
+                window.MoneyInput.bind(giaTriGiamInput);
+                if (currentValue) {
+                    giaTriGiamInput.value = currentValue;
+                    giaTriGiamInput.dispatchEvent(new Event('blur'));
+                }
+            }
+            
+        } else if (loai === 'amount') {
+            // Giảm số tiền: chỉ số nguyên
+            giaTriGiamInput.setAttribute('data-money-decimals', '0');
+            giaTriGiamInput.placeholder = '0';
+            giaTriGiamInput.disabled = false;
+            giaTriGiamInput.readOnly = false;
+            giaTriGiamInput.required = true;
+            suffixUnit.textContent = 'đ';
+            
+            // Re-bind để áp dụng decimals mới
+            if (window.MoneyInput) {
+                var currentValue = window.MoneyInput.parse(giaTriGiamInput.value, 2);
+                giaTriGiamInput.value = '';
+                giaTriGiamInput.__moneyBound = false;
+                window.MoneyInput.bind(giaTriGiamInput);
+                if (currentValue !== null && currentValue !== 0) {
+                    giaTriGiamInput.value = window.MoneyInput.format(currentValue, 0);
+                }
+            }
+            
+        } else if (loai === 'bogo') {
+            // Mua 1 tặng 1 không dùng giá trị giảm, nhưng vẫn gửi 0 lên server.
+            giaTriGiamInput.value = '0';
+            giaTriGiamInput.disabled = false;
+            giaTriGiamInput.readOnly = true;
+            giaTriGiamInput.required = false;
+            suffixUnit.textContent = '';
+            
+        } else {
+            // Chưa chọn: mặc định percent
+            giaTriGiamInput.setAttribute('data-money-decimals', '2');
+            giaTriGiamInput.placeholder = 'Chọn loại trước';
+            giaTriGiamInput.disabled = true;
+            giaTriGiamInput.readOnly = false;
+            giaTriGiamInput.required = true;
+            suffixUnit.textContent = '%';
+        }
+    }
+
+    if (loaiGiamGia) {
+        loaiGiamGia.addEventListener('change', updateInputByType);
+        updateInputByType(); // Init
+    }
 
 
     // ========================================

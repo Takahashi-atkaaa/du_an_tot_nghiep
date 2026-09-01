@@ -330,7 +330,7 @@
 
                         <div class="col-md-6">
                             <label class="form-label">Loại khuyến mãi <span class="text-danger">*</span></label>
-                            <select class="form-select" name="loai_giam_gia" required>
+                            <select class="form-select" id="modal_loai_giam_gia" name="loai_giam_gia" required>
                                 <option value="" selected disabled>Chọn loại</option>
                                 <option value="percent">Giảm %</option>
                                 <option value="amount">Giảm tiền</option>
@@ -341,8 +341,8 @@
                         <div class="col-md-6">
                             <label class="form-label">Giá trị giảm <span class="text-danger">*</span></label>
                             <div class="input-group">
-                                <input type="text" name="gia_tri_giam" class="form-control money-input" data-money-decimals="2" placeholder="0" inputmode="decimal" required>
-                                <span class="input-group-text">% / đ</span>
+                                <input type="text" id="modal_gia_tri_giam" name="gia_tri_giam" class="form-control money-input" data-money-decimals="2" data-money-format-on-input="true" placeholder="Chọn loại trước" inputmode="decimal" disabled>
+                                <span class="input-group-text" id="modal_suffix_unit">%</span>
                             </div>
                         </div>
 
@@ -662,6 +662,80 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
     });
+
+    // ========================================
+    // THAY ĐỔI INPUT THEO LOẠI KHUYẾN MÃI (MODAL)
+    // ========================================
+
+    const modalLoaiGiamGia = document.getElementById('modal_loai_giam_gia');
+    const modalGiaTriGiamInput = document.getElementById('modal_gia_tri_giam');
+    const modalSuffixUnit = document.getElementById('modal_suffix_unit');
+
+    function updateModalInputByType() {
+        const loai = modalLoaiGiamGia.value;
+        
+        if (loai === 'percent') {
+            // Giảm theo %: cho phép thập phân
+            modalGiaTriGiamInput.setAttribute('data-money-decimals', '2');
+            modalGiaTriGiamInput.placeholder = '0';
+            modalGiaTriGiamInput.disabled = false;
+            modalGiaTriGiamInput.readOnly = false;
+            modalGiaTriGiamInput.required = true;
+            modalSuffixUnit.textContent = '%';
+            
+            // Re-bind để áp dụng decimals mới
+            if (window.MoneyInput) {
+                var currentValue = modalGiaTriGiamInput.value;
+                modalGiaTriGiamInput.value = '';
+                modalGiaTriGiamInput.__moneyBound = false;
+                window.MoneyInput.bind(modalGiaTriGiamInput);
+                if (currentValue) {
+                    modalGiaTriGiamInput.value = currentValue;
+                    modalGiaTriGiamInput.dispatchEvent(new Event('blur'));
+                }
+            }
+            
+        } else if (loai === 'amount') {
+            // Giảm số tiền: chỉ số nguyên
+            modalGiaTriGiamInput.setAttribute('data-money-decimals', '0');
+            modalGiaTriGiamInput.placeholder = '0';
+            modalGiaTriGiamInput.disabled = false;
+            modalGiaTriGiamInput.readOnly = false;
+            modalGiaTriGiamInput.required = true;
+            modalSuffixUnit.textContent = 'đ';
+            
+            // Re-bind để áp dụng decimals mới
+            if (window.MoneyInput) {
+                var currentValue = window.MoneyInput.parse(modalGiaTriGiamInput.value, 2);
+                modalGiaTriGiamInput.value = '';
+                modalGiaTriGiamInput.__moneyBound = false;
+                window.MoneyInput.bind(modalGiaTriGiamInput);
+                if (currentValue !== null && currentValue !== 0) {
+                    modalGiaTriGiamInput.value = window.MoneyInput.format(currentValue, 0);
+                }
+            }
+            
+        } else if (loai === 'bogo') {
+            // Mua 1 tặng 1 không dùng giá trị giảm, nhưng vẫn gửi 0 lên server.
+            modalGiaTriGiamInput.value = '0';
+            modalGiaTriGiamInput.disabled = false;
+            modalGiaTriGiamInput.readOnly = true;
+            modalGiaTriGiamInput.required = false;
+            modalSuffixUnit.textContent = '';
+            
+        } else {
+            // Chưa chọn: mặc định disable
+            modalGiaTriGiamInput.setAttribute('data-money-decimals', '2');
+            modalGiaTriGiamInput.placeholder = 'Chọn loại trước';
+            modalGiaTriGiamInput.disabled = true;
+            modalSuffixUnit.textContent = '%';
+        }
+    }
+
+    if (modalLoaiGiamGia) {
+        modalLoaiGiamGia.addEventListener('change', updateModalInputByType);
+        updateModalInputByType(); // Init
+    }
 
 });
 

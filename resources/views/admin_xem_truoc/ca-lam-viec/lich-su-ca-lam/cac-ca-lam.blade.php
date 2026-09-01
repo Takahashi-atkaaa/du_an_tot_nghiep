@@ -315,16 +315,18 @@ h3,h4,h5{
         </div>
     </div>
 
-    <div class="the-thong-ke hoa-don">
+    <a href="{{ route('tat-ca-hoa-don-trong-ngay', ['ngay' => $ngay]) }}" 
+       class="the-thong-ke hoa-don" 
+       style="text-decoration: none; color: inherit;">
         <div class="icon">🧾</div>
 
         <div>
             <div class="tieu-de">Tổng số hóa đơn ngày</div>
-            <div class="gia-tri">
+            <div class="gia-tri" data-value="{{ $tongSoHoaDonNgay }}">
                 {{ $tongSoHoaDonNgay }}
             </div>
         </div>
-    </div>
+    </a>
 
     <div class="the-thong-ke ca">
         <div class="icon">⏰</div>

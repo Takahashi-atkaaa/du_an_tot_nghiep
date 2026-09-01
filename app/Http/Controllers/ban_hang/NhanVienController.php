@@ -256,6 +256,10 @@ public function donChoThanhToan(Request $request): \Illuminate\Http\JsonResponse
 
 public function hoaDon(Request $request)
     {
+        // #region agent log
+        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'NhanVienController.php:258','message'=>'hoaDon method entry','data'=>['auth_check'=>auth()->check(),'timestamp'=>time()],'hypothesisId'=>'G','timestamp'=>time()*1000])."\n", FILE_APPEND);
+        // #endregion
+
         $doiTraSummarySub = DB::table('doi_tra')
             ->selectRaw('id_hoa_don, COUNT(*) as so_lan_doi_tra')
             ->whereNull('deleted_at')
@@ -314,69 +318,73 @@ public function hoaDon(Request $request)
             ->orderBy('phuong_thuc_thanh_toan')
             ->pluck('phuong_thuc_thanh_toan');
 
+        // #region agent log
+        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'NhanVienController.php:321','message'=>'hoaDon data prepared, returning view','data'=>['hoaDons_count'=>$hoaDons->count(),'caLamViecs_count'=>$caLamViecs->count(),'view_name'=>'ban_hang.hoa-don.index'],'hypothesisId'=>'G','timestamp'=>time()*1000])."\n", FILE_APPEND);
+        // #endregion
+
         return view('ban_hang.hoa-don.index', compact('hoaDons', 'caLamViecs', 'phuongThucThanhToans'));
     }
 
-    public function sanPham(Request $request)
+    public function sanPham()
     {
-        $tuKhoa = trim((string) $request->query('tu_khoa', ''));
+        // #region agent log
+        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'NhanVienController.php:321','message'=>'sanPham method entry','data'=>['auth_check'=>auth()->check(),'timestamp'=>time()],'hypothesisId'=>'A,B','timestamp'=>time()*1000])."\n", FILE_APPEND);
+        // #endregion
 
-        $sanPhams = SanPham::query()
-            ->with([
-                'danhMuc',
-                'bienTheSanPhams' => function ($query) {
-                    $query->where('trang_thai', true)
-                        ->orderBy('id')
-                        ->with([
-                            'units' => function ($unitQuery) {
-                                $unitQuery->orderByDesc('la_don_vi_mac_dinh')
-                                    ->orderBy('id');
-                            },
-                        ]);
-                },
-            ])
-            ->where('trang_thai', true)
-            ->when($tuKhoa !== '', function ($query) use ($tuKhoa) {
-                $keyword = mb_strtolower($tuKhoa, 'UTF-8');
+        // Kiểm tra quyền truy cập
+        if (!auth()->check()) {
+            // #region agent log
+            file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'NhanVienController.php:328','message'=>'User not authenticated','data'=>[],'hypothesisId'=>'B','timestamp'=>time()*1000])."\n", FILE_APPEND);
+            // #endregion
+            return redirect()->route('admin.login')
+                ->with('error', 'Vui lòng đăng nhập để tiếp tục.');
+        }
 
-                $query->where(function ($subQuery) use ($keyword) {
-                    $subQuery->whereRaw('LOWER(ten_san_pham) LIKE ?', ["%{$keyword}%"])
-                        ->orWhereRaw("LOWER(COALESCE(thuong_hieu, '')) LIKE ?", ["%{$keyword}%"]);
-                });
-            })
-            ->orderBy('ten_san_pham')
+        $user = auth()->user();
+        
+        // #region agent log
+        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'NhanVienController.php:336','message'=>'User authenticated','data'=>['user_id'=>$user->id,'id_vai_tro'=>$user->id_vai_tro,'ho_ten'=>$user->ho_ten],'hypothesisId'=>'B,C','timestamp'=>time()*1000])."\n", FILE_APPEND);
+        // #endregion
+
+        // Trả về view danh sách sản phẩm cho POS
+        $keyword = request()->input('keyword');
+        $danhMucId = request()->input('danh_muc');
+        $trangThai = request()->filled('trang_thai') ? request()->boolean('trang_thai') : null;
+
+        $danhMucs = \App\Models\DanhMucSanPham::query()->orderBy('ten_danh_muc')->get();
+
+        $sanPhams = \App\Models\Product::with(['danhMuc', 'variants'])
+            ->withSum('variants', 'so_luong_ton')
+            ->whereNull('deleted_at')
+            ->whereHas('variants', fn($q) => $q->whereNull('deleted_at'))
+            ->when($keyword, fn($q) => $q
+                ->where(fn($inner) => $inner
+                    ->whereRaw('LOWER(ten_san_pham) LIKE ?', ["%".mb_strtolower($keyword)."%"])
+                    ->orWhereHas('variants', fn($v) => $v
+                        ->whereNull('deleted_at')
+                        ->whereRaw('LOWER(ma_vach) LIKE ?', ["%".mb_strtolower($keyword)."%"])
+                        ->orWhereRaw('LOWER(ma_hang) LIKE ?', ["%".mb_strtolower($keyword)."%"])
+                        ->orWhereRaw('LOWER(ten_bien_the) LIKE ?', ["%".mb_strtolower($keyword)."%"])
+                    )
+                )
+            )
+            ->when($danhMucId, fn($q) => $q->where('id_danh_muc', $danhMucId))
+            ->when(!is_null($trangThai), fn($q) => $q->where('trang_thai', $trangThai))
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate(10)
             ->withQueryString();
 
-        $sanPhams->getCollection()->transform(function (SanPham $sanPham) {
-            $bienThes = $sanPham->bienTheSanPhams ?? collect();
-            $bienTheDauTien = $bienThes->first();
-            $tatCaDonVi = $bienThes->flatMap(fn($bienThe) => $bienThe->units);
-            $donViMacDinh = $tatCaDonVi->firstWhere('la_don_vi_mac_dinh', true);
-            $donViDauTien = $donViMacDinh ?? $tatCaDonVi->first();
-            $tongTonKho = (int) $bienThes->sum('so_luong_ton');
-
-            $sanPham->setAttribute(
-                'hinh_anh_hien_thi',
-                $donViDauTien?->hinh_anh ?: $bienTheDauTien?->hinh_anh
-            );
-            $sanPham->setAttribute(
-                'don_vi_tinh_hien_thi',
-                $donViDauTien?->ten_don_vi ?: $bienTheDauTien?->ten_bien_the
-            );
-            $sanPham->setAttribute(
-                'gia_ban_hien_thi',
-                $donViDauTien?->gia_ban_quy_doi ?? $bienTheDauTien?->gia_ban
-            );
-            $sanPham->setAttribute('tong_ton_kho_hien_thi', $tongTonKho);
-            $sanPham->setAttribute('trang_thai_kho_hien_thi', $tongTonKho > 0 ? 'Còn hàng' : 'Hết hàng');
-
-            return $sanPham;
-        });
+        // #region agent log
+        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-27743d.log', json_encode(['sessionId'=>'27743d','location'=>'NhanVienController.php:385','message'=>'Returning POS san pham view','data'=>['sanPhams_count'=>$sanPhams->count()],'hypothesisId'=>'A','timestamp'=>time()*1000])."\n", FILE_APPEND);
+        // #endregion
 
         return view('ban_hang.san-pham.index', [
             'sanPhams' => $sanPhams,
-            'tuKhoa' => $tuKhoa,
+            'danhMucs' => $danhMucs,
+            'tuKhoa' => $keyword,
+            'danhMucId' => $danhMucId,
+            'trangThai' => request()->input('trang_thai'),
         ]);
     }
     public function lichLamViec(Request $request): View
@@ -494,7 +502,18 @@ public function hoaDon(Request $request)
                 $q->where('san_pham.ten_san_pham', 'like', "%{$keyword}%")
                     ->orWhere('bien_the_san_pham.ma_hang', 'like', "%{$keyword}%")
                     ->orWhere('bien_the_san_pham.ma_vach', 'like', "%{$keyword}%")
-                    ->orWhere('bien_the_san_pham.ten_bien_the', 'like', "%{$keyword}%");
+                    ->orWhere('bien_the_san_pham.ten_bien_the', 'like', "%{$keyword}%")
+                    ->orWhereExists(function ($unitQuery) use ($keyword) {
+                        $unitQuery->selectRaw('1')
+                            ->from('don_vi_quy_doi')
+                            ->whereColumn('don_vi_quy_doi.variant_id', 'bien_the_san_pham.id')
+                            ->whereNull('don_vi_quy_doi.deleted_at')
+                            ->where(function ($unit) use ($keyword) {
+                                $unit->where('don_vi_quy_doi.ten_don_vi', 'like', "%{$keyword}%")
+                                    ->orWhere('don_vi_quy_doi.ma_vach', 'like', "%{$keyword}%")
+                                    ->orWhere('don_vi_quy_doi.ma_hang', 'like', "%{$keyword}%");
+                            });
+                    });
             });
         }
 
@@ -504,6 +523,9 @@ public function hoaDon(Request $request)
             'san_pham.id_danh_muc',
             'san_pham.ten_san_pham',
             'bien_the_san_pham.ten_bien_the',
+            'bien_the_san_pham.thuoc_tinh_ids',
+            'bien_the_san_pham.la_don_vi',
+            'bien_the_san_pham.ten_don_vi',
             'bien_the_san_pham.ma_hang',
             'bien_the_san_pham.ma_vach',
             'bien_the_san_pham.gia_ban',
@@ -513,16 +535,96 @@ public function hoaDon(Request $request)
             ->orderByDesc('bien_the_san_pham.id')
             ->get();
 
-        $products = $products->map(function ($product) {
+        $variantIds = $products->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $unitsByVariant = DB::table('don_vi_quy_doi')
+            ->whereIn('variant_id', $variantIds)
+            ->whereNull('deleted_at')
+            ->select(
+                'id',
+                'variant_id',
+                'ten_don_vi',
+                'so_luong_san_pham_trong_don_vi',
+                'gia_ban_quy_doi',
+                'ma_hang',
+                'ma_vach',
+                'hinh_anh'
+            )
+            ->orderBy('so_luong_san_pham_trong_don_vi')
+            ->get()
+            ->groupBy('variant_id');
+
+        $attributeIds = [];
+        foreach ($products as $product) {
+            $rawIds = json_decode((string) ($product->thuoc_tinh_ids ?? ''), true);
+            if (!is_array($rawIds)) {
+                $rawIds = explode(',', (string) ($product->thuoc_tinh_ids ?? ''));
+            }
+            foreach ($rawIds as $id) {
+                if (is_numeric($id) && (int) $id > 0) {
+                    $attributeIds[] = (int) $id;
+                }
+            }
+        }
+
+        $attributeRows = collect();
+        if (!empty($attributeIds)) {
+            $attributeRows = DB::table('thuoc_tinh_san_pham as value')
+                ->leftJoin('thuoc_tinh_san_pham as parent', 'parent.id', '=', 'value.thuoc_tinh_cha_id')
+                ->whereIn('value.id', array_unique($attributeIds))
+                ->select(
+                    'value.id',
+                    'value.ten_thuoc_tinh',
+                    'parent.ten_thuoc_tinh as ten_thuoc_tinh_cha'
+                )
+                ->get()
+                ->keyBy('id');
+        }
+
+        $products = $products->map(function ($product) use ($unitsByVariant, $attributeRows) {
+            $product->ten_san_pham_goc = trim((string) ($product->ten_san_pham ?? ''));
             $product->ten_san_pham = trim(($product->ten_san_pham ?? '') . ' ' . ($product->ten_bien_the ?? ''));
             $product->ten_san_pham = preg_replace('/\s+/', ' ', $product->ten_san_pham);
             $product->ten_san_pham = trim($product->ten_san_pham);
 
             $product->ma_hang = $product->ma_hang ?? null;
             $product->ma_vach = $product->ma_vach ?? null;
+            $product->la_don_vi = (bool) ($product->la_don_vi ?? false);
+            $product->ten_don_vi = $product->ten_don_vi ?? null;
             $product->gia_ban = (float) ($product->gia_ban ?? 0);
             $product->so_luong_ton_kho = (int) ($product->so_luong_ton_kho ?? 0);
             $product->hinh_anh = $product->hinh_anh ?? null;
+
+            $product->don_vi_quy_doi = ($unitsByVariant->get($product->id) ?? collect())
+                ->map(function ($unit) use ($product) {
+                    $factor = (float) ($unit->so_luong_san_pham_trong_don_vi ?: 1);
+                    return [
+                        'id' => (int) $unit->id,
+                        'ten_don_vi' => trim((string) $unit->ten_don_vi),
+                        'so_luong_san_pham_trong_don_vi' => $factor,
+                        'gia_ban_quy_doi' => (float) ($unit->gia_ban_quy_doi ?? 0),
+                        'so_luong_ton_kho' => $factor > 0 ? (int) floor($product->so_luong_ton_kho / $factor) : 0,
+                        'ma_hang' => $unit->ma_hang ?? null,
+                        'ma_vach' => $unit->ma_vach ?? null,
+                        'hinh_anh' => $unit->hinh_anh ?? null,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            $rawIds = json_decode((string) ($product->thuoc_tinh_ids ?? ''), true);
+            if (!is_array($rawIds)) {
+                $rawIds = explode(',', (string) ($product->thuoc_tinh_ids ?? ''));
+            }
+            $attributeLabels = [];
+            foreach ($rawIds as $id) {
+                $attribute = is_numeric($id) ? $attributeRows->get((int) $id) : null;
+                if (!$attribute) {
+                    continue;
+                }
+                $groupName = trim((string) ($attribute->ten_thuoc_tinh_cha ?: 'Thuộc tính'));
+                $attributeLabels[$groupName] = trim((string) $attribute->ten_thuoc_tinh);
+            }
+            $product->thuoc_tinh_hien_thi = $attributeLabels;
 
             return $product;
         });
@@ -545,6 +647,7 @@ public function hoaDon(Request $request)
             'cart' => 'required|array|min:1',
             'cart.*.id' => 'required|integer|exists:bien_the_san_pham,id',
             'cart.*.qty' => 'required|integer|min:1',
+            'cart.*.id_don_vi_quy_doi' => 'nullable|integer|exists:don_vi_quy_doi,id',
             'tien_khach_dua' => 'required|numeric|min:0',
             'phuong_thuc_thanh_toan' => 'required|string',
             'id_khach_hang' => 'nullable|integer|exists:khach_hang,id',
@@ -620,20 +723,60 @@ public function hoaDon(Request $request)
                 ], 422);
             }
 
-            if ((int)$bienThe->so_luong_ton < (int)$item['qty']) {
+            $soLuongBan = (int) $item['qty'];
+            $donViQuyDoi = null;
+            $heSoQuyDoi = 1.0;
+            $giaBanDonVi = (float) $bienThe->gia_ban;
+
+            if (!empty($item['id_don_vi_quy_doi'])) {
+                $donViQuyDoi = DB::table('don_vi_quy_doi')
+                    ->where('id', (int) $item['id_don_vi_quy_doi'])
+                    ->where('variant_id', $bienThe->id)
+                    ->whereNull('deleted_at')
+                    ->first();
+
+                if (!$donViQuyDoi) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Đơn vị quy đổi không thuộc sản phẩm đã chọn.',
+                    ], 422);
+                }
+
+                $heSoQuyDoi = (float) ($donViQuyDoi->so_luong_san_pham_trong_don_vi ?: 1);
+                $giaBanDonVi = (float) ($donViQuyDoi->gia_ban_quy_doi ?? 0);
+                $tonTheoDonVi = $heSoQuyDoi > 0
+                    ? (int) floor((float) $bienThe->so_luong_ton / $heSoQuyDoi)
+                    : 0;
+
+                if ($soLuongBan > $tonTheoDonVi) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Sản phẩm "' . $bienThe->ten_san_pham . '" không đủ tồn kho theo đơn vị ' . $donViQuyDoi->ten_don_vi . '.',
+                    ], 422);
+                }
+            } elseif ((int) $bienThe->so_luong_ton < $soLuongBan) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Sản phẩm "' . $bienThe->ten_san_pham . '" không đủ tồn kho.'
                 ], 422);
             }
 
-            $thanhTien = $bienThe->gia_ban * $item['qty'];
+            // Kho luôn quản lý theo đơn vị cơ bản; hóa đơn tính theo đơn vị khách chọn.
+            $soLuongTonCanTru = max(1, (int) ceil($soLuongBan * $heSoQuyDoi));
+            $thanhTien = $giaBanDonVi * $soLuongBan;
+            $giaBanTheoDonViCoBan = $soLuongTonCanTru > 0
+                ? $thanhTien / $soLuongTonCanTru
+                : 0;
             $tongTienHang += $thanhTien;
 
             $items[] = [
                 'bien_the' => $bienThe,
-                'so_luong' => (int)$item['qty'],
-                'gia_ban' => $bienThe->gia_ban,
+                'so_luong' => $soLuongTonCanTru,
+                'so_luong_ban' => $soLuongBan,
+                'gia_ban' => $giaBanTheoDonViCoBan,
+                'gia_ban_don_vi' => $giaBanDonVi,
+                'he_so_quy_doi' => $heSoQuyDoi,
+                'ten_don_vi' => $donViQuyDoi?->ten_don_vi ?? $bienThe->ten_don_vi,
                 'thanh_tien' => $thanhTien,
             ];
         }
@@ -652,8 +795,8 @@ foreach ($items as $item) {
     $idSanPham = (int) $item['bien_the']->product_id;
     $idBienThe = (int) $item['bien_the']->id;
 
-    $soLuong = (int) $item['so_luong'];
-    $giaBan = (float) $item['gia_ban'];
+    $soLuong = (int) ($item['so_luong_ban'] ?? $item['so_luong']);
+    $giaBan = (float) ($item['gia_ban_don_vi'] ?? $item['gia_ban']);
     $thanhTien = (float) $item['thanh_tien'];
 
     $khuyenMaisSanPham = DB::table('khuyen_mai')
