@@ -30,7 +30,7 @@
             <i class="fas fa-save"></i> Lưu tất cả
         </button>
 
-        @if($phieu->co_the_hoan_tat_dem)
+        @if($phieu->co_the_hoan_tat_dem && userHasPermission('kiem_kho_dem'))
             <button type="button" class="btn btn-success btn-sm" @click="hoanTatDem">
                 <i class="fas fa-check-double"></i> Hoàn tất đếm
             </button>
@@ -64,8 +64,11 @@
             </thead>
             <tbody>
                 @foreach($phieu->chiTietKiemKho as $i => $ct)
+                @php
+                    $searchKey = strtolower(trim(($ct->ten_san_pham ?? '') . ' ' . ($ct->ma_vach ?? '') . ' ' . ($ct->ma_hang ?? '')));
+                @endphp
                 <tr class="kk-row-{{ $ct->loai_chenh_lech }}"
-                    x-show="(filterLoai === '' || '{{ $ct->loai_chenh_lech }}' === filterLoai) && (search === '' || '{{ strtolower(($ct->ten_san_pham ?? '') . ' ' . ($ct->ma_vach ?? '') . ' ' . ($ct->ma_hang ?? '')) }}'.includes(search.toLowerCase()))">
+                    x-show="(filterLoai === '' || '{{ $ct->loai_chenh_lech }}' === filterLoai) && (search === '' || @js($searchKey).includes(search.toLowerCase()))">
                     <td>{{ $i + 1 }}</td>
                     <td><code>{{ $ct->ma_hang ?? $ct->ma_vach ?? '#' . $ct->id }}</code></td>
                     <td>

@@ -29,19 +29,21 @@
                     <td>{{ $p->deleted_at?->format('d/m/Y H:i') }}</td>
                     <td>{{ $p->nguoiKiem?->ho_ten ?? '-' }}</td>
                     <td class="text-end">
-                        <form action="{{ route('kiem-kho.restore', $p->id) }}" method="POST" class="d-inline">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-success">
-                                <i class="fas fa-undo"></i> Khôi phục
-                            </button>
-                        </form>
-                        <form action="{{ route('kiem-kho.force-delete', $p->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Xóa vĩnh viễn?')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-danger">
-                                <i class="fas fa-times"></i> Xóa vĩnh viễn
-                            </button>
-                        </form>
+                        @if(userHasPermission('kiem_kho_huy'))
+                            <form action="{{ route('kiem-kho.restore', $p->id) }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    <i class="fas fa-undo"></i> Khôi phục
+                                </button>
+                            </form>
+                            <form action="{{ route('kiem-kho.force-delete', $p->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Xóa vĩnh viễn?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-times"></i> Xóa vĩnh viễn
+                                </button>
+                            </form>
+                        @endif
                     </td>
                 </tr>
                 @empty

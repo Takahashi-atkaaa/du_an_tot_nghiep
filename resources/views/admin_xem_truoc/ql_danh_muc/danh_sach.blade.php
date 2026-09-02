@@ -5,13 +5,16 @@
 @section('content')
 <div class="row g-4">
 
-    <div class="col-12" style="text-align: right;">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalThemDanhMuc">
-            Thêm danh mục mới
-        </button>
-    </div>
+    @if(userHasPermission('them_danh_muc'))
+        <div class="col-12" style="text-align: right;">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalThemDanhMuc">
+                Thêm danh mục mới
+            </button>
+        </div>
+    @endif
     
     {{-- //modol thêm danh mục --}}
+    @if(userHasPermission('them_danh_muc'))
     <div class="modal fade" id="modalThemDanhMuc" tabindex="-1">
         <div class="modal-dialog">
             <form action="{{ route('danh_muc.store') }}" method="POST" class="modal-content">
@@ -89,6 +92,7 @@
             </form>
         </div>
     </div>
+    @endif
     
     @foreach($danh_muc_sp as $item)
         <div class="col-xl-3 col-lg-4 col-md-6">
@@ -111,16 +115,20 @@
                         </p>
                     </a>
 
-                    <a href="{{ route('danh_muc.edit', $item->id) }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fa fa-edit"></i>
-                    </a>
-                    <form action="{{ route('danh_muc.destroy', $item->id) }}" method="POST" class="d-inline">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa danh mục này?')">
-                            <i class="fa fa-trash"></i>
-                        </button>
-                    </form>
+                    @if(userHasPermission('sua_danh_muc'))
+                        <a href="{{ route('danh_muc.edit', $item->id) }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fa fa-edit"></i>
+                        </a>
+                    @endif
+                    @if(userHasPermission('xoa_danh_muc'))
+                        <form action="{{ route('danh_muc.destroy', $item->id) }}" method="POST" class="d-inline">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa danh mục này?')">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </form>
+                    @endif
                     <br>
 
                     @if(isset($item->trang_thai))

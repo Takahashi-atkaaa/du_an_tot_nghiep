@@ -6,7 +6,7 @@
 <div class="container-fluid">
     <h4 class="mb-4">Xử lý đổi / trả hàng - Hóa đơn #HD{{ str_pad($hoaDon->id, 4, '0', STR_PAD_LEFT) }}</h4>
 
-    @include('partials.hoa-don.doi-tra-form')
+    @include('admin_xem_truoc.partials.hoa-don.doi-tra-form')
 </div>
 @endsection
 

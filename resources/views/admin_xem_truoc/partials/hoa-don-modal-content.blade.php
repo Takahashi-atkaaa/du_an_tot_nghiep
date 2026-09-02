@@ -59,7 +59,7 @@
         </table>
     </div>
 
-    @if(isset($lichSuDoiTra) && $lichSuDoiTra->count())
+    @if(isset($lichSuDoiTra) && $lichSuDoiTra->count() && (userHasPermission('quan_ly_hoa_don') || userHasPermission('xem_hoa_don') || userHasPermission('doi_tra_hoa_don')))
         <div class="mb-3">
             <a class="btn btn-outline-warning btn-sm" href="{{ route('admin.hoa-don.chi-tiet-doi-tra', $hoaDon->id) }}">
                 <i class="fas fa-rotate-left me-1"></i> Chi tiết đổi/trả

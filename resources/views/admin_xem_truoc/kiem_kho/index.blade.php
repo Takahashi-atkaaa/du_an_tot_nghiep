@@ -12,15 +12,19 @@
             <div class="subtitle">Theo dõi và quản lý các phiếu kiểm kho hàng hóa</div>
         </div>
         <div>
-            <a href="{{ route('kiem-kho.create') }}" class="btn btn-light">
-                <i class="fas fa-plus"></i> Tạo phiếu mới
-            </a>
+            @if(userHasPermission('kiem_kho_tao'))
+                <a href="{{ route('kiem-kho.create') }}" class="btn btn-light">
+                    <i class="fas fa-plus"></i> Tạo phiếu mới
+                </a>
+            @endif
             <a href="{{ route('kiem-kho.bao-cao') }}" class="btn btn-outline-light">
                 <i class="fas fa-chart-bar"></i> Báo cáo
             </a>
-            <a href="{{ route('kiem-kho.trash') }}" class="btn btn-outline-light">
-                <i class="fas fa-trash"></i> Thùng rác
-            </a>
+            @if(userHasPermission('kiem_kho_huy'))
+                <a href="{{ route('kiem-kho.trash') }}" class="btn btn-outline-light">
+                    <i class="fas fa-trash"></i> Thùng rác
+                </a>
+            @endif
         </div>
     </div>
 
@@ -110,7 +114,7 @@
                         <a href="{{ route('kiem-kho.show', $p->id) }}" class="btn btn-sm btn-outline-primary" title="Xem">
                             <i class="fas fa-eye"></i>
                         </a>
-                        @if($p->co_the_dem)
+                        @if($p->co_the_dem && userHasPermission('kiem_kho_dem'))
                             <a href="{{ route('kiem-kho.dem', $p->id) }}" class="btn btn-sm btn-outline-info" title="Kiểm đếm">
                                 <i class="fas fa-clipboard-check"></i>
                             </a>

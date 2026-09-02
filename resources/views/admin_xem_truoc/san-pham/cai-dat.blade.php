@@ -27,6 +27,7 @@
                 <h5 class="mb-0"><i class="fas fa-balance-scale me-2"></i>Đơn vị tính</h5>
             </div>
             <div class="card-body">
+                @if(userHasPermission('sua_san_pham'))
                 <form method="POST" action="{{ url('admin/cai-dat/san-pham/don-vi') }}">
                     @csrf
                     <div class="mb-3">
@@ -41,6 +42,7 @@
                         <button class="btn btn-primary mt-2" type="submit"><i class="fas fa-plus me-2"></i>Thêm</button>
                     </div>
                 </form>
+                @endif
 
                 <hr>
                 <ul class="list-group" id="donViList">

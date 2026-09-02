@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\BanHang\XuLyDoiTraRequest;
 use App\Http\Requests\DoiMatKhauRequest;
 use App\Models\ChiaCaLamViec;
+use App\Models\GiaoDich;
 use App\Models\NguoiDung;
 use App\Models\SanPham;
 use App\Models\CaLamViec;
@@ -20,6 +21,8 @@ use Illuminate\Support\Facades\DB;
 use App\Models\KhachHang;
 use App\Services\DoiTraService;
 use App\Services\KiemKhoService;
+use App\Services\PayOSService;
+use Illuminate\Validation\ValidationException;
 
 
 class NhanVienController extends Controller
@@ -186,12 +189,12 @@ public function banHangMoi()
     ));
 }
 
-public function donChoThanhToan(Request $request): \Illuminate\Http\JsonResponse
-{
-    // Lấy tất cả hoá đơn đang chờ thanh toán, kèm giao dịch PayOS còn `cho_xac_nhan`
-    $hoaDons = DB::table('hoa_don')
-        ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
-        ->where('hoa_don.trang_thai', 'Chờ thanh toán')
+private function danhSachDonChoThanhToanPayOS()
+    {
+        // Lấy tất cả hoá đơn đang chờ thanh toán, kèm giao dịch PayOS còn `cho_xac_nhan`
+        $hoaDons = DB::table('hoa_don')
+            ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
+            ->where('hoa_don.trang_thai', 'Chờ thanh toán')
         ->select(
             'hoa_don.id',
             'hoa_don.khach_can_tra',
@@ -219,20 +222,32 @@ public function donChoThanhToan(Request $request): \Illuminate\Http\JsonResponse
             $dl = is_string($gd->du_lieu_phan_hoi)
                 ? json_decode($gd->du_lieu_phan_hoi, true)
                 : (array) $gd->du_lieu_phan_hoi;
+            
             if (!isset($gdMap[$gd->id_hoa_don])) {
+                // Nếu API có expiredAt thì dùng, không thì tính = created_at + 15 phút
+                $expiredAt = $dl['expiredAt'] ?? (strtotime($gd->created_at) + (15 * 60));
+                
                 $gdMap[$gd->id_hoa_don] = [
                     'giao_dich_id' => $gd->id,
                     'ma_tham_chieu' => $gd->ma_tham_chieu,
                     'checkout_url' => $dl['checkout_url'] ?? null,
                     'qr_code' => $dl['qr_code'] ?? null,
                     'so_tien' => $gd->so_tien,
+                    'expiredAt' => $expiredAt,
                 ];
             }
         }
     }
 
-    $data = $hoaDons->map(function ($hd) use ($gdMap) {
+    return $hoaDons->map(function ($hd) use ($gdMap) {
         $gd = $gdMap[$hd->id] ?? null;
+
+        $currentTime = time();
+        $isExpired = false;
+        if ($gd && isset($gd['expiredAt'])) {
+            $isExpired = $currentTime > $gd['expiredAt'];
+        }
+        
         return [
             'hoa_don_id' => (int) $hd->id,
             'ma_hoa_don' => '#' . $hd->id,
@@ -245,16 +260,220 @@ public function donChoThanhToan(Request $request): \Illuminate\Http\JsonResponse
             'qr_code' => $gd['qr_code'] ?? null,
             'giao_dich_id' => $gd['giao_dich_id'] ?? null,
             'ma_tham_chieu' => $gd['ma_tham_chieu'] ?? null,
+            'expiredAt' => $gd['expiredAt'] ?? null,
+            'is_expired' => $isExpired,
         ];
-    });
+    })->filter(function ($item) {
+        // Loại bỏ các hóa đơn có QR đã hết hạn
+        return !$item['is_expired'];
+    })->values();
+}
 
-    return response()->json([
-        'success' => true,
-        'data' => $data,
+public function donChoThanhToan(): View
+{
+    $hoaDons = $this->danhSachDonChoThanhToanPayOS();
+
+    return view('ban_hang.payos.don-cho-thanh-toan', [
+        'hoaDons' => $hoaDons,
+        'tongHoaDon' => $hoaDons->count(),
+        'tongTien' => $hoaDons->sum('khach_can_tra'),
+        'soHoaDonCoQR' => $hoaDons->where('has_payos', true)->count(),
+        'soHoaDonChuaQR' => $hoaDons->where('has_payos', false)->count(),
     ]);
 }
 
-public function hoaDon(Request $request)
+public function doiPhuongThucThanhToanDonCho(Request $request, int $id, PayOSService $payOSService)
+{
+    $request->validate([
+        'phuong_thuc_thanh_toan' => 'required|in:cash',
+        'tien_khach_dua' => 'required|numeric|min:0',
+    ]);
+
+    $hoaDon = DB::table('hoa_don')
+        ->where('id', $id)
+        ->where('trang_thai', 'Chờ thanh toán')
+        ->first();
+
+    if (!$hoaDon) {
+        return back()->with('error', 'Không tìm thấy hóa đơn đang chờ thanh toán.');
+    }
+
+    $phuongThucThanhToan = 'Tiền mặt';
+    $tienKhachDua = (float) $request->input('tien_khach_dua');
+    $khachCanTra = (float) $hoaDon->khach_can_tra;
+
+    if ($tienKhachDua < $khachCanTra) {
+        return back()
+            ->withInput()
+            ->with('error', 'Tiền khách đưa phải lớn hơn hoặc bằng số tiền cần thanh toán.');
+    }
+
+    $giaoDich = GiaoDich::query()
+        ->where('id_hoa_don', $hoaDon->id)
+        ->where('phuong_thuc', 'payos')
+        ->where('trang_thai', 'cho_xac_nhan')
+        ->orderByDesc('id')
+        ->first();
+
+    if ($giaoDich && !empty($giaoDich->ma_tham_chieu)) {
+        $canProceedWithoutCancel = false;
+
+        try {
+            $paymentInfo = $payOSService->getPaymentInfo((string) $giaoDich->ma_tham_chieu);
+            $paymentStatus = data_get($paymentInfo, 'status');
+            $paymentStatusValue = $paymentStatus instanceof \BackedEnum
+                ? $paymentStatus->value
+                : strtoupper((string) $paymentStatus);
+
+            if ($paymentStatusValue === 'PAID') {
+                return back()->with('error', 'QR này đã được thanh toán rồi, không thể đổi phương thức.');
+            }
+
+            if (in_array($paymentStatusValue, ['CANCELLED', 'FAILED', 'EXPIRED', 'UNDERPAID'], true)) {
+                $canProceedWithoutCancel = true;
+            }
+        } catch (\Throwable $e) {
+            $expiredAt = data_get($giaoDich->du_lieu_phan_hoi, 'expiredAt');
+            $canProceedWithoutCancel = $expiredAt && time() > (int) $expiredAt;
+        }
+
+        if (!$canProceedWithoutCancel) {
+            try {
+                $payOSService->cancelPaymentLink(
+                    (string) $giaoDich->ma_tham_chieu,
+                    'Đổi phương thức thanh toán từ QR đang chờ'
+                );
+            } catch (\Throwable $e) {
+                $expiredAt = data_get($giaoDich->du_lieu_phan_hoi, 'expiredAt');
+
+                if (!($expiredAt && time() > (int) $expiredAt)) {
+                    return back()->with('error', 'Không thể hủy QR PayOS: ' . $e->getMessage());
+                }
+            }
+        }
+    }
+
+    try {
+        $tienThua = $this->hoanTatHoaDonDonChoThanhToan((int) $hoaDon->id, $phuongThucThanhToan, $tienKhachDua, $giaoDich);
+    } catch (\Throwable $e) {
+        return back()->with('error', 'Không thể hoàn tất hóa đơn: ' . $e->getMessage());
+    }
+
+    return redirect()
+        ->route('nhan-vien.ban-hang.don-cho-thanh-toan')
+        ->with('success', 'Đã đổi hóa đơn #' . $hoaDon->id . ' sang tiền mặt. Tiền thừa: ' . number_format($tienThua, 0, ',', '.') . 'đ');
+}
+
+private function hoanTatHoaDonDonChoThanhToan(int $hoaDonId, string $phuongThucThanhToan, float $tienKhachDua, ?GiaoDich $giaoDich = null): float
+{
+    return DB::transaction(function () use ($hoaDonId, $phuongThucThanhToan, $tienKhachDua, $giaoDich) {
+        $hoaDon = DB::table('hoa_don')
+            ->where('id', $hoaDonId)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$hoaDon || $hoaDon->trang_thai !== 'Chờ thanh toán') {
+            return 0.0;
+        }
+
+        $khachCanTra = (float) $hoaDon->khach_can_tra;
+        if ($tienKhachDua < $khachCanTra) {
+            throw ValidationException::withMessages([
+                'tien_khach_dua' => 'Tiền khách đưa phải lớn hơn hoặc bằng số tiền cần thanh toán.',
+            ]);
+        }
+
+        $tienThua = max(0, round($tienKhachDua - $khachCanTra, 2));
+
+        $chiTiets = DB::table('chi_tiet_hoa_don')
+            ->where('id_hoa_don', $hoaDon->id)
+            ->get();
+
+        foreach ($chiTiets as $ct) {
+            $variantId = (int) $ct->id_bien_the_san_pham;
+            $soLuongBan = (int) $ct->so_luong;
+
+            $remaining = $soLuongBan;
+            $loList = ChiTietLoHang::where('variant_id', $variantId)
+                ->where('so_luong_ton', '>', 0)
+                ->orderBy('han_su_dung', 'asc')
+                ->orderBy('id', 'asc')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($loList as $lo) {
+                if ($remaining <= 0) {
+                    break;
+                }
+
+                $truTuLo = (int) min($remaining, $lo->so_luong_ton);
+                $lo->so_luong_ton -= $truTuLo;
+                $lo->save();
+                $remaining -= $truTuLo;
+            }
+        }
+
+        $diemSuDung = (int) DB::table('lich_su_tich_diem')
+            ->where('id_hoa_don', $hoaDon->id)
+            ->where('loai_bien_dong', 'tru')
+            ->sum('so_diem');
+
+        $diemThuDuoc = (int) floor(((float) $hoaDon->khach_can_tra) / 10000);
+
+        if ($hoaDon->id_khach_hang) {
+            DB::table('khach_hang')
+                ->where('id', $hoaDon->id_khach_hang)
+                ->increment('tong_chi_tieu', $hoaDon->khach_can_tra);
+
+            if ($diemThuDuoc > 0) {
+                DB::table('khach_hang')
+                    ->where('id', $hoaDon->id_khach_hang)
+                    ->increment('diem_tich_luy', $diemThuDuoc);
+
+                DB::table('lich_su_tich_diem')->insert([
+                    'id_khach_hang' => $hoaDon->id_khach_hang,
+                    'id_hoa_don' => $hoaDon->id,
+                    'loai_bien_dong' => 'cong',
+                    'so_diem' => $diemThuDuoc,
+                    'ly_do' => 'Tích điểm từ hóa đơn (đổi từ QR đang chờ)',
+                    'created_at' => now(),
+                ]);
+            }
+        }
+
+        if ($giaoDich && $giaoDich->trang_thai === 'cho_xac_nhan') {
+            DB::table('giao_dich')
+                ->where('id', $giaoDich->id)
+                ->update([
+                    'trang_thai' => 'that_bai',
+                    'ma_phan_hoi' => 'PM_CASH',
+                    'trang_thai_doi_tac' => 'CANCELLED',
+                    'du_lieu_phan_hoi' => json_encode(array_merge($giaoDich->du_lieu_phan_hoi ?? [], [
+                        'manual_change' => [
+                            'new_payment_method' => $phuongThucThanhToan,
+                            'changed_at' => now()->toDateTimeString(),
+                        ],
+                    ]), JSON_UNESCAPED_UNICODE),
+                    'updated_at' => now(),
+                ]);
+        }
+
+        DB::table('hoa_don')
+            ->where('id', $hoaDon->id)
+            ->update([
+                'phuong_thuc_thanh_toan' => $phuongThucThanhToan,
+                'tien_khach_dua' => $tienKhachDua,
+                'tien_thua' => $tienThua,
+                'trang_thai' => 'Hoàn thành',
+                'diem_su_dung' => $diemSuDung,
+                'diem_thu_duoc' => $diemThuDuoc,
+                'updated_at' => now(),
+            ]);
+        return $tienThua;
+    });
+}
+
+    public function hoaDon(Request $request)
     {
         $doiTraSummarySub = DB::table('doi_tra')
             ->selectRaw('id_hoa_don, COUNT(*) as so_lan_doi_tra')
@@ -334,7 +553,7 @@ public function hoaDon(Request $request)
 
         $danhMucs = \App\Models\DanhMucSanPham::query()->orderBy('ten_danh_muc')->get();
 
-        $sanPhams = \App\Models\Product::with(['danhMuc', 'variants'])
+        $sanPhams = \App\Models\SanPham::with(['danhMuc', 'variants'])
             ->withSum('variants', 'so_luong_ton')
             ->whereNull('deleted_at')
             ->whereHas('variants', fn($q) => $q->whereNull('deleted_at'))
@@ -355,6 +574,19 @@ public function hoaDon(Request $request)
             ->orderByDesc('id')
             ->paginate(10)
             ->withQueryString();
+
+        // Transform collection để thêm các thuộc tính hiển thị
+        $sanPhams->getCollection()->transform(function ($sp) {
+            $firstVariant = $sp->variants->first();
+
+            $sp->hinh_anh_hien_thi = $firstVariant?->hinh_anh ?? $sp->hinh_anh;
+            $sp->don_vi_tinh_hien_thi = $firstVariant?->ten_don_vi ?? 'Cái';
+            $sp->gia_ban_hien_thi = $firstVariant?->gia_ban ?? 0;
+            $sp->tong_ton_kho_hien_thi = $sp->variants_sum_so_luong_ton ?? 0;
+            $sp->trang_thai_kho_hien_thi = $sp->tong_ton_kho_hien_thi > 0 ? 'Còn hàng' : 'Hết hàng';
+
+            return $sp;
+        });
 
         return view('ban_hang.san-pham.index', [
             'sanPhams' => $sanPhams,
@@ -1395,7 +1627,6 @@ foreach ($khuyenMaiDaApDung as $kmDaDung) {
 
     abort_if(!$hoaDon, 404);
 
-
     // =====================================================
     // CHI TIẾT SẢN PHẨM + BIẾN THỂ
     // =====================================================
@@ -1659,13 +1890,12 @@ foreach ($chiTiet as $item) {
         $data = $doiTraService->getInvoiceReturnData((int) $id);
         $hoaDon = $data['hoaDon'];
         $chiTiet = $data['chiTiet'];
-        $danhSachNguoiBan = $doiTraService->getEligibleSalesUsers();
 
         if (in_array($hoaDon->trang_thai, ['Đã hủy', 'Đã trả toàn bộ'], true)) {
             return back()->with('error', 'Hóa đơn này không thể đổi/trả hàng.');
         }
 
-        return view('ban_hang.hoa-don.doi-tra', compact('hoaDon', 'chiTiet', 'danhSachNguoiBan'));
+        return view('ban_hang.hoa-don.doi-tra', compact('hoaDon', 'chiTiet'));
 
         $hoaDon = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')

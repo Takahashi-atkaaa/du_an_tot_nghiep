@@ -21,6 +21,7 @@ class PayOSController extends Controller
 
     public function createPayment(Request $request): JsonResponse
     {
+        abort_unless(userHasPermission('ban_hang'), 403, 'Bạn không có quyền tạo thanh toán.');
         $request->validate([
             'hoa_don_id' => 'required|integer|exists:hoa_don,id',
         ]);
@@ -95,6 +96,11 @@ class PayOSController extends Controller
             ], 500);
         }
 
+        // #region agent log
+        $responseData = ['orderCode' => $response->orderCode, 'paymentLinkId' => $response->paymentLinkId, 'expiredAt' => $response->expiredAt ?? null, 'has_expiredAt' => isset($response->expiredAt), 'full_response' => json_decode(json_encode($response), true)];
+        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-91ae37.log', json_encode(['sessionId' => '91ae37', 'location' => 'PayOSController.php:107', 'message' => 'PayOS API response when creating payment', 'data' => $responseData, 'timestamp' => round(microtime(true) * 1000), 'hypothesisId' => 'E']) . "\n", FILE_APPEND);
+        // #endregion
+        
         $giaoDich = GiaoDich::create([
             'id_hoa_don' => $hoaDon->id,
             'phuong_thuc' => 'payos',
@@ -113,6 +119,7 @@ class PayOSController extends Controller
                 'account_name' => $response->accountName,
                 'amount' => $response->amount,
                 'description' => $response->description,
+                'expiredAt' => $response->expiredAt ?? null,
             ],
         ]);
 
@@ -328,14 +335,14 @@ class PayOSController extends Controller
 
             if ($hoaDon->id_khach_hang) {
                 $diemThuDuoc = (int) $hoaDon->diem_thu_duoc;
+                DB::table('khach_hang')
+                    ->where('id', $hoaDon->id_khach_hang)
+                    ->increment('tong_chi_tieu', $hoaDon->khach_can_tra);
+
                 if ($diemThuDuoc > 0) {
                     DB::table('khach_hang')
                         ->where('id', $hoaDon->id_khach_hang)
                         ->increment('diem_tich_luy', $diemThuDuoc);
-
-                    DB::table('khach_hang')
-                        ->where('id', $hoaDon->id_khach_hang)
-                        ->increment('tong_chi_tieu', $hoaDon->khach_can_tra);
 
                     DB::table('lich_su_tich_diem')->insert([
                         'id_khach_hang' => $hoaDon->id_khach_hang,

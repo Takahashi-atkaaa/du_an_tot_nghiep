@@ -3,7 +3,6 @@
 namespace App\Http\Requests\BanHang;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class XuLyDoiTraRequest extends FormRequest
 {
@@ -16,14 +15,6 @@ class XuLyDoiTraRequest extends FormRequest
     {
         return [
             'request_token' => ['required', 'string', 'max:120'],
-            'id_nguoi_dung' => [
-                'required',
-                'integer',
-                Rule::exists('nguoi_dung', 'id')->where(function ($query) {
-                    $query->where('trang_thai', 1)
-                        ->whereNull('deleted_at');
-                }),
-            ],
             'ly_do' => ['nullable', 'string', 'max:1000'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.id_chi_tiet_hoa_don' => ['required', 'integer'],
@@ -37,8 +28,6 @@ class XuLyDoiTraRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'id_nguoi_dung.required' => 'Vui lòng chọn người thực hiện đổi/trả.',
-            'id_nguoi_dung.exists' => 'Người thực hiện đổi/trả được chọn không tồn tại hoặc đã ngừng hoạt động.',
         ];
     }
 }

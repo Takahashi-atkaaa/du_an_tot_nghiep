@@ -35,7 +35,12 @@ class KTVaiTro
             abort(403, 'Tài khoản chưa được gán vai trò hợp lệ.');
         }
 
-        $hasPermission = $vaiTroQuanHe->hasPermission($permission);
+        // A route may accept one of several permissions (for example a module
+        // can be opened with either its legacy module permission or view).
+        $permissions = array_filter(array_map('trim', explode('|', $permission)));
+        $hasPermission = collect($permissions)->contains(
+            fn (string $requiredPermission): bool => $vaiTroQuanHe->hasPermission($requiredPermission)
+        );
 
         if (!$hasPermission) {
             abort(403, 'Bạn không có quyền truy cập');

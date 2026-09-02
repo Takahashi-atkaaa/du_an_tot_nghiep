@@ -138,12 +138,6 @@ class LichSuCaLam extends Controller
 
             $tongSoHoaDonNgay = HoaDon::whereDate('created_at', $ngay)->count('id');
 
-            // #region agent log
-            $logPath = '/Applications/XAMPP/xamppfiles/htdocs/SmartMart/.cursor/debug-cbbbdd.log';
-            $logEntry = json_encode(['sessionId'=>'cbbbdd','location'=>'LichSuCaLam.php:141','message'=>'tongSoHoaDonNgay calculated','data'=>['ngay'=>$ngay,'tongSoHoaDonNgay'=>$tongSoHoaDonNgay],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'A']) . "\n";
-            @file_put_contents($logPath, $logEntry, FILE_APPEND | LOCK_EX);
-            // #endregion
-
             $cacHoaDonDoiTraTrongCa = HoaDon::whereDate('created_at', $ngay)
                 ->where('id_ca_lam_viec', $id_ca)
                 ->whereIn('trang_thai', ['Đã đổi/trả hàng', 'Đã trả toàn bộ'])

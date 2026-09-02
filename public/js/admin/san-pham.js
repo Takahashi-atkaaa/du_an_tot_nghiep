@@ -69,35 +69,8 @@ function toggleSection(headerEl) {
     };
 
     window.toggleVariants = function(productId) {
-        var btn = document.getElementById('expandBtn' + productId);
-        var detailRow = document.getElementById('productDetailRow' + productId);
-        var isExpanded = false;
-
-        if (btn && btn.classList.contains('expanded')) {
-            isExpanded = true;
-        } else if (detailRow) {
-            var detailDisplay = window.getComputedStyle(detailRow).display;
-            isExpanded = detailDisplay !== 'none';
-        }
-
-        if (isExpanded) {
-            if (detailRow) detailRow.style.display = 'none';
-            if (btn) {
-                btn.classList.remove('expanded');
-                var icon = btn.querySelector('i');
-                if (icon) icon.style.transform = '';
-            }
-        } else {
-            if (detailRow) {
-                detailRow.style.display = '';
-                window.loadProductStats && window.loadProductStats(productId);
-            }
-            if (btn) {
-                btn.classList.add('expanded');
-                var icon = btn.querySelector('i');
-                if (icon) icon.style.transform = 'rotate(90deg)';
-            }
-        }
+        if (!productId) return;
+        window.location.href = '/admin/san-pham/' + encodeURIComponent(productId);
     };
 })();
 
@@ -960,10 +933,28 @@ window.deleteProduct = async function(productId, productName) {
                 var headers = jsonData[0];
                 var rows = jsonData.slice(1, 6);
 
-                thead.innerHTML = '<tr>' + headers.map(function(h) { return '<th>' + (h || '') + '</th>'; }).join('') + '</tr>';
-                tbody.innerHTML = rows.map(function(row) {
-                    return '<tr>' + headers.map(function(_, i) { return '<td>' + (row[i] !== undefined ? row[i] : '') + '</td>'; }).join('') + '</tr>';
-                }).join('');
+                // Dùng textContent thay vì innerHTML vì nội dung ô Excel là dữ liệu
+                // do người dùng cung cấp và không được phép trở thành HTML/script.
+                thead.replaceChildren();
+                tbody.replaceChildren();
+
+                var headerRow = document.createElement('tr');
+                headers.forEach(function(h) {
+                    var cell = document.createElement('th');
+                    cell.textContent = h || '';
+                    headerRow.appendChild(cell);
+                });
+                thead.appendChild(headerRow);
+
+                rows.forEach(function(row) {
+                    var bodyRow = document.createElement('tr');
+                    headers.forEach(function(_, i) {
+                        var cell = document.createElement('td');
+                        cell.textContent = row[i] !== undefined ? row[i] : '';
+                        bodyRow.appendChild(cell);
+                    });
+                    tbody.appendChild(bodyRow);
+                });
 
                 if (previewSection) previewSection.classList.remove('d-none');
             } catch(err) {
@@ -1413,4 +1404,3 @@ window.deleteVariant = async function(variantId, productId) {
         }
     });
 })();
-

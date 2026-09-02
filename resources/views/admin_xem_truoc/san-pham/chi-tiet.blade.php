@@ -15,9 +15,11 @@
         </nav>
     </div>
     <div class="d-flex gap-2">
-        <a href="{{ route('san-pham.edit', $product->id) }}" class="btn btn-primary">
-            <i class="fas fa-edit me-2"></i>Chỉnh sửa
-        </a>
+        @if(userHasPermission('sua_san_pham'))
+            <a href="{{ route('san-pham.edit', $product->id) }}" class="btn btn-primary">
+                <i class="fas fa-edit me-2"></i>Chỉnh sửa
+            </a>
+        @endif
         <a href="{{ url('admin/san-pham') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left me-2"></i>Quay lại
         </a>
@@ -233,10 +235,12 @@
                 <div class="tab-pane fade show active" id="tab-bien-the"
                      role="tabpanel" aria-labelledby="tab-bien-the-tab">
                     <div class="d-flex justify-content-end align-items-center px-3 pt-3 pb-2">
-                        <a href="{{ route('san-pham.edit', $product->id) }}"
-                           class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-plus me-1"></i>Thêm biến thể
-                        </a>
+                        @if(userHasPermission('sua_san_pham'))
+                            <a href="{{ route('san-pham.edit', $product->id) }}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-plus me-1"></i>Thêm biến thể
+                            </a>
+                        @endif
                     </div>
 
                     @if($product->variants->count() > 0)

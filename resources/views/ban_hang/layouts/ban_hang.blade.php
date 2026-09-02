@@ -402,15 +402,22 @@
                 </a>
             </div>
             <div class="nav-item">
-                <a href="{{ url('/admin/hoa-don') }}"
-                    class="nav-link {{ str_starts_with($currentPath, 'admin/hoa-don') ? 'active' : '' }}">
+                <a href="{{ route('nhan-vien.hoa-don') }}"
+                    class="nav-link {{ str_starts_with($currentPath, 'hoa-don') ? 'active' : '' }}">
                     <i class="fa-solid fa-file-invoice"></i>
                     <span>Hóa đơn</span>
                 </a>
             </div>
             <div class="nav-item">
-                <a href="{{ url('/admin/san-pham') }}"
-                    class="nav-link {{ str_starts_with($currentPath, 'admin/san-pham') ? 'active' : '' }}">
+                <a href="{{ route('nhan-vien.ban-hang.don-cho-thanh-toan') }}"
+                    class="nav-link {{ str_starts_with($currentPath, 'ban-hang/don-cho-thanh-toan') ? 'active' : '' }}">
+                    <i class="fa-solid fa-qrcode"></i>
+                    <span>QR đang chờ</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="{{ route('nhan-vien.san-pham') }}"
+                    class="nav-link {{ str_starts_with($currentPath, 'san-pham') ? 'active' : '' }}">
                     <i class="fa-solid fa-box"></i>
                     <span>Sản phẩm</span>
                 </a>

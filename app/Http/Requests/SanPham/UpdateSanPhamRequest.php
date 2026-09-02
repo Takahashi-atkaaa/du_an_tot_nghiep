@@ -161,12 +161,23 @@ class UpdateSanPhamRequest extends FormRequest
 
                 // Check units barcodes uniqueness in DB (ignore current unit id)
                 $units = $variant['units'] ?? [];
+
+                // Collect all unit IDs from this variant's payload (to exclude them all from DB check)
+                $unitIdsInThisVariant = array_filter(array_map(fn($u) => $u['id'] ?? null, $units));
+
                 foreach ($units as $uIndex => $unit) {
                     $uBarcode = trim($unit['ma_vach'] ?? '');
                     $unitId = $unit['id'] ?? null;
+                    
                     if ($uBarcode !== '') {
+                        // FIX: Exclude ALL unit IDs from this variant's payload, not just current one
+                        // This allows multiple units of the SAME variant to have the same barcode
+                        // (e.g., editing existing units without changing barcodes)
                         $uq = DonViQuyDoi::where('ma_vach', $uBarcode);
-                        if ($unitId) $uq->where('id', '!=', $unitId);
+                        if (!empty($unitIdsInThisVariant)) {
+                            $uq->whereNotIn('id', $unitIdsInThisVariant);
+                        }
+                        
                         if ($uq->exists()) {
                             $validator->errors()->add("bien_the.{$vIndex}.units.{$uIndex}.ma_vach", 'Mã vạch đơn vị quy đổi đã tồn tại.');
                         }

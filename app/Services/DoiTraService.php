@@ -235,8 +235,10 @@ class DoiTraService
             ]);
         }
 
-        return DB::transaction(function () use ($hoaDon, $payload, $items) {
-            $nguoiBan = $this->resolveSelectedSeller((int) ($payload['id_nguoi_dung'] ?? 0));
+        return DB::transaction(function () use ($hoaDon, $payload, $items, $nguoiXuLy) {
+            $nguoiBan = $nguoiXuLy
+                ? $this->ensureEligibleSeller($nguoiXuLy)
+                : $this->resolveSelectedSeller((int) ($payload['id_nguoi_dung'] ?? 0));
 
             $hoaDon = HoaDon::query()
                 ->where('id', $hoaDon->id)
@@ -431,6 +433,21 @@ class DoiTraService
         }
 
         return $nguoiBan;
+    }
+
+    private function ensureEligibleSeller(NguoiDung $nguoiDung): NguoiDung
+    {
+        if (
+            $nguoiDung->trang_thai != 1 ||
+            !is_null($nguoiDung->deleted_at) ||
+            !$this->isEligibleSellerRole(optional($nguoiDung->vaiTro)->ten_vai_tro)
+        ) {
+            throw ValidationException::withMessages([
+                'id_nguoi_dung' => 'Người thực hiện đổi/trả phải là người dùng đang hoạt động với vai trò Admin, Nhân viên hoặc Trưởng ca.',
+            ]);
+        }
+
+        return $nguoiDung;
     }
 
     private function calculateRefundUnitPrice(float $unitPrice, float $grossTotal, float $paidTotal): float

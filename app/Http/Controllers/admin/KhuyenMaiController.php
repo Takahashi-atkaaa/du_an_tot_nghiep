@@ -585,6 +585,7 @@ $hoaDonGanDay = $hoaDonQuery
     // Xóa mềm khuyến mãi
     public function destroy($id)
     {
+        abort_unless(userHasPermission('xoa_khuyen_mai'), 403, 'Bạn không có quyền xóa khuyến mãi.');
         $promo = KhuyenMai::findOrFail($id);
 
         $promo->trang_thai = false;
@@ -1077,6 +1078,7 @@ $hoaDonGanDay = $hoaDonQuery
     // Bật / Tắt khuyến mãi
     public function toggle($id)
     {
+        abort_unless(userHasPermission('sua_khuyen_mai'), 403, 'Bạn không có quyền thay đổi trạng thái khuyến mãi.');
         $promo = KhuyenMai::findOrFail($id);
 
         $now = Carbon::now();
@@ -1101,6 +1103,7 @@ $hoaDonGanDay = $hoaDonQuery
     // Bật / Tắt bằng AJAX
     public function ajaxToggle(Request $request, $id)
     {
+        abort_unless(userHasPermission('sua_khuyen_mai'), 403, 'Bạn không có quyền thay đổi trạng thái khuyến mãi.');
         $promo = KhuyenMai::findOrFail($id);
 
         $now = Carbon::now();
@@ -1137,6 +1140,7 @@ $hoaDonGanDay = $hoaDonQuery
     // Khôi phục khuyến mãi
     public function restore($id)
     {
+        abort_unless(userHasPermission('xoa_khuyen_mai'), 403, 'Bạn không có quyền khôi phục khuyến mãi.');
         $promo = KhuyenMai::onlyTrashed()->findOrFail($id);
 
         $promo->restore();
@@ -1148,6 +1152,7 @@ $hoaDonGanDay = $hoaDonQuery
     // Xóa vĩnh viễn
     public function forceDelete($id)
     {
+        abort_unless(userHasPermission('xoa_khuyen_mai'), 403, 'Bạn không có quyền xóa vĩnh viễn khuyến mãi.');
         $promo = KhuyenMai::onlyTrashed()->findOrFail($id);
 
         $promo->forceDelete();

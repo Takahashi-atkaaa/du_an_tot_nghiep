@@ -2,7 +2,7 @@
 
 @section('title', 'Tra cứu sản phẩm')
 
-@push('head')
+@section('styles')
 <style>
     .search-card,
     .product-card {
@@ -17,18 +17,23 @@
     }
 
     .product-image {
-        width: 56px;
-        height: 56px;
+        width: 48px !important;
+        height: 48px !important;
+        max-width: 48px !important;
+        max-height: 48px !important;
         object-fit: cover;
-        border-radius: 12px;
+        border-radius: 6px;
         border: 1px solid #e9ecef;
         background: #fff;
+        display: block;
     }
 
     .product-image-placeholder {
-        width: 56px;
-        height: 56px;
-        border-radius: 12px;
+        width: 48px !important;
+        height: 48px !important;
+        max-width: 48px !important;
+        max-height: 48px !important;
+        border-radius: 6px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -68,7 +73,7 @@
         }
     }
 </style>
-@endpush
+@endsection
 
 @section('content')
 <div class="d-flex justify-content-between flex-wrap align-items-center gap-2 pt-3 pb-2 mb-3 border-bottom">

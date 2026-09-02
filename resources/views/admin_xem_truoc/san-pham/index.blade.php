@@ -21,6 +21,33 @@
 @if(session('error'))
     <div class="alert alert-danger">{{ session('error') }}</div>
 @endif
+@if(session('import_summary'))
+    @php
+        $importSummary = session('import_summary');
+    @endphp
+    <div class="alert {{ !empty($importSummary['errors']) ? 'alert-warning' : 'alert-success' }}">
+        <div class="fw-semibold mb-1"><i class="fas fa-clipboard-check me-1"></i>Tóm tắt import</div>
+        <div class="small">
+            Sản phẩm mới: <strong>{{ $importSummary['created'] ?? 0 }}</strong> |
+            Sản phẩm cập nhật: <strong>{{ $importSummary['updated'] ?? 0 }}</strong> |
+            Biến thể mới: <strong>{{ $importSummary['created_variants'] ?? 0 }}</strong> |
+            Biến thể cập nhật: <strong>{{ $importSummary['updated_variants'] ?? 0 }}</strong> |
+            Đơn vị quy đổi mới: <strong>{{ $importSummary['created_units'] ?? 0 }}</strong> |
+            Đơn vị quy đổi cập nhật: <strong>{{ $importSummary['updated_units'] ?? 0 }}</strong> |
+            Bỏ qua: <strong>{{ $importSummary['skipped'] ?? 0 }}</strong>
+        </div>
+        @if(!empty($importSummary['errors']))
+            <details class="mt-2">
+                <summary class="small">Xem {{ count($importSummary['errors']) }} lỗi theo dòng</summary>
+                <ul class="small mb-0 mt-1 ps-3">
+                    @foreach($importSummary['errors'] as $importError)
+                        <li>{{ $importError }}</li>
+                    @endforeach
+                </ul>
+            </details>
+        @endif
+    </div>
+@endif
 
 <div class="card table-admin mb-4 search-filter-card" x-data="{ showFilter: @js(($activeFiltersCount ?? 0) > 0) }">
     <div class="card-body p-3">
@@ -72,23 +99,29 @@
 
                 {{-- 3) NHÓM ACTION --}}
                 <div class="d-flex gap-2 action-group">
-                    <a href="{{ route('san-pham.export') }}" 
-                       class="btn btn-outline-success action-btn"
-                       title="Xuất danh sách sản phẩm ra Excel">
-                        <i class="fas fa-file-excel me-2"></i>Xuất Excel
-                    </a>
-                    <button type="button"
-                            class="btn btn-success action-btn"
-                            data-bs-toggle="modal"
-                            data-bs-target="#importProductModal">
-                        <i class="fas fa-file-import me-2"></i>Import
-                    </button>
-                    <a href="{{ route('san-pham.create') }}" class="btn btn-primary action-btn">
-                        <i class="fas fa-plus me-2"></i>Thêm sản phẩm
-                    </a>
-                    <a href="{{ url('admin/san-pham/trash') }}" class="btn btn-outline-danger action-btn">
-                        <i class="fas fa-trash me-2"></i>Thùng rác
-                    </a>
+                    @if(userHasPermission('quan_ly_san_pham') || userHasPermission('xem_san_pham'))
+                        <a href="{{ route('san-pham.export') }}" 
+                           class="btn btn-outline-success action-btn"
+                           title="Xuất danh sách sản phẩm ra Excel">
+                            <i class="fas fa-file-excel me-2"></i>Xuất Excel
+                        </a>
+                    @endif
+                    @if(userHasPermission('them_san_pham'))
+                        <button type="button"
+                                class="btn btn-success action-btn"
+                                data-bs-toggle="modal"
+                                data-bs-target="#importProductModal">
+                            <i class="fas fa-file-import me-2"></i>Import
+                        </button>
+                        <a href="{{ route('san-pham.create') }}" class="btn btn-primary action-btn">
+                            <i class="fas fa-plus me-2"></i>Thêm sản phẩm
+                        </a>
+                    @endif
+                    @if(userHasPermission('xoa_san_pham'))
+                        <a href="{{ url('admin/san-pham/trash') }}" class="btn btn-outline-danger action-btn">
+                            <i class="fas fa-trash me-2"></i>Thùng rác
+                        </a>
+                    @endif
                 </div>
             </div>
 
@@ -236,7 +269,9 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                     <span class="text-muted me-2" id="selectedCount">0 đã chọn</span>
                     <button type="button" class="btn btn-sm btn-success" onclick="submitBulkAction('activate')"><i class="fas fa-check me-1"></i>Bật</button>
                     <button type="button" class="btn btn-sm btn-warning" onclick="submitBulkAction('deactivate')"><i class="fas fa-ban me-1"></i>Tắt</button>
-                    <button type="button" class="btn btn-sm btn-danger" onclick="submitBulkAction('delete')"><i class="fas fa-trash me-1"></i>Xóa</button>
+                    @if(userHasPermission('xoa_san_pham'))
+                        <button type="button" class="btn btn-sm btn-danger" onclick="submitBulkAction('delete')"><i class="fas fa-trash me-1"></i>Xóa</button>
+                    @endif
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
@@ -285,8 +320,6 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                             $hasMoreThanOneRow = $rows->count() > 1;
                             $firstRow = $rows->first();
                         @endphp
-
-                        @continue(!$rows->isNotEmpty())
 
                         @php
                             // ============================================================
@@ -353,6 +386,7 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                         {{-- DÒNG CHÍNH (dòng đầu tiên) --}}
                         <tr class="product-parent-row cursor-pointer hover:bg-gray-50 transition-colors {{ !$firstRow->trang_thai ? 'table-secondary opacity-50' : '' }}"
                             data-id="{{ $sp->id }}"
+                            data-detail-url="{{ url('admin/san-pham/' . $sp->id) }}"
                             data-variant-id="{{ $firstVariant?->id ?? '' }}"
                             data-unit-id=""
                             data-product-id="{{ $sp->id }}"
@@ -361,14 +395,13 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                             data-is-master="{{ $variantAttrRows->count() > 0 ? '1' : '0' }}"
                             data-gia-ban-goc="{{ $baseGiaBanGoc }}"
                             data-ton-kho-goc="{{ $baseTonKhoGoc }}"
-                            onclick="window.toggleVariants && window.toggleVariants({{ $sp->id }})">
+                            title="Click để xem chi tiết sản phẩm"
+                            onclick="window.location.href=this.dataset.detailUrl">
 
                             {{-- Cột đầu: chỉ giữ ô Checkbox.
-                                Icon mũi tên xổ xuống (chevron) đã được loại bỏ để
-                                giao diện gọn gàng hơn. Mở/đóng Dropdown xem nhanh
-                                bằng cách click vào bất kỳ vùng nào khác trên dòng.
+                                Click vào checkbox không chuyển sang trang chi tiết.
                                 Checkbox dùng event.stopPropagation() để không kích
-                                hoạt click mở dropdown khi người dùng tick chọn. --}}
+                                hoạt click dòng khi người dùng tick chọn. --}}
                             <td onclick="event.stopPropagation();">
                                 <input type="checkbox" class="form-check-input product-checkbox"
                                        value="{{ $sp->id }}"
@@ -485,56 +518,6 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
                                 @endif
                             </td>
                         </tr>
-                        <tr id="productDetailRow{{ $sp->id }}" class="product-detail-row" style="display:none; background:#f8f9fa;">
-                            <td colspan="9" class="p-0">
-                                <div id="productDetailPanel{{ $sp->id }}" class="product-detail-panel p-3">
-                                    <div class="d-flex justify-content-between align-items-start mb-3">
-                                        <div class="flex-grow-1 me-3">
-                                            <h6 class="mb-1 fw-semibold" style="font-size:0.95rem;">
-                                                <i class="fas fa-info-circle text-primary me-2"></i>Chi tiết sản phẩm
-                                            </h6>
-                                            <div class="text-muted small">
-                                                {{ $sp->ten_san_pham }} · {{ $sp->danhMuc?->ten_danh_muc ?? 'Không xác định' }}
-                                            </div>
-                                        </div>
-                                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                                            {{-- ===========================================================
-                                                NÚT CHÍNH (PRIMARY CTA) — "Xem chi tiết đầy đủ"
-                                                Mô hình Progressive Disclosure: đưa người dùng từ
-                                                Quick View trong bảng xổ xuống sang trang chi tiết.
-                                                Bằng chứng thị giác: gradient xanh dương + icon
-                                                mũi tên trượt khi hover.
-                                                ============================================================ --}}
-                                            <a href="{{ url('admin/san-pham/' . $sp->id) }}"
-                                               class="btn-view-detail-full"
-                                               title="Xem chi tiết đầy đủ"
-                                               onclick="event.stopPropagation();">
-                                                <span class="btn-view-detail-label">Xem chi tiết đầy đủ</span>
-                                                <i class="fas fa-arrow-right btn-view-detail-arrow"></i>
-                                            </a>
-                                            {{-- Nhóm nút phụ: Sửa / Xóa — thu nhỏ về icon-only --}}
-                                            <div class="panel-action-group">
-                                                <a href="{{ route('san-pham.edit', $sp->id) }}"
-                                                   class="btn btn-outline-primary"
-                                                   title="Sửa sản phẩm"
-                                                   onclick="event.stopPropagation();">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                <button type="button"
-                                                        class="btn btn-outline-danger"
-                                                        title="Xóa sản phẩm"
-                                                        onclick="event.stopPropagation(); window.deleteProductByUrl('{{ route('san-pham.destroy', $sp->id) }}', {{ $sp->id }}, '{{ addslashes($sp->ten_san_pham) }}');">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-
-                                </div>
-                            </td>
-                        </tr>
-
                     @endforeach
                 </tbody>
             </table>
@@ -672,28 +655,16 @@ Tuyệt đối KHÔNG nằm trong bảng để không phá vỡ layout
 })();
 </script>
 
-@include('admin_xem_truoc.san-pham._import-modal')
+@if(userHasPermission('them_san_pham'))
+    @include('admin_xem_truoc.san-pham._import-modal')
+@endif
 @endsection
 
 @section('page_scripts')
 {{-- Alpine.js dùng cho collapse panel lọc nâng cao + toggle trạng thái nút --}}
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
-{{-- san-pham.js cung cấp: toggleVariants, switchProductTab, deleteProductByUrl, ... cho Expandable Row / Quick View --}}
+{{-- san-pham.js cung cấp bulk action, xoá sản phẩm, xử lý ảnh và các tiện ích của trang sản phẩm --}}
 <script src="{{ asset('js/admin/san-pham.js') }}?v={{ time() }}"></script>
-<script>
-// #region agent log
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function() {
-        const images = document.querySelectorAll('.product-thumbnail-img');
-        images.forEach(function(img, idx) {
-            const computedStyle = window.getComputedStyle(img);
-            const rect = img.getBoundingClientRect();
-            fetch('http://127.0.0.1:7249/ingest/61cdda37-75e2-47ee-9a7a-608a4741bbba',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'096b03'},body:JSON.stringify({sessionId:'096b03',location:'index.blade.php:IMG_STYLE',message:'Image computed style',data:{index:idx,width:computedStyle.width,height:computedStyle.height,maxWidth:computedStyle.maxWidth,maxHeight:computedStyle.maxHeight,objectFit:computedStyle.objectFit,display:computedStyle.display,rectWidth:rect.width,rectHeight:rect.height,inlineStyle:img.getAttribute('style'),classList:Array.from(img.classList)},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-        });
-    }, 1000);
-});
-// #endregion
-</script>
 @endsection
 
 @section('styles')
@@ -1173,104 +1144,5 @@ document.addEventListener('DOMContentLoaded', function() {
         background: #f1f5f9;
     }
 
-    /* =========================================================
-       PROGRESSIVE DISCLOSURE — NÚT "XEM CHI TIẾT ĐẦY ĐỦ"
-       Style nổi bật so với các nút phụ Sửa/Xóa:
-         - gradient xanh dương
-         - icon mũi tên có chuyển động nhẹ khi hover
-         - viền đổ bóng
-       ========================================================= */
-    .btn-view-detail-full {
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-        border: 1px solid #1d4ed8;
-        color: #ffffff;
-        font-weight: 600;
-        letter-spacing: 0.01em;
-        padding: 0.45rem 0.95rem;
-        border-radius: 8px;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.45rem;
-        transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
-        text-decoration: none;
-    }
-    .btn-view-detail-full:hover {
-        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-        color: #ffffff;
-        transform: translateY(-1px);
-        box-shadow: 0 6px 14px rgba(37, 99, 235, 0.35);
-    }
-    .btn-view-detail-full:active {
-        transform: translateY(0);
-    }
-    .btn-view-detail-full:focus {
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
-    }
-    /* Mũi tên trượt nhẹ sang phải khi hover → nhấn mạnh "chuyển trang" */
-    .btn-view-detail-full:hover .btn-view-detail-arrow {
-        transform: translateX(3px);
-    }
-    .btn-view-detail-arrow {
-        transition: transform 0.18s ease;
-        font-size: 0.85rem;
-    }
-
-    /* "Sửa/Xóa" thu nhỏ về dạng icon-only nút phụ */
-    .panel-action-group {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding-left: 6px;
-        border-left: 1px solid #e5e7eb;
-        margin-left: 4px;
-    }
-    .panel-action-group .btn {
-        width: 32px;
-        height: 32px;
-        padding: 0;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    /* Hint nhỏ dưới tiêu đề (Progressive Disclosure cue) */
-    .quick-view-hint {
-        font-size: 0.7rem;
-        color: #6b7280;
-        line-height: 1.3;
-    }
-
-    /* "Xem tất cả" link trong khối "Đơn hàng gần nhất" */
-    .view-all-link {
-        color: #2563eb;
-        font-weight: 500;
-        transition: color 0.15s ease, transform 0.15s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-    }
-    .view-all-link:hover {
-        color: #1d4ed8;
-        transform: translateX(2px);
-    }
-    .view-all-link i {
-        transition: transform 0.15s ease;
-    }
-    .view-all-link:hover i {
-        transform: translateX(2px);
-    }
-
-    /* Responsive: stack panels trên mobile */
-    @media (max-width: 767.98px) {
-        .stats-cards-row > [class*="col-"] { margin-bottom: 0.75rem; }
-        .stats-bottom-row > [class*="col-"] { margin-bottom: 0.75rem; }
-    }
-    @media (max-width: 575.98px) {
-        /* Trên mobile: ẩn text "Xem chi tiết đầy đủ", chỉ giữ icon */
-        .btn-view-detail-full .btn-view-detail-label { display: none !important; }
-        .panel-action-group { padding-left: 4px; }
-    }
 </style>
 @endsection

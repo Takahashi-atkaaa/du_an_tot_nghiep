@@ -203,19 +203,23 @@
                                 @endif
                             </td>
                             <td>
-                                <a href="{{ route('admin.hoa-don.show', $hoaDon->id) }}"
-                                   class="btn btn-sm btn-outline-primary btn-action"
-                                   title="Xem hóa đơn">
-                                    <i class="fas fa-eye"></i>
-                                </a>
+                                @if(userHasPermission('quan_ly_hoa_don') || userHasPermission('xem_hoa_don'))
+                                    <a href="{{ route('admin.hoa-don.show', $hoaDon->id) }}"
+                                       class="btn btn-sm btn-outline-primary btn-action"
+                                       title="Xem hóa đơn">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                @endif
 
-                                <a href="{{ route('admin.hoa-don.show', $hoaDon->id) }}"
-                                   class="btn btn-sm btn-outline-secondary btn-action"
-                                   title="In">
-                                    <i class="fas fa-print"></i>
-                                </a>
+                                @if($hoaDon->trang_thai !== 'Đã hủy' && userHasPermission('in_hoa_don'))
+                                    <a href="{{ route('admin.hoa-don.show', $hoaDon->id) }}"
+                                       class="btn btn-sm btn-outline-secondary btn-action"
+                                       title="In">
+                                        <i class="fas fa-print"></i>
+                                    </a>
+                                @endif
 
-                                @if(($hoaDon->so_lan_doi_tra ?? 0) > 0)
+                                @if(($hoaDon->so_lan_doi_tra ?? 0) > 0 && userHasPermission('quan_ly_hoa_don') || ($hoaDon->so_lan_doi_tra ?? 0) > 0 && userHasPermission('doi_tra_hoa_don'))
                                     <a href="{{ route('admin.hoa-don.chi-tiet-doi-tra', $hoaDon->id) }}"
                                        class="btn btn-sm btn-outline-warning btn-action"
                                        title="Chi tiết đổi/trả">
@@ -223,12 +227,12 @@
                                     </a>
                                 @endif
 
-                                @if($hoaDon->trang_thai !== 'Đã hủy')
+                                @if($hoaDon->trang_thai !== 'Đã hủy' && userHasPermission('huy_hoa_don'))
                                     <form action="{{ route('admin.hoa-don.huy', $hoaDon->id) }}"
                                           method="POST"
                                           class="d-inline"
                                           onsubmit="return confirm('Bạn có chắc muốn hủy hóa đơn này không? Tồn kho sẽ được hoàn lại.')"
-                                          style="display: none !important;">
+                                          >
                                         @csrf
                                         <button class="btn btn-sm btn-outline-danger btn-action" title="Hủy">
                                             <i class="fas fa-times"></i>

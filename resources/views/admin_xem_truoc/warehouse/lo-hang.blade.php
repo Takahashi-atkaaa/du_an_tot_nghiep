@@ -18,9 +18,11 @@
         <a href="{{ url('admin/kho-hang') }}" class="btn btn-outline-secondary btn-sm">
             <i class="fas fa-th-large me-1"></i>Hub kho hàng
         </a>
-        <button class="btn btn-success btn-sm" id="btn-tao-lo-hang">
-            <i class="fas fa-plus me-1"></i>Tạo lô hàng
-        </button>
+        @if(userHasPermission('nhap_hang'))
+            <button class="btn btn-success btn-sm" id="btn-tao-lo-hang">
+                <i class="fas fa-plus me-1"></i>Tạo lô hàng
+            </button>
+        @endif
     </div>
 </div>
 
@@ -242,6 +244,46 @@
 
 @section('scripts')
 <script>
+
+function pad2(n) {
+    return String(n).padStart(2, '0');
+}
+
+function parseDateValue(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const raw = String(value).trim();
+    if (!raw) return null;
+
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) {
+        const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+        return Number.isNaN(d.getTime()) ? null : d;
+    }
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatDateDisplay(value, fallback = '--') {
+    const d = parseDateValue(value);
+    if (!d) return fallback;
+    return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+function formatDateInput(value) {
+    const d = parseDateValue(value);
+    if (!d) return '';
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function daysUntil(value) {
+    const d = parseDateValue(value);
+    if (!d) return null;
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    d.setHours(0,0,0,0);
+    return Math.ceil((d - today) / 86400000);
+}
+
 let sanPhamList = [];
 let loIdx = 0;
 let currentPage = 1;
@@ -374,10 +416,10 @@ function taiLoHang(page = 1) {
             const tongNhap = item.chi_tiet_lo_hang_sum_so_luong_nhap || 0;
             const tongTon = item.chi_tiet_lo_hang_sum_so_luong_ton || 0;
             const ncc = item.nha_cung_cap?.ten_nha_cung_cap || '<span class="text-muted">--</span>';
-            const ngay = item.ngay_nhap || '';
+            const ngay = formatDateDisplay(item.ngay_nhap);
             const maLo = item.ma_lo || 'L-' + item.id;
 
-            const hsds = item.chi_tiet_lo_hang?.map(c => c.han_su_dung?.slice(0, 10)) || [];
+            const hsds = item.chi_tiet_lo_hang?.map(c => formatDateInput(c.han_su_dung)).filter(Boolean) || [];
             const hsdMin = [...hsds].sort()[0];
             const today = new Date(); today.setHours(0,0,0,0);
             const diff = hsdMin ? Math.ceil((new Date(hsdMin) - today) / 86400000) : null;
@@ -403,8 +445,7 @@ function taiLoHang(page = 1) {
                 <td class="text-center">${loBadge}</td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-primary btn-xem-lo" data-id="${item.id}"><i class="fas fa-eye"></i></button>
-                    <button class="btn btn-sm btn-outline-warning btn-sua-lo" data-id="${item.id}"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm btn-outline-danger btn-xoa-lo" data-id="${item.id}"><i class="fas fa-trash"></i></button>
+                    ${@json(userHasPermission('nhap_hang')) ? `<button class="btn btn-sm btn-outline-warning btn-sua-lo" data-id="${item.id}"><i class="fas fa-edit"></i></button>` : ''}
                 </td>
             </tr>`;
         }).join('');
@@ -423,7 +464,7 @@ $(document).on('click', '.btn-xem-lo', function () {
         const tongTon = lo.chi_tiet_lo_hang?.reduce((s, c) => s + (c.so_luong_ton || 0), 0) || 0;
         const rows = (lo.chi_tiet_lo_hang || []).map(ct => {
             const sp = ct.san_pham || {};
-            const diff = Math.ceil((new Date(ct.han_su_dung) - new Date()) / 86400000);
+            const diff = daysUntil(ct.han_su_dung);
             let hsdClass = 'text-success';
             if (diff < 0) hsdClass = 'text-danger';
             else if (diff <= 30) hsdClass = 'text-warning';
@@ -432,7 +473,7 @@ $(document).on('click', '.btn-xem-lo', function () {
                 <td class="text-center">${(ct.so_luong_nhap || 0).toLocaleString()}</td>
                 <td class="text-center">${(ct.so_luong_ton || 0).toLocaleString()}</td>
                 <td class="text-center">${Number(ct.gia_nhap || 0).toLocaleString()} đ</td>
-                <td class="text-center ${hsdClass} fw-semibold">${ct.han_su_dung?.slice(0, 10)} (${diff > 0 ? diff + ' ngày' : 'Hết HSD'})</td>
+                <td class="text-center ${hsdClass} fw-semibold">${formatDateDisplay(ct.han_su_dung)} (${diff > 0 ? diff + ' ngày' : 'Hết HSD'})</td>
                 <td class="text-center">${ct.so_luong_ton > 0 ? '<span class="badge bg-success">Còn</span>' : '<span class="badge bg-secondary">Hết</span>'}</td>
             </tr>`;
         }).join('') || '<tr><td colspan="6" class="text-center text-muted">Không có chi tiết</td></tr>';
@@ -440,7 +481,7 @@ $(document).on('click', '.btn-xem-lo', function () {
             <div class="row mb-3">
                 <div class="col-md-3"><strong>Mã lô:</strong> ${lo.ma_lo || 'L-' + lo.id}</div>
                 <div class="col-md-3"><strong>NCC:</strong> ${lo.nha_cung_cap?.ten_nha_cung_cap || '--'}</div>
-                <div class="col-md-3"><strong>Ngày nhập:</strong> ${lo.ngay_nhap || ''}</div>
+                <div class="col-md-3"><strong>Ngày nhập:</strong> ${formatDateDisplay(lo.ngay_nhap)}</div>
                 <div class="col-md-3"><strong>Ghi chú:</strong> ${lo.ghi_chu || '--'}</div>
             </div>
             <div class="row mb-3">
@@ -463,7 +504,7 @@ $(document).on('click', '.btn-sua-lo', function () {
         $('#sua-lo-id').val(lo.id);
         $('#sua-lo-ncc').val(lo.id_nha_cung_cap || '');
         $('#sua-lo-ma').val(lo.ma_lo || '');
-        $('#sua-lo-ngay').val(lo.ngay_nhap || '');
+        $('#sua-lo-ngay').val(formatDateInput(lo.ngay_nhap));
         $('#sua-lo-ghi-chu').val(lo.ghi_chu || '');
         new bootstrap.Modal(document.getElementById('modal-sua-lo-hang')).show();
     });

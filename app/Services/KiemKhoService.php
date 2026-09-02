@@ -489,40 +489,32 @@ class KiemKhoService
             $variantId = $ct->variant_id;
             $chenhLech = $ct->so_luong_lech; // > 0
 
-            // Phan bo cho cac lo theo FEFO
-            $loHangs = ChiTietLoHang::where('variant_id', $variantId)
+            $loGanNhat = ChiTietLoHang::where('variant_id', $variantId)
+                ->where('so_luong_ton', '>', 0)
                 ->orderBy('han_su_dung', 'asc')
                 ->lockForUpdate()
-                ->get();
+                ->first();
 
-            $conLai = $chenhLech;
-            foreach ($loHangs as $lo) {
-                if ($conLai <= 0) break;
-                $them = min((int) $lo->so_luong_ton == 0 ? $conLai : 0, $conLai);
-                if ($them > 0) {
-                    $lo->increment('so_luong_ton', $them);
-                    $conLai -= $them;
-                    // Cap nhat chi_tiet_phieu
-                }
+            if ($loGanNhat) {
+                $loGanNhat->increment('so_luong_ton', $chenhLech);
+                continue;
             }
 
-            // Neu con du, tao lo moi (snapshot)
-            if ($conLai > 0) {
-                $loMoi = LoHang::create([
-                    'ma_lo' => 'KK-' . now()->format('YmdHis') . '-' . $variantId,
-                    'ngay_nhap' => now(),
-                    'ghi_chu' => "Tự động tạo từ phiếu kiểm kho (hàng dư)",
-                ]);
-                ChiTietLoHang::create([
-                    'id_lo_hang' => $loMoi->id,
-                    'id_san_pham' => $ct->variant->product_id,
-                    'variant_id' => $variantId,
-                    'so_luong_nhap' => $conLai,
-                    'so_luong_ton' => $conLai,
-                    'gia_nhap' => $ct->gia_von,
-                    'han_su_dung' => now()->addYear(),
-                ]);
-            }
+            // Neu chua co lo nao, tao lo snapshot moi
+            $loMoi = LoHang::create([
+                'ma_lo' => 'KK-' . now()->format('YmdHis') . '-' . $variantId,
+                'ngay_nhap' => now(),
+                'ghi_chu' => "Tự động tạo từ phiếu kiểm kho (hàng dư)",
+            ]);
+            ChiTietLoHang::create([
+                'id_lo_hang' => $loMoi->id,
+                'id_san_pham' => $ct->variant->product_id,
+                'variant_id' => $variantId,
+                'so_luong_nhap' => $chenhLech,
+                'so_luong_ton' => $chenhLech,
+                'gia_nhap' => $ct->gia_von,
+                'han_su_dung' => now()->addYear(),
+            ]);
         }
     }
 

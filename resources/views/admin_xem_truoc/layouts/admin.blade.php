@@ -248,69 +248,108 @@
             <h4>Smart<span>Mart</span></h4>
         </div>
         <ul class="nav flex-column mt-3">
+            {{-- 1. Thống kê - Chỉ hiển thị nếu có quyền xem_dashboard --}}
+            @if(userHasPermissionGroup('dashboard'))
             <li class="nav-item">
                 <a href="{{ url('admin/dashboard') }}" class="nav-link {{ request()->is('admin/dashboard') ? 'active' : '' }}">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>Thống kê</span>
                 </a>
             </li>
+            @endif
+
+            {{-- 2. Bán hàng - Chỉ hiển thị nếu có quyền ban_hang --}}
+            @if(userHasPermissionGroup('ban_hang'))
             <li class="nav-item">
                 <a href="{{ url('/ban-hang') }}" class="nav-link">
                     <i class="fas fa-cash-register"></i>
                     <span>Bán hàng</span>
                 </a>
             </li>
+            @endif
+
+            {{-- 3. Hóa đơn - Chỉ hiển thị nếu có quyền quan_ly_hoa_don --}}
+            @if(userHasPermissionGroup('hoa_don'))
             <li class="nav-item">
                 <a href="{{ url('admin/hoa-don') }}" class="nav-link {{ request()->is('admin/hoa-don*') ? 'active' : '' }}">
                     <i class="fas fa-file-invoice"></i>
                     <span>Hóa đơn</span>
                 </a>
             </li>
+            @endif
+
+            {{-- 4. Sản phẩm - Hiển thị nếu có bất kỳ quyền nào về sản phẩm --}}
+            @if(userHasPermissionGroup('san_pham'))
             <li class="nav-item">
                 <a href="{{ url('admin/san-pham') }}" class="nav-link {{ request()->is('admin/san-pham*') ? 'active' : '' }}">
                     <i class="fas fa-box"></i>
                     <span>Sản phẩm</span>
                 </a>
             </li>
+            @endif
+
+            {{-- 5. Danh mục - Chỉ hiển thị nếu có quyền quan_ly_danh_muc --}}
+            @if(userHasPermissionGroup('danh_muc'))
             <li class="nav-item">
                 <a href="{{ route('danh_muc.index') }}" class="nav-link {{ request()->is('admin/danh-muc*') ? 'active' : '' }}">
                     <i class="fas fa-tags"></i>
                     <span>Danh mục</span>
                 </a>
             </li>
+            @endif
+
+            {{-- 6. Kho hàng - Hiển thị nếu có quyền quan_ly_kho_hang hoặc quyền kiểm kho --}}
+            @if(userHasPermissionGroup('kho_hang'))
             <li class="nav-item">
                 <a href="{{ url('admin/kho-hang') }}" class="nav-link {{ request()->is('admin/kho-hang*') ? 'active' : '' }}">
                     <i class="fas fa-warehouse"></i>
                     <span>Kho hàng</span>
                 </a>
             </li>
+            @endif
+
+            {{-- 7. Hàng lỗi - Chỉ hiển thị nếu có quyền quan_ly_hang_loi --}}
+            @if(userHasPermissionGroup('hang_loi'))
             <li class="nav-item">
                 <a href="{{ route('admin.hang-loi.index') }}" class="nav-link {{ request()->is('admin/hang-loi*') ? 'active' : '' }}">
                     <i class="fas fa-triangle-exclamation"></i>
                     <span>Hàng lỗi</span>
                 </a>
             </li>
+            @endif
+
+            {{-- 8. Khách hàng - Chỉ hiển thị nếu có quyền quan_ly_khach_hang --}}
+            @if(userHasPermissionGroup('khach_hang'))
             <li class="nav-item">
                 <a href="{{ url('admin/khach-hang') }}" class="nav-link {{ request()->is('admin/khach-hang*') ? 'active' : '' }}">
                     <i class="fas fa-users"></i>
                     <span>Khách hàng</span>
                 </a>
             </li>
+            @endif
+
+            {{-- 9. Khuyến mãi - Chỉ hiển thị nếu có quyền quan_ly_khuyen_mai --}}
+            @if(userHasPermissionGroup('khuyen_mai'))
             <li class="nav-item">
                 <a href="{{ url('admin/khuyen-mai') }}" class="nav-link {{ request()->is('admin/khuyen-mai*') ? 'active' : '' }}">
                     <i class="fas fa-gift"></i>
                     <span>Khuyến mãi</span>
                 </a>
             </li>
+            @endif
+
+            {{-- Nhân sự - CHỈ Admin và người có quyền quan_ly_nhan_su --}}
+            @if(userHasPermissionGroup('nhan_su'))
             <li class="nav-item">
-                <a href="{{ url('nguoi-dung') }}" class="nav-link {{ request()->routeIs('nguoi-dung.index') ? 'active' : '' }}" {{ request()->is('nguoi-dung*') ? 'active' : '' }}">
+                <a href="{{ url('nguoi-dung') }}" class="nav-link {{ request()->is('nguoi-dung') || request()->is('nguoi-dung/*') ? 'active' : '' }}">
                     <i class="fas fa-user-tie"></i>
                     <span>Nhân sự</span>
                 </a>
             </li>
+            @endif
 
-
-            {{-- Quản lý ca làm --}}
+            {{-- 10. Quản lý ca làm - Chỉ hiển thị nếu có quyền quan_ly_ca_lam --}}
+            @if(userHasPermissionGroup('ca_lam'))
             <li class="nav-item">
                 <a class="nav-link collapsed dropdown-toggle-custom"
                 data-bs-toggle="collapse"
@@ -325,7 +364,6 @@
 
                 <div class="collapse" id="caLamMenu">
                     <ul class="nav flex-column ms-3">
-
                         <li class="nav-item">
                             <a href="{{ route('ca-lam.index') }}"
                             class="nav-link {{ request()->is('admin/ca-lam-viec*') ? 'active' : '' }}">
@@ -340,7 +378,6 @@
                             </a>
                         </li>
 
-
                         <li class="nav-item">
                             <a href="{{ route('lich-su-ca-lam-viec.index') }}"
                             class="nav-link {{ request()->is('admin/lich-su-ca-lam-viec*') ? 'active' : '' }}">
@@ -354,12 +391,13 @@
                                 Chia ca làm việc
                             </a>
                         </li>
-
                     </ul>
                 </div>
             </li>
+            @endif
 
-            {{-- phân quyền --}}
+            {{-- Phân quyền - CHỈ Admin và người có quyền phan_quyen --}}
+            @if(userHasPermissionGroup('phan_quyen'))
             <li class="nav-item">
                 <a class="nav-link collapsed dropdown-toggle-custom"
                 data-bs-toggle="collapse"
@@ -374,7 +412,6 @@
 
                 <div class="collapse" id="phanQuyenMenu">
                     <ul class="nav flex-column ms-3">
-
                         <li class="nav-item">
                             <a href="{{ route('nguoi-dung.phan-quyen', ['id_vai_tro' => 2]) }}"
                             class="nav-link {{ request()->is('nguoi-dung/phan-quyen/2') ? 'active' : '' }}">
@@ -388,17 +425,20 @@
                                 Bán hàng
                             </a>
                         </li>
-
                     </ul>
                 </div>
             </li>
+            @endif
 
+            {{-- Cài đặt - quyền riêng, mặc định chỉ Admin được cấp --}}
+            @if(userHasPermissionGroup('cai_dat'))
             <li class="nav-item mt-3">
                 <a href="{{ url('admin/cai-dat') }}" class="nav-link {{ request()->is('admin/cai-dat*') ? 'active' : '' }}">
                     <i class="fas fa-cog"></i>
                     <span>Cài đặt</span>
                 </a>
             </li>
+            @endif
         </ul>
     </nav>
 

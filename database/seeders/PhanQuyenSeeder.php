@@ -16,44 +16,30 @@ class PhanQuyenSeeder extends Seeder
 
         $allQuyens = DB::table('quyen')->pluck('id', 'ma_quyen');
 
-        // Admin: toàn quyền
-        foreach ($allQuyens as $id) {
-            DB::table('quyen_vai_tro')->insert([
-                'id_vai_tro' => $admin->id,
-                'id_quyen' => $id,
-            ]);
+        // Admin luôn giữ toàn quyền; không xóa quyền đã cấp thủ công.
+        if ($admin) {
+            $admin->quyens()->syncWithoutDetaching($allQuyens->values()->all());
         }
 
-        // Trưởng ca
-        $truongCaQuyens = [
-            'ban_hang',
-            'quan_ly_ca_lam',
-            'quan_ly_hoa_don',
-            'quan_ly_khach_hang',
-        ];
-        foreach ($truongCaQuyens as $maQuyen) {
-            if (isset($allQuyens[$maQuyen])) {
-                DB::table('quyen_vai_tro')->insert([
-                    'id_vai_tro' => $truongCa->id,
-                    'id_quyen' => $allQuyens[$maQuyen],
-                ]);
-            }
+        // Trưởng ca chỉ nhận bộ quyền trong catalog. Các quyền xóa, hủy,
+        // điều chỉnh tồn kho và quản trị hệ thống không nằm trong bộ mặc định.
+        if ($truongCa) {
+            $truongCaIds = collect(config('permissions.truong_ca', []))
+                ->map(fn (string $code) => $allQuyens->get($code))
+                ->filter()
+                ->values()
+                ->all();
+            $truongCa->quyens()->sync($truongCaIds);
         }
 
         // Bán hàng
-        $banHangQuyens = [
-            'ban_hang',
-            'quan_ly_khach_hang', // nếu được phép thêm/sửa khách hàng khi bán
-        ];
-
-        foreach ($banHangQuyens as $maQuyen) {
-            if (isset($allQuyens[$maQuyen])) {
-                DB::table('quyen_vai_tro')->insert([
-                    'id_vai_tro' => $banHang->id,
-                    'id_quyen' => $allQuyens[$maQuyen],
-                ]);
-            }
+        if ($banHang) {
+            $banHangIds = collect(['ban_hang', 'quan_ly_khach_hang'])
+                ->map(fn (string $code) => $allQuyens->get($code))
+                ->filter()
+                ->values()
+                ->all();
+            $banHang->quyens()->syncWithoutDetaching($banHangIds);
         }
-  
     }
 }

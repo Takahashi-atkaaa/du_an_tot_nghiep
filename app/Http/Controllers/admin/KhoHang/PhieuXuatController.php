@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\KhoHang;
 
 use App\Http\Controllers\Controller;
 use App\Models\NhaCungCap;
+use App\Models\PhieuXuat;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -20,5 +21,38 @@ class PhieuXuatController extends Controller
             ->get();
 
         return view('admin_xem_truoc.kho-hang.phieu-xuat.create', compact('nhaCungCaps'));
+    }
+
+    /**
+     * Hiển thị chi tiết phiếu xuất trên trang riêng.
+     */
+    public function show(int $id): View
+    {
+        $phieuXuat = PhieuXuat::with([
+            'phieu.nhaCungCap',
+            'phieu.nguoiDung',
+            'phieu.hoaDon',
+            'phieuNhapLienQuan.phieuNhap',
+            'chiTietPhieu' => function ($q) {
+                $q->orderBy('id')
+                    ->with([
+                        'variant.product',
+                        'chiTietLoHang.loHang',
+                    ]);
+            },
+        ])->findOrFail($id);
+
+        $chiTietPhieu = $phieuXuat->chiTietPhieu;
+        $tongSoDong = $chiTietPhieu->count();
+        $tongSoLuong = $chiTietPhieu->sum(fn ($ct) => (float) ($ct->so_luong ?? 0));
+        $soLoaiSanPham = $chiTietPhieu->pluck('variant_id')->filter()->unique()->count();
+
+        return view('admin_xem_truoc.warehouse.phieu-xuat-chi-tiet', compact(
+            'phieuXuat',
+            'chiTietPhieu',
+            'tongSoDong',
+            'tongSoLuong',
+            'soLoaiSanPham'
+        ));
     }
 }

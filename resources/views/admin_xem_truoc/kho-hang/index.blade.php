@@ -555,7 +555,6 @@
     <div class="tab-pane fade" id="content-xuat-hang" role="tabpanel">
         <div class="d-flex justify-content-end mb-3 gap-2">
             <button class="btn btn-outline-danger btn-sm" id="px-btn-export"><i class="fas fa-file-excel me-1"></i>Xuất Excel</button>
-            <button class="btn btn-outline-danger btn-sm" id="px-btn-import"><i class="fas fa-file-import me-1"></i>Import Excel</button>
             <a href="{{ route('phieu-xuat.create') }}" class="btn btn-danger btn-sm" id="px-btn-tao"><i class="fas fa-plus me-1"></i>Tạo phiếu xuất</a>
         </div>
         <div class="card table-admin mb-4">
@@ -885,40 +884,6 @@
     </div>
 </div>
 
-{{-- ===================== MODAL: XEM CHI TIẾT PHIẾU NHẬP ===================== --}}
-<div class="modal fade" id="modal-xem-pn" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-file-alt me-2 text-success"></i>Chi tiết phiếu nhập</h5>
-                <button type="button" class="btn btn-sm btn-success" id="pxn-export-btn"><i class="fas fa-download me-1"></i>Xuất Excel</button>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="modal-xem-pn-body"></div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- ===================== MODAL: XEM CHI TIẾT PHIẾU XUẤT ===================== --}}
-<div class="modal fade" id="modal-xem-px" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-file-alt me-2 text-danger"></i>Chi tiết phiếu xuất</h5>
-                <button type="button" class="btn btn-sm btn-danger" id="pxx-export-btn"><i class="fas fa-download me-1"></i>Xuất Excel</button>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="modal-xem-px-body"></div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 {{-- ===================== MODAL: THÊM LÔ HÀNG ===================== --}}
 <div class="modal fade" id="modal-them-lo" tabindex="-1">
     <div class="modal-dialog">
@@ -1005,70 +970,6 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
                     <button type="button" class="btn btn-outline-primary" id="import-pn-download-template"><i class="fas fa-download me-1"></i>Tải file mẫu</button>
                     <button type="submit" class="btn btn-success" id="import-pn-submit" disabled><i class="fas fa-upload me-1"></i>Import</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-{{-- ===================== MODAL: IMPORT PHIẾU XUẤT ===================== --}}
-<div class="modal fade" id="modal-import-px" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title"><i class="fas fa-file-import me-2"></i>Import Phiếu Xuất từ Excel</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="form-import-px">
-                <div class="modal-body">
-                    <div class="alert alert-warning mb-3 py-2 small">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Hệ thống sẽ tự động trừ kho theo nguyên tắc <strong>FEFO</strong> — ưu tiên lô có HSD gần nhất.
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Loại xuất <span class="text-danger">*</span></label>
-                        <select name="loai_xuat" class="form-select" id="import-px-loai" required>
-                            <option value="tieu_huy">Tiêu hủy</option>
-                            <option value="tra_hang_nha_cung_cap">Trả hàng NCC</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Nhà cung cấp</label>
-                        <select name="id_nha_cung_cap" id="import-px-ncc" class="form-select">
-                            <option value="">-- Chọn NCC --</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Lý do</label>
-                        <input type="text" name="ly_do" id="import-px-ly-do" class="form-control" placeholder="Lý do xuất hàng...">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Ghi chú</label>
-                        <input type="text" name="ghi_chu" id="import-px-ghi-chu" class="form-control" placeholder="Ghi chú...">
-                    </div>
-                    <hr>
-                    <div class="mb-3">
-                        <label class="form-label">Chọn file Excel <span class="text-danger">*</span></label>
-                        <input type="file" id="import-px-file" accept=".xlsx,.xls,.csv" class="form-control" required>
-                        <small class="text-muted">Hỗ trợ định dạng .xlsx, .xls, .csv</small>
-                    </div>
-                    <div class="drop-zone border rounded p-4 text-center" id="drop-zone-px" style="border-style: dashed; background: #f8f9fa;">
-                        <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
-                        <p class="mb-0 text-muted">Kéo thả file Excel vào đây</p>
-                        <small class="text-muted">hoặc nhấn "Chọn file" ở trên</small>
-                    </div>
-                    <div id="import-px-preview" class="mt-2 d-none">
-                        <div class="alert alert-info py-2 mb-0 d-flex align-items-center">
-                            <i class="fas fa-file-excel me-2 text-success"></i>
-                            <span id="import-px-filename"></span>
-                            <button type="button" class="btn-close ms-auto" id="import-px-remove"></button>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="button" class="btn btn-outline-primary" id="import-px-download-template"><i class="fas fa-download me-1"></i>Tải file mẫu</button>
-                    <button type="submit" class="btn btn-danger" id="import-px-submit" disabled><i class="fas fa-upload me-1"></i>Import</button>
                 </div>
             </form>
         </div>

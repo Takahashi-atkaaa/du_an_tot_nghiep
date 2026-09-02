@@ -23,19 +23,19 @@
             <i class="fas fa-arrow-left"></i> Quay lại
         </a>
 
-        @if($phieu->co_the_dem)
+        @if($phieu->co_the_dem && userHasPermission('kiem_kho_dem'))
             <a href="{{ route('kiem-kho.dem', $phieu->id) }}" class="btn btn-primary btn-sm">
                 <i class="fas fa-clipboard-check"></i> Kiểm đếm
             </a>
         @endif
 
-        @if($phieu->co_the_sua)
+        @if($phieu->co_the_sua && userHasPermission('kiem_kho_tao'))
             <a href="{{ route('kiem-kho.edit', $phieu->id) }}" class="btn btn-warning btn-sm">
                 <i class="fas fa-edit"></i> Sửa
             </a>
         @endif
 
-        @if($phieu->co_the_huy)
+        @if($phieu->co_the_huy && userHasPermission('kiem_kho_huy'))
             <button type="button" class="btn btn-danger btn-sm" @click="huyPhieu">
                 <i class="fas fa-ban"></i> Hủy phiếu
             </button>
@@ -143,8 +143,11 @@
                     </thead>
                     <tbody>
                         @foreach($phieu->chiTietKiemKho as $i => $ct)
+                        @php
+                            $searchKey = strtolower(trim(($ct->ten_san_pham ?? '') . ' ' . ($ct->ma_vach ?? '') . ' ' . ($ct->ma_hang ?? '')));
+                        @endphp
                         <tr class="kk-row-{{ $ct->loai_chenh_lech }}"
-                            x-show="(filter === '' || '{{ $ct->loai_chenh_lech }}' === filter) && (search === '' || '{{ strtolower($ct->ten_san_pham . ' ' . $ct->ma_vach . ' ' . $ct->ma_hang) }}'.includes(search.toLowerCase()))">
+                            x-show="(filter === '' || '{{ $ct->loai_chenh_lech }}' === filter) && (search === '' || @js($searchKey).includes(search.toLowerCase()))">
                             <td>{{ $i + 1 }}</td>
                             <td><code>{{ $ct->ma_hang ?? $ct->ma_vach ?? '#' . $ct->id }}</code></td>
                             <td>

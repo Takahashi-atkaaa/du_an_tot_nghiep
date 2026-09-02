@@ -184,6 +184,7 @@ class SanPhamApiController extends Controller
             ->selectRaw('cth.so_luong as quantity')
             ->selectRaw('cth.thanh_tien as revenue')
             ->selectRaw('kh.ten_khach_hang as customer_name')
+            ->selectRaw('hd.trang_thai as status')
             ->orderByDesc('hd.created_at')
             ->limit(5)
             ->get()
@@ -196,6 +197,7 @@ class SanPhamApiController extends Controller
                 'quantity' => (int) $row->quantity,
                 'revenue' => (float) $row->revenue,
                 'customer_name' => $row->customer_name,
+                'status' => $row->status,
             ])->values()->all();
 
         return response()->json([
@@ -442,6 +444,7 @@ class SanPhamApiController extends Controller
 
     public function destroyVariant(int $id): JsonResponse
     {
+        abort_unless(userHasPermission('xoa_san_pham'), 403, 'Bạn không có quyền xóa biến thể sản phẩm.');
         $variant = BienTheSanPham::find($id);
 
         if (!$variant) {
@@ -469,6 +472,7 @@ class SanPhamApiController extends Controller
 
     public function destroyAllVariants(int $productId): JsonResponse
     {
+        abort_unless(userHasPermission('xoa_san_pham'), 403, 'Bạn không có quyền xóa biến thể sản phẩm.');
         $product = Product::find($productId);
 
         if (!$product) {

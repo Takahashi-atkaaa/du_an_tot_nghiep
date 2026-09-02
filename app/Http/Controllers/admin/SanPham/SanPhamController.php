@@ -847,6 +847,7 @@ class SanPhamController extends Controller
 
     public function destroy(Request $request, int $id)
     {
+        abort_unless(userHasPermission('xoa_san_pham'), 403, 'Bạn không có quyền xóa sản phẩm.');
         try {
             // Tìm sản phẩm, bao gồm cả bản ghi đã bị soft delete
             $product = Product::withTrashed()->with('variants.units')->find($id);
@@ -905,6 +906,14 @@ class SanPhamController extends Controller
 
         $ids = $request->input('ids', []);
         $action = $request->input('action');
+
+        abort_unless(
+            $action === 'delete'
+                ? userHasPermission('xoa_san_pham')
+                : userHasPermission('sua_san_pham'),
+            403,
+            'Bạn không có quyền thực hiện thao tác này.'
+        );
 
         switch ($action) {
             case 'delete':
@@ -975,7 +984,10 @@ class SanPhamController extends Controller
 
     public function exportTemplate()
     {
-        return new \App\Exports\SanPhamImportTemplateExport;
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\SanPhamImportTemplateExport(),
+            'san-pham-import-template.xlsx'
+        );
     }
 
     public function import(ImportSanPhamRequest $request): RedirectResponse
@@ -988,30 +1000,44 @@ class SanPhamController extends Controller
                 new \stdClass(), 
                 $file
             )[0]; // Sheet đầu tiên
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return redirect()->route('san-pham.index')
                 ->with('error', 'Không thể đọc file: ' . $e->getMessage());
         }
 
-        $importer = new \App\Imports\SanPhamImport;
+        $importer = new \App\Imports\SanPhamImport();
         $importer->collection(collect($rows));
         $summary = $importer->getSummary();
 
         $errors = $summary['errors'] ?? [];
-        $total = $summary['created'] + $summary['updated'] + $summary['skipped'];
 
         if (!empty($errors)) {
+            // Không đưa toàn bộ lỗi vào một chuỗi flash quá dài; danh sách chi tiết
+            // được giữ trong import_summary để view hiển thị theo từng dòng.
+            $errorCount = count($errors);
+            $shortErrors = array_slice($errors, 0, 3);
+            $message = 'Import không hoàn tất. Có ' . $errorCount . ' lỗi.';
+            if (!empty($shortErrors)) {
+                $message .= ' ' . implode(' ', $shortErrors);
+            }
+
             return redirect()->route('san-pham.index')
-                ->with('error', 'Import hoàn tất với lỗi: ' . implode('; ', $errors))
+                ->with('error', $message)
                 ->with('import_summary', $summary);
         }
 
-        $message = "Import thành công {$summary['created']} sản phẩm mới, cập nhật {$summary['updated']} sản phẩm.";
+        $message = "Import thành công {$summary['created']} sản phẩm mới, cập nhật {$summary['updated']} sản phẩm; "
+            . "{$summary['created_variants']} biến thể mới, {$summary['updated_variants']} biến thể cập nhật. ";
+        if (($summary['created_units'] ?? 0) > 0 || ($summary['updated_units'] ?? 0) > 0) {
+            $message .= "Đơn vị quy đổi: {$summary['created_units']} mới, {$summary['updated_units']} cập nhật. ";
+        }
         if ($summary['skipped'] > 0) {
-            $message .= " Bỏ qua {$summary['skipped']} dòng.";
+            $message .= "Bỏ qua {$summary['skipped']} dòng. ";
         }
 
-        return redirect()->route('san-pham.index')->with('success', $message);
+        return redirect()->route('san-pham.index')
+            ->with('success', trim($message))
+            ->with('import_summary', $summary);
     }
 
     public function restore(int $id): RedirectResponse
@@ -1289,7 +1315,7 @@ class SanPhamController extends Controller
 
             $row = DB::table('chi_tiet_hoa_don as cth')
                 ->join('hoa_don as hd', 'cth.id_hoa_don', '=', 'hd.id')
-                ->join('bien_the_san_pham as v', 'cth.variant_id', '=', 'v.id')
+                ->join('bien_the_san_pham as v', 'cth.id_bien_the_san_pham', '=', 'v.id')
                 ->where('v.product_id', $product->id)
                 ->where('hd.trang_thai', 'Hoàn thành')
                 ->whereBetween('hd.created_at', [$from, $to])
@@ -1303,6 +1329,7 @@ class SanPhamController extends Controller
                 $doanhThu     = (float) $row->total_revenue;
                 $giaVonUoc    = (float) $row->total_cost;
                 $loiNhuanGop  = $doanhThu - $giaVonUoc;
+
                 $ordersSummary = [
                     'doanh_thu'      => $doanhThu,
                     'so_luong_ban'   => (int) $row->total_quantity,

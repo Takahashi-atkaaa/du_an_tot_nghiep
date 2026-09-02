@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\PhieuNhap\ImportPhieuNhapRequest;
 use App\Imports\PhieuNhapImport;
 use App\Exports\PhieuNhapDanhSachExport;
+use App\Exports\PhieuNhapTemplateExport;
 use App\Models\Phieu;
 use App\Models\PhieuNhap;
 use App\Models\LoHang;
@@ -18,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PhieuNhapApiController extends Controller
 {
@@ -347,6 +350,7 @@ class PhieuNhapApiController extends Controller
 
     public function destroy(int $id): JsonResponse
     {
+        abort_unless(userHasPermission('xoa_phieu_nhap'), 403, 'Bạn không có quyền xóa phiếu nhập.');
         $phieuNhap = PhieuNhap::with('phieu.chiTietPhieu.chiTietLoHang')->find($id);
 
         if (!$phieuNhap) {
@@ -415,7 +419,14 @@ class PhieuNhapApiController extends Controller
         ]);
     }
 
-    public function downloadTemplate(): StreamedResponse
+    public function downloadTemplate(): BinaryFileResponse
+    {
+        $fileName = 'mau-import-phieu-nhap-' . now()->format('Ymd') . '.xlsx';
+        
+        return Excel::download(new PhieuNhapTemplateExport(), $fileName);
+    }
+
+    public function downloadTemplateCsvLegacy(): StreamedResponse
     {
         $headers = [
             'Content-Type' => 'text/csv; charset=utf-8',
@@ -537,23 +548,17 @@ class PhieuNhapApiController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
-    public function importExcel(Request $request): JsonResponse
+    public function importExcel(ImportPhieuNhapRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'file' => 'required|file|mimes:csv,txt,xlsx,xls,max:10240',
-            'id_nha_cung_cap' => 'nullable|integer|exists:nha_cung_cap,id',
-            'loai_nhap' => 'nullable|in:mua_hang,tra_lai_tu_khach',
-            'ghi_chu' => 'nullable|string|max:1000',
-        ]);
-
         try {
-            $file = $data['file'];
-            $idNhaCungCap = $data['id_nha_cung_cap'] ?? null;
-            $loaiNhap = $data['loai_nhap'] ?? 'mua_hang';
-            $ghiChu = $data['ghi_chu'] ?? null;
-            $idNguoiDung = auth()->id() ?? 0;
+            $validated = $request->validated();
+            
+            $file = $request->file('file');
+            $idNhaCungCap = $validated['id_nha_cung_cap'] ?? null;
+            $loaiNhap = $validated['loai_nhap'];
+            $ghiChu = $validated['ghi_chu'] ?? null;
+            $idNguoiDung = auth()->id();
 
-            // Use maatwebsite/excel to import
             $import = new PhieuNhapImport(
                 idNhaCungCap: $idNhaCungCap,
                 loaiNhap: $loaiNhap,
@@ -567,29 +572,34 @@ class PhieuNhapApiController extends Controller
             $rowCount = $import->getRowCount();
             $insertedCount = $import->getInsertedCount();
 
-            // Truong hop 1: Khong co dong nao duoc insert (tat ca loi)
             if ($insertedCount === 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Import thất bại: ' . implode(' | ', array_slice($errors, 0, 5)),
+                    'message' => 'Import thất bại: Không có dòng hợp lệ nào.',
                     'errors' => $errors,
-                    'row_count' => 0,
-                    'inserted_count' => 0,
+                    'summary' => [
+                        'phieu_created' => 0,
+                        'chi_tiet_created' => 0,
+                        'row_total' => $rowCount,
+                        'row_skipped' => $rowCount,
+                    ],
                 ], 422);
             }
 
-            // Truong hop 2: Co it nhat 1 dong insert thanh cong
-            $msg = "Import thành công {$insertedCount}/{$rowCount} dòng.";
+            $msg = "Import thành công: Tạo 1 phiếu nhập với {$insertedCount} chi tiết.";
             if (!empty($errors)) {
-                $msg .= ' Bỏ qua ' . count($errors) . ' dòng lỗi: ' . implode('; ', array_slice($errors, 0, 3));
+                $msg .= " Bỏ qua " . ($rowCount - $insertedCount) . " dòng lỗi.";
             }
 
             return response()->json([
                 'success' => true,
                 'message' => $msg,
-                'row_count' => $rowCount,
-                'inserted_count' => $insertedCount,
-                'skipped_count' => $rowCount - $insertedCount,
+                'summary' => [
+                    'phieu_created' => 1,
+                    'chi_tiet_created' => $insertedCount,
+                    'row_total' => $rowCount,
+                    'row_skipped' => $rowCount - $insertedCount,
+                ],
                 'errors' => $errors,
             ]);
         } catch (\Exception $e) {

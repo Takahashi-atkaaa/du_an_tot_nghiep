@@ -21,6 +21,46 @@ function escapeAttr(s) {
     return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+function pad2(n) {
+    return String(n).padStart(2, '0');
+}
+
+function parseDateValue(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const raw = String(value).trim();
+    if (!raw) return null;
+
+    const dateOnly = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnly) {
+        const d = new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]));
+        return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatDateDisplay(value, fallback = '--') {
+    const d = parseDateValue(value);
+    if (!d) return fallback;
+    return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+function formatDateInput(value) {
+    const d = parseDateValue(value);
+    if (!d) return '';
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function daysUntil(value) {
+    const d = parseDateValue(value);
+    if (!d) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    d.setHours(0, 0, 0, 0);
+    return Math.ceil((d - today) / 86400000);
+}
+
 // ─── INIT ───────────────────────────────────────────────
 $(function () {
     console.log('[KHO-HANG] Init start');
@@ -478,19 +518,20 @@ function loadLoHang(page = 1) {
             const tongNhap = item.chi_tiet_lo_hang_sum_so_luong_nhap || 0;
             const tongTon = item.chi_tiet_lo_hang_sum_so_luong_ton || 0;
             const ncc = item.nha_cung_cap?.ten_nha_cung_cap || '<span class="text-muted">--</span>';
-            const ngay = item.ngay_nhap || '';
+            const ngay = formatDateDisplay(item.ngay_nhap);
             const maLo = item.ma_lo || 'L-' + item.id;
-            let hsds = (item.chi_tiet_lo_hang || []).map(c => (c.han_su_dung || '').split('T')[0]).filter(d => d).sort();
+            let hsds = (item.chi_tiet_lo_hang || [])
+                .map(c => formatDateInput(c.han_su_dung))
+                .filter(d => d)
+                .sort();
             const hsdMin = hsds[0] || null;
             let hsdBadge = '', hsdClass = '';
             if (hsdMin) {
-                const ngayHsdNghiem = new Date(hsdMin);
-                const ngayHomNay = new Date();
-                ngayHsdNghiem.setHours(0,0,0,0); ngayHomNay.setHours(0,0,0,0);
-                const diff = Math.ceil((ngayHsdNghiem - ngayHomNay) / 86400000);
+                const diff = daysUntil(hsdMin);
+                const hsdText = formatDateDisplay(hsdMin);
                 if (diff < 0) { hsdBadge = `<span class="badge bg-danger badge-hsd">Hết HSD</span>`; hsdClass = 'table-danger'; }
-                else if (diff <= 30) { hsdBadge = `<span class="badge bg-warning text-dark badge-hsd">${hsdMin} (${diff} ngay)</span>`; hsdClass = 'table-warning'; }
-                else { hsdBadge = `<span class="badge bg-success badge-hsd">${hsdMin}</span>`; }
+                else if (diff <= 30) { hsdBadge = `<span class="badge bg-warning text-dark badge-hsd">${hsdText} (${diff} ngày)</span>`; hsdClass = 'table-warning'; }
+                else { hsdBadge = `<span class="badge bg-success badge-hsd">${hsdText}</span>`; }
             }
             let loBadge = tongTon > 0 ? '<span class="badge bg-success">Còn hàng</span>' : '<span class="badge bg-secondary">Hết</span>';
             return `
@@ -505,7 +546,6 @@ function loadLoHang(page = 1) {
                 <td class="text-center">${loBadge}</td>
                 <td class="text-center">
                     <a href="/admin/kho-hang/lo-hang/${item.id}" class="btn btn-sm btn-outline-primary" title="Xem chi tiết"><i class="fas fa-eye"></i></a>
-                    <button class="btn btn-sm btn-outline-danger btn-xoa-lo" data-id="${item.id}"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`;
         }).join('');
@@ -540,7 +580,7 @@ function loadPhieuNhap(page = 1) {
                 : '<span class="badge bg-info">Nhập hàng khách hoàn trả</span>';
             const ncc = item.phieu?.nha_cung_cap?.ten_nha_cung_cap || '--';
             const nguoi = item.phieu?.nguoi_dung?.ho_ten || item.phieu?.id_nguoi_dung || '--';
-            const ngay = item.created_at?.slice(0, 10) || '';
+            const ngay = formatDateDisplay(item.created_at);
             const tongGiaTri = (item.chi_tiet_phieu || []).reduce((s, ct) =>
                 s + ((ct.so_luong || 0) * (ct.gia_nhap || 0)), 0);
             const ghiChu = item.ghi_chu || '<span class="text-muted">--</span>';
@@ -556,7 +596,6 @@ function loadPhieuNhap(page = 1) {
                 <td>${ghiChu}</td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-primary btn-xem-pn" data-id="${item.id}"><i class="fas fa-eye"></i></button>
-                    <button class="btn btn-sm btn-outline-danger btn-xoa-pn" data-id="${item.id}"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`;
         }).join('');
@@ -591,7 +630,7 @@ function loadPhieuXuat(page = 1) {
                 : '<span class="badge bg-danger">Tiêu hủy</span>';
             const ncc = item.phieu?.nha_cung_cap?.ten_nha_cung_cap || '--';
             const nguoi = item.phieu?.nguoi_dung?.ho_ten || item.phieu?.id_nguoi_dung || '--';
-            const ngay = item.created_at?.slice(0, 10) || '';
+            const ngay = formatDateDisplay(item.created_at);
             const lyDo = item.ly_do || '<span class="text-muted">--</span>';
             const tongSl = (item.chi_tiet_phieu || []).reduce((s, ct) => s + (ct.so_luong || 0), 0);
             return `
@@ -605,8 +644,9 @@ function loadPhieuXuat(page = 1) {
                 <td class="text-center">${ngay}</td>
                 <td class="text-center fw-bold text-danger">${tongSl.toLocaleString()}</td>
                 <td class="text-center">
-                    <button class="btn btn-sm btn-outline-primary btn-xem-px" data-id="${item.id}"><i class="fas fa-eye"></i></button>
-                    <button class="btn btn-sm btn-outline-danger btn-xoa-px" data-id="${item.id}"><i class="fas fa-trash"></i></button>
+                    <a href="/admin/kho-hang/phieu-xuat/${item.id}" class="btn btn-sm btn-outline-primary" title="Xem chi tiết phiếu xuất">
+                        <i class="fas fa-eye"></i>
+                    </a>
                 </td>
             </tr>`;
         }).join('');
@@ -654,14 +694,14 @@ function renderAlertGroup(type, title, cls, items, badgeCls) {
             const product = item.product || variant.product || {};
             const lo = item.lo_hang || item.lo_hang_nha_cung_cap || {};
             const hsdRaw = item.han_su_dung || '';
-            const hsdDate = new Date(hsdRaw);
-            const diff = Math.ceil((hsdDate - new Date()) / 86400000);
+            const diff = daysUntil(hsdRaw);
+            const hsdText = formatDateDisplay(hsdRaw);
             return `
             <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
                 <div>
                     <div class="fw-semibold">${product.ten_san_pham || variant.ten_bien_the || item.id_san_pham || item.variant_id || 'Không xác định'}</div>
                     <div class="small text-muted">
-                        Lô: ${lo.ma_lo || (item.id_lo_hang ? 'L-' + item.id_lo_hang : '--')} | Tồn: ${item.so_luong_ton} | HSD: ${hsdRaw.split('T')[0]}
+                        Lô: ${lo.ma_lo || (item.id_lo_hang ? 'L-' + item.id_lo_hang : '--')} | Tồn: ${item.so_luong_ton} | HSD: ${hsdText}
                         ${diff < 0 ? '<span class="text-danger ms-1">Đã hết HSD</span>' : `<span class="text-warning ms-1">Còn ${diff} ngày</span>`}
                     </div>
                 </div>
@@ -721,12 +761,8 @@ function buildFefoTable(chiTiet) {
         const lo = ct.lo_hang || {};
         const ncc = lo.nha_cung_cap?.ten_nha_cung_cap || '--';
         const hsdRaw = ct.han_su_dung || '';
-        const hsd = hsdRaw.split('T')[0];
-        let diff = null;
-        if (hsdRaw) {
-            const d = new Date(hsdRaw);
-            diff = Math.ceil((d - new Date()) / 86400000);
-        }
+        const hsd = formatDateDisplay(hsdRaw);
+        const diff = daysUntil(hsdRaw);
 
         let hsdClass = 'hsd-ok';
         let hsdLabel = hsd || '--';
@@ -847,101 +883,13 @@ $(document).on('click', '.btn-xoa-lo', function () {
 
 $(document).on('click', '.btn-xem-pn', function () {
     const id = $(this).data('id');
-    $.get('/admin/api/phieu-nhap/' + id, res => {
-        if (!res.success) return;
-        const pn = res.data;
-        const loaiLabel = pn.loai_nhap === 'mua_hang' ? 'Nhập mua hàng' : 'Trả lại từ khách';
-        const rows = (pn.chi_tiet_phieu || []).map(ct => {
-            const variant = ct.variant || {};
-            const product = variant.product || {};
-            const baseName = variant.ten_bien_the && variant.ten_bien_the !== product.ten_san_pham
-                ? `${product.ten_san_pham || ''} - ${variant.ten_bien_the}`
-                : (product.ten_san_pham || variant.ten_bien_the || ct.id_san_pham || ct.variant_id || '');
-            const attrs = (ct.thuoc_tinh_labels && ct.thuoc_tinh_labels.length)
-                ? ` - ${ct.thuoc_tinh_labels.join(', ')}`
-                : '';
-            const code = variant.ma_vach || ct.variant_id || '';
-            const displayName = `${baseName}${attrs} (${code})`;
-            const lo = ct.lo_hang || {};
-            const ghiChuCt = ct.ghi_chu
-                ? `<small class="text-info d-block">${ct.ghi_chu}</small>`
-                : '';
-            return `<tr>
-                <td>${displayName}${ghiChuCt}</td>
-                <td class="text-center">${(ct.so_luong || 0).toLocaleString()}</td>
-                <td class="text-center">${Number(ct.gia_nhap || 0).toLocaleString()} d</td>
-                <td class="text-center">${(ct.han_su_dung || '').split('T')[0]}</td>
-                <td class="text-center">${lo.ma_lo || 'L-' + (ct.id_lo_hang || '')}</td>
-                <td class="text-end fw-bold">${((ct.so_luong || 0) * (ct.gia_nhap || 0)).toLocaleString()} d</td>
-            </tr>`;
-        }).join('') || '<tr><td colspan="6" class="text-center text-muted">Không có chi tiết</td></tr>';
-        const tongGt = (pn.chi_tiet_phieu || []).reduce((s, ct) => s + (ct.so_luong || 0) * (ct.gia_nhap || 0), 0);
-        $('#modal-xem-pn-body').html(`
-            <div class="row mb-3">
-                <div class="col-md-3"><strong>Mã phiếu:</strong> PN-${pn.id_phieu}</div>
-                <div class="col-md-3"><strong>Loai:</strong> ${loaiLabel}</div>
-                <div class="col-md-3"><strong>NCC:</strong> ${pn.phieu?.nha_cung_cap?.ten_nha_cung_cap || '--'}</div>
-                <div class="col-md-3"><strong>Ngay:</strong> ${pn.created_at?.slice(0, 10) || ''}</div>
-            </div>
-            <p><strong>Ghi chú:</strong> ${pn.ghi_chu || '--'}</p>
-            <table class="table table-sm table-bordered">
-                <thead class="table-light"><tr><th>Sản phẩm</th><th class="text-center">SL nhập</th><th class="text-center">Giá nhập</th><th class="text-center">HSD</th><th class="text-center">Lô</th><th class="text-end">Thành tiền</th></tr></thead>
-                <tbody>${rows}</tbody>
-                <tfoot><tr><td colspan="5" class="text-end fw-bold">Tổng cộng:</td><td class="text-end fw-bold text-danger">${tongGt.toLocaleString()} d</td></tr></tfoot>
-            </table>
-        `);
-        new bootstrap.Modal(document.getElementById('modal-xem-pn')).show();
-    });
+    window.location.href = '/admin/kho-hang/phieu-nhap/' + id;
 });
 
 $(document).on('click', '.btn-xoa-pn', function () {
     if (!confirm('Xóa phiếu nhập này?')) return;
     const id = $(this).data('id');
     $.ajax({ url: '/admin/api/phieu-nhap/' + id, method: 'DELETE', success: res => { hienBao('success', res.message); loadPhieuNhap(pnPage); loadStats(); }, error: x => hienBao('danger', x.responseJSON?.message || 'Lỗi.') });
-});
-
-$(document).on('click', '.btn-xem-px', function () {
-    const id = $(this).data('id');
-    $.get('/admin/api/phieu-xuat/' + id, res => {
-        if (!res.success) return;
-        const px = res.data;
-        const loaiLabel = px.loai_xuat === 'tra_hang_nha_cung_cap' ? 'Trả hàng NCC' : 'Tiêu hủy';
-        const rows = (px.chi_tiet_phieu || []).map(ct => {
-            const variant = ct.variant || {};
-            const product = variant.product || ct.san_pham || {};
-            const baseName = variant.ten_bien_the && variant.ten_bien_the !== product.ten_san_pham
-                ? `${product.ten_san_pham || ''} - ${variant.ten_bien_the}`
-                : (product.ten_san_pham || variant.ten_bien_the || ct.variant_id || '---');
-            const attrs = (ct.thuoc_tinh_labels && ct.thuoc_tinh_labels.length)
-                ? ` - ${ct.thuoc_tinh_labels.join(', ')}`
-                : '';
-            const code = variant.ma_vach || ct.variant_id || '';
-            const displayName = `${baseName}${attrs} (${code})`;
-            const hsd = (ct.chi_tiet_lo_hang?.han_su_dung || ct.han_su_dung || '').split('T')[0];
-            return `<tr>
-                <td>${displayName}</td>
-                <td class="text-center text-danger fw-bold">${(ct.so_luong || 0).toLocaleString()}</td>
-                <td class="text-center">${hsd || '--'}</td>
-                <td class="text-center">${ct.lo_hang?.ma_lo || 'L-' + (ct.id_lo_hang || '')}</td>
-            </tr>`;
-        }).join('') || '<tr><td colspan="4" class="text-center text-muted">Không có chi tiết</td></tr>';
-        const tongSl = (px.chi_tiet_phieu || []).reduce((s, ct) => s + (ct.so_luong || 0), 0);
-        $('#modal-xem-px-body').html(`
-            <div class="row mb-3">
-                <div class="col-md-3"><strong>Mã phiếu:</strong> PX-${px.id_phieu}</div>
-                <div class="col-md-3"><strong>Loai:</strong> ${loaiLabel}</div>
-                <div class="col-md-3"><strong>NCC:</strong> ${px.phieu?.nha_cung_cap?.ten_nha_cung_cap || '--'}</div>
-                <div class="col-md-3"><strong>Ngay:</strong> ${px.created_at?.slice(0, 10) || ''}</div>
-            </div>
-            <p><strong>Lý do:</strong> ${px.ly_do || '--'}</p>
-            <table class="table table-sm table-bordered">
-                <thead class="table-light"><tr><th>Sản phẩm</th><th class="text-center">SL xuất</th><th class="text-center">HSD lô</th><th class="text-center">Lô</th></tr></thead>
-                <tbody>${rows}</tbody>
-                <tfoot><tr><td colspan="3" class="text-end fw-bold">Tổng SL xuất:</td><td class="text-center fw-bold text-danger">${tongSl.toLocaleString()}</td></tr></tfoot>
-            </table>
-        `);
-        new bootstrap.Modal(document.getElementById('modal-xem-px')).show();
-    });
 });
 
 $(document).on('click', '.btn-xoa-px', function () {
@@ -1177,7 +1125,7 @@ $('#pn-btn-export').click(function () {
 // Helper preset ngày (dùng chung cho cả pn & px)
 function fillDateRange(tuSel, denSel, preset) {
     const today = new Date();
-    const fmt = (d) => d.toISOString().slice(0, 10);
+    const fmt = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
     let tu = '', den = '';
     if (preset === 'today') {
         tu = den = fmt(today);
@@ -1396,7 +1344,6 @@ function showImportPnResultModal(res) {
 }
 
 // ─── IMPORT/EXPORT EXCEL - PHIẾU XUẤT ─────────────────────────────────
-let importPxFile = null;
 
 // Nút Export Excel - Phiếu xuất: mở modal
 $('#px-btn-export').click(function () {
@@ -1426,6 +1373,9 @@ $('#form-xuat-px').submit(function (e) {
     bootstrap.Modal.getInstance(document.getElementById('modal-xuat-px')).hide();
     window.location.href = url;
 });
+
+// ─── IMPORT/EXPORT EXCEL - PHIẾU XUẤT ─────────────────────────────────
+let importPxFile = null;
 
 // Nút Import Excel - Phiếu xuất
 $('#px-btn-import').click(function () {

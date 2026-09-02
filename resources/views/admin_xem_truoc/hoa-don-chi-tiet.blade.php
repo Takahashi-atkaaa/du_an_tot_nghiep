@@ -144,18 +144,20 @@ $doanhThuRong = max(
 
 
         {{-- In hóa đơn --}}
-        <button
-            type="button"
-            onclick="window.print()"
-            class="btn btn-success"
-        >
-            <i class="fas fa-print me-1"></i>
-            In hóa đơn
-        </button>
+        @if(($hoaDon->trang_thai ?? '') !== 'Đã hủy' && userHasPermission('in_hoa_don'))
+            <button
+                type="button"
+                onclick="window.print()"
+                class="btn btn-success"
+            >
+                <i class="fas fa-print me-1"></i>
+                In hóa đơn
+            </button>
+        @endif
 
 
         {{-- Đổi / trả --}}
-        @if(!in_array($trangThai, ['Đã hủy', 'Đã trả toàn bộ']))
+        @if(!in_array(($hoaDon->trang_thai ?? ''), ['Đã hủy', 'Đã trả toàn bộ']) && userHasPermission('doi_tra_hoa_don'))
 
             <a
                 href="{{ route('admin.hoa-don.doi-tra', $hoaDon->id) }}"
@@ -169,7 +171,7 @@ $doanhThuRong = max(
 
 
         {{-- Modal chi tiết --}}
-        @if(isset($lichSuDoiTra) && $lichSuDoiTra->count())
+        @if(isset($lichSuDoiTra) && $lichSuDoiTra->count() && (userHasPermission('quan_ly_hoa_don') || userHasPermission('xem_hoa_don') || userHasPermission('doi_tra_hoa_don')))
 
             <a
                 class="btn btn-outline-warning"

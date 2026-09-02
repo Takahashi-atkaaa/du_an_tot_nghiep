@@ -158,6 +158,7 @@ class LoHangApiController extends Controller
 
     public function destroy(int $id): JsonResponse
     {
+        abort_unless(userHasPermission('xoa_lo_hang'), 403, 'Bạn không có quyền xóa lô hàng.');
         $loHang = LoHang::with('chiTietLoHang')->find($id);
         if (!$loHang) {
             return response()->json(['success' => false, 'message' => 'Lô hàng không tồn tại.'], 404);

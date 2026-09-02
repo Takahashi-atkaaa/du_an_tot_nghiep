@@ -28,13 +28,15 @@
 
             </a>
 
-            <a href="{{ route('khuyen-mai.edit', $khuyenMai->id) }}"
-               class="btn btn-primary">
+            @if(userHasPermission('sua_khuyen_mai'))
+                <a href="{{ route('khuyen-mai.edit', $khuyenMai->id) }}"
+                   class="btn btn-primary">
 
-                <i class="fas fa-edit me-1"></i>
-                Chỉnh sửa
+                    <i class="fas fa-edit me-1"></i>
+                    Chỉnh sửa
 
-            </a>
+                </a>
+            @endif
 
         </div>
 

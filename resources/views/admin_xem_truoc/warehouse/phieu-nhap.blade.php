@@ -21,12 +21,14 @@
         <button class="btn btn-outline-success btn-sm" id="btn-xuat-excel-nhap" title="Xuất Excel">
             <i class="fas fa-file-excel me-1"></i>Xuất Excel
         </button>
-        <button class="btn btn-success btn-sm" id="btn-tao-phieu-nhap">
-            <i class="fas fa-plus me-1"></i>Tạo phiếu nhập
-        </button>
-        <button class="btn btn-success btn-sm" id="btn-open-import-nhap" title="Import từ Excel">
-            <i class="fas fa-file-import me-1"></i>Import Excel
-        </button>
+        @if(userHasPermission('nhap_hang'))
+            <button class="btn btn-success btn-sm" id="btn-tao-phieu-nhap">
+                <i class="fas fa-plus me-1"></i>Tạo phiếu nhập
+            </button>
+            <button class="btn btn-success btn-sm" id="btn-open-import-nhap" title="Import từ Excel">
+                <i class="fas fa-file-import me-1"></i>Import Excel
+            </button>
+        @endif
     </div>
 </div>
 
@@ -215,38 +217,108 @@
 
 {{-- Modal Import Excel --}}
 <div class="modal fade" id="modal-import-phieu-nhap" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
-                <h5 class="modal-title"><i class="fas fa-file-import me-2"></i>Import Phiếu Nhập từ Excel</h5>
+                <h5 class="modal-title"><i class="fas fa-file-import me-2"></i>Import Phiếu nhập từ Excel</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form id="form-import-phieu-nhap">
+            <form id="form-import-phieu-nhap" enctype="multipart/form-data">
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Loại nhập <span class="text-danger">*</span></label>
-                        <select name="loai_nhap" class="form-select" id="import-loai-nhap" required>
-                            <option value="mua_hang">Nhập mua hàng</option>
-                            <option value="tra_lai_tu_khach">Trả lại từ khách</option>
-                        </select>
+                    {{-- Bước 1: Download template --}}
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Bước 1:</strong> Tải file mẫu, điền dữ liệu theo đúng cột.
+                        <a href="/admin/api/phieu-nhap/download-template" 
+                           class="btn btn-sm btn-outline-primary ms-2" 
+                           id="btn-download-template-nhap" target="_blank">
+                            <i class="fas fa-download me-1"></i>Tải file mẫu Excel
+                        </a>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Nhà cung cấp</label>
-                        <select name="id_nha_cung_cap" id="import-id-ncc" class="form-select">
-                            <option value="">-- Chọn NCC --</option>
-                        </select>
+
+                    {{-- Metadata --}}
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Loại nhập <span class="text-danger">*</span></label>
+                            <select name="loai_nhap" class="form-select" id="import-loai-nhap" required>
+                                <option value="mua_hang" selected>Nhập mua hàng</option>
+                                <option value="tra_lai_tu_khach">Trả lại từ khách</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Nhà cung cấp</label>
+                            <select name="id_nha_cung_cap" id="import-id-ncc" class="form-select">
+                                <option value="">-- Không chọn --</option>
+                            </select>
+                        </div>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">Ghi chú</label>
-                        <input type="text" name="ghi_chu" id="import-ghi-chu" class="form-control" placeholder="Ghi chú phiếu nhập...">
+                        <textarea name="ghi_chu" id="import-ghi-chu" class="form-control" rows="2" 
+                                  placeholder="Ghi chú cho phiếu nhập..."></textarea>
                     </div>
+
                     <hr>
+
+                    {{-- Bước 2: Upload file --}}
                     <div class="mb-3">
-                        <label class="form-label">Chọn file Excel <span class="text-danger">*</span></label>
-                        <input type="file" id="import-file-nhap" accept=".xlsx,.xls,.csv" class="form-control" required>
-                        <small class="text-muted">Hỗ trợ định dạng .xlsx, .xls, .csv</small>
+                        <label class="form-label">
+                            <strong>Bước 2:</strong> Chọn file Excel để import <span class="text-danger">*</span>
+                        </label>
+                        <div id="drop-zone-nhap" 
+                             class="border border-2 border-dashed rounded p-4 text-center"
+                             style="cursor: pointer; transition: all 0.3s; background: #f8f9fa;">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
+                            <p class="mb-1">Nhấn để chọn file hoặc kéo thả file vào đây</p>
+                            <small class="text-muted">Hỗ trợ: .xlsx, .xls, .csv (tối đa 5MB, 1000 dòng)</small>
+                            <input type="file" id="import-file-nhap" name="file" 
+                                   accept=".xlsx,.xls,.csv" style="display: none;" required>
+                        </div>
+                        <div id="import-file-preview-nhap" class="mt-2 d-none">
+                            <span class="badge bg-success">
+                                <i class="fas fa-check-circle me-1"></i>
+                                <span id="import-file-name-nhap"></span>
+                            </span>
+                            <button type="button" class="btn btn-sm btn-link text-danger" id="btn-clear-file-nhap">
+                                <i class="fas fa-times"></i> Xóa
+                            </button>
+                        </div>
                     </div>
-                    <div class="drop-zone-nhap border rounded p-4 text-center" id="drop-zone-nhap" style="border-style: dashed; background: #f8f9fa;">
+
+                    {{-- Preview table --}}
+                    <div id="import-preview-section-nhap" class="d-none">
+                        <label class="form-label"><strong>Xem trước 5 dòng đầu:</strong></label>
+                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                            <table class="table table-sm table-bordered" id="import-preview-table-nhap">
+                                <thead class="table-light" style="position: sticky; top: 0; z-index: 1;"></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {{-- Hướng dẫn --}}
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <strong><i class="fas fa-exclamation-triangle me-1"></i> Lưu ý quan trọng:</strong>
+                        <ul class="mb-0 mt-2 small">
+                            <li><strong>Ma_vach</strong> là cột bắt buộc, phải tồn tại trong hệ thống</li>
+                            <li>Hệ thống tự nhận biết mã vạch là <strong>biến thể</strong> hay <strong>đơn vị quy đổi</strong></li>
+                            <li>Các dòng trùng (Ma_vach + Han_su_dung) sẽ tự động <strong>gộp lại</strong></li>
+                            <li>Giá nhập tính theo <strong>bình quân gia quyền</strong> khi gộp</li>
+                            <li>1 file Excel = 1 phiếu nhập duy nhất</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-success" id="btn-submit-import-nhap" disabled>
+                        <i class="fas fa-upload me-1"></i>Import ngay
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
                         <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
                         <p class="mb-0 text-muted">Kéo thả file Excel vào đây</p>
                         <small class="text-muted">hoặc nhấn "Chọn file" ở trên</small>
@@ -275,6 +347,7 @@
 @endsection
 
 @section('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 let sanPhamTreeNhap = [];
 let sanPhamFlatNhap = [];
@@ -355,6 +428,177 @@ $(function () {
                 taiPhieuNhap(currentPageNhap);
             },
             error: x => hienThongBao('danger', x.responseJSON?.message || 'Lỗi.')
+        });
+    });
+
+    $('#btn-loc-phieu-nhap').click(() => taiPhieuNhap(1));
+
+    // ========== IMPORT EXCEL ==========
+    let importFileNhap = null;
+
+    $('#btn-download-template-nhap').click(function(e) {
+        e.preventDefault();
+        window.open('/admin/api/phieu-nhap/download-template', '_blank');
+    });
+
+    $('#drop-zone-nhap').click(function() {
+        $('#import-file-nhap').click();
+    });
+
+    $('#import-file-nhap').change(function() {
+        const file = this.files[0];
+        if (!file) return;
+        
+        importFileNhap = file;
+        $('#import-file-name-nhap').text(file.name);
+        $('#import-file-preview-nhap').removeClass('d-none');
+        $('#btn-submit-import-nhap').prop('disabled', false);
+        
+        // Preview 5 dòng đầu
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const workbook = XLSX.read(e.target.result, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ''});
+                
+                if (json.length > 0) {
+                    renderPreviewTableNhap(json.slice(0, 6)); // header + 5 rows
+                }
+            } catch (err) {
+                console.error('Error reading Excel:', err);
+                hienThongBao('warning', 'Không thể đọc file. Vui lòng kiểm tra định dạng file.');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    $('#btn-clear-file-nhap').click(function() {
+        $('#import-file-nhap').val('');
+        $('#import-file-preview-nhap').addClass('d-none');
+        $('#import-preview-section-nhap').addClass('d-none');
+        $('#btn-submit-import-nhap').prop('disabled', true);
+        importFileNhap = null;
+    });
+
+    function renderPreviewTableNhap(data) {
+        const $table = $('#import-preview-table-nhap');
+        const $thead = $table.find('thead');
+        const $tbody = $table.find('tbody');
+        
+        $thead.empty();
+        $tbody.empty();
+        
+        if (data.length === 0) return;
+        
+        // Header row
+        const headers = data[0];
+        let headerHtml = '<tr>';
+        headers.forEach(h => {
+            headerHtml += `<th class="text-nowrap">${escapeHtml(h)}</th>`;
+        });
+        headerHtml += '</tr>';
+        $thead.html(headerHtml);
+        
+        // Data rows (max 5)
+        for (let i = 1; i < Math.min(data.length, 6); i++) {
+            let rowHtml = '<tr>';
+            data[i].forEach(cell => {
+                rowHtml += `<td class="text-nowrap">${escapeHtml(cell)}</td>`;
+            });
+            rowHtml += '</tr>';
+            $tbody.append(rowHtml);
+        }
+        
+        $('#import-preview-section-nhap').removeClass('d-none');
+    }
+
+    $('#form-import-phieu-nhap').submit(function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const $btn = $('#btn-submit-import-nhap');
+        
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Đang import...');
+        
+        $.ajax({
+            url: '/admin/api/phieu-nhap/import',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(res) {
+                bootstrap.Modal.getInstance(document.getElementById('modal-import-phieu-nhap')).hide();
+                
+                let alertClass = res.success ? 'success' : 'warning';
+                let iconClass = res.success ? 'check-circle' : 'exclamation-triangle';
+                let alertHtml = `<div class="alert alert-${alertClass} alert-dismissible fade show">
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <h5><i class="fas fa-${iconClass} me-2"></i>${res.message}</h5>`;
+                
+                if (res.summary) {
+                    alertHtml += `<hr><div class="small">
+                        <strong>Tổng kết:</strong><br>
+                        - Phiếu nhập: <strong class="text-primary">${res.summary.phieu_created}</strong> phiếu<br>
+                        - Chi tiết: <strong class="text-success">${res.summary.chi_tiet_created}</strong> dòng<br>
+                        - Tổng dòng: ${res.summary.row_total}<br>
+                        - Bỏ qua: <strong class="text-danger">${res.summary.row_skipped}</strong>
+                    </div>`;
+                }
+                
+                if (res.errors && res.errors.length > 0) {
+                    alertHtml += `<details class="mt-2">
+                        <summary class="fw-bold" style="cursor:pointer;">
+                            <i class="fas fa-list me-1"></i> Xem ${res.errors.length} lỗi chi tiết
+                        </summary>
+                        <ul class="mb-0 mt-2 small">
+                            ${res.errors.slice(0, 10).map(err => `<li>${escapeHtml(err)}</li>`).join('')}
+                            ${res.errors.length > 10 ? `<li class="text-muted">... và ${res.errors.length - 10} lỗi khác</li>` : ''}
+                        </ul>
+                    </details>`;
+                }
+                
+                alertHtml += '</div>';
+                $('#alert-container').html(alertHtml);
+                
+                // Reset form
+                $('#form-import-phieu-nhap')[0].reset();
+                $('#btn-clear-file-nhap').click();
+                
+                // Reload table
+                taiPhieuNhap(currentPageNhap);
+            },
+            error: function(xhr) {
+                $btn.prop('disabled', false).html('<i class="fas fa-upload me-1"></i>Import ngay');
+                
+                const msg = xhr.responseJSON?.message || 'Có lỗi xảy ra khi import.';
+                const errors = xhr.responseJSON?.errors || [];
+                
+                let errorHtml = `<div class="alert alert-danger alert-dismissible fade show">
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <h5><i class="fas fa-times-circle me-2"></i>${msg}</h5>`;
+                
+                if (errors.length > 0) {
+                    errorHtml += `<ul class="mb-0 mt-2 small">
+                        ${errors.slice(0, 5).map(err => `<li>${escapeHtml(err)}</li>`).join('')}
+                    </ul>`;
+                }
+                errorHtml += '</div>';
+                
+                $('#alert-container').html(errorHtml);
+            }
+        });
+    });
+
+    // Load NCC list when modal opens
+    $('#modal-import-phieu-nhap').on('show.bs.modal', function() {
+        taiNhaCungCapNhap();
+        
+        // Populate NCC dropdown for import
+        $.get('/admin/api/lo-hang/nha-cung-cap', res => {
+            const list = Array.isArray(res) ? res : (res?.data || []);
+            const opts = list.map(n => `<option value="${n.id}">${escapeHtml(n.ten_nha_cung_cap)}</option>`).join('');
+            $('#import-id-ncc').html('<option value="">-- Không chọn --</option>' + opts);
         });
     });
 
@@ -708,8 +952,7 @@ function taiPhieuNhap(page = 1) {
                 <td>${ghiChu}</td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-primary btn-xem-pn" data-id="${item.id}"><i class="fas fa-eye"></i></button>
-                    <button class="btn btn-sm btn-outline-warning btn-sua-pn" data-id="${item.id}"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm btn-outline-danger btn-xoa-pn" data-id="${item.id}"><i class="fas fa-trash"></i></button>
+                    ${@json(userHasPermission('nhap_hang')) ? `<button class="btn btn-sm btn-outline-warning btn-sua-pn" data-id="${item.id}"><i class="fas fa-edit"></i></button>` : ''}
                 </td>
             </tr>`;
         }).join('');

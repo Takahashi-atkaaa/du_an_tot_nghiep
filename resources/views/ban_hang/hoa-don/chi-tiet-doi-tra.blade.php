@@ -3,8 +3,5 @@
 @section('title', 'Chi tiết đổi/trả')
 
 @section('content')
-    @include('partials.hoa-don.chi-tiet-doi-tra-page', [
-        'backUrl' => route('nhan-vien.hoa-don.chi-tiet', $hoaDon->id),
-        'backLabel' => 'Quay lại chi tiết hóa đơn',
-    ])
+    @include('ban_hang.partials.hoa-don.chi-tiet-doi-tra-page')
 @endsection

@@ -40,17 +40,21 @@
     </div>
 
     <div class="d-flex gap-2">
-        <a href="{{ route('khach-hang.trash') }}"
-           class="btn btn-outline-danger">
-            <i class="fas fa-trash-restore me-2"></i>
-            Thùng rác
-        </a>
+        @if(userHasPermission('xoa_khach_hang'))
+            <a href="{{ route('khach-hang.trash') }}"
+               class="btn btn-outline-danger">
+                <i class="fas fa-trash-restore me-2"></i>
+                Thùng rác
+            </a>
+        @endif
 
-        <a href="{{ route('khach-hang.create') }}"
-           class="btn btn-primary px-4">
-            <i class="fas fa-plus me-2"></i>
-            Thêm khách hàng
-        </a>
+        @if(userHasPermission('them_khach_hang'))
+            <a href="{{ route('khach-hang.create') }}"
+               class="btn btn-primary px-4">
+                <i class="fas fa-plus me-2"></i>
+                Thêm khách hàng
+            </a>
+        @endif
     </div>
 </div>
 
@@ -194,15 +198,21 @@
                                 {{-- <a href="{{ route('khach-hang.show', $khachHang) }}#lich-su-tich-diem" class="btn btn-sm btn-outline-info btn-action" title="Xem lịch sử tích điểm">
                                     <i class="fas fa-star"></i>
                                 </a> --}}
-                                <a href="{{ route('khach-hang.show', $khachHang) }}" class="btn btn-sm btn-outline-primary btn-action" title="Xem chi tiết">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{{ route('khach-hang.edit', $khachHang) }}" class="btn btn-sm btn-outline-warning btn-action" title="Sửa">
-                                    <i class="fas fa-pen"></i>
-                                </a>
-                                <button type="button" class="btn btn-sm btn-outline-danger btn-action" title="Xóa mềm" data-bs-toggle="modal" data-bs-target="#deleteCustomerModal" data-delete-url="{{ route('khach-hang.destroy', $khachHang) }}" data-customer-name="{{ $khachHang->ten_khach_hang }}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                @if(userHasPermission('quan_ly_khach_hang') || userHasPermission('xem_khach_hang'))
+                                    <a href="{{ route('khach-hang.show', $khachHang) }}" class="btn btn-sm btn-outline-primary btn-action" title="Xem chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                @endif
+                                @if(userHasPermission('sua_khach_hang'))
+                                    <a href="{{ route('khach-hang.edit', $khachHang) }}" class="btn btn-sm btn-outline-warning btn-action" title="Sửa">
+                                        <i class="fas fa-pen"></i>
+                                    </a>
+                                @endif
+                                @if(userHasPermission('xoa_khach_hang'))
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-action" title="Xóa mềm" data-bs-toggle="modal" data-bs-target="#deleteCustomerModal" data-delete-url="{{ route('khach-hang.destroy', $khachHang) }}" data-customer-name="{{ $khachHang->ten_khach_hang }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                @endif
                             </td>
                         </tr>
                     @empty

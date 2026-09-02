@@ -14,6 +14,7 @@ class HangLoiController extends Controller
 {
     public function index(Request $request)
     {
+        abort_unless(userHasPermissionGroup('hang_loi'), 403, 'Bạn không có quyền xem hàng lỗi.');
         $schemaReady = Schema::hasTable('hang_loi');
         $migrationMessage = null;
 
@@ -48,6 +49,7 @@ class HangLoiController extends Controller
 
     public function xacNhanTieuHuy(int $id)
     {
+        abort_unless(userHasPermission('xu_ly_hang_loi'), 403, 'Bạn không có quyền xử lý hàng lỗi.');
         if (!Schema::hasTable('hang_loi')) {
             return back()->with('error', 'Bảng hàng lỗi chưa được tạo. Vui lòng chạy migration trước.');
         }

@@ -524,13 +524,15 @@
 
         <div class="d-flex gap-2">
 
-            <a
-                href="{{ route('khach-hang.edit', $khachHang) }}"
-                class="btn btn-primary customer-action-btn"
-            >
-                <i class="fas fa-pen me-2"></i>
-                Chỉnh sửa
-            </a>
+            @if(userHasPermission('sua_khach_hang'))
+                <a
+                    href="{{ route('khach-hang.edit', $khachHang) }}"
+                    class="btn btn-primary customer-action-btn"
+                >
+                    <i class="fas fa-pen me-2"></i>
+                    Chỉnh sửa
+                </a>
+            @endif
 
             <a
                 href="{{ route('khach-hang.index') }}"

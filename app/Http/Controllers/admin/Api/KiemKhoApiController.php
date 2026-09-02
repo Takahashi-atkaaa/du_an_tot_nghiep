@@ -68,6 +68,7 @@ class KiemKhoApiController extends Controller
      */
     public function capNhatSoLuongThucTe(int $id, int $itemId, CapNhatSoLuongRequest $request): JsonResponse
     {
+        abort_unless(userHasPermission('kiem_kho_dem'), 403, 'Bạn không có quyền kiểm đếm hàng.');
         try {
             $chiTiet = $this->service->capNhatSoLuongThucTe(
                 $id,
@@ -113,6 +114,7 @@ class KiemKhoApiController extends Controller
      */
     public function capNhatHangLo(int $id, Request $request): JsonResponse
     {
+        abort_unless(userHasPermission('kiem_kho_dem'), 403, 'Bạn không có quyền cập nhật kiểm đếm.');
         $validator = Validator::make($request->all(), [
             'items' => 'required|array|min:1',
             'items.*.chi_tiet_id' => 'required|integer',
@@ -172,6 +174,7 @@ class KiemKhoApiController extends Controller
      */
     public function batDauKiem(int $id): JsonResponse
     {
+        abort_unless(userHasPermission('kiem_kho_dem'), 403, 'Bạn không có quyền bắt đầu kiểm kho.');
         try {
             $phieu = $this->service->batDauKiem($id);
             return response()->json([
@@ -189,6 +192,7 @@ class KiemKhoApiController extends Controller
      */
     public function hoanTatKiem(int $id): JsonResponse
     {
+        abort_unless(userHasPermission('kiem_kho_dem'), 403, 'Bạn không có quyền hoàn tất kiểm đếm.');
         try {
             $phieu = $this->service->hoanTatKiem($id);
             return response()->json([
@@ -206,6 +210,7 @@ class KiemKhoApiController extends Controller
      */
     public function duyet(int $id): JsonResponse
     {
+        abort_unless(userHasPermission('kiem_kho_duyet'), 403, 'Bạn không có quyền duyệt phiếu kiểm kho.');
         try {
             $phieu = $this->service->duyetPhieu($id, Auth::user());
             return response()->json([
@@ -223,6 +228,7 @@ class KiemKhoApiController extends Controller
      */
     public function tuChoi(int $id, TuChoiPhieuRequest $request): JsonResponse
     {
+        abort_unless(userHasPermission('kiem_kho_duyet'), 403, 'Bạn không có quyền từ chối phiếu kiểm kho.');
         try {
             $phieu = $this->service->tuChoiPhieu($id, $request->ly_do);
             return response()->json([
@@ -240,6 +246,7 @@ class KiemKhoApiController extends Controller
      */
     public function demLai(int $id): JsonResponse
     {
+        abort_unless(userHasPermission('kiem_kho_dem'), 403, 'Bạn không có quyền yêu cầu đếm lại.');
         try {
             $phieu = $this->service->demLai($id);
             return response()->json([
@@ -258,6 +265,7 @@ class KiemKhoApiController extends Controller
      */
     public function hoanTat(int $id): JsonResponse
     {
+        abort_unless(userHasPermission('kiem_kho_dieu_chinh'), 403, 'Bạn không có quyền điều chỉnh tồn kho.');
         try {
             $phieu = $this->service->hoanTatDieuChinh($id, Auth::user());
             return response()->json([
@@ -275,6 +283,7 @@ class KiemKhoApiController extends Controller
      */
     public function huy(int $id, HuyPhieuRequest $request): JsonResponse
     {
+        abort_unless(userHasPermission('kiem_kho_huy'), 403, 'Bạn không có quyền hủy phiếu kiểm kho.');
         try {
             $phieu = $this->service->huyPhieu($id, $request->ly_do);
             return response()->json([

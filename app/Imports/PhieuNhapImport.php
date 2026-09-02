@@ -27,10 +27,10 @@ class PhieuNhapImport implements ToCollection, WithHeadingRow, WithValidation
     protected int $insertedCount = 0;
 
     public function __construct(
-        int $idNhaCungCap = null,
+        ?int $idNhaCungCap = null,
         string $loaiNhap = 'mua_hang',
         ?string $ghiChu = null,
-        int $idNguoiDung = null
+        ?int $idNguoiDung = null
     ) {
         $this->idNhaCungCap = $idNhaCungCap ?? 0;
         $this->loaiNhap = $loaiNhap;

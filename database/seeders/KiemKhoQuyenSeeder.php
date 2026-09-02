@@ -12,14 +12,13 @@ class KiemKhoQuyenSeeder extends Seeder
      */
     public function run(): void
     {
-        $quyens = [
-            ['ma_quyen' => 'kiem_kho_xem',        'ten_quyen' => 'Xem kiểm kho'],
-            ['ma_quyen' => 'kiem_kho_tao',        'ten_quyen' => 'Tạo/Sửa phiếu kiểm kho'],
-            ['ma_quyen' => 'kiem_kho_dem',        'ten_quyen' => 'Kiểm đếm hàng'],
-            ['ma_quyen' => 'kiem_kho_duyet',      'ten_quyen' => 'Duyệt/Từ chối phiếu'],
-            ['ma_quyen' => 'kiem_kho_dieu_chinh', 'ten_quyen' => 'Hoàn tất điều chỉnh kho'],
-            ['ma_quyen' => 'kiem_kho_huy',        'ten_quyen' => 'Hủy/Xóa phiếu kiểm kho'],
-        ];
+        $labels = config('permissions.labels', []);
+        $quyens = collect(config('permissions.groups.kho_hang', []))
+            ->filter(fn (string $code): bool => str_starts_with($code, 'kiem_kho_'))
+            ->map(fn (string $code): array => [
+                'ma_quyen' => $code,
+                'ten_quyen' => $labels[$code] ?? $code,
+            ])->all();
 
         foreach ($quyens as $quyen) {
             Quyen::firstOrCreate(

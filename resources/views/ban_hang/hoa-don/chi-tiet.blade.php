@@ -32,12 +32,17 @@
 
     <div>
         <a href="{{ route('nhan-vien.hoa-don') }}" class="btn btn-secondary">Quay lại</a>
-        <button onclick="window.print()" class="btn btn-success">
-            <i class="fas fa-print me-1"></i> In hóa đơn
-        </button>
-        <a href="{{ route('nhan-vien.hoa-don.doi-tra', $hoaDon->id) }}" class="btn btn-warning">
-            <i class="fas fa-undo me-1"></i> Đổi / Trả hàng
-        </a>
+        @if($hoaDon->trang_thai !== 'Đã hủy')
+            <button onclick="window.print()" class="btn btn-success">
+                <i class="fas fa-print me-1"></i> In hóa đơn
+            </button>
+        @endif
+
+        @if($hoaDon->trang_thai !== 'Đã hủy')
+            <a href="{{ route('nhan-vien.hoa-don.doi-tra', $hoaDon->id) }}" class="btn btn-warning">
+                <i class="fas fa-undo me-1"></i> Đổi / Trả hàng
+            </a>
+        @endif
         @if(isset($lichSuDoiTra) && $lichSuDoiTra->count())
             <a href="{{ route('nhan-vien.hoa-don.chi-tiet-doi-tra', $hoaDon->id) }}" class="btn btn-outline-warning">
                 <i class="fas fa-rotate-left me-1"></i> Chi tiết đổi/trả

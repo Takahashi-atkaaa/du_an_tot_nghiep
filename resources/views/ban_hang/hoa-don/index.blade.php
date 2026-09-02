@@ -146,12 +146,14 @@
                                     <i class="fas fa-eye"></i>
                                 </a>
 
-                                <a href="{{ route('nhan-vien.hoa-don.in', $hoaDon->id) }}"
-                                   target="_blank"
-                                   class="btn btn-sm btn-outline-success"
-                                   title="In hóa đơn">
-                                    <i class="fas fa-print"></i>
-                                </a>
+                                @if($hoaDon->trang_thai !== 'Đã hủy')
+                                    <a href="{{ route('nhan-vien.hoa-don.in', $hoaDon->id) }}"
+                                       target="_blank"
+                                       class="btn btn-sm btn-outline-success"
+                                       title="In hóa đơn">
+                                        <i class="fas fa-print"></i>
+                                    </a>
+                                @endif
 
                                 @if(($hoaDon->so_lan_doi_tra ?? 0) > 0)
                                     <a href="{{ route('nhan-vien.hoa-don.chi-tiet-doi-tra', $hoaDon->id) }}"

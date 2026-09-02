@@ -12,6 +12,7 @@ class DashboardController extends Controller
 {
     public function index(Request $request, RevenueStatisticsService $revenueStatisticsService)
     {
+        abort_unless(userHasPermission('xem_dashboard'), 403, 'Bạn không có quyền xem thống kê.');
         $quickFilter = $request->get('bo_loc');
 
 if ($quickFilter === '3_ngay') {

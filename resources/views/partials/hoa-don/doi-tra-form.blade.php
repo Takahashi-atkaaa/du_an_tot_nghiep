@@ -3,14 +3,13 @@ use Illuminate\Support\Str;
 
 $currentRoute = request()->route()?->getName() ?? '';
 $isAdmin = Str::startsWith($currentRoute, 'admin.');
-$actionRoute = $isAdmin ? route('admin.hoa-don.xu-ly-doi-tra', $hoaDon->id) : route('nhan-vien.hoa-don.xu-ly-doi-tra', $hoaDon->id);
-$showRoute = $isAdmin ? route('admin.hoa-don.show', $hoaDon->id) : route('nhan-vien.hoa-don.chi-tiet', $hoaDon->id);
+$actionRoute = $actionRoute ?? ($isAdmin
+    ? route('admin.hoa-don.xu-ly-doi-tra', $hoaDon->id)
+    : route('nhan-vien.hoa-don.xu-ly-doi-tra', $hoaDon->id));
+$showRoute = $showRoute ?? ($isAdmin
+    ? route('admin.hoa-don.show', $hoaDon->id)
+    : route('nhan-vien.hoa-don.chi-tiet', $hoaDon->id));
 $requestToken = old('request_token', (string) Str::uuid());
-$nguoiBanMacDinh = old(
-    'id_nguoi_dung',
-    optional($danhSachNguoiBan->firstWhere('id', auth()->id()))->id
-        ?? optional($danhSachNguoiBan->firstWhere('id', $hoaDon->id_nguoi_dung ?? null))->id
-);
 @endphp
 
 <form action="{{ $actionRoute }}" method="POST" id="doiTraForm">
@@ -26,27 +25,6 @@ $nguoiBanMacDinh = old(
             </ul>
         </div>
     @endif
-
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label for="id_nguoi_dung" class="form-label fw-bold">Người thực hiện đổi/trả</label>
-                    <select name="id_nguoi_dung" id="id_nguoi_dung" class="form-select @error('id_nguoi_dung') is-invalid @enderror" required>
-                        <option value="">Chọn người thực hiện đổi/trả</option>
-                        @foreach($danhSachNguoiBan as $nguoiBan)
-                            <option value="{{ $nguoiBan->id }}" @selected((string) $nguoiBanMacDinh === (string) $nguoiBan->id)>
-                                {{ $nguoiBan->ho_ten_kem_vai_tro }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('id_nguoi_dung')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-            </div>
-        </div>
-    </div>
 
     <div class="card mb-4">
         <div class="card-header bg-warning text-dark fw-bold">

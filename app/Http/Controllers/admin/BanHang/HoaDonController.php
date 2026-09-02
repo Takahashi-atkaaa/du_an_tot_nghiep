@@ -47,6 +47,7 @@ class HoaDonController extends Controller
 
     public function index(Request $request)
     {
+        abort_unless(userHasPermission('quan_ly_hoa_don') || userHasPermission('xem_hoa_don'), 403, 'Bạn không có quyền xem hóa đơn.');
         $doiTraSummarySub = DB::table('doi_tra')
             ->selectRaw('id_hoa_don, COUNT(*) as so_lan_doi_tra')
             ->whereNull('deleted_at')
@@ -133,6 +134,7 @@ class HoaDonController extends Controller
 
     public function show($id, DoiTraService $doiTraService)
     {
+        abort_unless(userHasPermission('quan_ly_hoa_don') || userHasPermission('xem_hoa_don'), 403, 'Bạn không có quyền xem hóa đơn.');
         $hoaDon = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
             ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
@@ -273,6 +275,7 @@ $doanhThuRong = max(
 
     public function chiTietDoiTra($id, DoiTraService $doiTraService)
     {
+        abort_unless(userHasPermission('quan_ly_hoa_don') || userHasPermission('xem_hoa_don') || userHasPermission('doi_tra_hoa_don'), 403, 'Bạn không có quyền xem đổi/trả.');
         $data = $doiTraService->getInvoiceReturnHistoryPageData((int) $id);
 
         return view('admin_xem_truoc.hoa-don-chi-tiet-doi-tra', $data);
@@ -280,6 +283,7 @@ $doanhThuRong = max(
 
     public function showModal($id, DoiTraService $doiTraService)
     {
+        abort_unless(userHasPermission('quan_ly_hoa_don') || userHasPermission('xem_hoa_don'), 403, 'Bạn không có quyền xem hóa đơn.');
         $hoaDon = DB::table('hoa_don')
             ->leftJoin('khach_hang', 'hoa_don.id_khach_hang', '=', 'khach_hang.id')
             ->leftJoin('nguoi_dung', 'hoa_don.id_nguoi_dung', '=', 'nguoi_dung.id')
@@ -422,6 +426,7 @@ $doanhThuRong = max(
 
     public function huy($id)
     {
+        abort_unless(userHasPermission('huy_hoa_don'), 403, 'Bạn không có quyền hủy hóa đơn.');
         return DB::transaction(function () use ($id) {
             $hoaDon = DB::table('hoa_don')
                 ->where('id', $id)
@@ -459,6 +464,7 @@ $doanhThuRong = max(
 
     public function searchProduct(Request $request, KiemKhoService $kiemKhoService)
     {
+        abort_unless(userHasPermission('quan_ly_hoa_don') || userHasPermission('xem_hoa_don') || userHasPermission('doi_tra_hoa_don'), 403, 'Bạn không có quyền tìm sản phẩm đổi/trả.');
         $keyword = $request->q;
 
         $query = DB::table('bien_the_san_pham')
@@ -497,20 +503,21 @@ $doanhThuRong = max(
 
     public function formDoiTra($id, DoiTraService $doiTraService)
     {
+        abort_unless(userHasPermission('doi_tra_hoa_don'), 403, 'Bạn không có quyền xử lý đổi/trả.');
         $data = $doiTraService->getInvoiceReturnData((int) $id);
         $hoaDon = $data['hoaDon'];
         $chiTiet = $data['chiTiet'];
-        $danhSachNguoiBan = $doiTraService->getEligibleSalesUsers();
 
         if (in_array($hoaDon->trang_thai, ['Đã hủy', 'Đã trả toàn bộ'], true)) {
             return back()->with('error', 'Hóa đơn này không thể đổi/trả hàng.');
         }
 
-        return view('admin_xem_truoc.hoa-don-doi-tra', compact('hoaDon', 'chiTiet', 'danhSachNguoiBan'));
+        return view('admin_xem_truoc.hoa-don-doi-tra', compact('hoaDon', 'chiTiet'));
     }
 
     public function xuLyDoiTra(XuLyDoiTraRequest $request, $id, DoiTraService $doiTraService)
     {
+        abort_unless(userHasPermission('doi_tra_hoa_don'), 403, 'Bạn không có quyền xử lý đổi/trả.');
         $processedTokens = session()->get('processed_doi_tra_tokens', []);
         $requestToken = $request->string('request_token')->toString();
 

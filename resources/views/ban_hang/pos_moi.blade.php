@@ -6,7 +6,6 @@
     <title>SmartMart POS — Bán lẻ</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="payos-create-url" content="{{ route('payos.create') }}">
-    <meta name="payos-pending-url" content="{{ route('nhan-vien.ban-hang.don-cho-thanh-toan') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -334,6 +333,7 @@
             display: grid;
             grid-template-columns: 440px 1fr;
             gap: 0;
+            min-height: 0;
             overflow: hidden;
         }
 
@@ -606,7 +606,8 @@
         /* ===== RIGHT: PRODUCT PANEL ===== */
         .pos-right {
             display: grid;
-            grid-template-rows: auto 1fr;
+            grid-template-rows: auto minmax(0, 1fr);
+            min-height: 0;
             overflow: hidden;
             background: var(--pos-bg);
         }
@@ -670,11 +671,12 @@
         }
 
         .product-grid {
+            min-height: 0;
             overflow-y: auto;
             padding: 14px 18px;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 12px;
             align-content: start;
         }
 
@@ -687,6 +689,7 @@
             transition: 0.15s;
             display: flex;
             flex-direction: column;
+            min-height: 240px;
         }
 
         .product-card:hover {
@@ -704,15 +707,18 @@
         .product-card .img-wrap {
             position: relative;
             width: 100%;
-            aspect-ratio: 4 / 3;
-            background: #f8fafc;
+            height: 122px;
+            flex: 0 0 122px;
+            background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
             overflow: hidden;
         }
 
         .product-card .img-wrap img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
+            object-position: center;
+            padding: 8px;
         }
 
         .product-card .img-wrap .no-img {
@@ -722,7 +728,7 @@
             align-items: center;
             justify-content: center;
             color: #cbd5e1;
-            font-size: 32px;
+            font-size: 34px;
         }
 
         .product-card .badge-promo {
@@ -971,6 +977,21 @@
             .pos-main { grid-template-columns: 380px 1fr; }
         }
 
+        @media (max-width: 1800px) {
+            .product-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+            .product-card .img-wrap { height: 116px; flex-basis: 116px; }
+        }
+
+        @media (max-width: 1500px) {
+            .product-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .product-card .img-wrap { height: 112px; flex-basis: 112px; }
+        }
+
+        @media (max-width: 1200px) {
+            .product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .product-card .img-wrap { height: 108px; flex-basis: 108px; }
+        }
+
         @media (max-width: 900px) {
             html, body { overflow: auto; }
             .pos-shell { height: auto; min-height: 100vh; }
@@ -984,7 +1005,7 @@
             .pos-right { min-height: 560px; }
             .filter-bar .search-row { grid-template-columns: 1fr; }
             .product-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                grid-template-columns: repeat(2, minmax(0, 1fr));
                 padding: 12px;
                 gap: 10px;
             }
@@ -994,6 +1015,7 @@
             .pos-header { padding: 0 12px; }
             .pos-header .meta { display: none; }
             .pos-header .user-block { font-size: 12px; }
+            .product-grid { grid-template-columns: 1fr; }
         }
 
         .scroll-thin::-webkit-scrollbar { width: 6px; }
@@ -1121,20 +1143,20 @@
             </a>
         </div>
         <div class="nav-item">
-            <a href="javascript:void(0)" class="nav-link" onclick="openDonChoPayOS()">
+            <a href="{{ route('nhan-vien.ban-hang.don-cho-thanh-toan') }}" class="nav-link">
                 <i class="fa-solid fa-qrcode"></i>
                 <span>QR đang chờ</span>
             </a>
         </div>
         <div class="nav-item">
-            <a href="{{ url('/admin/hoa-don') }}" class="nav-link">
+            <a href="{{ route('nhan-vien.hoa-don') }}" class="nav-link {{ request()->is('hoa-don') ? 'active' : '' }}">
                 <i class="fa-solid fa-file-invoice"></i>
                 <span>Hóa đơn</span>
             </a>
         </div>
        
         <div class="nav-item">
-            <a href="{{ url('/admin/san-pham') }}" class="nav-link">
+            <a href="{{ route('nhan-vien.san-pham') }}" class="nav-link {{ request()->is('san-pham') ? 'active' : '' }}">
                 <i class="fa-solid fa-box"></i>
                 <span>Sản phẩm</span>
             </a>
@@ -1401,28 +1423,6 @@
     </div>
 </div>
 
-<!-- MODAL: Đơn chờ thanh toán PayOS -->
-<div class="modal fade" id="donChoPayOSModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header" style="background: var(--pos-primary); color: #fff;">
-                <h5 class="modal-title">
-                    <i class="fa-solid fa-qrcode me-2"></i>Đơn chờ thanh toán PayOS
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
-            </div>
-            <div class="modal-body p-0">
-                <div id="donChoPayOSList" class="py-3"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-primary" onclick="loadDonChoPayOS()">
-                    <i class="fa-solid fa-rotate me-1"></i>Làm mới
-                </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-            </div>
-        </div>
-    </div>
-</div>
 <!-- =========================================================
      MODAL: THÊM KHÁCH HÀNG NHANH
 ========================================================= -->
@@ -1997,13 +1997,30 @@ function groupProducts(products) {
 }
 
 function getSaleOptions(group) {
-    return group.variants.flatMap(product => {
+    const allOptions = group.variants.flatMap(product => {
         const options = [{ product, unit: null }];
         const conversionUnits = (product.don_vi_quy_doi || [])
             .filter(unit => Number(unit.so_luong_ton_kho || 0) > 0)
             .map(unit => ({ product, unit }));
         return options.concat(conversionUnits);
     });
+
+    // Deduplicate options by barcode to prevent rendering duplicate units
+    // This handles legacy data where multiple units may have the same barcode
+    const seen = new Set();
+    const deduplicated = [];
+    
+    for (const option of allOptions) {
+        const barcode = option.unit ? option.unit.ma_vach : option.product.ma_vach;
+        const key = `${option.product.id}_${barcode || 'base'}`;
+        
+        if (!seen.has(key)) {
+            seen.add(key);
+            deduplicated.push(option);
+        }
+    }
+    
+    return deduplicated;
 }
 
 function getVariantLabel(product) {
@@ -3410,7 +3427,7 @@ document.getElementById('btnConfirmPay').onclick = async () => {
         renderInvoiceTabs();
         applyActiveInvoice();
 
-        showToast('Thanh toán thành công! #' + hoaDonId);
+        showToast('Tạo QR thành công! #' + hoaDonId);
 
         if (data.redirect_to_payos) {
             await redirectToPayOS(hoaDonId);

@@ -42,4 +42,14 @@ class VaiTro extends Model
             ->where('ma_quyen', $maQuyen)
             ->exists();
     }
+
+    /**
+     * Kiểm tra vai trò có ít nhất 1 trong các quyền được chỉ định
+     */
+    public function hasAnyPermission(array $maQuyens): bool
+    {
+        return $this->quyens()
+            ->whereIn('ma_quyen', $maQuyens)
+            ->exists();
+    }
 }

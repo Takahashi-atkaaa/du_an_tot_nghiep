@@ -31,10 +31,34 @@ class PhieuNhapController extends Controller
         $phieuNhap = PhieuNhap::with([
             'phieu.nhaCungCap',
             'phieu.nguoiDung',
-            'chiTietPhieu.sanPham',
-            'chiTietPhieu.loHang'
+            'phieu.hoaDon',
+            'hoaDon',
+            'phieuXuatGoc',
+            'chiTietPhieu' => function ($q) {
+                $q->orderBy('id')
+                    ->with([
+                        'variant.product',
+                        'loHang.nhaCungCap',
+                        'chiTietLoHang',
+                    ]);
+            },
         ])->findOrFail($id);
 
-        return view('admin_xem_truoc.warehouse.phieu-nhap-chi-tiet', compact('phieuNhap'));
+        $chiTietPhieu = $phieuNhap->chiTietPhieu;
+        $tongSoDong = $chiTietPhieu->count();
+        $tongSoLuong = $chiTietPhieu->sum(fn ($ct) => (float) ($ct->so_luong ?? 0));
+        $tongThanhTien = $chiTietPhieu->sum(fn ($ct) => (float) ($ct->so_luong ?? 0) * (float) ($ct->gia_nhap ?? 0));
+        $soLoaiSanPham = $chiTietPhieu->pluck('variant_id')->filter()->unique()->count();
+        $hsdSomNhat = $chiTietPhieu->pluck('han_su_dung')->filter()->sort()->first();
+
+        return view('admin_xem_truoc.kho-hang.phieu-nhap-chi-tiet', compact(
+            'phieuNhap',
+            'chiTietPhieu',
+            'tongSoDong',
+            'tongSoLuong',
+            'tongThanhTien',
+            'soLoaiSanPham',
+            'hsdSomNhat'
+        ));
     }
 }

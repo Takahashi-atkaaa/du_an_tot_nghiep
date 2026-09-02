@@ -32,15 +32,18 @@
     </div>
 
     <div class="d-flex gap-2">
-        <a href="{{ url('/admin/khuyen-mai/thung-rac') }}" class="btn btn-outline-danger">
-            <i class="fas fa-trash me-2"></i>Thùng rác
-        </a>
+        @if(userHasPermission('xoa_khuyen_mai'))
+            <a href="{{ url('/admin/khuyen-mai/thung-rac') }}" class="btn btn-outline-danger">
+                <i class="fas fa-trash me-2"></i>Thùng rác
+            </a>
+        @endif
 
-        <a href="{{ route('khuyen-mai.create') }}"
-   class="btn btn-primary">
-    <i class="fas fa-plus me-2"></i>
-    Tạo khuyến mãi
-</a>
+        @if(userHasPermission('them_khuyen_mai'))
+            <a href="{{ route('khuyen-mai.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>
+                Tạo khuyến mãi
+            </a>
+        @endif
     </div>
 </div>
 
@@ -233,33 +236,33 @@
 
                                     <div>
                                         {{-- Xem chi tiết --}}
-                                            <a href="{{ route('khuyen-mai.show', $promo->id) }}"
-                                            class="btn btn-sm btn-outline-info"
-                                            title="Xem chi tiết">
+                                        @if(userHasPermission('quan_ly_khuyen_mai') || userHasPermission('xem_khuyen_mai'))
+                                            <a href="{{ route('khuyen-mai.show', $promo->id) }}" class="btn btn-sm btn-outline-info" title="Xem chi tiết">
                                                 <i class="fas fa-eye"></i>
-                                            </a>    
-                                        <a href="{{ route('khuyen-mai.edit', $promo->id) }}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-
-                                        <form action="{{ route('khuyen-mai.destroy', $promo->id) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('Xác nhận xóa chương trình khuyến mãi này?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-
-                                        <form action="{{ url('/admin/khuyen-mai/' . $promo->id . '/toggle') }}" method="POST" style="display:inline-block; margin-left:6px;">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Bật/Tắt">
-                                                @if($promo->trang_thai)
-                                                    <i class="fas fa-toggle-on text-success"></i>
-                                                @else
-                                                    <i class="fas fa-toggle-off text-secondary"></i>
-                                                @endif
-                                            </button>
-                                        </form>
+                                            </a>
+                                        @endif
+                                        @if(userHasPermission('sua_khuyen_mai'))
+                                            <a href="{{ route('khuyen-mai.edit', $promo->id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <form action="{{ url('/admin/khuyen-mai/' . $promo->id . '/toggle') }}" method="POST" style="display:inline-block; margin-left:6px;">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary" title="Bật/Tắt">
+                                                    @if($promo->trang_thai)
+                                                        <i class="fas fa-toggle-on text-success"></i>
+                                                    @else
+                                                        <i class="fas fa-toggle-off text-secondary"></i>
+                                                    @endif
+                                                </button>
+                                            </form>
+                                        @endif
+                                        @if(userHasPermission('xoa_khuyen_mai'))
+                                            <form action="{{ route('khuyen-mai.destroy', $promo->id) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('Xác nhận xóa chương trình khuyến mãi này?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -275,11 +278,11 @@
                             </div>
                             <h5 class="mb-2">Tạo khuyến mãi mới</h5>
                             <p class="text-muted mb-3">Thêm chương trình khuyến mãi mới</p>
-                            <a href="{{ route('khuyen-mai.create') }}"
-   class="btn btn-primary">
-    <i class="fas fa-plus me-2"></i>
-    Tạo mới
-</a>
+                            @if(userHasPermission('them_khuyen_mai'))
+                                <a href="{{ route('khuyen-mai.create') }}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-2"></i>Tạo mới
+                                </a>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -288,11 +291,11 @@
                     <div class="card table-admin">
                         <div class="card-body text-center">
                             <p class="mb-0">Chưa có chương trình khuyến mãi nào.</p>
-                            <a href="{{ route('khuyen-mai.create') }}"
-   class="btn btn-primary mt-3">
-    <i class="fas fa-plus me-2"></i>
-    Tạo khuyến mãi mới
-</a>
+                            @if(userHasPermission('them_khuyen_mai'))
+                                <a href="{{ route('khuyen-mai.create') }}" class="btn btn-primary mt-3">
+                                    <i class="fas fa-plus me-2"></i>Tạo khuyến mãi mới
+                                </a>
+                            @endif
                         </div>
                     </div>
                 </div>
