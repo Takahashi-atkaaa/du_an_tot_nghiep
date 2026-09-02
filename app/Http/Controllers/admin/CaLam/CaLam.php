@@ -7,15 +7,13 @@ use App\Models\CaLamViec;
 use App\Models\ChiaCaLamViec;
 use App\Models\ChiTietHoaDon;
 use App\Models\HoaDon;
-use App\Services\RevenueStatisticsService;
 
 class CaLam extends Controller
 {
-    public function index(RevenueStatisticsService $revenueStatisticsService)
+    public function index()
     {
         $ngay_hien_tai = now()->format('Y-m-d');
         $gio_hien_tai = now()->format('H:i:s');
-        $revenueStatuses = $revenueStatisticsService->salesRevenueStatuses();
 
         $ca_hien_tai = CaLamViec::where(function ($query) use ($gio_hien_tai) {
             $query->where(function ($q) use ($gio_hien_tai) {
