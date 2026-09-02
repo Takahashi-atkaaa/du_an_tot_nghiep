@@ -20,7 +20,8 @@ class SanPhamImport
     public function collection(Collection $rows)
     {
         $rows = $rows->skip(1); // skip header
-        $rows = $rows->filter(fn($row) => !empty($row[0]) && trim((string)$row[0]) !== '');
+        // Bỏ qua dòng trống (kiểm tra cột 1 - Tên sản phẩm, vì cột 0 là STT)
+        $rows = $rows->filter(fn($row) => !empty($row[1]) && trim((string)$row[1]) !== '');
 
         if ($rows->isEmpty()) {
             return;
@@ -36,16 +37,37 @@ class SanPhamImport
         DB::transaction(function () use ($rows, $existingBarcodes, $allMaHang, $productsCache) {
             foreach ($rows as $idx => $row) {
                 $lineNumber = $idx + 2;
-                $tenSanPham = trim((string)($row[0] ?? ''));
-                $tenDanhMuc = trim((string)($row[1] ?? ''));
-                $tenBienThe = trim((string)($row[2] ?? ''));
-                $maHang = trim((string)($row[3] ?? ''));
-                $maVach = trim((string)($row[4] ?? ''));
-                $giaVon = 0; // Luôn = 0; giá vốn chỉ được sinh tự động từ lần nhập hàng đầu tiên
-                $giaBan = (float)($row[6] ?? 0);
-                $soLuongTon = (int)($row[7] ?? 0);
-                $dinhMucToiThieu = (int)($row[8] ?? 0);
-                $trangThai = (int)($row[9] ?? 1) === 1;
+                
+                // Mapping cột từ file Excel export (13 cột):
+                // 0: STT (bỏ qua)
+                // 1: Tên sản phẩm
+                // 2: Danh mục
+                // 3: Biến thể
+                // 4: Mã hàng
+                // 5: Mã vạch
+                // 6: Đơn vị (bỏ qua)
+                // 7: Giá vốn
+                // 8: Giá bán
+                // 9: Tồn kho
+                // 10: Định mức tối thiểu
+                // 11: Trạng thái
+                // 12: Thương hiệu (bỏ qua)
+                
+                $tenSanPham = trim((string)($row[1] ?? ''));
+                $tenDanhMuc = trim((string)($row[2] ?? ''));
+                $tenBienThe = trim((string)($row[3] ?? ''));
+                $maHang = trim((string)($row[4] ?? ''));
+                $maVach = trim((string)($row[5] ?? ''));
+                
+                // Parse số từ format VNĐ: "1,234,567 đ" -> 1234567
+                $giaVon = $this->parseNumber($row[7] ?? 0);
+                $giaBan = $this->parseNumber($row[8] ?? 0);
+                $soLuongTon = (int)($row[9] ?? 0);
+                $dinhMucToiThieu = (int)($row[10] ?? 0);
+                
+                // Parse trạng thái: "Hoạt động" = true, "Tạm ngưng" = false
+                $trangThaiText = trim((string)($row[11] ?? ''));
+                $trangThai = in_array($trangThaiText, ['Hoạt động', '1', 'true'], true);
 
                 if ($tenSanPham === '') {
                     $this->errors[] = "Dòng {$lineNumber}: Thiếu tên sản phẩm.";
@@ -130,5 +152,19 @@ class SanPhamImport
             'skipped' => $this->skipped,
             'errors' => $this->errors,
         ];
+    }
+
+    /**
+     * Parse số từ format VNĐ: "1,234,567 đ" -> 1234567
+     */
+    protected function parseNumber($value): float
+    {
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+        
+        // Loại bỏ tất cả ký tự không phải số và dấu chấm
+        $cleaned = preg_replace('/[^0-9.]/', '', (string) $value);
+        return (float) ($cleaned ?: 0);
     }
 }

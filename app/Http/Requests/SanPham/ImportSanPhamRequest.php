@@ -19,8 +19,8 @@ class ImportSanPhamRequest extends FormRequest
                 'file',
                 function ($attribute, $value, $fail) {
                     $ext = strtolower($value->getClientOriginalExtension());
-                    if (!in_array($ext, ['csv', 'txt'])) {
-                        $fail('File phải có định dạng .csv hoặc .txt.');
+                    if (!in_array($ext, ['csv', 'txt', 'xlsx', 'xls'])) {
+                        $fail('File phải có định dạng .csv, .xlsx hoặc .xls.');
                     }
                 },
                 'max:5120',
@@ -32,7 +32,6 @@ class ImportSanPhamRequest extends FormRequest
     {
         return [
             'excel_file.required' => 'Vui lòng chọn file để import.',
-            'excel_file.mimes' => 'File phải có định dạng .csv.',
             'excel_file.max' => 'File vượt quá dung lượng cho phép (tối đa 5MB).',
         ];
     }

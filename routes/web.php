@@ -178,6 +178,7 @@ Route::middleware([KTVaiTro::class])->group(function () {
 
     //quản lý sản phẩm
     Route::get('/admin/san-pham', [SanPhamController::class, 'index'])->middleware('permission:quan_ly_san_pham')->name('san-pham.index');
+    Route::get('/admin/san-pham/export', [SanPhamController::class, 'export'])->middleware('permission:quan_ly_san_pham')->name('san-pham.export');
     Route::get('/admin/san-pham/create', [SanPhamController::class, 'create'])->middleware('permission:them_san_pham')->name('san-pham.create');
     Route::post('/admin/san-pham', [SanPhamController::class, 'store'])->middleware('permission:them_san_pham')->name('san-pham.store');
     Route::post('/admin/san-pham/bulk-action', [SanPhamController::class, 'bulkAction'])->middleware('permission:sua_san_pham');

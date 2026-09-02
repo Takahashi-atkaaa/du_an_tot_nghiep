@@ -7,7 +7,7 @@
                     <h5 class="modal-title fw-bold mb-0" id="importProductModalLabel">
                         <i class="fas fa-file-import me-2"></i>Nhập dữ liệu sản phẩm
                     </h5>
-                    <small class="text-white-50">Từ file CSV (.csv)</small>
+                    <small class="text-white-50">Từ file Excel (.xlsx, .xls) hoặc CSV (.csv)</small>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -16,15 +16,15 @@
                 <input type="hidden" name="_action" value="import">
                 <div class="modal-body">
                     <div class="text-center mb-4">
-                        <i class="fas fa-file-csv fa-4x text-success mb-3"></i>
-                        <h5>Chọn file CSV để import</h5>
-                        <p class="text-muted small mb-2">File phải có định dạng <strong>.csv</strong> (UTF-8).</p>
+                        <i class="fas fa-file-excel fa-4x text-success mb-3"></i>
+                        <h5>Chọn file Excel để import</h5>
+                        <p class="text-muted small mb-2">File phải có định dạng <strong>.xlsx, .xls</strong> hoặc <strong>.csv</strong></p>
                     </div>
 
                     <div class="mb-3">
-                        <label for="importFileInput" class="form-label fw-semibold">Chọn file CSV</label>
-                        <input type="file" class="form-control" id="importFileInput" name="excel_file" accept=".csv,text/csv">
-                        <div class="form-text">Dung lượng tối đa: 5MB</div>
+                        <label for="importFileInput" class="form-label fw-semibold">Chọn file Excel/CSV</label>
+                        <input type="file" class="form-control" id="importFileInput" name="excel_file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+                        <div class="form-text">Dung lượng tối đa: 5MB. Có thể import lại file Excel vừa xuất.</div>
                     </div>
 
                     <!-- Preview section -->

@@ -72,6 +72,11 @@
 
                 {{-- 3) NHÓM ACTION --}}
                 <div class="d-flex gap-2 action-group">
+                    <a href="{{ route('san-pham.export') }}" 
+                       class="btn btn-outline-success action-btn"
+                       title="Xuất danh sách sản phẩm ra Excel">
+                        <i class="fas fa-file-excel me-2"></i>Xuất Excel
+                    </a>
                     <button type="button"
                             class="btn btn-success action-btn"
                             data-bs-toggle="modal"

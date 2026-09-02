@@ -967,7 +967,10 @@ class SanPhamController extends Controller
 
     public function export()
     {
-        return new \App\Exports\SanPhamExport();
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\SanPhamExport(),
+            'danh-sach-san-pham-' . now()->format('Y-m-d-His') . '.xlsx'
+        );
     }
 
     public function exportTemplate()
@@ -978,16 +981,17 @@ class SanPhamController extends Controller
     public function import(ImportSanPhamRequest $request): RedirectResponse
     {
         $file = $request->file('excel_file');
-        $handle = fopen($file->getRealPath(), 'r');
-        if (!$handle) {
-            return redirect()->route('san-pham.index')->with('error', 'Không thể đọc file.');
+        
+        // Đọc file Excel (.xlsx, .xls) hoặc CSV
+        try {
+            $rows = \Maatwebsite\Excel\Facades\Excel::toArray(
+                new \stdClass(), 
+                $file
+            )[0]; // Sheet đầu tiên
+        } catch (\Exception $e) {
+            return redirect()->route('san-pham.index')
+                ->with('error', 'Không thể đọc file: ' . $e->getMessage());
         }
-
-        $rows = [];
-        while (($data = fgetcsv($handle, 0, ',')) !== false) {
-            $rows[] = $data;
-        }
-        fclose($handle);
 
         $importer = new \App\Imports\SanPhamImport;
         $importer->collection(collect($rows));
