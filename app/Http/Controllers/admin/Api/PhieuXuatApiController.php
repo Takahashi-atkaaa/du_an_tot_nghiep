@@ -26,11 +26,13 @@ class PhieuXuatApiController extends Controller
         $loai = $request->query('loai_xuat');
         $tuNgay = $request->query('tu_ngay');
         $denNgay = $request->query('den_ngay');
+        $maLo = $request->query('ma_lo');
 
         $query = PhieuXuat::with([
-            'phieu',
+            'phieu.nhaCungCap',
+            'phieu.nguoiDung',
             'phieuNhapLienQuan',
-            'chiTietPhieu',
+            'chiTietPhieu.loHang',
         ])
             ->whereHas('phieu', fn($p) => $p->where('loai_phieu_enum', 'like', 'xuat%'))
             ->orderByDesc('id');
@@ -44,6 +46,14 @@ class PhieuXuatApiController extends Controller
         if (!empty($denNgay)) {
             $query->whereDate('created_at', '<=', $denNgay);
         }
+        if (!empty($maLo)) {
+            $query->whereHas('chiTietPhieu', function($ct) use ($maLo) {
+                $ct->where('ma_lo', 'like', "%{$maLo}%")
+                  ->orWhereHas('loHang', function($lh) use ($maLo) {
+                      $lh->where('ma_lo', 'like', "%{$maLo}%");
+                  });
+            });
+        }
 
         $items = $query->paginate(15)->withQueryString();
 
@@ -56,7 +66,8 @@ class PhieuXuatApiController extends Controller
     public function showEdit(int $id)
     {
         $phieuXuat = PhieuXuat::with([
-            'phieu',
+            'phieu.nhaCungCap',
+            'phieu.nguoiDung',
             'chiTietPhieu.variant.product',
             'chiTietPhieu.chiTietLoHang',
         ])->find($id);
@@ -73,7 +84,8 @@ class PhieuXuatApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $phieuXuat = PhieuXuat::with([
-            'phieu',
+            'phieu.nhaCungCap',
+            'phieu.nguoiDung',
             'phieuNhapLienQuan',
             'chiTietPhieu' => fn($ct) => $ct->with('variant.product', 'chiTietLoHang'),
         ])->find($id);
@@ -273,7 +285,7 @@ class PhieuXuatApiController extends Controller
 
     public function destroy(int $id): JsonResponse
     {
-        abort_unless(userHasPermission('xoa_phieu_xuat'), 403, 'Bạn không có quyền xóa phiếu xuất.');
+        abort_unless(\userHasPermission('xoa_phieu_xuat'), 403, 'Bạn không có quyền xóa phiếu xuất.');
         $phieuXuat = PhieuXuat::with('phieu')->find($id);
         if (!$phieuXuat) {
             return response()->json(['success' => false, 'message' => 'Phiếu xuất không tồn tại.'], 404);

@@ -419,12 +419,12 @@
                             </a>
                         </li>
 
-                        <li class="nav-item">
+                        {{-- <li class="nav-item">
                             <a href="{{ route('nguoi-dung.phan-quyen', ['id_vai_tro' => 4]) }}"
                             class="nav-link {{ request()->is('nguoi-dung/phan-quyen/4') ? 'active' : '' }}">
                                 Bán hàng
                             </a>
-                        </li>
+                        </li> --}}
                     </ul>
                 </div>
             </li>

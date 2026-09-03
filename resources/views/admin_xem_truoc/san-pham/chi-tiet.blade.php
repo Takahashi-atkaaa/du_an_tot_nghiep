@@ -361,7 +361,7 @@
                                                                             <th class="text-end align-middle">Giá vốn QĐ <span class="text-muted small" title="Tự động từ lô hàng">*</span></th>
                                                                             <th class="text-end align-middle">Giá bán QĐ</th>
                                                                             <th class="align-middle">Mã vạch</th>
-                                                                            <th class="text-center align-middle">Mặc định</th>
+                                                                            <th class="text-center align-middle" style="display: none;">Mặc định</th>
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody>
@@ -385,7 +385,7 @@
                                                                                 <td class="align-middle">
                                                                                     <span class="text-gray-500 font-monospace">{{ $unit->ma_vach ?: '—' }}</span>
                                                                                 </td>
-                                                                                <td class="text-center align-middle">
+                                                                                <td class="text-center align-middle" style="display: none;">
                                                                                     @if($unit->la_don_vi_mac_dinh)
                                                                                         <i class="fas fa-check-circle text-green-700"></i>
                                                                                     @else
@@ -652,19 +652,9 @@
                                  data-target-table="loHangTableBody"
                                  data-target-empty="loHangEmptyState">
                                 <div class="filter-grid filter-grid--lohang">
-                                    <div class="filter-field" style="grid-column: span 2;">
+                                    <div class="filter-field" style="grid-column: span 4;">
                                         <label>Tìm mã lô</label>
                                         <input type="text" class="form-control filter-ma-lo" placeholder="Nhập mã lô...">
-                                    </div>
-                                    <div class="filter-field" style="grid-column: span 2;">
-                                        <label>Trạng thái HSD</label>
-                                        <select class="form-select filter-trang-thai-hsd">
-                                            <option value="">Tất cả</option>
-                                            <option value="conhan">Còn hạn (&gt; 30 ngày)</option>
-                                            <option value="sap">Sắp hết hạn (≤ 30 ngày)</option>
-                                            <option value="het">Đã hết hạn</option>
-                                            <option value="khong">Không có HSD</option>
-                                        </select>
                                     </div>
                                     <div class="filter-actions">
                                         <button type="button" class="btn btn-primary btn-apply-filter">
@@ -686,24 +676,14 @@
                                         <th class="align-middle">Mã lô</th>
                                         <th class="text-end align-middle">Số lượng còn</th>
                                         <th class="align-middle">Hạn sử dụng</th>
-                                        <th class="align-middle">Trạng thái HSD</th>
                                     </tr>
                                 </thead>
                                 <tbody id="loHangTableBody">
                                     @forelse($loHang as $lo)
                                         @php
                                             $hanSuDung = $lo->han_su_dung ? \Carbon\Carbon::parse($lo->han_su_dung) : null;
-                                            $now = \Carbon\Carbon::now();
-                                            // Carbon 2.x/3.x: diffInDays() trả về FLOAT mặc định
-                                            // Ép kiểu (int) để hiển thị số nguyên, giữ dấu (âm = quá hạn).
-                                            $daysLeft = $hanSuDung ? (int) $now->diffInDays($hanSuDung, false) : null;
-                                            $hsdKey = 'conhan';
-                                            if (!$hanSuDung) { $hsdKey = 'khong'; }
-                                            elseif ($daysLeft < 0) { $hsdKey = 'het'; }
-                                            elseif ($daysLeft <= 30) { $hsdKey = 'sap'; }
                                         @endphp
-                                        <tr data-ma-lo="{{ $lo->ma_lo ?: '' }}"
-                                            data-trang-thai-hsd="{{ $hsdKey }}">
+                                        <tr data-ma-lo="{{ $lo->ma_lo ?: '' }}">
                                             <td class="align-middle"><span class="font-monospace fw-semibold text-gray-900">{{ $lo->ma_lo ?: '—' }}</span></td>
                                             <td class="text-end align-middle">
                                                 <span class="fw-bold {{ ($lo->so_luong ?? 0) <= 0 ? 'text-gray-400' : 'text-green-700' }}">
@@ -717,20 +697,9 @@
                                                     <span class="text-gray-400">—</span>
                                                 @endif
                                             </td>
-                                            <td class="align-middle">
-                                                @if(!$hanSuDung)
-                                                    <span class="pill pill--gray">Không có HSD</span>
-                                                @elseif($daysLeft < 0)
-                                                    <span class="pill pill--red">Đã hết hạn</span>
-                                                @elseif($daysLeft <= 30)
-                                                    <span class="pill pill--amber">Còn {{ $daysLeft }} ngày</span>
-                                                @else
-                                                    <span class="pill pill--green">Còn {{ $daysLeft }} ngày</span>
-                                                @endif
-                                            </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="4" class="text-center text-gray-400 py-5 align-middle">
+                                        <tr><td colspan="3" class="text-center text-gray-400 py-5 align-middle">
                                             <i class="fas fa-boxes-stacked fa-3x mb-3"></i>
                                             <p class="mb-0">Chưa có thông tin lô hàng.</p>
                                         </td></tr>
@@ -1055,7 +1024,6 @@ window.addEventListener('DOMContentLoaded', function () {
         var variantSel = toolbar.querySelector('.filter-variant');
         var loaiSel   = toolbar.querySelector('.filter-loai-phieu');
         var maLoInp   = toolbar.querySelector('.filter-ma-lo');
-        var hsdSel    = toolbar.querySelector('.filter-trang-thai-hsd');
         var info      = toolbar.querySelector('.filter-result-info');
         var applyBtn  = toolbar.querySelector('.btn-apply-filter');
         var resetBtn  = toolbar.querySelector('.btn-reset-filter');
@@ -1087,7 +1055,6 @@ window.addEventListener('DOMContentLoaded', function () {
                 var ml = (row.getAttribute('data-ma-lo') || '').toLowerCase();
                 if (ml.indexOf(filters.maLo.toLowerCase()) === -1) return false;
             }
-            if (filters.hsd && (row.getAttribute('data-trang-thai-hsd') || '') !== filters.hsd) return false;
             return true;
         }
 
@@ -1099,14 +1066,13 @@ window.addEventListener('DOMContentLoaded', function () {
                 status: statusSel ? statusSel.value : '',
                 variantId: variantSel ? variantSel.value : '',
                 loai: loaiSel ? loaiSel.value : '',
-                maLo: maLoInp ? maLoInp.value : '',
-                hsd: hsdSel ? hsdSel.value : ''
+                maLo: maLoInp ? maLoInp.value : ''
             };
         }
 
         function determineRowFilter() {
-            if (maLoInp || hsdSel) return matchesLoHang;
-            if (loaiSel)            return matchesKho;
+            if (maLoInp) return matchesLoHang;
+            if (loaiSel) return matchesKho;
             return matchesOrder;
         }
 

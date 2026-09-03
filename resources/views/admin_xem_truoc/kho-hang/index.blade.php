@@ -447,7 +447,7 @@
         </div>
     </div>
 
-    {{-- ============================================ LÔ HÀNG ============================================ --}}
+    {{-- ============================================ LÔ HÀNG 1============================================ --}}
     <div class="tab-pane fade" id="content-lo-hang" role="tabpanel">
         <div class="card table-admin mb-4">
             <div class="card-body">
@@ -474,6 +474,8 @@
                                 <th class="text-center">Ngày nhập</th>
                                 <th class="text-center">Số lượng nhập</th>
                                 <th class="text-center">Còn lại</th>
+                                <th class="text-center">HSD</th>
+                                <th class="text-center">Tình trạng </th>
                                 <th class="text-center">Thao tác</th>
                             </tr>
                         </thead>
@@ -535,6 +537,7 @@
                                 <th>Người tạo</th>
                                 <th class="text-center">Ngày</th>
                                 <th class="text-center">Tổng giá trị</th>
+                                <th class="text-center">Ghi chú</th>
                                 <th class="text-center">Thao tác</th>
                             </tr>
                         </thead>
@@ -568,12 +571,15 @@
                         </select>
                     </div>
                     <div class="col-md-2">
+                        <input type="text" class="form-control form-control-sm" id="px-filter-ma-lo" placeholder="Tìm theo mã lô...">
+                    </div>
+                    <div class="col-md-2">
                         <input type="date" class="form-control form-control-sm" id="px-filter-tu">
                     </div>
                     <div class="col-md-2">
                         <input type="date" class="form-control form-control-sm" id="px-filter-den">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <button class="btn btn-primary btn-sm" onclick="loadPhieuXuat(1)"><i class="fas fa-filter me-1"></i>Lọc</button>
                         <a href="{{ url('admin/kho-hang') }}" class="btn btn-light border btn-sm"><i class="fas fa-redo"></i></a>
                     </div>

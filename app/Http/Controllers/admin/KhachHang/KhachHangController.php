@@ -278,7 +278,7 @@ class KhachHangController extends Controller
     public function destroy(
         KhachHang $khachHang
     ): RedirectResponse {
-        abort_unless(userHasPermission('xoa_khach_hang'), 403, 'Bạn không có quyền xóa khách hàng.');
+        abort_unless(\userHasPermission('xoa_khach_hang'), 403, 'Bạn không có quyền xóa khách hàng.');
 
         $khachHang->delete($khachHang->id);
 
@@ -313,7 +313,7 @@ class KhachHangController extends Controller
     public function restore(
         $id
     ): RedirectResponse {
-        abort_unless(userHasPermission('xoa_khach_hang'), 403, 'Bạn không có quyền khôi phục khách hàng.');
+        abort_unless(\userHasPermission('xoa_khach_hang'), 403, 'Bạn không có quyền khôi phục khách hàng.');
 
         $khachHang = KhachHang::onlyTrashed()
             ->findOrFail($id);
@@ -335,7 +335,7 @@ class KhachHangController extends Controller
     public function forceDelete(
         $id
     ): RedirectResponse {
-        abort_unless(userHasPermission('xoa_khach_hang'), 403, 'Bạn không có quyền xóa vĩnh viễn khách hàng.');
+        abort_unless(\userHasPermission('xoa_khach_hang'), 403, 'Bạn không có quyền xóa vĩnh viễn khách hàng.');
 
         $khachHang = KhachHang::onlyTrashed()
             ->findOrFail($id);

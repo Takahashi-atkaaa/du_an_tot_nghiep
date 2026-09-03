@@ -847,7 +847,7 @@ class SanPhamController extends Controller
 
     public function destroy(Request $request, int $id)
     {
-        abort_unless(userHasPermission('xoa_san_pham'), 403, 'Bạn không có quyền xóa sản phẩm.');
+        abort_unless(\userHasPermission('xoa_san_pham'), 403, 'Bạn không có quyền xóa sản phẩm.');
         try {
             // Tìm sản phẩm, bao gồm cả bản ghi đã bị soft delete
             $product = Product::withTrashed()->with('variants.units')->find($id);
@@ -909,8 +909,8 @@ class SanPhamController extends Controller
 
         abort_unless(
             $action === 'delete'
-                ? userHasPermission('xoa_san_pham')
-                : userHasPermission('sua_san_pham'),
+                ? \userHasPermission('xoa_san_pham')
+                : \userHasPermission('sua_san_pham'),
             403,
             'Bạn không có quyền thực hiện thao tác này.'
         );
@@ -1278,21 +1278,27 @@ class SanPhamController extends Controller
                     'phieu.loai_phieu',
                     'nha_cung_cap.ten_nha_cung_cap as nha_cung_cap',
                     'chi_tiet_phieu.gia_nhap as gia',
-                    'chi_tiet_phieu.so_luong as so_luong'
+                    DB::raw("
+                        CASE 
+                            WHEN phieu.loai_phieu LIKE '%xuất%' OR phieu.loai_phieu LIKE '%tiêu%' THEN -chi_tiet_phieu.so_luong
+                            ELSE chi_tiet_phieu.so_luong
+                        END as so_luong
+                    ")
                 )
                 ->orderByDesc('phieu.created_at')
                 ->get();
 
-            $loHang = DB::table('chi_tiet_phieu')
-                ->where('variant_id', $variant->id)
-                ->whereNotNull('ma_lo')
+            // FIX: Query from chi_tiet_lo_hang (source of truth) instead of chi_tiet_phieu
+            $loHang = DB::table('chi_tiet_lo_hang as ctl')
+                ->join('lo_hang as lh', 'ctl.id_lo_hang', '=', 'lh.id')
+                ->where('ctl.variant_id', $variant->id)
+                ->whereNotNull('lh.ma_lo')
                 ->select(
-                    'ma_lo',
-                    'han_su_dung',
-                    DB::raw('COALESCE(SUM(so_luong_con_lai), SUM(so_luong)) as so_luong')
+                    'lh.ma_lo as ma_lo',
+                    'ctl.han_su_dung',
+                    'ctl.so_luong_ton as so_luong'
                 )
-                ->groupBy('ma_lo', 'han_su_dung')
-                ->orderBy('han_su_dung')
+                ->orderBy('ctl.han_su_dung')
                 ->get();
         }
 

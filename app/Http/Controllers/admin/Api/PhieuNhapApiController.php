@@ -32,7 +32,8 @@ class PhieuNhapApiController extends Controller
         $denNgay = $request->query('den_ngay');
 
         $query = PhieuNhap::with([
-            'phieu' => fn($p) => $p->with('nhaCungCap', 'nguoiDung'),
+            'phieu.nhaCungCap',
+            'phieu.nguoiDung',
             'hoaDon',
             'phieuXuatGoc',
             'chiTietPhieu',
@@ -61,7 +62,8 @@ class PhieuNhapApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $phieuNhap = PhieuNhap::with([
-            'phieu',
+            'phieu.nhaCungCap',
+            'phieu.nguoiDung',
             'hoaDon',
             'chiTietPhieu' => fn($ct) => $ct->with('variant.product', 'chiTietLoHang'),
         ])->find($id);
@@ -350,7 +352,7 @@ class PhieuNhapApiController extends Controller
 
     public function destroy(int $id): JsonResponse
     {
-        abort_unless(userHasPermission('xoa_phieu_nhap'), 403, 'Bạn không có quyền xóa phiếu nhập.');
+        abort_unless(\userHasPermission('xoa_phieu_nhap'), 403, 'Bạn không có quyền xóa phiếu nhập.');
         $phieuNhap = PhieuNhap::with('phieu.chiTietPhieu.chiTietLoHang')->find($id);
 
         if (!$phieuNhap) {

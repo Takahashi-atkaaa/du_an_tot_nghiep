@@ -24,9 +24,9 @@
         <a href="{{ url('admin/kho-hang') }}" class="btn btn-outline-secondary btn-sm">
             <i class="fas fa-arrow-left me-1"></i>Quay lại
         </a>
-        <button class="btn btn-outline-primary btn-sm" onclick="window.print()">
+        {{-- <button class="btn btn-outline-primary btn-sm" onclick="window.print()">
             <i class="fas fa-print me-1"></i>In báo cáo
-        </button>
+        </button> --}}
         <button class="btn btn-outline-success btn-sm" id="btn-xuat-excel">
             <i class="fas fa-file-excel me-1"></i>Xuất Excel
         </button>

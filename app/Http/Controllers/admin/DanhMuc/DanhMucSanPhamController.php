@@ -19,7 +19,7 @@ class DanhMucSanPhamController extends Controller
 
     function store(StoreCreateRequest $request)
     {
-        abort_unless(userHasPermission('them_danh_muc'), 403, 'Bạn không có quyền thêm danh mục.');
+        abort_unless(\userHasPermission('them_danh_muc'), 403, 'Bạn không có quyền thêm danh mục.');
         DanhMucSanPham::create($request->validated());
 
         return redirect()
@@ -32,7 +32,7 @@ class DanhMucSanPhamController extends Controller
 
     public function destroy($id)
     {
-        abort_unless(userHasPermission('xoa_danh_muc'), 403, 'Bạn không có quyền xóa danh mục.');
+        abort_unless(\userHasPermission('xoa_danh_muc'), 403, 'Bạn không có quyền xóa danh mục.');
         // 1. Tìm danh mục sản phẩm theo ID, nếu không thấy sẽ tự trả về lỗi 404
         $danh_muc = DanhMucSanPham::findOrFail($id);
 
@@ -56,7 +56,7 @@ class DanhMucSanPhamController extends Controller
 
     // Sửa danh mục sản phẩm
     public function edit($id){
-        abort_unless(userHasPermission('sua_danh_muc'), 403, 'Bạn không có quyền sửa danh mục.');
+        abort_unless(\userHasPermission('sua_danh_muc'), 403, 'Bạn không có quyền sửa danh mục.');
         $danhmuc = DanhMucSanPham::findOrfail($id);
         return view('admin_xem_truoc.ql_danh_muc.sua', compact('danhmuc'));
     }
@@ -64,7 +64,7 @@ class DanhMucSanPhamController extends Controller
     // Cập nhập danh mục sản phẩm
     public function update(UpdateDanhMucRequest $request, $id)
     {
-        abort_unless(userHasPermission('sua_danh_muc'), 403, 'Bạn không có quyền sửa danh mục.');
+        abort_unless(\userHasPermission('sua_danh_muc'), 403, 'Bạn không có quyền sửa danh mục.');
         $danhmuc = DanhMucSanPham::findOrFail($id);
 
         $danhmuc->ten_danh_muc = $request->ten_danh_muc;

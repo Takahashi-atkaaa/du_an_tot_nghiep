@@ -100,6 +100,7 @@ $(function () {
 
     // Enter key filters
     $('#lh-filter-ma').on('keypress', e => { if (e.which === 13) loadLoHang(1); });
+    $('#px-filter-ma-lo').on('keypress', e => { if (e.which === 13) loadPhieuXuat(1); });
 
     // Submit forms
     // Lưu ý: #form-tao-px đã được chuyển sang trang riêng (file: phieu-xuat-create.js),
@@ -261,7 +262,6 @@ function loadNhaCungCap(page = 1, q = '') {
                     <td>${ncc.nguoi_dai_dien || '<span class="text-muted">--</span>'}</td>
                     <td class="text-center">
                         <button class="btn btn-sm btn-outline-secondary btn-sua-ncc" data-id="${ncc.id}"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-sm btn-outline-danger btn-xoa-ncc" data-id="${ncc.id}" data-ten="${escapeAttr(ncc.ten_nha_cung_cap)}"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>`).join('');
             $tbody.html(rows);
@@ -506,6 +506,7 @@ function loadLoHang(page = 1) {
     const q = $('#lh-filter-ma').val();
     const ncc = $('#lh-filter-ncc').val();
     const params = new URLSearchParams({ page, q: q || '', id_nha_cung_cap: ncc || '' });
+    
     $.get('/admin/api/lo-hang?' + params.toString(), res => {
         const items = res.data?.data || [];
         if (!items.length) {
@@ -514,10 +515,11 @@ function loadLoHang(page = 1) {
             $('#lh-phan-trang').html('');
             return;
         }
+        
         const html = items.map(item => {
             const tongNhap = item.chi_tiet_lo_hang_sum_so_luong_nhap || 0;
             const tongTon = item.chi_tiet_lo_hang_sum_so_luong_ton || 0;
-            const ncc = item.nha_cung_cap?.ten_nha_cung_cap || '<span class="text-muted">--</span>';
+            const ncc = item.nha_cung_cap?.ten_nha_cung_cap || '<span class="text-muted fst-italic">(Không có)</span>';
             const ngay = formatDateDisplay(item.ngay_nhap);
             const maLo = item.ma_lo || 'L-' + item.id;
             let hsds = (item.chi_tiet_lo_hang || [])
@@ -615,7 +617,14 @@ function loadPhieuXuat(page = 1) {
     const loai = $('#px-filter-loai').val();
     const tu = $('#px-filter-tu').val();
     const den = $('#px-filter-den').val();
-    const params = new URLSearchParams({ page, loai_xuat: loai || '', tu_ngay: tu || '', den_ngay: den || '' });
+    const maLo = $('#px-filter-ma-lo').val();
+    const params = new URLSearchParams({ 
+        page, 
+        loai_xuat: loai || '', 
+        tu_ngay: tu || '', 
+        den_ngay: den || '',
+        ma_lo: maLo || ''
+    });
     $.get('/admin/api/phieu-xuat?' + params.toString(), res => {
         const items = res.data?.data || [];
         if (!items.length) {

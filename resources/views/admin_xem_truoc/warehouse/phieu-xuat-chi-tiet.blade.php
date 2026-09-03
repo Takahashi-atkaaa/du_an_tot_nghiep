@@ -63,7 +63,7 @@
     $nhaCungCap = $phieu?->nhaCungCap;
     $nguoiTao = $phieu?->nguoiDung;
     $phieuNhapLienQuan = $phieuXuat->phieuNhapLienQuan;
-    $phieuNhapLienQuanRecord = $phieuNhapLienQuan?->phieuNhap;
+    
     $chiTietList = $chiTietPhieu ?? $phieuXuat->chiTietPhieu;
     $tongSoDong = $tongSoDong ?? $chiTietList->count();
     $tongSoLuong = $tongSoLuong ?? $chiTietList->sum(fn ($ct) => (float) ($ct->so_luong ?? 0));
@@ -93,9 +93,6 @@
     <div class="d-flex gap-2">
         <a href="{{ url('admin/kho-hang/phieu-xuat') }}" class="btn btn-outline-secondary btn-sm">
             <i class="fas fa-arrow-left me-1"></i>Quay lại
-        </a>
-        <a href="{{ url('/admin/api/phieu-xuat/' . $phieuXuat->id . '/export') }}" class="btn btn-danger btn-sm" target="_blank">
-            <i class="fas fa-download me-1"></i>Xuất Excel
         </a>
     </div>
 </div>

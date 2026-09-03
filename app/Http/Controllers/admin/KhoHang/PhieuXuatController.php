@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\KhoHang;
 
 use App\Http\Controllers\Controller;
 use App\Models\NhaCungCap;
+use App\Models\Phieu;
 use App\Models\PhieuXuat;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -46,13 +47,24 @@ class PhieuXuatController extends Controller
         $tongSoDong = $chiTietPhieu->count();
         $tongSoLuong = $chiTietPhieu->sum(fn ($ct) => (float) ($ct->so_luong ?? 0));
         $soLoaiSanPham = $chiTietPhieu->pluck('variant_id')->filter()->unique()->count();
+        
+        // Nếu id_phieu_nhap_lien_quan NULL, lấy từ lô hàng của chi tiết đầu tiên
+        if (!$phieuXuat->id_phieu_nhap_lien_quan && $chiTietPhieu->isNotEmpty()) {
+            $idPhieuFromLo = $chiTietPhieu->first()?->chiTietLoHang?->loHang?->id_phieu;
+            if ($idPhieuFromLo) {
+                $phieuXuat->phieuNhapLienQuan = Phieu::with('phieuNhap')->find($idPhieuFromLo);
+            }
+        }
+
+        $phieuNhapLienQuanRecord = $phieuXuat->phieuNhapLienQuan?->phieuNhap;
 
         return view('admin_xem_truoc.warehouse.phieu-xuat-chi-tiet', compact(
             'phieuXuat',
             'chiTietPhieu',
             'tongSoDong',
             'tongSoLuong',
-            'soLoaiSanPham'
+            'soLoaiSanPham',
+            'phieuNhapLienQuanRecord'
         ));
     }
 }

@@ -444,7 +444,7 @@ class SanPhamApiController extends Controller
 
     public function destroyVariant(int $id): JsonResponse
     {
-        abort_unless(userHasPermission('xoa_san_pham'), 403, 'Bạn không có quyền xóa biến thể sản phẩm.');
+        abort_unless(\userHasPermission('xoa_san_pham'), 403, 'Bạn không có quyền xóa biến thể sản phẩm.');
         $variant = BienTheSanPham::find($id);
 
         if (!$variant) {
@@ -472,7 +472,7 @@ class SanPhamApiController extends Controller
 
     public function destroyAllVariants(int $productId): JsonResponse
     {
-        abort_unless(userHasPermission('xoa_san_pham'), 403, 'Bạn không có quyền xóa biến thể sản phẩm.');
+        abort_unless(\userHasPermission('xoa_san_pham'), 403, 'Bạn không có quyền xóa biến thể sản phẩm.');
         $product = Product::find($productId);
 
         if (!$product) {

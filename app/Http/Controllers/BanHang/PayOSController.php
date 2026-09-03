@@ -21,7 +21,7 @@ class PayOSController extends Controller
 
     public function createPayment(Request $request): JsonResponse
     {
-        abort_unless(userHasPermission('ban_hang'), 403, 'Bạn không có quyền tạo thanh toán.');
+        abort_unless(\userHasPermission('ban_hang'), 403, 'Bạn không có quyền tạo thanh toán.');
         $request->validate([
             'hoa_don_id' => 'required|integer|exists:hoa_don,id',
         ]);
