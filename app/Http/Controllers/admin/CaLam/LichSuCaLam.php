@@ -193,7 +193,7 @@ class LichSuCaLam extends Controller
         $tongTienChuyenKhoan = HoaDon::where('id_ca_lam_viec', $id_ca)
             ->where('phuong_thuc_thanh_toan', 'PayOS')
             ->whereDate('created_at', $ngay)
-            ->where('trang_thai', '!=', 'Đã hủy')
+            ->whereIn('trang_thai', ['Hoàn thành', 'Đã đổi/trả hàng', 'Đã trả toàn bộ'])
             ->sum('khach_can_tra');
 
         $danhSachNhanVienTrongCa = ChiaCaLamViec::with('nguoiDung')
