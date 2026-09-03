@@ -199,14 +199,14 @@
                     <div class="col-md-4 info-item">
                         <div class="info-label">Tiền đầu ca</div>
                         <div class="info-value">
-                            {{ number_format($giaoCa->tien_dau_ca,0,',','.') }} VNĐ
+                            {{ number_format($giaoCa->tien_mat_dau_ca,0,',','.') }} VNĐ
                         </div>
                     </div>
 
                     <div class="col-md-4 info-item">
                         <div class="info-label">Tiền cuối ca</div>
                         <div class="info-value">
-                            {{ number_format($giaoCa->tien_cuoi_ca,0,',','.') }} VNĐ
+                            {{ number_format($giaoCa->tien_mat_cuoi_ca,0,',','.') }} VNĐ
                         </div>
                     </div>
 
