@@ -223,8 +223,8 @@
                                 type="datetime-local"
                                 class="form-control"
                                 name="thoi_gian_bat_dau_ca"
-                                value="{{ \Carbon\Carbon::parse($ca->gio_bat_dau)->format('Y-m-d\TH:i') }}">
-                                
+                                value="{{ \Carbon\Carbon::parse($ngay)->setTimeFromTimeString($ca->gio_bat_dau)->format('Y-m-d\TH:i') }}"
+                            >
 
                         </div>
 
@@ -234,12 +234,12 @@
                                 Thời gian kết thúc
                             </label>
 
-                            <input
-                                type="datetime-local"
-                                class="form-control"
-                                name="thoi_gian_ket_thuc_ca"
-                                value="{{ \Carbon\Carbon::parse($ca->gio_ket_thuc)->format('Y-m-d\TH:i') }}">
-
+                                <input
+                                    type="datetime-local"
+                                    class="form-control"
+                                    name="thoi_gian_ket_thuc_ca"
+                                    value="{{ \Carbon\Carbon::parse($ngay)->setTimeFromTimeString($ca->gio_ket_thuc)->format('Y-m-d\TH:i') }}"
+                                >
                         </div>
 
                     </div>
