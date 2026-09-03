@@ -48,6 +48,20 @@ $(function () {
     });
 
     $('#px-sp-search').focus();
+    
+    // === NÚT CHỌN LÔ ===
+    $('#px-btn-chon-lo').click(function() {
+        $('#modal-chon-lo').modal('show');
+        loadDanhSachLoHangDeChon();
+    });
+    
+    // Search trong modal chọn lô
+    let chonLoSearchTimer = 0;
+    $('#chon-lo-search, #chon-lo-ncc-filter').on('input change', function () {
+        clearTimeout(chonLoSearchTimer);
+        chonLoSearchTimer = setTimeout(loadDanhSachLoHangDeChon, 300);
+    });
+    
     console.log('[PHIEU-XUAT-CREATE] Init end');
 });
 
@@ -361,6 +375,213 @@ $(document).on('click', '.btn-remove-px-row', function () {
 function updateTongSL() {
     const rows = $('#px-ds-sp tr:not(#px-empty-row)').length;
     $('#px-tong-sl').text(rows);
+}
+
+// ─── CHỌN LÔ HÀNG ──────────────────────────────────────────
+// Load danh sách lô hàng (có tồn kho)
+function loadDanhSachLoHangDeChon() {
+    const search = $('#chon-lo-search').val().trim();
+    const nccId = $('#chon-lo-ncc-filter').val();
+    
+    $('#chon-lo-body').html(
+        '<tr><td colspan="6" class="text-center text-muted py-4">' +
+        '<i class="fas fa-spinner fa-spin me-1"></i>Đang tải...</td></tr>'
+    );
+    
+    $.get('/admin/api/lo-hang', { 
+        q: search,
+        id_nha_cung_cap: nccId,
+        co_ton: 1 
+    }, function(res) {
+        if (!res.success || !res.data || !res.data.data || !res.data.data.length) {
+            $('#chon-lo-body').html(
+                '<tr><td colspan="6" class="text-center text-muted py-4">' +
+                '<i class="fas fa-box-open fs-3 mb-2 d-block text-secondary"></i>' +
+                'Không tìm thấy lô hàng nào có tồn kho.</td></tr>'
+            );
+            return;
+        }
+        
+        const loHangList = res.data.data;
+        const html = loHangList.map(function(lo) {
+            const ncc = (lo.nha_cung_cap && lo.nha_cung_cap.ten_nha_cung_cap) || '--';
+            const ngay = lo.created_at ? formatDateDisplay(lo.created_at) : '--';
+            
+            // Đếm số sản phẩm có tồn
+            const chiTietCoTon = (lo.chi_tiet_lo_hang || []).filter(function(ct) {
+                return ct.so_luong_ton > 0;
+            });
+            const soSP = chiTietCoTon.length;
+            
+            // Tổng tồn
+            const tongTon = chiTietCoTon.reduce(function(sum, ct) {
+                return sum + (parseInt(ct.so_luong_ton) || 0);
+            }, 0);
+            
+            const maLo = lo.ma_lo || ('L-' + lo.id);
+            
+            return '' +
+                '<tr>' +
+                    '<td><span class="badge bg-info fs-6">' + escapeHtml(maLo) + '</span></td>' +
+                    '<td>' + escapeHtml(ncc) + '</td>' +
+                    '<td class="text-center">' + ngay + '</td>' +
+                    '<td class="text-center"><span class="badge bg-secondary">' + soSP + '</span></td>' +
+                    '<td class="text-center fw-bold text-success">' + tongTon.toLocaleString() + '</td>' +
+                    '<td class="text-center">' +
+                        '<button type="button" class="btn btn-sm btn-primary" ' +
+                                'onclick="chonToanBoLoHang(' + lo.id + ')">' +
+                            '<i class="fas fa-check me-1"></i>Chọn' +
+                        '</button>' +
+                    '</td>' +
+                '</tr>';
+        }).join('');
+        
+        $('#chon-lo-body').html(html);
+    }).fail(function() {
+        $('#chon-lo-body').html(
+            '<tr><td colspan="6" class="text-center text-danger py-4">' +
+            '<i class="fas fa-exclamation-triangle me-1"></i>Lỗi khi tải danh sách lô hàng.</td></tr>'
+        );
+    });
+}
+
+// Format date helper
+function formatDateDisplay(dateStr) {
+    if (!dateStr) return '--';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '--';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return day + '/' + month + '/' + year;
+}
+
+// Chọn toàn bộ sản phẩm trong lô
+window.chonToanBoLoHang = function(idLo) {
+    $.get('/admin/api/lo-hang/' + idLo, function(res) {
+        if (!res.success || !res.data) {
+            hienBaoPage('danger', 'Không tải được chi tiết lô hàng.');
+            return;
+        }
+        
+        const lo = res.data;
+        const chiTietCoTon = (lo.chi_tiet_lo_hang || []).filter(function(ct) {
+            return ct.so_luong_ton > 0;
+        });
+        
+        if (!chiTietCoTon.length) {
+            hienBaoPage('warning', 'Lô này không có sản phẩm tồn kho nào.');
+            return;
+        }
+        
+        let soLuongThemMoi = 0;
+        let soLuongBoQua = 0;
+        
+        // Thêm từng sản phẩm vào danh sách xuất
+        chiTietCoTon.forEach(function(ct) {
+            const variantId = ct.variant_id;
+            
+            // Check xem đã có trong bảng chưa
+            const existingRow = $('#px-ds-sp tr[data-sp-id="' + variantId + '"]');
+            if (existingRow.length) {
+                soLuongBoQua++;
+                return;
+            }
+            
+            // Thêm row mới
+            addVariantToXuatTable(ct, lo);
+            soLuongThemMoi++;
+        });
+        
+        $('#modal-chon-lo').modal('hide');
+        
+        const maLo = lo.ma_lo || ('L-' + lo.id);
+        let msg = 'Đã thêm ' + soLuongThemMoi + ' sản phẩm từ lô <strong>' + escapeHtml(maLo) + '</strong>';
+        if (soLuongBoQua > 0) {
+            msg += ' (' + soLuongBoQua + ' sản phẩm đã có trong danh sách)';
+        }
+        hienBaoPage('success', msg);
+        
+        updateTongSL();
+    }).fail(function() {
+        hienBaoPage('danger', 'Lỗi khi tải chi tiết lô hàng.');
+    });
+};
+
+// Helper: thêm variant vào bảng xuất
+function addVariantToXuatTable(chiTietLo, loHang) {
+    const variant = chiTietLo.variant || {};
+    const product = variant.product || {};
+    const variantId = variant.id;
+    
+    if (!variantId) return;
+    if (selectedPxProducts.has(variantId)) return;
+    
+    selectedPxProducts.add(variantId);
+    
+    const tenSP = product.ten_san_pham || '';
+    const tenBT = variant.ten_bien_the || '';
+    const tenFull = tenSP + (tenBT ? ' - ' + tenBT : '');
+    const maVach = variant.ma_vach || '';
+    const ton = chiTietLo.so_luong_ton || 0;
+    const hsd = chiTietLo.han_su_dung || '';
+    const hsdDisplay = hsd ? formatDateDisplay(hsd) : '--';
+    const maLo = loHang.ma_lo || ('L-' + loHang.id);
+    
+    const idx = pxIdx++;
+    $('#px-empty-row').remove();
+    
+    const row = '' +
+    '<tr data-sp-id="' + variantId + '">' +
+        '<td>' +
+            '<div class="fw-semibold small">' + escapeHtml(tenFull) + '</div>' +
+            (maVach ? '<div class="text-muted small"><code>' + escapeHtml(maVach) + '</code></div>' : '') +
+            '<input type="hidden" name="chi_tiet[' + idx + '][variant_id]" value="' + variantId + '">' +
+            '<div class="px-lo-hang-list mt-1" data-idx="' + idx + '">' +
+                '<small class="text-success"><i class="fas fa-check"></i> Từ lô: <strong>' + escapeHtml(maLo) + '</strong></small>' +
+            '</div>' +
+        '</td>' +
+        '<td class="text-center align-middle">' +
+            '<span class="badge bg-light text-dark px-ton-hien-thi" data-idx="' + idx + '">' + ton.toLocaleString() + '</span>' +
+        '</td>' +
+        '<td>' +
+            '<input type="number" class="form-control form-control-sm px-sl-input" ' +
+                'name="chi_tiet[' + idx + '][so_luong]" ' +
+                'value="' + ton + '" min="1" step="1" ' +
+                'data-idx="' + idx + '" data-ton="' + ton + '" data-ton-lo="' + ton + '">' +
+        '</td>' +
+        '<td>' +
+            '<select class="form-select form-select-sm px-lo-select" ' +
+                'name="chi_tiet[' + idx + '][id_chi_tiet_lo_hang]" ' +
+                'data-idx="' + idx + '" required>' +
+                '<option value="' + chiTietLo.id + '" selected ' +
+                    'data-hsd="' + escapeAttr(hsd) + '" ' +
+                    'data-ton="' + ton + '">' +
+                    escapeHtml(maLo) + ' | Tồn: ' + ton.toLocaleString() +
+                '</option>' +
+            '</select>' +
+        '</td>' +
+        '<td>' +
+            '<input type="text" class="form-control form-control-sm px-hsd-input" ' +
+                'data-idx="' + idx + '" readonly ' +
+                'value="' + hsdDisplay + '" placeholder="HSD từ lô">' +
+        '</td>' +
+        '<td class="text-center">' +
+            '<button type="button" class="btn btn-sm btn-outline-danger btn-remove-px-row" ' +
+                'data-id="' + variantId + '">' +
+                '<i class="fas fa-times"></i>' +
+            '</button>' +
+        '</td>' +
+    '</tr>';
+    
+    $('#px-ds-sp').append(row);
+    
+    // Disable nút "Chọn" trong kết quả tìm kiếm nếu có
+    const btn = $('.btn-chon-sp-xuat[data-id="' + variantId + '"]');
+    if (btn.length) {
+        btn.prop('disabled', true).removeClass('btn-primary btn-danger').addClass('btn-secondary')
+            .html('<i class="fas fa-check"></i> Đã chọn');
+    }
 }
 
 // ─── BUILD CHI TIET (mapping input -> payload API) ──────

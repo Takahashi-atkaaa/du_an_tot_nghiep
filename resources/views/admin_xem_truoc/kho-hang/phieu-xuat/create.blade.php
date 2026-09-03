@@ -70,7 +70,7 @@
 
         {{-- Thanh tìm kiếm nổi bật --}}
         <div class="row g-2 mb-3">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="input-group input-group-lg">
                     <span class="input-group-text bg-danger text-white">
                         <i class="fas fa-search"></i>
@@ -79,14 +79,19 @@
                         placeholder="Tìm mã vạch, tên sản phẩm..." autocomplete="off">
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <select id="px-sp-danh-muc" class="form-select form-select-lg">
                     <option value="">-- Tất cả danh mục --</option>
                 </select>
             </div>
-            <div class="col-md-2 text-end">
+            <div class="col-md-2">
+                <button type="button" class="btn btn-outline-primary btn-lg w-100" id="px-btn-chon-lo">
+                    <i class="fas fa-layer-group me-1"></i>Chọn lô
+                </button>
+            </div>
+            <div class="col-md-3 text-end">
                 <button type="button" class="btn btn-outline-secondary btn-lg w-100" id="px-sp-clear">
-                    <i class="fas fa-times me-1"></i>Xóa
+                    <i class="fas fa-times me-1"></i>Xóa tìm kiếm
                 </button>
             </div>
         </div>
@@ -147,6 +152,65 @@
                 </a>
                 <button type="button" class="btn btn-danger px-4" id="px-btn-save">
                     <i class="fas fa-save me-1"></i>Lưu phiếu xuất
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ==================== MODAL CHỌN LÔ ==================== --}}
+<div class="modal fade" id="modal-chon-lo" tabindex="-1" aria-labelledby="modalChonLoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalChonLoLabel">
+                    <i class="fas fa-layer-group me-2"></i>Chọn lô hàng để xuất
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-3">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" id="chon-lo-search" 
+                                   placeholder="Tìm theo mã lô, tên nhà cung cấp...">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <select id="chon-lo-ncc-filter" class="form-select">
+                            <option value="">-- Tất cả NCC --</option>
+                            @foreach($nhaCungCaps as $ncc)
+                                <option value="{{ $ncc->id }}">{{ $ncc->ten_nha_cung_cap }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="table-responsive" style="max-height: 500px;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="width: 150px">Mã lô</th>
+                                <th>Nhà cung cấp</th>
+                                <th style="width: 120px">Ngày nhập</th>
+                                <th style="width: 80px" class="text-center">Số SP</th>
+                                <th style="width: 100px" class="text-center">Tổng tồn</th>
+                                <th style="width: 100px" class="text-center">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="chon-lo-body">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    <i class="fas fa-spinner fa-spin me-1"></i>Đang tải danh sách lô hàng...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Đóng
                 </button>
             </div>
         </div>

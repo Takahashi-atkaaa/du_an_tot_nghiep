@@ -18,8 +18,9 @@ class LoHangApiController extends Controller
     {
         $q = $request->query('q');
         $ncc = $request->query('id_nha_cung_cap');
+        $coTon = $request->query('co_ton'); // Filter chỉ lô có tồn kho
 
-        $query = LoHang::with(['nhaCungCap', 'chiTietLoHang.variant'])
+        $query = LoHang::with(['nhaCungCap', 'chiTietLoHang.variant.product'])
             ->withSum('chiTietLoHang', 'so_luong_ton')
             ->withSum('chiTietLoHang', 'so_luong_nhap')
             ->orderByDesc('id');
@@ -34,6 +35,11 @@ class LoHangApiController extends Controller
 
         if (!empty($ncc)) {
             $query->where('id_nha_cung_cap', $ncc);
+        }
+        
+        // Chỉ lấy lô có tồn kho > 0
+        if (!empty($coTon)) {
+            $query->whereHas('chiTietLoHang', fn($ct) => $ct->where('so_luong_ton', '>', 0));
         }
 
         $perPage = 15;
